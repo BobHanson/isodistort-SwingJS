@@ -557,6 +557,7 @@ public abstract class RenderApplet extends Applet implements Runnable
 				pop();
 			}
 		}
+		
 	}
 
 	// --- PRIVATE METHODS

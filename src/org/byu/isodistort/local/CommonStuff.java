@@ -1674,9 +1674,11 @@ public class CommonStuff implements ChangeListener
 		irrepSlidersOn = !irrepSlidersOn;	
 	}
 
-	/** recalcDistortion recalculates the positions and occupancies based on current slider values.*/
-	public void recalcDistortion()
-	{
+	/**
+	 * recalcDistortion recalculates the positions and occupancies based on current
+	 * slider values.
+	 */
+	public void recalcDistortion() {
 		double tempval, tempdisp, maxdisp, tempmag, maxmag, temprot, maxrot, tempellip, maxellip, avgocc;
 		double[] tempvec = new double[3];
 		double[][] tempmat = new double[3][3];
@@ -1685,236 +1687,257 @@ public class CommonStuff implements ChangeListener
 		double[] deltaRot = new double[3];
 		double[] deltaEllip = new double[6];
 		double deltaOcc;
-		double[][] pBasisCartTranspose = new double[3][3]; 
+		double[][] pBasisCartTranspose = new double[3][3];
 		double[][] sBasisCartTranspose = new double[3][3];
 		double[] pStrainVoigt = new double[6];
 		double[][] pStrainPlusIdentity = new double[3][3];
-        		
-		// naively calculate strained parent-cell basis vectors in cartesian Angstrom coords
-		for (int n=0; n<6; n++)
-        	for (int m=0; m<strainmodeNum; m++)
-        	{
-        		tempval = strainmodeSliderVal[m]*irrepmodeSliderVal[strainmodeIrrep[m]]*masterSliderVal;
-        		pStrainVoigt[n] += strainmodeVect[m][n]*tempval;
-        	}
+
+		// naively calculate strained parent-cell basis vectors in cartesian Angstrom
+		// coords
+		for (int n = 0; n < 6; n++)
+			for (int m = 0; m < strainmodeNum; m++) {
+				tempval = strainmodeSliderVal[m] * irrepmodeSliderVal[strainmodeIrrep[m]] * masterSliderVal;
+				pStrainVoigt[n] += strainmodeVect[m][n] * tempval;
+			}
 		// calculate (strain tensor)+(identity matrix) from voigt strain components
-		pStrainPlusIdentity[0][0] = pStrainVoigt[0]+1;
-    	pStrainPlusIdentity[1][0] = pStrainVoigt[5]/2;
-    	pStrainPlusIdentity[2][0] = pStrainVoigt[4]/2;
-    	pStrainPlusIdentity[0][1] = pStrainVoigt[5]/2;
-    	pStrainPlusIdentity[1][1] = pStrainVoigt[1]+1;
-    	pStrainPlusIdentity[2][1] = pStrainVoigt[3]/2;
-    	pStrainPlusIdentity[0][2] = pStrainVoigt[4]/2;
-    	pStrainPlusIdentity[1][2] = pStrainVoigt[3]/2;
-    	pStrainPlusIdentity[2][2] = pStrainVoigt[2]+1;
+		pStrainPlusIdentity[0][0] = pStrainVoigt[0] + 1;
+		pStrainPlusIdentity[1][0] = pStrainVoigt[5] / 2;
+		pStrainPlusIdentity[2][0] = pStrainVoigt[4] / 2;
+		pStrainPlusIdentity[0][1] = pStrainVoigt[5] / 2;
+		pStrainPlusIdentity[1][1] = pStrainVoigt[1] + 1;
+		pStrainPlusIdentity[2][1] = pStrainVoigt[3] / 2;
+		pStrainPlusIdentity[0][2] = pStrainVoigt[4] / 2;
+		pStrainPlusIdentity[1][2] = pStrainVoigt[3] / 2;
+		pStrainPlusIdentity[2][2] = pStrainVoigt[2] + 1;
 
-    	// calculate strained parent basis vectors in cartesian Angstrom coords
-    	Vec.matdotmat(pStrainPlusIdentity,pBasisCart0,pBasisCart);
+		// calculate strained parent basis vectors in cartesian Angstrom coords
+		Vec.matdotmat(pStrainPlusIdentity, pBasisCart0, pBasisCart);
 
-        // calculate strained supercell basis vectors in cartesian Angstrom coords
-    	Vec.matdotmat(pBasisCart,TmatInverseTranspose,sBasisCart);
+		// calculate strained supercell basis vectors in cartesian Angstrom coords
+		Vec.matdotmat(pBasisCart, TmatInverseTranspose, sBasisCart);
 
 		// calculate some other useful matrices
-    	Vec.mattranspose(pBasisCart,pBasisCartTranspose);
-		Vec.mattranspose(sBasisCart,sBasisCartTranspose);
-        Vec.matinverse(sBasisCart,sBasisCartInverse);
+		Vec.mattranspose(pBasisCart, pBasisCartTranspose);
+		Vec.mattranspose(sBasisCart, sBasisCartTranspose);
+		Vec.matinverse(sBasisCart, sBasisCartInverse);
 
-        // calculate the strained parent and supercell lattice parameters
-        pLatt[0] = Math.sqrt(Vec.dot(pBasisCartTranspose[0],pBasisCartTranspose[0])); //a
-        pLatt[1] = Math.sqrt(Vec.dot(pBasisCartTranspose[1],pBasisCartTranspose[1])); //b
-        pLatt[2] = Math.sqrt(Vec.dot(pBasisCartTranspose[2],pBasisCartTranspose[2])); //c
-        pLatt[3] = Math.acos(Vec.dot(pBasisCartTranspose[1],pBasisCartTranspose[2])/Math.max(pLatt[1]*pLatt[2],0.001)); //alpha
-        pLatt[4] = Math.acos(Vec.dot(pBasisCartTranspose[0],pBasisCartTranspose[2])/Math.max(pLatt[0]*pLatt[2],0.001)); //beta
-        pLatt[5] = Math.acos(Vec.dot(pBasisCartTranspose[0],pBasisCartTranspose[1])/Math.max(pLatt[0]*pLatt[1],0.001)); //gamma
-        sLatt[0] = Math.sqrt(Vec.dot(sBasisCartTranspose[0],sBasisCartTranspose[0])); //a
-        sLatt[1] = Math.sqrt(Vec.dot(sBasisCartTranspose[1],sBasisCartTranspose[1])); //b
-        sLatt[2] = Math.sqrt(Vec.dot(sBasisCartTranspose[2],sBasisCartTranspose[2])); //c
-        sLatt[3] = Math.acos(Vec.dot(sBasisCartTranspose[1],sBasisCartTranspose[2])/Math.max(sLatt[1]*sLatt[2],0.001)); //alpha
-        sLatt[4] = Math.acos(Vec.dot(sBasisCartTranspose[0],sBasisCartTranspose[2])/Math.max(sLatt[0]*sLatt[2],0.001)); //beta
-        sLatt[5] = Math.acos(Vec.dot(sBasisCartTranspose[0],sBasisCartTranspose[1])/Math.max(sLatt[0]*sLatt[1],0.001)); //gamma
-        
-        double r2d = 180.0/Math.PI;
-		// Diagnostic code
-        System.out.print("pBasisCart0: ");
-    	for (int i=0;i<3;i++)
-    		for (int j=0;j<3;j++)
-    			System.out.printf("%7.4f ", pBasisCart0[j][i]);
-    	System.out.println("");
-        System.out.println ("pCell0: "+pLatt0[0]+", "+pLatt0[1]+", "+pLatt0[2]+", "+pLatt0[3]*r2d+", "+pLatt0[4]*r2d+", "+pLatt0[5]*r2d+", ");
-        System.out.print("pBasisCart: ");
-    	for (int i=0;i<3;i++)
-    		for (int j=0;j<3;j++)
-    			System.out.printf("%7.4f ", pBasisCart[j][i]);
-    	System.out.println("");
-        System.out.println ("pCell: " +pLatt[0]+", " +pLatt[1]+", " +pLatt[2]+", " +pLatt[3]*r2d+", " +pLatt[4]*r2d+", " +pLatt[5]*r2d+", ");
-		System.out.println("");         
+		// calculate the strained parent and supercell lattice parameters
+		pLatt[0] = Math.sqrt(Vec.dot(pBasisCartTranspose[0], pBasisCartTranspose[0])); // a
+		pLatt[1] = Math.sqrt(Vec.dot(pBasisCartTranspose[1], pBasisCartTranspose[1])); // b
+		pLatt[2] = Math.sqrt(Vec.dot(pBasisCartTranspose[2], pBasisCartTranspose[2])); // c
+		pLatt[3] = Math
+				.acos(Vec.dot(pBasisCartTranspose[1], pBasisCartTranspose[2]) / Math.max(pLatt[1] * pLatt[2], 0.001)); // alpha
+		pLatt[4] = Math
+				.acos(Vec.dot(pBasisCartTranspose[0], pBasisCartTranspose[2]) / Math.max(pLatt[0] * pLatt[2], 0.001)); // beta
+		pLatt[5] = Math
+				.acos(Vec.dot(pBasisCartTranspose[0], pBasisCartTranspose[1]) / Math.max(pLatt[0] * pLatt[1], 0.001)); // gamma
+		sLatt[0] = Math.sqrt(Vec.dot(sBasisCartTranspose[0], sBasisCartTranspose[0])); // a
+		sLatt[1] = Math.sqrt(Vec.dot(sBasisCartTranspose[1], sBasisCartTranspose[1])); // b
+		sLatt[2] = Math.sqrt(Vec.dot(sBasisCartTranspose[2], sBasisCartTranspose[2])); // c
+		sLatt[3] = Math
+				.acos(Vec.dot(sBasisCartTranspose[1], sBasisCartTranspose[2]) / Math.max(sLatt[1] * sLatt[2], 0.001)); // alpha
+		sLatt[4] = Math
+				.acos(Vec.dot(sBasisCartTranspose[0], sBasisCartTranspose[2]) / Math.max(sLatt[0] * sLatt[2], 0.001)); // beta
+		sLatt[5] = Math
+				.acos(Vec.dot(sBasisCartTranspose[0], sBasisCartTranspose[1]) / Math.max(sLatt[0] * sLatt[1], 0.001)); // gamma
+
+		boolean testing = false;
+
+		if (testing) {
+			double r2d = 180.0 / Math.PI;
+			// Diagnostic code
+			System.out.print("pBasisCart0: ");
+			for (int i = 0; i < 3; i++)
+				for (int j = 0; j < 3; j++)
+					System.out.printf("%7.4f ", pBasisCart0[j][i]);
+			System.out.println("");
+			System.out.println("pCell0: " + pLatt0[0] + ", " + pLatt0[1] + ", " + pLatt0[2] + ", " + pLatt0[3] * r2d
+					+ ", " + pLatt0[4] * r2d + ", " + pLatt0[5] * r2d + ", ");
+			System.out.print("pBasisCart: ");
+			for (int i = 0; i < 3; i++)
+				for (int j = 0; j < 3; j++)
+					System.out.printf("%7.4f ", pBasisCart[j][i]);
+			System.out.println("");
+			System.out.println("pCell: " + pLatt[0] + ", " + pLatt[1] + ", " + pLatt[2] + ", " + pLatt[3] * r2d + ", "
+					+ pLatt[4] * r2d + ", " + pLatt[5] * r2d + ", ");
+			System.out.println("");
 //      System.out.println ("sCell: "+sLatt[0]+", "+sLatt[1]+", "+sLatt[2]+", "+sLatt[3]+", "+sLatt[4]+", "+sLatt[5]+", ");
+		}
 
+		// set the parent and supercell lattice parameter labels
+		for (int n = 0; n < 3; n++) {
+			pLattLabel[n].setText(mytoString(pLatt[n], 2, -5));
+			pLattLabel[n + 3].setText(mytoString((180 / Math.PI) * pLatt[n + 3], 2, -5));
+			sLattLabel[n].setText(mytoString(sLatt[n], 2, -5));
+			sLattLabel[n + 3].setText(mytoString((180 / Math.PI) * sLatt[n + 3], 2, -5));
+		}
 
-    	// set the parent and supercell lattice parameter labels
-        for (int n=0; n<3; n++)
-       	{
-   			pLattLabel[n].setText(mytoString(pLatt[n],2,-5));
-   			pLattLabel[n+3].setText(mytoString((180/Math.PI)*pLatt[n+3],2,-5));
-   			sLattLabel[n].setText(mytoString(sLatt[n],2,-5));
-   			sLattLabel[n+3].setText(mytoString((180/Math.PI)*sLatt[n+3],2,-5));
-       	}
+		// calculate the parent cell origin in strained cartesian Angtstrom coords
+		Vec.matdotvect(sBasisCart, pOriginUnitless, pOriginCart);
 
-        // calculate the parent cell origin in strained cartesian Angtstrom coords
-        Vec.matdotvect(sBasisCart,pOriginUnitless,pOriginCart);
-			
-        // calculate the 8 cell vertices in strained cartesian Angstrom coordinates
-		for (int ix=0; ix<2; ix++)
-			for(int iy=0; iy<2; iy++)
-	        	for(int iz=0; iz<2; iz++)
-	        		for(int i=0; i<3; i++)
-	        		{
-	        			parentCellVertices[ix+2*iy+4*iz][i] = ix*pBasisCart[i][0] + iy*pBasisCart[i][1] + iz*pBasisCart[i][2] + pOriginCart[i];
-	           			superCellVertices[ix+2*iy+4*iz][i] = ix*sBasisCart[i][0] + iy*sBasisCart[i][1] + iz*sBasisCart[i][2];
-	        		}
+		// calculate the 8 cell vertices in strained cartesian Angstrom coordinates
+		for (int ix = 0; ix < 2; ix++)
+			for (int iy = 0; iy < 2; iy++)
+				for (int iz = 0; iz < 2; iz++)
+					for (int i = 0; i < 3; i++) {
+						parentCellVertices[ix + 2 * iy + 4 * iz][i] = ix * pBasisCart[i][0] + iy * pBasisCart[i][1]
+								+ iz * pBasisCart[i][2] + pOriginCart[i];
+						superCellVertices[ix + 2 * iy + 4 * iz][i] = ix * sBasisCart[i][0] + iy * sBasisCart[i][1]
+								+ iz * sBasisCart[i][2];
+					}
 
 //      Calculate the center of the supercell in strained cartesian Angstrom coords (sOriginCart).
 		double[] minloc = new double[3];
 		double[] maxloc = new double[3];
-		for (int i=0;i<3;i++)
-		{
+		for (int i = 0; i < 3; i++) {
 			minloc[i] = 1000000;
 			maxloc[i] = -1000000;
 		}
-		for (int j=0;j<8;j++)
-			for (int i=0;i<3;i++) 
-			{
+		for (int j = 0; j < 8; j++)
+			for (int i = 0; i < 3; i++) {
 				tempvec[i] = superCellVertices[j][i];
-				if (tempvec[i]<minloc[i])
-					minloc[i]=tempvec[i];
-				if (tempvec[i]>maxloc[i])
-					maxloc[i]=tempvec[i];
+				if (tempvec[i] < minloc[i])
+					minloc[i] = tempvec[i];
+				if (tempvec[i] > maxloc[i])
+					maxloc[i] = tempvec[i];
 			}
-		for (int t=0; t<numTypes; t++)
-			for (int s=0; s<numSubTypes[t]; s++)
-				for (int a=0; a<numSubAtoms[t][s]; a++)
-				{
+		for (int t = 0; t < numTypes; t++)
+			for (int s = 0; s < numSubTypes[t]; s++)
+				for (int a = 0; a < numSubAtoms[t][s]; a++) {
 					Vec.matdotvect(sBasisCart, atomInitCoord[t][s][a], tempvec);
-					for (int i=0;i<3;i++)
-					{
-						if (tempvec[i]<minloc[i])
-							minloc[i]=tempvec[i];
-						if (tempvec[i]>maxloc[i])
-							maxloc[i]=tempvec[i];
+					for (int i = 0; i < 3; i++) {
+						if (tempvec[i] < minloc[i])
+							minloc[i] = tempvec[i];
+						if (tempvec[i] > maxloc[i])
+							maxloc[i] = tempvec[i];
 					}
 				}
-		for (int i=0; i<3; i++)
-			sCenterCart[i] = (maxloc[i]+minloc[i])/2;
-		
-		// Place the center of the supercell at the origin 
-		for (int j=0;j<8;j++)
-			for (int i=0; i<3; i++)
-			{
+		for (int i = 0; i < 3; i++)
+			sCenterCart[i] = (maxloc[i] + minloc[i]) / 2;
+
+		// Place the center of the supercell at the origin
+		for (int j = 0; j < 8; j++)
+			for (int i = 0; i < 3; i++) {
 				parentCellVertices[j][i] -= sCenterCart[i];
 				superCellVertices[j][i] -= sCenterCart[i];
 			}
 
-
 		// calculate the new atomic positions and radii
-		for (int t=0; t<numTypes; t++)
-			for (int s=0; s<numSubTypes[t]; s++)
-			{	
+		for (int t = 0; t < numTypes; t++)
+			for (int s = 0; s < numSubTypes[t]; s++) {
 				maxdisp = 0;
 				maxmag = 0;
 				maxrot = 0;
 				maxellip = 0;
 				avgocc = 0;
-				for (int a=0; a<numSubAtoms[t][s]; a++)
-				{
+				for (int a = 0; a < numSubAtoms[t][s]; a++) {
 					deltaOcc = 0;
-					for (int m=0; m<scalarmodePerType[t]; m++)//sum up the scalar vectors for all the modes for each atom of given type
+					for (int m = 0; m < scalarmodePerType[t]; m++)// sum up the scalar vectors for all the modes for
+																	// each atom of given type
 					{
-						tempval = scalarmodeSliderVal[t][m]*irrepmodeSliderVal[scalarmodeIrrep[t][m]]*masterSliderVal;
-						deltaOcc +=scalarmodeVect[t][m][s][a]*tempval;
+						tempval = scalarmodeSliderVal[t][m] * irrepmodeSliderVal[scalarmodeIrrep[t][m]]
+								* masterSliderVal;
+						deltaOcc += scalarmodeVect[t][m][s][a] * tempval;
 					}
-					atomFinalOcc[t][s][a]= atomInitOcc[t][s][a] + deltaOcc;
+					atomFinalOcc[t][s][a] = atomInitOcc[t][s][a] + deltaOcc;
 //					System.out.println("tsa:"+t+s+a+", deltaOcc:"+deltaOcc);
-					for (int i=0; i<3; i++)
-					{
+					for (int i = 0; i < 3; i++) {
 						deltaCoord[i] = 0;
-						for (int m=0; m<dispmodePerType[t]; m++)//sum up the displacement vectors for all the modes for each atom of given type
+						for (int m = 0; m < dispmodePerType[t]; m++)// sum up the displacement vectors for all the modes
+																	// for each atom of given type
 						{
-							tempval = dispmodeSliderVal[t][m]*irrepmodeSliderVal[dispmodeIrrep[t][m]]*masterSliderVal;
-							deltaCoord[i] += dispmodeVect[t][m][s][a][i]*tempval; // change in unitless position
+							tempval = dispmodeSliderVal[t][m] * irrepmodeSliderVal[dispmodeIrrep[t][m]]
+									* masterSliderVal;
+							deltaCoord[i] += dispmodeVect[t][m][s][a][i] * tempval; // change in unitless position
 						}
-						atomFinalCoord[t][s][a][i] = atomInitCoord[t][s][a][i]+deltaCoord[i]; //total position in lattice coords (undistorted position + aggregate displacement).
+						atomFinalCoord[t][s][a][i] = atomInitCoord[t][s][a][i] + deltaCoord[i]; // total position in
+																								// lattice coords
+																								// (undistorted position
+																								// + aggregate
+																								// displacement).
 //						System.out.println("tsai:"+t+s+a+i+", deltaCoord:"+deltaCoord[i]);
 					}
-					
-					for (int i=0; i<3; i++)
-					{
+
+					for (int i = 0; i < 3; i++) {
 						deltaMag[i] = 0;
-						for (int m=0; m<magmodePerType[t]; m++)//sum up the magnetic moment vectors for all the modes for each atom of given type
+						for (int m = 0; m < magmodePerType[t]; m++)// sum up the magnetic moment vectors for all the
+																	// modes for each atom of given type
 						{
-							tempval = magmodeSliderVal[t][m]*irrepmodeSliderVal[magmodeIrrep[t][m]]*masterSliderVal;
-							deltaMag[i] += magmodeVect[t][m][s][a][i]*tempval; // change in magnetic moment
+							tempval = magmodeSliderVal[t][m] * irrepmodeSliderVal[magmodeIrrep[t][m]] * masterSliderVal;
+							deltaMag[i] += magmodeVect[t][m][s][a][i] * tempval; // change in magnetic moment
 						}
-						atomFinalMag[t][s][a][i] = atomInitMag[t][s][a][i]+deltaMag[i]; //total magnetic moment (undistorted + aggregate change).
+						atomFinalMag[t][s][a][i] = atomInitMag[t][s][a][i] + deltaMag[i]; // total magnetic moment
+																							// (undistorted + aggregate
+																							// change).
 //						System.out.println("tsai:"+t+s+a+i+", deltaMag:"+deltaMag[i]);
 					}
 
-					for (int i=0; i<3; i++)
-					{
+					for (int i = 0; i < 3; i++) {
 						deltaRot[i] = 0;
-						for (int m=0; m<rotmodePerType[t]; m++)//sum up the rotational vectors for all the modes for each atom of given type
+						for (int m = 0; m < rotmodePerType[t]; m++)// sum up the rotational vectors for all the modes
+																	// for each atom of given type
 						{
-							tempval = rotmodeSliderVal[t][m]*irrepmodeSliderVal[rotmodeIrrep[t][m]]*masterSliderVal;
-							deltaRot[i] += rotmodeVect[t][m][s][a][i]*tempval; // change in rotation angle
+							tempval = rotmodeSliderVal[t][m] * irrepmodeSliderVal[rotmodeIrrep[t][m]] * masterSliderVal;
+							deltaRot[i] += rotmodeVect[t][m][s][a][i] * tempval; // change in rotation angle
 						}
-						atomFinalRot[t][s][a][i] = atomInitRot[t][s][a][i]+deltaRot[i]; //total rotation angle (undistorted + aggregate change).
+						atomFinalRot[t][s][a][i] = atomInitRot[t][s][a][i] + deltaRot[i]; // total rotation angle
+																							// (undistorted + aggregate
+																							// change).
 					}
 
-					for (int i=0; i<6; i++)
-					{
+					for (int i = 0; i < 6; i++) {
 						deltaEllip[i] = 0;
-						for (int m=0; m<ellipmodePerType[t]; m++)//sum up the ellipsoid vectors for all the modes for each atom of given type
+						for (int m = 0; m < ellipmodePerType[t]; m++)// sum up the ellipsoid vectors for all the modes
+																		// for each atom of given type
 						{
-							tempval = ellipmodeSliderVal[t][m]*irrepmodeSliderVal[ellipmodeIrrep[t][m]]*masterSliderVal;
-							deltaEllip[i] += ellipmodeVect[t][m][s][a][i]*tempval; // change in ellipsoid
+							tempval = ellipmodeSliderVal[t][m] * irrepmodeSliderVal[ellipmodeIrrep[t][m]]
+									* masterSliderVal;
+							deltaEllip[i] += ellipmodeVect[t][m][s][a][i] * tempval; // change in ellipsoid
 //							System.out.println("ellipcheck: "+t+", "+s+", "+a+", "+i+", "+deltaEllip[i]);
 						}
-						atomFinalEllip[t][s][a][i] = atomInitEllip[t][s][a][i]+deltaEllip[i]; //total ellipsoid params (undistorted + aggregate change).
+						atomFinalEllip[t][s][a][i] = atomInitEllip[t][s][a][i] + deltaEllip[i]; // total ellipsoid
+																								// params (undistorted +
+																								// aggregate change).
 					}
 
 //					Determine the "size" of the displacement.
 					Vec.matdotvect(sBasisCart, deltaCoord, tempvec); // displacement in cartesian coords
-					tempdisp = Vec.norm(tempvec); //displacement magnitude in Angstroms
+					tempdisp = Vec.norm(tempvec); // displacement magnitude in Angstroms
 					if (tempdisp > maxdisp)
 						maxdisp = tempdisp;
 
 //					Determine the "size" of the magnetic moment.
 					Vec.matdotvect(sBasisCart, atomFinalMag[t][s][a], tempvec); // magnetic moment in cartesian coords
-					tempmag = Vec.norm(tempvec); //moment magnitude in Angstroms
+					tempmag = Vec.norm(tempvec); // moment magnitude in Angstroms
 					if (tempmag > maxmag)
 						maxmag = tempmag;
 
 //					Determine the "size" of the rotation angle.
 					Vec.matdotvect(sBasisCart, atomFinalRot[t][s][a], tempvec); // rotation in cartesian coords
-					temprot = Vec.norm(tempvec); //rotation in Angstroms
+					temprot = Vec.norm(tempvec); // rotation in Angstroms
 					if (temprot > maxrot)
 						maxrot = temprot;
 
-					avgocc += atomFinalOcc[t][s][a]/numSubAtoms[t][s];
+					avgocc += atomFinalOcc[t][s][a] / numSubAtoms[t][s];
 
 //					Determine the "size" of the ellipsoid.
-					Vec.voigt2matrix(atomFinalEllip[t][s][a],tempmat);
+					Vec.voigt2matrix(atomFinalEllip[t][s][a], tempmat);
 					Vec.matdotmat(sBasisCart, tempmat, tempmat);
 					Vec.matdotmat(tempmat, sBasisCartInverse, tempmat);// ellipsoid in cartesian coords
 					tempellip = 0;
-					for (int i=0; i<3; i++)
-						for (int j=0; j<3; j++)
+					for (int i = 0; i < 3; i++)
+						for (int j = 0; j < 3; j++)
 							tempellip += Math.pow(tempmat[i][j], 2);
 					if (tempellip > maxellip)
 						maxellip = tempellip;
-					
+
 				}
-				subTypeLabel[t][s].setText("      "+subTypeName[t][s]+"  ["+mytoString(maxdisp,2,-4)+", "+mytoString(avgocc,2,-4)+", "+mytoString(maxmag,2,-4)+", "+mytoString(maxrot,2,-4)+"]");
-				subTypeBox[t][s].setText(           subTypeName[t][s]+"  ["+mytoString(maxdisp,2,-4)+", "+mytoString(avgocc,2,-4)+", "+mytoString(maxmag,2,-4)+", "+mytoString(maxrot,2,-4)+"]");
+				subTypeLabel[t][s].setText("      " + subTypeName[t][s] + "  [" + mytoString(maxdisp, 2, -4) + ", "
+						+ mytoString(avgocc, 2, -4) + ", " + mytoString(maxmag, 2, -4) + ", "
+						+ mytoString(maxrot, 2, -4) + "]");
+				subTypeBox[t][s].setText(
+						subTypeName[t][s] + "  [" + mytoString(maxdisp, 2, -4) + ", " + mytoString(avgocc, 2, -4) + ", "
+								+ mytoString(maxmag, 2, -4) + ", " + mytoString(maxrot, 2, -4) + "]");
 			}
 	}
 	

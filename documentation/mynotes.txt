@@ -1,0 +1,14 @@
+***** 
+
+October 2023: Branton stopped developing the applet in 2014.  In 2017, a friend (Manfred Riem) helped him convert the applet to a stand-alone executables (for Windows and MacOSX).  This involved configuring some old computers (Windows and MacOSX), copying the code onto those computers, adding a wrapper layer to the code, and using some sort of Jenkins workflow to prepare the executables.
+
+The code contained here does not include that wrapping layer.
+
+***** JAMA
+
+In the future, we hope to use the JAMA library to do some eigenvector/eigenvalue calculations, but haven't finished this part of the code yet.
+
+To install Jama, download the jama.jar file from http://math.nist.gov/javanumerics/jama/ and place it in the external jre run library (C:\\Program Files (x86)\java\jre7\lib\ext).  Then put "import jama.*.jar" in the java code.
+
+Alternatively, right click on the isodistort project in the navigation pane, choose BuildPath, and Configure Build Path.  Then choose "Add External Jar" and navigate to the jama.jar file.  This will pull the jar into the project and make it available for inclusion.  But you won't be able to move the jar file, because Eclipse remembers its location.
+

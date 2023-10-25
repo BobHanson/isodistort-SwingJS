@@ -1,0 +1,83 @@
+by David Tanner
+
+I will try to explain how Ken Perlin's render package works.
+
+
+Here is the basic code for rendering a sphere:
+
+1	spheres = world.add();
+	
+2	translate (x,y,z);
+
+3	rotateY(angle1);
+	rotateX(angle2);
+	
+4	scale(scaleX, scaleY, scaleZ);
+	
+5	transform (complicated stuff);
+	
+
+Explanation:
+1 Spheres is an instantiation of the Geometry class.  What is a geometry?  A geometry is a shape or
+	collection of shapes.  For example, if we want to make a dumbell we'll need a cylinder
+	shape and two sphere shapes.  We can add these three shapes to a geometry called "dumbell."
+	In this case dumbell becomes a parent geometry and is made up of three children: two spheres
+	and a cylinder.
+
+	"world" is like the grandparent geometry.  To world we will add our parents: atoms, bonds
+	and cells.  Atoms will have children: the individual spheres.  Bonds will an array of shapes
+	(cylinders).  Cells will have children: the 24 cell edges.  Unfortunately, because of the
+	quirks of the render package, we need to instantiate and use these three different geometries
+	in three different ways (explained later).
+
+2 Translate(x,y,z) creates a translation matrix that moves the location of the geometry.
+
+3 the rotations create translation matricies that will rotate the geometry around the respective axes.
+
+4 scale changes the shape of the geometry (again via matrix multiplication) and has the freedom of re-sizing
+	the shape differently in the three directions.
+
+5 transform(): this is the important step.  In steps 2, 3, 4 we have created and multiplied three matrices.
+	In step 1 we gave birth to a shape, a unit shape; for example a sphere of radius 1 or a cylinder 
+	of radius 1 and length 1 both positioned at the origin and sit at a standard orientation.  In the
+	transorm step the render package uses the afore created matrix to distort the unit shape so the
+	resulting geometry is a shape just the right size in just the right place oriented just right.
+	During the transform step we must specify what shape we want our geometry to be and what color.
+
+	In step 1 I said that our three geometries are instantiated in three different ways, I mean they use
+	transform() in three different ways...
+
+Cells:	these are simple.  Cells is a single geometry to which we will add 24 children cylinders.
+	we simply itterate through the above 1-5 cycle 24 times, each time creating a unit cylinder
+	and just the right matrix to manipulate the cylinders.  When all is said and done, Cells is
+	a single shape: if we rotate cells, the whole thing rotates together.  We cannot rotate
+	a single cylinder seperately (properly at least).
+
+		transform(cells.add().cylinder(numCellSides).setMaterial(parentCellMaterial));
+
+
+Bonds:	On the other hand, we want to be able to rotate, move and reshape (length) our bonds
+	individually.  To do this, we make every bond a sepperate geometry and we manipulate
+	then through Bonds[] -an array of geometries.
+
+		transform(bond[b].add().tube(numBondSides).setMaterial(bondMaterial));
+
+
+Atoms:	Atoms are created following Ken Perlin's example.  I don't fully understand it but the bottom
+	line of it is that we can make all the atoms one geometry but retain the ability to move them
+	individually.
+
+		transform (atoms=spheres.add());
+		atoms.add().setMaterial(atomMaterial[t]).add().ball(4);
+
+Now we have rendered all our shapes and they are a single grandparent geometry called world.  We can rotate
+	this geometry, zoom in and out on it and the like.
+
+To manipulate the motion of the atoms and the bonds we do the following:
+
+Atoms:
+
+
+Bonds:
+
+	

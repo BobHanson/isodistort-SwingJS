@@ -13,7 +13,6 @@
 
 package org.byu.isodistort;
 
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Insets;
@@ -25,9 +24,6 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
 import java.text.DecimalFormat;
 
 import javax.swing.ButtonGroup;
@@ -49,13 +45,11 @@ import org.byu.isodistort.render.Vec;
 public class IsoDistortApplet extends RenderApplet {
 	private static final long serialVersionUID = 1L;
 
-	
+	public IsoDistortApplet() {
+		super();
+	}
 	
 // Variables that the user may want to adjust
-	/** False for datafile and True for html file */
-	boolean readMode = false;
-	/** The datafile to use when readMode is false */
-	String whichdatafile = "data/test28.txt";
 	/** Cell-edge tube parameters */
 	int numBondSides = 6, numCellSides = 6, numArrowSides = 8, ballRes = 4;
 	/** Focal length for renderer. */
@@ -70,10 +64,6 @@ public class IsoDistortApplet extends RenderApplet {
 	double cellMultiplier = 0.25, momentMultiplier = 0.4, rotationMultiplier = 0.35;
 
 //	Other global variables.
-	/** An instance of the LoadVariables class that holds all the input data */
-	CommonStuff rd;
-	/** A string containing all of the input data */
-	String dataString = "";
 	/** Initially show bonds or not */
 	boolean showBonds0 = true, showAtoms0 = true, showCells0 = true, showAxes0 = false;
 	/** Currently show bonds or not */
@@ -149,15 +139,13 @@ public class IsoDistortApplet extends RenderApplet {
 	JRadioButton nButton, xButton, yButton, zButton, zoomButton;
 	/** Buttons to use super or parent cell for view vectors */
 	JRadioButton superHKL, superUVW, parentHKL, parentUVW;
-	/** Radio button group, so only one can be selected */
-	ButtonGroup cellButtons, xyzButtons;
 	/** Button for inputting the view direction */
-	JButton applyView = new JButton("Apply View");
+	JButton applyView;
 	/** Button for saving the current applet image */
-	JButton saveImage = new JButton("Save Image");
+	JButton saveImage;
 	/** Text fields for inputting viewing angles */
-	JTextField uView = new JTextField(3), vView = new JTextField(3), wView = new JTextField(3);
-
+	JTextField uView, vView, wView;
+	
 	/**
 	 * 222222222222222222222222222222222222222222222222222222222222222222222222222222
 	 * 2 2 2 In the second section we initialize everything on the applet that we
@@ -166,10 +154,9 @@ public class IsoDistortApplet extends RenderApplet {
 	 */
 
 	public void initialize() {
-		setTimer();
 		this.addKeyListener(new keyinputListener());
 		readFile();
-		rd = new CommonStuff(dataString, false);
+		rd = new CommonStuff(this, dataString, false);
 		initMaterials();
 		spheres = world.add();
 		bonds = world.add();
@@ -221,6 +208,7 @@ public class IsoDistortApplet extends RenderApplet {
 		renderBonds();// add the bonds to the renderer
 		renderCells();// add the cells to the renderer
 		renderAxes();// add the axes to the renderer
+		setTimer();
 	}
 	
 	/**
@@ -235,62 +223,64 @@ public class IsoDistortApplet extends RenderApplet {
 	boolean isFocused = true; // is the Applet in focus? If not, stop updating the display.
 	boolean viewFocused = false; // are the viewDir fields being accessed?
 
-	public void start() {
-		this.setVisible(true);
-		this.requestFocus();
-		this.requestFocusInWindow();
-		this.requestFocus();
-		super.start();
+	protected void runImpl() {
+		if (!isAnimate && !spin && --initializing < 0)
+			return;
+		updateDisplay();
+		if (initializing == 0 && !isAnimate && !spin)
+			stop();
 	}
-	/**
-	 * Renderer thread.
-	 */
-	public void run() {
 
-		if (isRunning) {
-			boolean v = viewFocused;
-			/** @j2sNative
-			 * v = true; 
-			 */
-			{}
-			isFocused = v || this.hasFocus();
-			// BH: SwingJS isn't reporting this properly
-			
-			// Stops display updates not in focus.
-			// Includes the applet focus and the focusable viewDir fields
-			// which would otherwise stop the display when accessed.
-
-			if (rd.isChanged) {
-				isRecalc = true;
-				rd.isChanged = false;
-			}
-
-			if (isFocused) // if in focus
-			{
-				if (isAnimate) {
-					animPhase += 2 * Math.PI / (5 * frameRate);
-					animPhase = animPhase % (2 * Math.PI);
-					animAmp = Math.pow(Math.sin(animPhase), 2);
-					rd.masterSlider.setValue((int) Math.round(animAmp * rd.sliderMaxVal));
-					isRecalc = true;
-				}
-
-				if (isRecalcMat) {
-					recalcMaterials();
-					isRecalcMat = false;
-				}
-				if (isRecalc) {
-					recalcABC();
-					renderAtoms();
-					renderBonds();
-					renderCells();
-					renderAxes();
-					isRecalc = false;
-				}
-				moreRunStuff();
-			}
-
+	private boolean isAdjusting = false;
+	
+	public void updateDisplay() {
+		if (isAdjusting)
+			return;
+		isAdjusting = true;
+		boolean v = viewFocused;
+		/**
+		 * @j2sNative v = true;
+		 */
+		{
 		}
+		isFocused = v || this.hasFocus();
+		// BH: SwingJS isn't reporting this properly
+
+		// Stops display updates not in focus.
+		// Includes the applet focus and the focusable viewDir fields
+		// which would otherwise stop the display when accessed.
+
+		if (rd.isChanged) {
+			isRecalc = true;
+			rd.isChanged = false;
+		}
+
+		if (isFocused) // if in focus
+		{
+			if (isAnimate) {
+				animPhase += 2 * Math.PI / (5 * frameRate);
+				animPhase = animPhase % (2 * Math.PI);
+				animAmp = Math.pow(Math.sin(animPhase), 2);
+				rd.masterSlider.setValue((int) Math.round(animAmp * rd.sliderMaxVal));
+				isRecalc = true;
+			}
+
+			if (isRecalcMat) {
+				recalcMaterials();
+				isRecalcMat = false;
+			}
+			if (isRecalc) {
+				recalcABC();
+				renderAtoms();
+				renderBonds();
+				renderCells();
+				renderAxes();
+				isRecalc = false;
+			}
+			moreRunStuff();
+		}
+		isAdjusting = false;
+		repaint();
 	}
 
 	/**
@@ -370,12 +360,12 @@ public class IsoDistortApplet extends RenderApplet {
 	 * from the render package
 	 */
 	private void initMaterials() {
-		parentCellMaterial = new Material();
-		superCellMaterial = new Material();
-		bondMaterial = new Material();
-		xMaterial = new Material();
-		yMaterial = new Material();
-		zMaterial = new Material();
+		parentCellMaterial = new Material(renderer);
+		superCellMaterial = new Material(renderer);
+		bondMaterial = new Material(renderer);
+		xMaterial = new Material(renderer);
+		yMaterial = new Material(renderer);
+		zMaterial = new Material(renderer);
 		subMaterial = new Material[rd.numTypes][];
 
 		// Create the subMaterial array;
@@ -383,7 +373,7 @@ public class IsoDistortApplet extends RenderApplet {
 		{
 			subMaterial[t] = new Material[rd.numSubTypes[t]];
 			for (int s = 0; s < rd.numSubTypes[t]; s++)// iterate over number-of-subtypes
-				subMaterial[t][s] = new Material();
+				subMaterial[t][s] = new Material(renderer);
 		}
 	}
 
@@ -912,6 +902,7 @@ public class IsoDistortApplet extends RenderApplet {
 				centerImage();
 				break;
 			}
+			updateDisplay();
 		}
 
 		private void centerImage() {
@@ -934,6 +925,7 @@ public class IsoDistortApplet extends RenderApplet {
 	private class focusListener implements FocusListener {
 		public void focusGained(FocusEvent event) {
 			viewFocused = true; // Record the fact that we have focus.
+			updateDisplay();
 		}
 
 		public void focusLost(FocusEvent event) {
@@ -952,6 +944,11 @@ public class IsoDistortApplet extends RenderApplet {
 			isSimpleColor = colorBox.isSelected();
 			isAnimate = animBox.isSelected();
 			isRecalcMat = true;
+			if (isAnimate || spin) {
+				start();
+			} else {
+				updateDisplay();
+			}
 		}
 	}
 
@@ -987,6 +984,7 @@ public class IsoDistortApplet extends RenderApplet {
 				viewType = 3;
 			if (event.getSource() == parentUVW)
 				viewType = 4;
+			updateDisplay();
 
 		}
 	}
@@ -998,6 +996,7 @@ public class IsoDistortApplet extends RenderApplet {
 				resetViewDirection();
 			if (event.getSource() == saveImage)
 				ImageSaver.saveImageFile(im, IsoDistortApplet.this);
+			updateDisplay();
 		}
 	}
 
@@ -1013,6 +1012,9 @@ public class IsoDistortApplet extends RenderApplet {
 	 */
 	private void initView() {
 		setSize(rd.appletWidth, rd.appletHeight);// the total area of the applet (e.g. 1024x512)
+		
+		// BH: On a page, an applet dimension is not settable
+		
 		setLayout(new BorderLayout());// allows for adding slider panel to the side (east or west) of rendering area
 		setBackground(Color.WHITE);
 		rd.initPanels();
@@ -1020,178 +1022,63 @@ public class IsoDistortApplet extends RenderApplet {
 		add(rd.controlPane, BorderLayout.SOUTH);// add to south of Applet
 		add(rd.scrollPane, BorderLayout.EAST);// add to east of Applet
 		setRenderArea(rd.renderingWidth, rd.renderingHeight);// the rendering area of the applet (e.g. 512x512)
+		updateDisplay();
 	}
 
 	/**
 	 * creates the components of the control panel
 	 */
 	private void buildControls() {
-		aBox = new JCheckBox("Atoms", showAtoms);
-		aBox.setHorizontalAlignment(JCheckBox.LEFT);
-		aBox.setVerticalAlignment(JCheckBox.CENTER);
-		aBox.setFocusable(false);
-		aBox.setVisible(true);
-		aBox.setBackground(Color.WHITE);
-		aBox.setForeground(Color.BLACK);
-		aBox.addItemListener(new checkboxListener());
-		bBox = new JCheckBox("Bonds", showBonds);
-		bBox.setHorizontalAlignment(JCheckBox.LEFT);
-		bBox.setVerticalAlignment(JCheckBox.CENTER);
-		bBox.setFocusable(false);
-		bBox.setVisible(true);
-		bBox.setBackground(Color.WHITE);
-		bBox.setForeground(Color.BLACK);
-		bBox.addItemListener(new checkboxListener());
-		cBox = new JCheckBox("Cells", showCells);
-		cBox.setHorizontalAlignment(JCheckBox.LEFT);
-		cBox.setVerticalAlignment(JCheckBox.CENTER);
-		cBox.setFocusable(false);
-		cBox.setVisible(true);
-		cBox.setBackground(Color.WHITE);
-		cBox.setForeground(Color.BLACK);
-		cBox.addItemListener(new checkboxListener());
-		axesBox = new JCheckBox("Axes", showAxes);
-		axesBox.setHorizontalAlignment(JCheckBox.LEFT);
-		axesBox.setVerticalAlignment(JCheckBox.CENTER);
-		axesBox.setFocusable(false);
-		axesBox.setVisible(true);
-		axesBox.setBackground(Color.WHITE);
-		axesBox.setForeground(Color.BLACK);
-		axesBox.addItemListener(new checkboxListener());
-		animBox = new JCheckBox("Animate", false);
-		animBox.setHorizontalAlignment(JCheckBox.LEFT);
-		animBox.setVerticalAlignment(JCheckBox.CENTER);
-		animBox.setFocusable(false);
-		animBox.setVisible(true);
-		animBox.setBackground(Color.WHITE);
-		animBox.setForeground(Color.BLACK);
-		animBox.addItemListener(new checkboxListener());
-		spinBox = new JCheckBox("Spin", false);
-		spinBox.setHorizontalAlignment(JCheckBox.LEFT);
-		spinBox.setVerticalAlignment(JCheckBox.CENTER);
-		spinBox.setFocusable(false);
-		spinBox.setVisible(true);
-		spinBox.setBackground(Color.WHITE);
-		spinBox.setForeground(Color.BLACK);
-		spinBox.addItemListener(new checkboxListener());
-		colorBox = new JCheckBox("Color", false);
-		colorBox.setHorizontalAlignment(JCheckBox.LEFT);
-		colorBox.setVerticalAlignment(JCheckBox.CENTER);
-		colorBox.setFocusable(false);
+		
+		aBox = newJCheckBox("Atoms", showAtoms);
+		bBox = newJCheckBox("Bonds", showBonds);
+		cBox = newJCheckBox("Cells", showCells);
+		axesBox = newJCheckBox("Axes", showAxes);
+		animBox = newJCheckBox("Animate", false);
+		spinBox = newJCheckBox("Spin", false);
+		colorBox = newJCheckBox("Color", false);
 		colorBox.setVisible(rd.needSimpleColor);
-		colorBox.setBackground(Color.WHITE);
-		colorBox.setForeground(Color.BLACK);
-		colorBox.addItemListener(new checkboxListener());
+		
+		ButtonGroup xyzButtons = new ButtonGroup();
+		nButton = newJRadioButton("Normal", true, xyzButtons);
+		xButton = newJRadioButton("Xrot", false, xyzButtons);
+		yButton = newJRadioButton("Yrot", false, xyzButtons);
+		zButton = newJRadioButton("Zrot", false, xyzButtons);
+		zoomButton = newJRadioButton("Zoom", false, xyzButtons);
 
-		nButton = new JRadioButton("Normal", true);
-		nButton.setHorizontalAlignment(JRadioButton.LEFT);
-		nButton.setVerticalAlignment(JRadioButton.CENTER);
-		nButton.setFocusable(false);
-		nButton.setBackground(Color.WHITE);
-		nButton.setForeground(Color.BLACK);
-		nButton.setVisible(true);
-		nButton.setBorderPainted(false);
-		nButton.addItemListener(new buttonListener());
-		xButton = new JRadioButton("Xrot", false);
-		xButton.setHorizontalAlignment(JRadioButton.LEFT);
-		xButton.setVerticalAlignment(JRadioButton.CENTER);
-		xButton.setFocusable(false);
-		xButton.setBackground(Color.WHITE);
-		xButton.setForeground(Color.BLACK);
-		xButton.setVisible(true);
-		xButton.setBorderPainted(false);
-		xButton.addItemListener(new buttonListener());
-		yButton = new JRadioButton("Yrot", false);
-		yButton.setHorizontalAlignment(JRadioButton.LEFT);
-		yButton.setVerticalAlignment(JRadioButton.CENTER);
-		yButton.setFocusable(false);
-		yButton.setBackground(Color.WHITE);
-		yButton.setForeground(Color.BLACK);
-		yButton.setVisible(true);
-		yButton.setBorderPainted(false);
-		yButton.addItemListener(new buttonListener());
-		zButton = new JRadioButton("Zrot", false);
-		zButton.setHorizontalAlignment(JRadioButton.LEFT);
-		zButton.setVerticalAlignment(JRadioButton.CENTER);
-		zButton.setFocusable(false);
-		zButton.setBackground(Color.WHITE);
-		zButton.setForeground(Color.BLACK);
-		zButton.setVisible(true);
-		zButton.setBorderPainted(false);
-		zButton.addItemListener(new buttonListener());
-		zoomButton = new JRadioButton("Zoom", false);
-		zoomButton.setHorizontalAlignment(JRadioButton.LEFT);
-		zoomButton.setVerticalAlignment(JRadioButton.CENTER);
-		zoomButton.setFocusable(false);
-		zoomButton.setBackground(Color.WHITE);
-		zoomButton.setForeground(Color.BLACK);
-		zoomButton.setVisible(true);
-		zoomButton.setBorderPainted(false);
-		zoomButton.addItemListener(new buttonListener());
-		xyzButtons = new ButtonGroup();
-		xyzButtons.add(nButton);
-		xyzButtons.add(xButton);
-		xyzButtons.add(yButton);
-		xyzButtons.add(zButton);
-		xyzButtons.add(zoomButton);
-
-		superHKL = new JRadioButton("SupHKL", true); // initial view type
 		viewType = 1; // initial view type
-		superHKL.setFocusable(false);
-		superHKL.setHorizontalAlignment(JRadioButton.LEFT);
-		superHKL.setVerticalAlignment(JRadioButton.CENTER);
-		superHKL.setBackground(Color.WHITE);
-		superHKL.setVisible(true);
-		superHKL.setBorderPainted(false);
-		superHKL.addItemListener(new buttonListener());
-		superUVW = new JRadioButton("SupUVW", false);
-		superUVW.setFocusable(false);
-		superUVW.setHorizontalAlignment(JRadioButton.LEFT);
-		superUVW.setVerticalAlignment(JRadioButton.CENTER);
-		superUVW.setBackground(Color.WHITE);
-		superUVW.setVisible(true);
-		superUVW.setBorderPainted(false);
-		superUVW.addItemListener(new buttonListener());
-		parentHKL = new JRadioButton("ParHKL", false);
-		parentHKL.setFocusable(false);
-		parentHKL.setHorizontalAlignment(JRadioButton.LEFT);
-		parentHKL.setVerticalAlignment(JRadioButton.CENTER);
-		parentHKL.setBackground(Color.WHITE);
-		parentHKL.setVisible(true);
-		parentHKL.setBorderPainted(false);
-		parentHKL.addItemListener(new buttonListener());
-		parentUVW = new JRadioButton("ParUVW", false);
-		parentUVW.setFocusable(false);
-		parentUVW.setHorizontalAlignment(JRadioButton.LEFT);
-		parentUVW.setVerticalAlignment(JRadioButton.CENTER);
-		parentUVW.setBackground(Color.WHITE);
-		parentUVW.setVisible(true);
-		parentUVW.setBorderPainted(false);
-		parentUVW.addItemListener(new buttonListener());
-		cellButtons = new ButtonGroup();
-		cellButtons.add(superHKL);
-		cellButtons.add(superUVW);
-		cellButtons.add(parentHKL);
-		cellButtons.add(parentUVW);
 
-		JLabel uvwLabel = new JLabel("                          Direction: ");
+		ButtonGroup cellButtons = new ButtonGroup();
+		superHKL = newJRadioButton("SupHKL", true, cellButtons); // initial view type
+		superUVW = newJRadioButton("SupUVW", false, cellButtons);
+		parentHKL = newJRadioButton("ParHKL", false, cellButtons);
+		parentUVW = newJRadioButton("ParUVW", false, cellButtons);
+
+		uView = new JTextField(3);
 		uView.setText("0");
 		uView.setMargin(new Insets(-2, 0, -1, -10));
 		uView.addFocusListener(new focusListener());
+		
+		vView = new JTextField(3); 
 		vView.setText("0");
 		vView.setMargin(new Insets(-2, 0, -1, -10));
 		vView.addFocusListener(new focusListener());
+
+		wView = new JTextField(3);
 		wView.setText("1");
 		wView.setMargin(new Insets(-2, 0, -1, -10));
 		wView.addFocusListener(new focusListener());
+
+		applyView = new JButton("Apply View");
 		applyView.setFocusable(false);
-		applyView.setMargin(new Insets(-3, 0, -2, 0));
+		applyView.setMargin(new Insets(-3, 3, -2, 4));
 		applyView.setHorizontalAlignment(JButton.LEFT);
 		applyView.setVerticalAlignment(JButton.CENTER);
 		applyView.addActionListener(new viewListener());
 
+		saveImage = new JButton("Save Image");		 
 		saveImage.setFocusable(false);
-		saveImage.setMargin(new Insets(-3, 0, -2, 0));
+		saveImage.setMargin(new Insets(-3, 3, -2, 4));
 		saveImage.setHorizontalAlignment(JButton.LEFT);
 		saveImage.setVerticalAlignment(JButton.CENTER);
 		saveImage.addActionListener(new viewListener());
@@ -1218,7 +1105,7 @@ public class IsoDistortApplet extends RenderApplet {
 		botControlPanel.add(superUVW);
 		botControlPanel.add(parentHKL);
 		botControlPanel.add(parentUVW);
-		botControlPanel.add(uvwLabel);
+		botControlPanel.add(new JLabel("                          Direction: "));
 		botControlPanel.add(uView);
 		botControlPanel.add(vView);
 		botControlPanel.add(wView);
@@ -1235,31 +1122,31 @@ public class IsoDistortApplet extends RenderApplet {
 				rd.subTypeBox[t][s].addItemListener(new checkboxListener());
 	}
 
-	/**
-	 * This data reader has two modes of operation. For data files, it uses a
-	 * buffered reader to get the data into a single string. The alternative is to
-	 * read a single-string data sequence directly from the html file that calls the
-	 * applet (injected as isoData). The LoadVariables class then has a method that
-	 * parses this string.
-	 */
-	private void readFile() {
-		if (readMode)
-			dataString = getParameter("isoData");
-		else {
-			try {
-				String path = IsoDistortApplet.class.getName();
-				path = path.substring(0, path.lastIndexOf('.') + 1).replace('.','/');
-				BufferedReader br = new BufferedReader(new FileReader(path + whichdatafile));// this reads the data
-				dataString = br.readLine() + "\n";// scrap the first data line of text
-				while (br.ready()) // previously used `for (int i=1;br.ready();i++)
-					dataString += br.readLine() + "\n";
-				br.close();
-			} // close try
-			catch (IOException exception) {
-				exception.printStackTrace();
-				System.out.println("Oops. File not found.");
-			}
-		}
+	private JRadioButton newJRadioButton(String label, boolean selected, ButtonGroup g) {
+		JRadioButton b = new JRadioButton(label, selected);
+		b.setHorizontalAlignment(JRadioButton.LEFT);
+		b.setVerticalAlignment(JRadioButton.CENTER);
+		b.setFocusable(false);
+		b.setBackground(Color.WHITE);
+		b.setForeground(Color.BLACK);
+		b.setVisible(true);
+		b.setBorderPainted(false);
+		b.addItemListener(new buttonListener());
+		g.add(b);
+		return b;
 	}
+
+	private JCheckBox newJCheckBox(String label, boolean selected) {
+		JCheckBox cb = new JCheckBox(label, selected);
+		cb.setHorizontalAlignment(JCheckBox.LEFT);
+		cb.setVerticalAlignment(JCheckBox.CENTER);
+		cb.setFocusable(false);
+		cb.setVisible(true);
+		cb.setBackground(Color.WHITE);
+		cb.setForeground(Color.BLACK);
+		cb.addItemListener(new checkboxListener());
+		return cb;
+	}
+
 } // end isoDistortApplet.class
 

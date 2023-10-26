@@ -15,17 +15,24 @@ import javax.swing.Timer;
  * properties of material: diffuse light, specular light, and ambient light.
  * Holds information about transparency and whether the material is double
  * sided.
- * 
+ *
  * @author Ken Perlin 2001
  */
 public class Material implements Runnable {
 
-	public Material() {
+	private Renderer renderer;
+
+	public Material(Renderer renderer) {
+		this.renderer = renderer;
 	}
 
 	private Timer timer;
 
 	private void setTimer() {
+		if (timer != null) {
+			timer.stop();
+			timer = null;
+		}
 		if (timer == null) {
 			timer = new Timer(20, new ActionListener() {
 
@@ -39,11 +46,11 @@ public class Material implements Runnable {
 		}
 	}
 
-	private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+	String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 	/**
-	 * Flag determining wheter to precompute and store color tables for direct look
-	 * up intead of on the fly computation.
+	 * Flag determining whether to precompute and store color tables for direct look
+	 * up instead of on the fly computation.
 	 */
 	public boolean tableMode = true;
 
@@ -508,12 +515,12 @@ public class Material implements Runnable {
 		int chunk = 0;
 		if (!stopped) {
 
-			if (tableMode && startedBackgroundCaching && !Renderer.isDragging()) {
+			if (tableMode && startedBackgroundCaching && !renderer.isDragging()) {
 
 				for (chunk = 0; chunk < 500; chunk++) {
 
 					if (table[tableIndex] == 0) {
-						Renderer.renderVertex(tableIndex, this);
+						renderer.renderVertex(tableIndex, this);
 					}
 
 					tableIndex++;

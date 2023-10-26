@@ -3,19 +3,15 @@
 
 package org.byu.isodistort.render;
 
-import java.applet.Applet;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Image;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.MemoryImageSource;
 
-import javax.swing.Timer;
-
+import org.byu.isodistort.ISOApplet;
 
 /**
  * Provides an applet interface to the {@link Renderer}. It also implements
@@ -26,10 +22,15 @@ import javax.swing.Timer;
  * @author Ken Perlin 2001
  */
 
-public abstract class RenderApplet extends Applet implements Runnable
+public abstract class RenderApplet extends ISOApplet
 // APS (April 2009): edits thanks to: http://www.dgp.toronto.edu/~mjmcguff/learn/java/04-mouseInput/
-{
+		implements MouseListener, MouseMotionListener {
+
 	private static final long serialVersionUID = 1L;
+
+	
+	abstract protected void initialize();
+
 
 	/** restabit rests the thread for the indicated number of milliseconds. */
 	int restabit = 10;
@@ -46,7 +47,7 @@ public abstract class RenderApplet extends Applet implements Runnable
 		fov = FOV;
 	}
 
-	private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+	public String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 	// --- PUBLIC DATA FIELDS
 
@@ -282,8 +283,8 @@ public abstract class RenderApplet extends Applet implements Runnable
 	 * @see #initialize()
 	 */
 	public void init() {
-		this.addMouseListener(new mouseclickListener());
-		this.addMouseMotionListener(new mousedragListener());
+		addMouseListener(this);
+		addMouseMotionListener(this);
 		W = renderAreaX;
 		H = renderAreaY;
 		renderer = new Renderer();
@@ -301,60 +302,16 @@ public abstract class RenderApplet extends Applet implements Runnable
 	}
 
 	/**
-	 * Override this to initialize the application program.
-	 */
-	public void initialize() {
-		/** the method initialize() in the crystal Applet defines this method */
-	}
-
-	/**
-	 * Starts the renderer thread.
-	 */
-
-	protected boolean isRunning; // is the Applet running?
-
-	private Timer timer;
-
-	protected void setTimer() {
-		if (timer == null) {
-			timer = new Timer(restabit, new ActionListener() {
-
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					run();
-				}
-
-			});
-			timer.setRepeats(true);
-		}
-	}
-
-	public void start() {
-		setTimer();
-		isRunning = true;
-		timer.start();
-	}
-
-	/**
-	 * Stops the renderer thread.
-	 */
-	public void stop() {
-		if (timer != null) {
-			isRunning = false;
-		}
-		timer = null;
-	}
-
-	/**
 	 * Euler angles for camera positioning (horizontal and vertical view rotation).
 	 */
 	public double theta = 0;
 	public double phi = 0;
 	public double sigma = 0;
 
-	public synchronized void moreRunStuff() {
+	protected synchronized void moreRunStuff() {
 		// LET THE APPLICATION PROGRAMMER MOVE THINGS INTO PLACE
 		identity(); // APPLIC. MATRIX STARTS UNTRANSFORMED
+		
 		renderer.rotateView(theta, phi, sigma);
 
 		if (!spin)
@@ -369,7 +326,6 @@ public abstract class RenderApplet extends Applet implements Runnable
 
 		// WRITE RESULTS TO THE SCREEN
 		mis.newPixels(0, 0, W, H, true);
-		repaint();
 	}
 
 	/**
@@ -454,110 +410,108 @@ public abstract class RenderApplet extends Applet implements Runnable
 	 */
 	public boolean spin = false; // Branton Campbell
 
-	protected class mouseclickListener implements MouseListener {
-		public void mouseClicked(MouseEvent e) {
-		}
-
-		public void mouseEntered(MouseEvent e) {
-		}
-
-		public void mouseExited(MouseEvent e) {
-		}
-
-		public void mousePressed(MouseEvent e) {
-			int x = e.getX();
-			int y = e.getY();
-			Renderer.setDragging(true);
-			mx = x;
-			my = y;
-		}
-
-		public void mouseReleased(MouseEvent e) {
-			Renderer.setDragging(false);
-		}
+	public void mouseClicked(MouseEvent e) {
 	}
 
-	protected class mousedragListener implements MouseMotionListener {
-		public void mouseMoved(MouseEvent e) {
-		}
+	public void mouseEntered(MouseEvent e) {
+	}
 
-		public void mouseDragged(MouseEvent e) {
-			int x = e.getX();
-			int y = e.getY();
-			// Compare the int representing which buttons are down
-			// with the representation of button 1 being down
-			if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) != 0) {
+	public void mouseExited(MouseEvent e) {
+	}
 
-				double spinrate;
-				if (spin)
-					spinrate = 0.0003;
-				else
-					spinrate = 0.006;
-				if (Renderer.isDragging()) {
-					switch (rotAxis) {
-					case 0:
-						phi += spinrate * (double) (y - my); // VERTICAL VIEW ROTATION
-						theta += spinrate * (double) (x - mx); // VERTICAL VIEW ROTATION
-						sigma = 0;
-						break;
-					case 1:
-						phi += spinrate * (double) (y - my);
-						theta = 0;
-						sigma = 0;
-						break;
-					case 2:
-						phi = 0;
-						theta += spinrate * (double) (x - mx);
-						sigma = 0;
-						break;
-					case 3:
-						phi = 0;
-						theta = 0;
-						sigma += -spinrate * (double) ((x - mx) * (256 - y) - (y - my) * (256 - x))
-								/ (double) (1 + Math.sqrt((256 - x) * (256 - x) + (256 - y) * (256 - y)));
-						break;
-					case 4:
-						setFOV(fov = fov * (1 + (y - my) * 0.004));// y-direction motion changes field of view (zoom).
-																	// -David Tanner
-						phi = 0;
-						theta = 0;
-						sigma = 0;
-						break;
-					}
-					mx = x;
-					my = y;
+	public void mousePressed(MouseEvent e) {
+		// necessary for SwingJS if mouse has cliked on the page outside of applet
+		requestFocus();
+		int x = e.getX();
+		int y = e.getY();
+		renderer.setDragging(true);
+		mx = x;
+		my = y;
+	}
+
+	public void mouseReleased(MouseEvent e) {
+		renderer.setDragging(false);
+	}
+
+	public void mouseMoved(MouseEvent e) {
+	}
+
+	public void mouseDragged(MouseEvent e) {
+		int x = e.getX();
+		int y = e.getY();
+		// Compare the int representing which buttons are down
+		// with the representation of button 1 being down
+		if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) != 0) {
+
+			double spinrate;
+			if (spin)
+				spinrate = 0.0003;
+			else
+				spinrate = 0.006;
+			if (renderer.isDragging()) {
+				switch (rotAxis) {
+				case 0:
+					phi += spinrate * (double) (y - my); // VERTICAL VIEW ROTATION
+					theta += spinrate * (double) (x - mx); // VERTICAL VIEW ROTATION
+					sigma = 0;
+					break;
+				case 1:
+					phi += spinrate * (double) (y - my);
+					theta = 0;
+					sigma = 0;
+					break;
+				case 2:
+					phi = 0;
+					theta += spinrate * (double) (x - mx);
+					sigma = 0;
+					break;
+				case 3:
+					phi = 0;
+					theta = 0;
+					sigma += -spinrate * (double) ((x - mx) * (256 - y) - (y - my) * (256 - x))
+							/ (double) (1 + Math.sqrt((256 - x) * (256 - x) + (256 - y) * (256 - y)));
+					break;
+				case 4:
+					setFOV(fov = fov * (1 + (y - my) * 0.004));// y-direction motion changes field of view (zoom).
+																// -David Tanner
+					phi = 0;
+					theta = 0;
+					sigma = 0;
+					break;
 				}
-			}
-			// If we want this to be only at right click, then
-			// we would need to check e.getModifiers with
-			// MouseEvent.BUTTON2_MASK or MouseEvent.BUTTON3_MASK
-			else {
-				theta = phi = sigma = 0;
-
-				double shiftRate = 0.01 * fov;
-				double shiftX = shiftRate * (x - mx);
-				double shiftY = shiftRate * (y - my);
-
 				mx = x;
 				my = y;
-
-				push();
-				identity();
-				xOff += invert * shiftX * renderer.getCamera().get(0, 0);
-				yOff += invert * shiftX * renderer.getCamera().get(0, 1);
-				zOff += invert * shiftX * renderer.getCamera().get(0, 2);
-
-				xOff -= invert * shiftY * renderer.getCamera().get(1, 0);
-				yOff -= invert * shiftY * renderer.getCamera().get(1, 1);
-				zOff -= invert * shiftY * renderer.getCamera().get(1, 2);
-				translate(xOff, yOff, zOff);
-				for (int i = 0; i < 16; i++)
-					if (world.child(i) != null)
-						transform(world.child(i));
-				pop();
 			}
 		}
-		
+		// If we want this to be only at right click, then
+		// we would need to check e.getModifiers with
+		// MouseEvent.BUTTON2_MASK or MouseEvent.BUTTON3_MASK
+		else {
+			theta = phi = sigma = 0;
+
+			double shiftRate = 0.01 * fov;
+			double shiftX = shiftRate * (x - mx);
+			double shiftY = shiftRate * (y - my);
+
+			mx = x;
+			my = y;
+
+			push();
+			identity();
+			xOff += invert * shiftX * renderer.getCamera().get(0, 0);
+			yOff += invert * shiftX * renderer.getCamera().get(0, 1);
+			zOff += invert * shiftX * renderer.getCamera().get(0, 2);
+
+			xOff -= invert * shiftY * renderer.getCamera().get(1, 0);
+			yOff -= invert * shiftY * renderer.getCamera().get(1, 1);
+			zOff -= invert * shiftY * renderer.getCamera().get(1, 2);
+			translate(xOff, yOff, zOff);
+			for (int i = 0; i < 16; i++)
+				if (world.child(i) != null)
+					transform(world.child(i));
+			pop();
+		}
+		updateDisplay();
 	}
 
 	// --- PRIVATE METHODS
@@ -627,5 +581,8 @@ public abstract class RenderApplet extends Applet implements Runnable
 	private Matrix matrix[] = new Matrix[10]; // THE MATRIX STACK
 	private int top = 0; // MATRIX STACK POINTER
 
+	
+	public void repaint() {
+		super.repaint();
+	}
 }
-

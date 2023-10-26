@@ -28,7 +28,7 @@ public abstract class ISOApplet extends Applet implements Runnable {
 	private static final long serialVersionUID = -4185666763090053134L;
 
 	/**restabit rests the thread for the indicated number of milliseconds.*/
-	int restabit = 10;
+	int restabit = (/**@j2sNative true ? 50 :*/ 100);
 
 	protected boolean isRunning;
 
@@ -118,6 +118,7 @@ public abstract class ISOApplet extends Applet implements Runnable {
 	public void stop() {
 		if (timer != null) {
 			isRunning = false;
+			timer.stop();
 		}
 		timer = null;
 	}

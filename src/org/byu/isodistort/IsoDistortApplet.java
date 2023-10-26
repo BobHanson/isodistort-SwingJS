@@ -224,14 +224,19 @@ public class IsoDistortApplet extends RenderApplet {
 	boolean viewFocused = false; // are the viewDir fields being accessed?
 
 	protected void runImpl() {
-		if (!isAnimate && --initializing < 0)
+		if (!isAnimate && !spin && --initializing < 0)
 			return;
 		updateDisplay();
-		if (initializing == 0)
+		if (initializing == 0 && !isAnimate && !spin)
 			stop();
 	}
 
+	private boolean isAdjusting = false;
+	
 	public void updateDisplay() {
+		if (isAdjusting)
+			return;
+		isAdjusting = true;
 		boolean v = viewFocused;
 		/**
 		 * @j2sNative v = true;
@@ -274,6 +279,7 @@ public class IsoDistortApplet extends RenderApplet {
 			}
 			moreRunStuff();
 		}
+		isAdjusting = false;
 		repaint();
 	}
 
@@ -938,7 +944,11 @@ public class IsoDistortApplet extends RenderApplet {
 			isSimpleColor = colorBox.isSelected();
 			isAnimate = animBox.isSelected();
 			isRecalcMat = true;
-			updateDisplay();
+			if (isAnimate || spin) {
+				start();
+			} else {
+				updateDisplay();
+			}
 		}
 	}
 

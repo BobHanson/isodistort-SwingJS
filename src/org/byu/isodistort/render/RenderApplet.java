@@ -311,6 +311,7 @@ public abstract class RenderApplet extends ISOApplet
 	protected synchronized void moreRunStuff() {
 		// LET THE APPLICATION PROGRAMMER MOVE THINGS INTO PLACE
 		identity(); // APPLIC. MATRIX STARTS UNTRANSFORMED
+		
 		renderer.rotateView(theta, phi, sigma);
 
 		if (!spin)

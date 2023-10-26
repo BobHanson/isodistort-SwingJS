@@ -8,7 +8,7 @@ package org.byu.isodistort.render;
 */
 
 public class ImagePyramid {
-private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 /** Creates a multi-image maps from an image buffer
  * @param base the original image 

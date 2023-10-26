@@ -17,7 +17,7 @@ add the u,v components to the vertices.
 */
 
 public class Geometry {
-private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 /**
    Stores the shape's material properties.

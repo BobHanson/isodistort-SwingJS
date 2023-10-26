@@ -19,6 +19,7 @@ import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import org.byu.isodistort.ISOApplet;
 import org.byu.isodistort.render.Vec;
 
 public class CommonStuff implements ChangeListener
@@ -318,9 +319,11 @@ public class CommonStuff implements ChangeListener
 	private StringTokenizer getData;
 	private boolean diffraction;
 
+	private ISOApplet applet;
 
-	public CommonStuff(String dataString, boolean isDiffraction)
-	{
+
+	public CommonStuff(ISOApplet applet, String dataString, boolean isDiffraction)
+	{		this.applet = applet;
 			getData = new StringTokenizer(dataString);//chop the string into separate numbers and string chunks
 			diffraction = isDiffraction;
 			parseDataTags();
@@ -343,6 +346,7 @@ public class CommonStuff implements ChangeListener
 	public void stateChanged(ChangeEvent e)//called when a slider bar is moved
 	{
 		isChanged = true;
+		applet.updateDisplay();
 	}	
 
 	/**
@@ -2494,6 +2498,7 @@ public class CommonStuff implements ChangeListener
 		}
 		return s;
 	}	
+
 
 
 } // end the main class

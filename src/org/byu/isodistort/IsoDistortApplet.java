@@ -42,6 +42,13 @@ import org.byu.isodistort.render.Material;
 import org.byu.isodistort.render.RenderApplet;
 import org.byu.isodistort.render.Vec;
 
+/**
+ * @j2sNative
+ * 
+ * J2S._applets.master.__Info.width=1024;
+ * J2S._applets.master.__Info.height=1024/1.6;
+ *
+ */
 public class IsoDistortApplet extends RenderApplet {
 	private static final long serialVersionUID = 1L;
 

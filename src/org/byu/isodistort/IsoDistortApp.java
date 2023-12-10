@@ -27,7 +27,7 @@ import java.text.DecimalFormat;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
-import javax.swing.JFrame;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -46,7 +46,7 @@ import org.byu.isodistort.render.RenderPanel3D;
 public class IsoDistortApp extends IsoApp implements Runnable {
 
 	public IsoDistortApp() {
-		super();
+		super(APP_ISODISTORT);
 	}
 	
 	protected boolean isRunning;
@@ -1095,11 +1095,6 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		wView.setMargin(new Insets(-2, 0, -1, -10));
 //		wView.addFocusListener(new focusListener());
 
-		ViewListener vl = new ViewListener(); 
-		applyView = newJButton("Apply View", vl, true);
-		saveImage = newJButton("Save Image", vl, true);
-		saveISOVIZ = newJButton("Save ISOVIZ", vl, true);
-		
 		JPanel topControlPanel = new JPanel();
 		topControlPanel.setBackground(Color.WHITE);
 		topControlPanel.add(nButton);
@@ -1126,12 +1121,8 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		botControlPanel.add(uView);
 		botControlPanel.add(vView);
 		botControlPanel.add(wView);
-		botControlPanel.add(new JLabel("      "));
-		botControlPanel.add(applyView);
-		botControlPanel.add(saveImage);
-		botControlPanel.add(saveISOVIZ);
 
-//		botControlPanel.add(new JLabel("                 "));
+		addSaveButtons((JComponent) botControlPanel);
 
 		controlPanel.add(topControlPanel);
 		controlPanel.add(botControlPanel);
@@ -1220,7 +1211,7 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 	}
 
 	public static void main(String[] args) {
-		new IsoDistortApp().start(new JFrame("IsoDistort"), args);
+		create("IsoDistort", args);
 	}
 
 }

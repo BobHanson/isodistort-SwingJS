@@ -23,11 +23,16 @@ import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+
+import org.byu.isodistort.IsoDiffractApp;
+import org.byu.isodistort.IsoDistortApp;
 
 /**
  * 
@@ -39,6 +44,8 @@ import javax.swing.SwingUtilities;
 public abstract class IsoApp {
 
 	abstract public void init();
+
+	abstract protected boolean setVariables(String dataString);
 
 	/**
 	 * only after size has been established after frame packing
@@ -108,13 +115,22 @@ public abstract class IsoApp {
 	 * Image height
 	 */
 	protected int drawHeight;
+
+	protected int appType;
+	
+	final static protected int APP_ISODISTORT = 1;
+	final static protected int APP_ISODIFFRACT = 2;
+	
+	protected IsoApp(int appType) {
+		this.appType = appType;
+	}
 	
 	protected void initializePanels() {
 		panel.setTransferHandler(new FileUtil.FileDropHandler(this));
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
 
-		sliderPanel.setBackground(Color.BLACK);
+		sliderPanel.setBackground(Color.WHITE);
 		sliderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0)); // sets grid length equal to number of rows.
 
 		sliderPane = new JScrollPane(sliderPanel);
@@ -129,6 +145,39 @@ public abstract class IsoApp {
 		panel.add(drawPanel, BorderLayout.CENTER);
 	}
 	
+	/**
+	 * Add general buttons to bottom control panel right side.
+	 * 
+	 * @param panel
+	 */
+	public void addSaveButtons(JComponent panel) {
+		ViewListener vl = new ViewListener(); 
+		applyView = newJButton("Apply View", vl);
+		saveImage = newJButton("Save Image", vl);
+		saveISOVIZ = newJButton("Save ISOVIZ", vl);
+		panel.add(new JLabel("      "));		
+		panel.add(applyView);
+		panel.add(saveImage);
+		panel.add(saveISOVIZ);
+	}
+
+	private static JButton newJButton(String text, ViewListener vl) {
+		JButton b = new JButton(text);
+		b.setFocusable(false);
+		b.setMargin(new Insets(-3, 3, -2, 4));
+		b.setHorizontalAlignment(JButton.LEFT);
+		b.setVerticalAlignment(JButton.CENTER);
+		b.addActionListener(vl);
+		return b;
+	}
+
+	protected static JTextField newTextField(String text, int insetRight, ActionListener l) {
+		JTextField t = new JTextField(text, 3);
+		t.setMargin(new Insets(-2, 0, -1, insetRight));
+		t.addActionListener(l);
+		return t;
+	}
+
 	/**
 	 * This data reader has two modes of operation. For data files, it uses a
 	 * buffered reader to get the data into a single string. The alternative is to
@@ -206,7 +255,6 @@ public abstract class IsoApp {
 		isFramed = true;
 		panel = (JPanel) frame.getContentPane();
 		panel.setLayout(new BorderLayout());
-		panel.setBackground(Color.WHITE);
 		init();
 		if (variables != null)
 			panel.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
@@ -278,10 +326,7 @@ public abstract class IsoApp {
 	 * viewListener class listens for the applet buttons and the inside methods
 	 * specify the viewing angles.
 	 */
-	public class ViewListener implements ActionListener {
-
-		public ViewListener() {
-		}
+	private class ViewListener implements ActionListener {
 
 		public void actionPerformed(ActionEvent event) {
 			if (event.getSource() == applyView) {
@@ -669,24 +714,17 @@ public abstract class IsoApp {
 			+ "   0.00000   0.00000   0.00000 \r\n" + "   0.00000   0.00000   0.00000 \r\n"
 			+ "   0.00000   0.00000   0.00000 \r\n" + "   0.00000   0.00000   0.00000 \r\n" + "\r\n" + "";
 	public double fov0;
+
+	public static void create(String type, String[] args) {
+		IsoApp app = null;
+		switch (type) {
+		case "IsoDistort":
+			app = new IsoDistortApp();
+			break;
+		case "IsoDiffract":
+			app = new IsoDiffractApp();
+		}
+		app.start(new JFrame(type), args);
+	}
 	
-	protected static JButton newJButton(String text, ViewListener vl, boolean padded) {
-		JButton b = new JButton(text);
-		b.setFocusable(false);
-		b.setMargin(padded ? new Insets(-3, 3, -2, 4) : new Insets(-3, 0, -2, 0));
-		b.setHorizontalAlignment(JButton.LEFT);
-		b.setVerticalAlignment(JButton.CENTER);
-		b.addActionListener(vl);
-		return b;
-	}
-
-	protected static JTextField newTextField(String text, int insetRight, ActionListener l) {
-		JTextField t = new JTextField(text, 3);
-		t.setMargin(new Insets(-2, 0, -1, insetRight));
-		t.addActionListener(l);
-		return t;
-	}
-
-	abstract protected boolean setVariables(String dataString);
-
 }

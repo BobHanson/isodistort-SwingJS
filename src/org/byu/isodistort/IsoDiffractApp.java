@@ -51,7 +51,6 @@ import java.util.Random;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -218,9 +217,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	/** the array that holds the powder pattern */
 	double[] powderY = new double[powderXRange];
 
-	
-	
-	
 	JLabel horizLabel, upperLabel, centerLabel, qrangeLabel, wavLabel, minLabel, maxLabel, fwhmLabel, zoomLabel,
 			mouseoverLabel;
 	JCheckBox colorBox;
@@ -237,7 +233,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	private RenderPanel rp;
 
 	public IsoDiffractApp() {
-		super();
+		super(APP_ISODIFFRACT);
 	}
 
 	public void init() {
@@ -251,6 +247,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		try {
 			variables = new Variables(this, dataString, true);
 			variables.initPanels(sliderPanel, controlPanel);
+			sliderPanel.setBackground(Color.BLACK);
 			buildControls();
 			showControls();
 		} catch (Exception e) {
@@ -1892,11 +1889,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		fwhmLabel = new JLabel("   Res");
 		zoomLabel = new JLabel("   Zoom");
 
-		ViewListener vl = new ViewListener(); 		
-		applyView = newJButton("Apply View", vl, false);
-		saveImage = newJButton("Save Image", vl, false);
-		saveISOVIZ = newJButton("Save ISOVIZ", vl, false);
-		
 		JPanel topControlPanel = new JPanel();
 		JPanel botControlPanel = new JPanel();
 		topControlPanel.setBackground(Color.WHITE);
@@ -1942,10 +1934,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		botControlPanel.add(fwhmTxt);
 		botControlPanel.add(zoomLabel);
 		botControlPanel.add(zoomTxt);
-		botControlPanel.add(new JLabel("      "));
-		botControlPanel.add(applyView);
-		botControlPanel.add(saveImage);
-		botControlPanel.add(saveISOVIZ);
+
+		addSaveButtons(botControlPanel);
 
 		controlPanel.add(topControlPanel);
 		controlPanel.add(botControlPanel);
@@ -2012,10 +2002,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	}
 
-	public static void main(String[] args) {
-		new IsoDiffractApp().start(new JFrame("IsoDiffract"), args);
-	}
-
 	@Override
 	protected BufferedImage getImage() {
 		return rp.im;
@@ -2028,6 +2014,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		rp.im = null;
 		isReset = true;
 		updateDisplay();
+	}
+
+	public static void main(String[] args) {
+		create("IsoDiffract", args);
 	}
 
 }

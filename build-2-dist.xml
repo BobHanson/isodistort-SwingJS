@@ -1,0 +1,13 @@
+<project name="JSmol" default="zip" basedir=".">
+
+   <target name="zip" id="zip">
+  			   	
+   	<echo>creating dist/isodistort-site.zip </echo>
+   	<zip destfile="dist/isodistort-site.zip" basedir="site" >
+   		<exclude name="test/**"/>
+   		<exclude name="*.txt"/>
+   	   	<include name="*org_byu*.html"/>
+   	   	<include name="swingjs/**/*"/>
+   	</zip>
+  </target>
+</project>

@@ -85,15 +85,16 @@ public class Material implements Runnable {
 	 */
 	public boolean anisotropic = false;
 
-	/**
-	 * Noise frequency.
-	 */
-	public double noiseF = 1;
-
-	/**
-	 * Noise amplitude.
-	 */
-	public double noiseA = 0;
+// BH removed	
+//	/**
+//	 * Noise frequency.
+//	 */
+//	public double noiseF = 1;
+//
+//	/**
+//	 * Noise amplitude.
+//	 */
+//	public double noiseA = 0;
 
 	/**
 	 * Looks up the appropriate color value from the table at x, y, z.
@@ -184,59 +185,59 @@ public class Material implements Runnable {
 	 */
 	protected double ambient[] = { 0, 0, 0 };
 
-	protected Texture texture;
-
-	public boolean hasTexture() {
-		return texture != null;
-	}
-
-	public Material setTexture(Texture texel) {
-		texture = texel;
-		return this;
-	}
-
-	private double getw(int pz, int NB) {
-		double p = 1. * pz / (1 << NB);
-		double ret = 1. * p / (1 << 31 - NB);
-		return ret;
-	}
-
+//	protected Texture texture;
+//
+//	public boolean hasTexture() {
+//		return texture != null;
+//	}
+//
+//	public Material setTexture(Texture texel) {
+//		texture = texel;
+//		return this;
+//	}
+//
+//	private double getw(int pz, int NB) {
+//		double p = 1. * pz / (1 << NB);
+//		double ret = 1. * p / (1 << 31 - NB);
+//		return ret;
+//	}
+//
 	/**
 	 * Focal Length
 	 */
 	protected double FL = 10;
 
-	private double getuv(int pz, int NB) {
-		double ret = 1. * pz / (1 << 31 - NB);
-		return ret;
-	}
-
-	/**
-	 * Returns the packed integer of a particular pixel To do extra pixel
-	 * computation, overload this method
-	 * 
-	 * @param data array representing the pixel indices of data are: 0,1,2 are the
-	 *             x,y,z of the pixel 3,4,5 are the r,g,b values 6,7 are the u,v
-	 *             coordinates
-	 * @param dx   size of the pixel in x
-	 * @param dy   size of the pixel in y
-	 * @param NB   precision value
-	 */
-	public int computePixel(int[] data, int dx, int dy, int NB) {
-		// 0,1,2 are the x,y,z of the point
-		// 3,4,5 are the rbg of the point
-		// 6, 7 are the u, v
-		double dw = getw(data[2], NB);
-
-		double u = (double) (getuv(data[6], NB)) / dw;
-		double v = (double) (getuv(data[7], NB)) / dw;
-
-		int ret;
-		int NBPower = 1 << NB;
-
-		ret = texture.getTexel(u, v, dx, dy, NBPower);
-		return ret;
-	}
+//	private double getuv(int pz, int NB) {
+//		double ret = 1. * pz / (1 << 31 - NB);
+//		return ret;
+//	}
+//
+//	/**
+//	 * Returns the packed integer of a particular pixel To do extra pixel
+//	 * computation, overload this method
+//	 * 
+//	 * @param data array representing the pixel indices of data are: 0,1,2 are the
+//	 *             x,y,z of the pixel 3,4,5 are the r,g,b values 6,7 are the u,v
+//	 *             coordinates
+//	 * @param dx   size of the pixel in x
+//	 * @param dy   size of the pixel in y
+//	 * @param NB   precision value
+//	 */
+//	public int computePixel(int[] data, int dx, int dy, int NB) {
+//		// 0,1,2 are the x,y,z of the point
+//		// 3,4,5 are the rbg of the point
+//		// 6, 7 are the u, v
+//		double dw = getw(data[2], NB);
+//
+//		double u = (double) (getuv(data[6], NB)) / dw;
+//		double v = (double) (getuv(data[7], NB)) / dw;
+//
+//		int ret;
+//		int NBPower = 1 << NB;
+//
+//		ret = texture.getTexel(u, v, dx, dy, NBPower);
+//		return ret;
+//	}
 
 	/**
 	 * Sets the diffuse components of light (range 0..1).

@@ -31,7 +31,7 @@
  
   	<!-- non-Java resources to copy to site/ -->
     <property name="resource.dir" value="resources" />  	
-    <property name="site-resource.dir" value="html" />  	
+    <property name="site-resource.dir" value="site-resources" />  	
   	
 	<!-- output directories -->
 
@@ -50,15 +50,6 @@
 	   all zip files placed in libjs will be processed
 	   
 	 -->
-
-  	<for param="file.zip">
-  	  <path>
-  	    <fileset dir="${libjs.dir}" includes="*.zip"/>
-  	  </path>
-  	  <sequential>
-  	  	 	<unzip src="@{file.zip}" dest="${site.dir}" overwrite="true"/>  	
-  	  </sequential>
-  	</for>
 
   	<!-- unzip SwingJS-site.zip 
   	

@@ -5,6 +5,9 @@ package org.byu.isodistort.render;
 
 import java.util.Arrays;
 
+import org.byu.isodistort.local.Matrix;
+import org.byu.isodistort.local.Vec;
+
 /**
  * Provides the computational functionality to render geometric objects in
  * realtime.
@@ -19,22 +22,22 @@ public class Renderer {
 	/**
 	 * Flag controls table lookup mode for materials, true means on.
 	 */
-	public boolean tableMode = true;
+	private boolean tableMode = true;
 
 	/**
 	 * Set the level of detail for meshes.
 	 */
-	public int lod = 1;
+	int lod = 1;
 
 	/**
 	 * Shows/overlays the geometry mesh in black when true.
 	 */
-	public boolean showMesh = false;
+	private boolean showMesh = false;
 
 	/**
 	 * Allocate space for transparent objects when true.
 	 */
-	public boolean updateTransparency = true;
+	private boolean updateTransparency = true;
 
 	/**
 	 * Flag that determines whether to keep a z-buffer of geometries, to to know the
@@ -42,12 +45,12 @@ public class Renderer {
 	 * 
 	 * @see #getGeometry(int x, int y)
 	 */
-	public boolean bufferg = false;
+	boolean bufferg = false;
 
-//--- PUBLIC METHODS
+//--- METHODS
 
-	public Renderer() {
-
+	Renderer() {
+		world = new Geometry();
 	}
 
 	/**
@@ -57,15 +60,14 @@ public class Renderer {
 	 * @param H framebuffer height.
 	 * @return framebuffer array.
 	 */
-	public int[] init(int W, int H) {
+	int[] init(int W, int H) {
 		int[] pix = new int[W * H];
 		init(W, H, pix);
 		return pix;
 	}
 
-	public void init(int W, int H, int pix[]) {
+	void init(int W, int H, int pix[]) {
 		nLights = 0;
-		world = new Geometry();
 		this.pix = pix;
 		this.W = W;
 		this.H = H;
@@ -80,7 +82,7 @@ public class Renderer {
 	 * @param H framebuffer height.
 	 * @return framebuffer array.
 	 */
-	public synchronized int[] reinit(int W, int H) {
+	synchronized int[] reinit(int W, int H) {
 		this.W = W;
 		this.H = H;
 		pix = new int[W * H];
@@ -98,7 +100,7 @@ public class Renderer {
 	 * 
 	 * @param tf dragging true or false
 	 */
-	public void setDragging(boolean tf) {
+	void setDragging(boolean tf) {
 		dragging = tf;
 	}
 
@@ -107,7 +109,7 @@ public class Renderer {
 	 * 
 	 * @return true when dragging is active, false otherwise
 	 */
-	public boolean isDragging() {
+	boolean isDragging() {
 		return dragging;
 	}
 
@@ -116,7 +118,7 @@ public class Renderer {
 	 * 
 	 * @param value focal lengh
 	 */
-	public void setFL(double value) {
+	void setFL(double value) {
 		FL = value;
 	}
 
@@ -125,7 +127,7 @@ public class Renderer {
 	 * 
 	 * @return camera's focal length
 	 */
-	public double getFL() {
+	double getFL() {
 		return FL;
 	}
 
@@ -134,7 +136,7 @@ public class Renderer {
 	 * 
 	 * @param value field of view
 	 */
-	public void setFOV(double value) {
+	void setFOV(double value) {
 		FOV = value;
 	}
 
@@ -143,7 +145,7 @@ public class Renderer {
 	 * 
 	 * @return value field of view
 	 */
-	public double getFOV() {
+	double getFOV() {
 		return FOV;
 	}
 
@@ -152,28 +154,28 @@ public class Renderer {
 	 * 
 	 * @return the root of the geometry tree.
 	 */
-	public Geometry getWorld() {
+	Geometry getWorld() {
 		return world;
 	}
 
 	/**
 	 * Set the background fill color.
 	 */
-	public void setBgColor(double r, double g, double b) {
+	void setBgColor(double r, double g, double b) {
 		bgColor = pack(f2i(r), f2i(g), f2i(b));
 	}
 
 	/**
 	 * Set the background fill color.
 	 */
-	public void setBgColor(int color) {
+	void setBgColor(int color) {
 		bgColor = color;
 	}
 
 	/**
 	 * Returns the background color.
 	 */
-	public int getBgColor() {
+	int getBgColor() {
 		return bgColor;
 	}
 
@@ -181,7 +183,7 @@ public class Renderer {
 	 * Add a light source where x,y,z are light source direction; r,g,b are light
 	 * source color.
 	 */
-	public void addLight(double x, double y, double z, double r, double g, double b) {
+	void addLight(double x, double y, double z, double r, double g, double b) {
 		placeLight(nLights, x, y, z);
 		colorLight(nLights, r, g, b);
 		nLights++;
@@ -192,7 +194,7 @@ public class Renderer {
 	 * 
 	 * @return the number of lights
 	 */
-	public int getNumberOfLights() {
+	int getNumberOfLights() {
 		return nLights;
 	}
 
@@ -205,7 +207,7 @@ public class Renderer {
 	 * @param y y direction of the light
 	 * @param z z direction of the light
 	 */
-	public void placeLight(int i, double x, double y, double z) {
+	void placeLight(int i, double x, double y, double z) {
 		double s = Math.sqrt(x * x + y * y + z * z);
 		light[i][0] = x / s;
 		light[i][1] = y / s;
@@ -220,7 +222,7 @@ public class Renderer {
 	 * @param g the green color component
 	 * @param b the blue color component
 	 */
-	public void colorLight(int i, double r, double g, double b) {
+	void colorLight(int i, double r, double g, double b) {
 		light[nLights][3] = r;
 		light[nLights][4] = g;
 		light[nLights][5] = b;
@@ -242,7 +244,7 @@ public class Renderer {
 	/**
 	 * Rotate angle of view.
 	 */
-	public synchronized void rotateView(double t, double p, double s) {
+	synchronized void rotateView(double t, double p, double s) {
 		theta += t;
 		phi += p;
 		sigma += s;
@@ -258,9 +260,9 @@ public class Renderer {
 	 * {@link #setCameraUp}. When false you can use :
 	 * {@link #setCamera(double, double)}
 	 */
-	public boolean manualCameraControl = false;
+	boolean manualCameraControl = false;
 
-	public void setManualCameraControl(boolean cameraControl) {
+	void setManualCameraControl(boolean cameraControl) {
 		manualCameraControl = cameraControl;
 	}
 
@@ -274,7 +276,7 @@ public class Renderer {
 	 * @param up     unit vector specifying the up direction in the world (
 	 *               double[x, y, z] )
 	 */
-	public void lookAt(double[] eye, double[] center, double[] up) {
+	void lookAt(double[] eye, double[] center, double[] up) {
 		for (int i = 0; i < 3; i++) {
 			cameraPos[i] = eye[i];
 			cameraAim[i] = center[i];
@@ -288,14 +290,14 @@ public class Renderer {
 	 * 
 	 * @return the matrix that defines the camera transformation
 	 */
-	public Matrix getCamera() {
+	Matrix getCamera() {
 		return camera;
 	}
 
 	/**
 	 * Sets the camera matrix directly. Matrix needs to be 4x4.
 	 */
-	public void setCamera(Matrix m) {
+	void setCamera(Matrix m) {
 		camera.copy(m);
 	}
 
@@ -303,7 +305,7 @@ public class Renderer {
 	 * Sets the position of the camera. ( requires the {@link manualCameraControl}
 	 * flag to be turned on).
 	 */
-	public void setCameraPos(double px, double py, double pz) {
+	void setCameraPos(double px, double py, double pz) {
 		cameraPos[0] = px;
 		cameraPos[1] = -py;
 		cameraPos[2] = pz;
@@ -313,7 +315,7 @@ public class Renderer {
 	/**
 	 * returns the current position of the camera
 	 */
-	public double[] getCameraPos() {
+	double[] getCameraPos() {
 		double cp[] = new double[3];
 		System.arraycopy(cameraPos, 0, cp, 0, 3);
 		return cp;
@@ -323,7 +325,7 @@ public class Renderer {
 	 * Sets the aiming point at which the camera should point. ( requires the
 	 * {@link manualCameraControl} flag to be turned on).
 	 */
-	public void setCameraAim(double px, double py, double pz) {
+	void setCameraAim(double px, double py, double pz) {
 		cameraAim[0] = px;
 		cameraAim[1] = py;
 		cameraAim[2] = pz;
@@ -333,7 +335,7 @@ public class Renderer {
 	/**
 	 * returns the current target look-at point of the camera
 	 */
-	public double[] getCameraAim() {
+	double[] getCameraAim() {
 		double cp[] = new double[3];
 		System.arraycopy(cameraAim, 0, cp, 0, 3);
 		return cp;
@@ -347,7 +349,7 @@ public class Renderer {
 	 * @param py
 	 * @param pz
 	 */
-	public void setCameraUp(double px, double py, double pz) {
+	void setCameraUp(double px, double py, double pz) {
 		cameraUp[0] = px;
 		cameraUp[1] = py;
 		cameraUp[2] = pz;
@@ -357,7 +359,7 @@ public class Renderer {
 	/**
 	 * returns the current up vector of the camera
 	 */
-	public double[] getCameraUp() {
+	double[] getCameraUp() {
 		double cp[] = new double[3];
 		System.arraycopy(cameraUp, 0, cp, 0, 3);
 		return cp;
@@ -368,7 +370,7 @@ public class Renderer {
 	 * 
 	 * @param e the actual disance
 	 */
-	public void setClippingPlaneEpsilon(double e) {
+	void setClippingPlaneEpsilon(double e) {
 		epsilonPlane = e;
 	}
 
@@ -377,14 +379,14 @@ public class Renderer {
 	 * 
 	 * @returns the distance of the clipping plane from the camera lens.
 	 */
-	public double getClippingPlaneEpsilon() {
+	double getClippingPlaneEpsilon() {
 		return epsilonPlane;
 	}
 
 	/**
 	 * Render the entire world for this frame.
 	 */
-	public synchronized void render() {
+	synchronized void render() {
 
 		computeCamera(); // UPDATE CAMERA MATRIX
 
@@ -457,7 +459,7 @@ public class Renderer {
 	 * Returns the outline threshold parameter for sketch-like (artistic) rendition
 	 * of the scene.
 	 */
-	public double getOutline() {
+	double getOutline() {
 		return outline_t;
 	}
 
@@ -466,7 +468,7 @@ public class Renderer {
 	 * 
 	 * @param t outline threshold
 	 */
-	public void outline(double t) {
+	void outline(double t) {
 		outline_t = t;
 		isOutline = (t > 0);
 		if (isOutline)
@@ -489,7 +491,7 @@ public class Renderer {
 	/**
 	 * Force a refresh of the entire window.
 	 */
-	public synchronized void refresh() {
+	synchronized void refresh() {
 		LEFT = 0;
 		TOP = 0;
 		RIGHT = W;
@@ -510,7 +512,7 @@ public class Renderer {
 		return (int) (255 * t) & 255;
 	}
 
-	public boolean isAnaglyph = false;
+	boolean isAnaglyph = false;
 	int anaglyphEye = 0;
 
 //PACK RGB INTO ONE WORD
@@ -871,29 +873,29 @@ public class Renderer {
 	 * When set true, only the wireframe structure of the objects is displayed using
 	 * appropriate colors.
 	 */
-	public boolean seeMesh = false;
+	boolean seeMesh = false;
 
 //CENTER OF PROJECTION
 
-	public void setCx(double x) {
+	void setCx(double x) {
 		cX = x;
 	}
 
-	public void setCy(double y) {
+	void setCy(double y) {
 		cY = y;
 	}
 
-	public double getCx() {
+	double getCx() {
 		return cX;
 	}
 
-	public double getCy() {
+	double getCy() {
 		return cY;
 	}
 
 	private double cX = 0.0, cY = 0.0;
 
-	public void projectPoint(double v[]) {
+	void projectPoint(double v[]) {
 		v[2] = 1 / (FL - v[2]);
 		v[0] = W / 2 + W * (cX / FL + v[2] * (v[0] - cX)) / FOV;
 		v[1] = H / 2 - W * (cY / FL + v[2] * (v[1] - cY)) / FOV;
@@ -1310,9 +1312,10 @@ public class Renderer {
 				if (z > zb[i]) {
 					pixel[0] = ix;
 					if (isOpaque) {
-						if (s.verticedepth > 6)
-							px[i] = s.material.computePixel(pixel, deltaX, deltaY, NB);
-						else
+// BH no textures used
+//						if (s.verticedepth > 6)
+//							px[i] = s.material.computePixel(pixel, deltaX, deltaY, NB);
+//						else
 							pack(px, i, r >> NB, g >> NB, b >> NB);
 
 					} else {
@@ -1321,17 +1324,19 @@ public class Renderer {
 						g0 = (packed >> 8) & 255;
 						b0 = (packed) & 255;
 						op = opacity;
-						if (s.verticedepth > 6) {
-							int rc, gc, bc;
-							int c = s.material.computePixel(pixel, deltaX, deltaY, NB);
-							rc = (c >> 16) & 255;
-							gc = (c >> 8) & 255;
-							bc = (c) & 255;
-							pack(px, i, r0 + (op * ((rc >> NB) - r0) >> NB), g0 + (op * ((gc >> NB) - g0) >> NB),
-									b0 + (op * ((bc >> NB) - b0) >> NB));
-						} else
+// BH no textures used
+//						if (s.verticedepth > 6) {
+//							int rc, gc, bc;
+//							int c = s.material.computePixel(pixel, deltaX, deltaY, NB);
+//							rc = (c >> 16) & 255;
+//							gc = (c >> 8) & 255;
+//							bc = (c) & 255;
+//							pack(px, i, r0 + (op * ((rc >> NB) - r0) >> NB), g0 + (op * ((gc >> NB) - g0) >> NB),
+//									b0 + (op * ((bc >> NB) - b0) >> NB));
+//						} else {
 							pack(px, i, r0 + (op * ((r >> NB) - r0) >> NB), g0 + (op * ((g >> NB) - g0) >> NB),
 									b0 + (op * ((b >> NB) - b0) >> NB));
+//						}
 					}
 					if (showMesh)
 						if (ix == ixL || ix == ixR - 1)
@@ -1382,7 +1387,7 @@ public class Renderer {
 
 //TRANSFORM ONE VERTEX OR NORMAL BY A MATRIX
 
-	public void xf(Matrix m, double x, double y, double z, double w, double v[]) {
+	void xf(Matrix m, double x, double y, double z, double w, double v[]) {
 		if (w == 0)
 			for (int j = 0; j < 3; j++)
 				v[j] = m.get(j, 0) * x + m.get(j, 1) * y + m.get(j, 2) * z;
@@ -1407,7 +1412,7 @@ public class Renderer {
 	 * @param i vertex to be rendered
 	 * @param m material properties to be applied to the vertex
 	 */
-	public void renderVertex(int i, Material m) {
+	void renderVertex(int i, Material m) {
 
 		if (!tableMode || !m.tableMode)
 			return;
@@ -1435,7 +1440,7 @@ public class Renderer {
 	 * @param v vertex x,y,z and the r,g,b values for it.
 	 * @param m material with which to render the vertex.
 	 */
-	public void renderVertex(double v[], Material m) {
+	void renderVertex(double v[], Material m) {
 		if (m == null) {
 			v[3] = v[4] = v[5] = 0;
 			return;
@@ -1499,8 +1504,8 @@ public class Renderer {
 			if (m.anisotropic)
 				t = Math.sqrt(1 - t * t);
 			t = Math.max(0, t);
-			if (m.noiseA != 0)
-				t *= noiseTexture(m, x, y, z);
+// BH removed			if (m.noiseA != 0)
+//				t *= noiseTexture(m, x, y, z);
 			rD += L[3] * t;
 			gD += L[4] * t;
 			bD += L[5] * t;
@@ -1519,13 +1524,13 @@ public class Renderer {
 				if (t > 0) {
 					t = Math.pow(t, S[3]);
 					// t = computeHilite(0,0,1, x,y,z, L);
-					if (m.noiseA != 0) {
-						double d = 2 * (x * v[3] + y * v[4] + z * v[5]);
-						double rx = d * v[3] - x;
-						double ry = d * v[4] - y;
-						double rz = d * v[5] - z;
-						t *= noiseTexture(m, rx, ry, rz);
-					}
+//					if (m.noiseA != 0) {
+//						double d = 2 * (x * v[3] + y * v[4] + z * v[5]);
+//						double rx = d * v[3] - x;
+//						double ry = d * v[4] - y;
+//						double rz = d * v[5] - z;
+//						t *= noiseTexture(m, rx, ry, rz);
+//					}
 					rS += L[3] * t;
 					gS += L[4] * t;
 					bS += L[5] * t;
@@ -1553,7 +1558,7 @@ public class Renderer {
 	 * @param y y coordinate in the image
 	 * @return the geometry of the foremost object at that location
 	 */
-	public synchronized Geometry getGeometry(int x, int y) {
+	synchronized Geometry getGeometry(int x, int y) {
 		if (x < 0 || x >= W || y < 0 || y >= H)
 			return null;
 		if (y * W + x < gzbuffer.length)
@@ -1561,7 +1566,7 @@ public class Renderer {
 		return null;
 	}
 
-	public synchronized boolean getPoint(int ix, int iy, double xyz[]) {
+	synchronized boolean getPoint(int ix, int iy, double xyz[]) {
 		if (ix < 0 || ix >= W || iy < 0 || iy >= H)
 			return false;
 		int zb = zbuffer[iy * W + ix];
@@ -1577,12 +1582,12 @@ public class Renderer {
 		return true;
 	}
 
-	private static double noiseTexture(Material m, double x, double y, double z) {
-		if (m.noiseA != 0)
-			return 1 + m.noiseA * Noise.noise(m.noiseF * x, m.noiseF * y, m.noiseF * z);
-		else
-			return 1;
-	}
+//	private static double noiseTexture(Material m, double x, double y, double z) {
+//		if (m.noiseA != 0)
+//			return 1 + m.noiseA * Noise.noise(m.noiseF * x, m.noiseF * y, m.noiseF * z);
+//		else
+//			return 1;
+//	}
 
 //COMPUTE DIRECTION OF SPECULAR REFLECTION, THEN DOT PRODUCT WITH LIGHT
 
@@ -1607,7 +1612,12 @@ public class Renderer {
 	private Geometry world; // THE ROOT OF THE GEOMETRY TREE
 	private int W, H; // THE RESOLUTION OF THE IMAGE
 	private double theta = 0, phi = 0, sigma = 0; // VIEW ROTATION ANGLES
-	private int pix[]; // THE FRAME BUFFER
+	private int[] pix; // THE FRAME BUFFER
+	
+	int[] getPix() {
+		return pix;
+	}
+	
 	private int bgColor = pack(0, 0, 0); // BACKGROUND FILL COLOR
 	private final int zHuge = 1 << 31; // BIGGEST POSSIBLE ZBUFFER VALUE
 	private int TOP = -1, BOTTOM, LEFT, RIGHT;

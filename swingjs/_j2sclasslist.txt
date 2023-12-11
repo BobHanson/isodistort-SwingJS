@@ -1,3 +1,10 @@
+java/util/concurrent/ConcurrentHashMap.js
+java/util/concurrent/ConcurrentMap.js
+java/util/spi/LocaleServiceProvider.js
+sun/util/locale/provider/AuxLocaleProviderAdapter.js
+sun/util/locale/provider/JRELocaleProviderAdapter.js
+sun/util/locale/provider/ResourceBundleBasedAdapter.js
+sun/util/locale/provider/SPILocaleProviderAdapter.js
 java/applet/Applet.js
 java/applet/AppletContext.js
 java/applet/AppletStub.js
@@ -408,5 +415,3 @@ swingjs/plaf/JSWindowUI.js
 swingjs/plaf/LazyActionMap.js
 swingjs/plaf/Resizer.js
 swingjs/plaf/TextListener.js
-
-

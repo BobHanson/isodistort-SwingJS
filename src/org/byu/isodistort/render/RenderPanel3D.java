@@ -609,7 +609,7 @@ public class RenderPanel3D extends JPanel
 	}
 
 	public void setRotationAxis(int i) {
-		rotAxis = 0;
+		rotAxis = i;
 	}
 
 	public void setSpinning(boolean spin) {

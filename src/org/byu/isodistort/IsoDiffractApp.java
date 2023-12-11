@@ -38,8 +38,6 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -56,6 +54,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 
 import org.byu.isodistort.local.Elements;
 import org.byu.isodistort.local.IsoApp;
@@ -236,11 +235,17 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		super(APP_ISODIFFRACT);
 	}
 
-	public void init() {
+	protected void init() {
 		initializePanels();
 		panel.addKeyListener(this);
 		panel.addMouseMotionListener(this);
 		setVariables(readFile());
+	}
+	
+	protected void dispose() {
+		panel.removeKeyListener(this);
+		panel.removeMouseMotionListener(this);
+		super.dispose();
 	}
 
 	protected boolean setVariables(String dataString) {
@@ -1582,100 +1587,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 */
 
 	/**
-	 * buttonListener class listens for the applet buttons and the inside methods
-	 * specify the viewing angles.
-	 */
-	private class buttonListener implements ItemListener {
-		public void itemStateChanged(ItemEvent event) {
-			updateButton(event.getSource());
-		}
-	}
-
-	public void updateButton(Object source) {
-		if (source instanceof JRadioButton && !((JRadioButton) source).isSelected())
-			return;
-		System.out.println("UB1 " + powderXMax + " " + powderXMin + " " + powderDinvmin + " " + powderDinvmax + " " + source	);
-		if (source == tButton) {
-			powderPatternType = 1;
-			double t = powderDinvmin * powderWavelength / 2;
-			if (t < -1)
-				t = -1;
-			if (t > 1)
-				t = 1;
-			powderXMin = (180 / Math.PI) * 2 * Math.asin(t);
-			t = powderDinvmax * powderWavelength / 2;
-			if (t < -1)
-				t = -1;
-			if (t > 1)
-				t = 1;
-			powderXMax = (180 / Math.PI) * 2 * Math.asin(t);
-			powderResolution = powderDinvres * powderWavelength / (Math.PI / 180);
-			minTxt.setText(Variables.mytoString(powderXMin, 2, -5));
-			maxTxt.setText(Variables.mytoString(powderXMax, 2, -5));
-			fwhmTxt.setText(Variables.mytoString(powderResolution, 3, -5));
-			isReset = true;
-		} else if (source == dButton) {
-			powderPatternType = 2;
-			powderXMax = 1 / powderDinvmin;
-			powderXMin = 1 / powderDinvmax;
-			powderResolution = powderDinvres * Math.pow((powderXMin + powderXMax), 2) / 4;
-			minTxt.setText(Variables.mytoString(powderXMin, 2, -5));
-			maxTxt.setText(Variables.mytoString(powderXMax, 2, -5));
-			fwhmTxt.setText(Variables.mytoString(powderResolution, 3, -5));
-			isReset = true;
-		} else if (source == qButton) {
-			powderPatternType = 3;
-			powderXMin = powderDinvmin * (2 * Math.PI);
-			powderXMax = powderDinvmax * (2 * Math.PI);
-			powderResolution = powderDinvres * (2 * Math.PI) / ((powderXMin + powderXMax) / 2);
-			minTxt.setText(Variables.mytoString(powderXMin, 2, -5));
-			maxTxt.setText(Variables.mytoString(powderXMax, 2, -5));
-			fwhmTxt.setText(Variables.mytoString(powderResolution, 3, -5));
-			isReset = true;
-		} else if (source == parentButton) {
-			hklType = 1;
-			isReset = true;
-		} else if (source == superButton) {
-			hklType = 2;
-			isReset = true;
-		} else if (source == xrayButton) {
-			isXray = true;
-			variables.readSliders();
-			isReset = true;
-		} else if (source == neutronButton) {
-			isXray = false;
-			variables.readSliders();
-			isReset = true;
-		} else if (source == crystalButton) {
-			isBoth = isPowder = false;
-			showControls();
-			isReset = true;
-		} else if (source == powderButton) {
-			isBoth = !(isPowder = true);
-			showControls();
-			isReset = true;
-		} else if (source == bothButton) {
-			isBoth = isPowder = true;
-			showControls();
-			isReset = true;
-		}
-		updateDisplay();
-	}
-
-	/**
-	 * DisorderListener listens for the check boxes that highlight a given atomic
-	 * subtype.
-	 */
-	private class checkboxListener implements ItemListener {
-		public void itemStateChanged(ItemEvent event) {
-			isSimpleColor = colorBox.isSelected();
-			variables.setColors(isSimpleColor);
-			variables.recolorPanels();
-			panel.repaint();
-		}
-	}
-
-	/**
 	 * keyinputListener responds to keyboard commands.
 	 */
 	public void keyPressed(KeyEvent e) {
@@ -1685,8 +1596,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	}
 
 	public void keyTyped(KeyEvent e) {
-		char key = e.getKeyChar();
-		if (key == 'r' || key == 'R') {
+		switch (e.getKeyChar()) {
+		case 'r':
+		case 'R':
 			hOTxt.setText("0");
 			kOTxt.setText("0");
 			lOTxt.setText("0");
@@ -1708,15 +1620,22 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			colorBox.setSelected(false);
 			variables.resetSliders();
 			isReset = true;
-		} else if (key == 'z' || key == 'Z') {
+			break;
+		case 'z':
+		case 'Z':
 			variables.zeroSliders();
 			variables.isChanged = true;
-		} else if (key == 'i' || key == 'I') {
+			break;
+		case 'i':
+		case 'I':
 			variables.resetSliders();
 			variables.isChanged = true;
-		} else if (key == 's' || key == 'S') {
+			break;
+		case 's':
+		case 'S':
 			variables.toggleIrrepSliders();
 			variables.isChanged = true;
+			break;
 		}
 	}
 
@@ -1747,7 +1666,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		dButton.setHorizontalAlignment(JRadioButton.LEFT);
 		dButton.setVerticalAlignment(JRadioButton.CENTER);
 		dButton.setFocusable(false);
-		dButton.addItemListener(new buttonListener());
+		dButton.addItemListener(buttonListener);
 		dButton.setBackground(Color.WHITE);
 		dButton.setForeground(Color.BLACK);
 		dButton.setBorderPainted(false);
@@ -1755,7 +1674,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		qButton.setHorizontalAlignment(JRadioButton.LEFT);
 		qButton.setVerticalAlignment(JRadioButton.CENTER);
 		qButton.setFocusable(false);
-		qButton.addItemListener(new buttonListener());
+		qButton.addItemListener(buttonListener);
 		qButton.setBackground(Color.WHITE);
 		qButton.setForeground(Color.BLACK);
 		qButton.setBorderPainted(false);
@@ -1763,7 +1682,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		tButton.setHorizontalAlignment(JRadioButton.LEFT);
 		tButton.setVerticalAlignment(JRadioButton.CENTER);
 		tButton.setFocusable(false);
-		tButton.addItemListener(new buttonListener());
+		tButton.addItemListener(buttonListener);
 		tButton.setBackground(Color.WHITE);
 		tButton.setForeground(Color.BLACK);
 		tButton.setBorderPainted(false);
@@ -1776,7 +1695,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		parentButton.setHorizontalAlignment(JRadioButton.LEFT);
 		parentButton.setVerticalAlignment(JRadioButton.CENTER);
 		parentButton.setFocusable(false);
-		parentButton.addItemListener(new buttonListener());
+		parentButton.addItemListener(buttonListener);
 		parentButton.setBackground(Color.WHITE);
 		parentButton.setForeground(Color.BLACK);
 		parentButton.setBorderPainted(false);
@@ -1784,7 +1703,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		superButton.setHorizontalAlignment(JRadioButton.LEFT);
 		superButton.setVerticalAlignment(JRadioButton.CENTER);
 		superButton.setFocusable(false);
-		superButton.addItemListener(new buttonListener());
+		superButton.addItemListener(buttonListener);
 		superButton.setBackground(Color.WHITE);
 		superButton.setForeground(Color.BLACK);
 		superButton.setBorderPainted(false);
@@ -1796,7 +1715,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		crystalButton.setHorizontalAlignment(JRadioButton.LEFT);
 		crystalButton.setVerticalAlignment(JRadioButton.CENTER);
 		crystalButton.setFocusable(false);
-		crystalButton.addItemListener(new buttonListener());
+		crystalButton.addItemListener(buttonListener);
 		crystalButton.setBackground(Color.WHITE);
 		crystalButton.setForeground(Color.BLACK);
 		crystalButton.setBorderPainted(false);
@@ -1804,7 +1723,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		powderButton.setHorizontalAlignment(JRadioButton.LEFT);
 		powderButton.setVerticalAlignment(JRadioButton.CENTER);
 		powderButton.setFocusable(false);
-		powderButton.addItemListener(new buttonListener());
+		powderButton.addItemListener(buttonListener);
 		powderButton.setBackground(Color.WHITE);
 		powderButton.setForeground(Color.BLACK);
 		powderButton.setBorderPainted(false);
@@ -1812,7 +1731,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		bothButton.setHorizontalAlignment(JRadioButton.LEFT);
 		bothButton.setVerticalAlignment(JRadioButton.CENTER);
 		bothButton.setFocusable(false);
-		bothButton.addItemListener(new buttonListener());
+		bothButton.addItemListener(buttonListener);
 		bothButton.setBackground(Color.WHITE);
 		bothButton.setForeground(Color.BLACK);
 		bothButton.setBorderPainted(false);
@@ -1827,7 +1746,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		xrayButton.setHorizontalAlignment(JRadioButton.LEFT);
 		xrayButton.setVerticalAlignment(JRadioButton.CENTER);
 		xrayButton.setFocusable(false);
-		xrayButton.addItemListener(new buttonListener());
+		xrayButton.addItemListener(buttonListener);
 		xrayButton.setBackground(Color.WHITE);
 		xrayButton.setForeground(Color.BLACK);
 		xrayButton.setBorderPainted(false);
@@ -1835,7 +1754,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		neutronButton.setHorizontalAlignment(JRadioButton.LEFT);
 		neutronButton.setVerticalAlignment(JRadioButton.CENTER);
 		neutronButton.setFocusable(false);
-		neutronButton.addItemListener(new buttonListener());
+		neutronButton.addItemListener(buttonListener);
 		neutronButton.setBackground(Color.WHITE);
 		neutronButton.setForeground(Color.BLACK);
 		neutronButton.setBorderPainted(false);
@@ -1849,7 +1768,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		colorBox.setFocusable(false);
 		colorBox.setBackground(Color.WHITE);
 		colorBox.setForeground(Color.BLACK);
-		colorBox.addItemListener(new checkboxListener());
+		colorBox.addItemListener(checkboxListener);
 
 		ActionListener l = new ActionListener() {
 
@@ -1996,10 +1915,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		colorBox.setVisible(!isMouseOver && variables.needSimpleColor);
 
-		// always
-
-		applyView.setVisible(true);
-
 	}
 
 	@Override
@@ -2018,6 +1933,86 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	public static void main(String[] args) {
 		create("IsoDiffract", args);
+	}
+
+	@Override
+	protected void handleCheckBoxEvent(Object src) {
+		isSimpleColor = colorBox.isSelected();
+		variables.setColors(isSimpleColor);
+		variables.recolorPanels();
+		panel.repaint();
+	}
+
+	@Override
+	protected void handleRadioButtonEvent(Object source) {
+		if (!((JToggleButton) source).isSelected())
+			return;
+		System.out.println("UB1 " + powderXMax + " " + powderXMin + " " + powderDinvmin + " " + powderDinvmax + " " + source	);
+		if (source == tButton) {
+			powderPatternType = 1;
+			double t = powderDinvmin * powderWavelength / 2;
+			if (t < -1)
+				t = -1;
+			if (t > 1)
+				t = 1;
+			powderXMin = (180 / Math.PI) * 2 * Math.asin(t);
+			t = powderDinvmax * powderWavelength / 2;
+			if (t < -1)
+				t = -1;
+			if (t > 1)
+				t = 1;
+			powderXMax = (180 / Math.PI) * 2 * Math.asin(t);
+			powderResolution = powderDinvres * powderWavelength / (Math.PI / 180);
+			minTxt.setText(Variables.mytoString(powderXMin, 2, -5));
+			maxTxt.setText(Variables.mytoString(powderXMax, 2, -5));
+			fwhmTxt.setText(Variables.mytoString(powderResolution, 3, -5));
+			isReset = true;
+		} else if (source == dButton) {
+			powderPatternType = 2;
+			powderXMax = 1 / powderDinvmin;
+			powderXMin = 1 / powderDinvmax;
+			powderResolution = powderDinvres * Math.pow((powderXMin + powderXMax), 2) / 4;
+			minTxt.setText(Variables.mytoString(powderXMin, 2, -5));
+			maxTxt.setText(Variables.mytoString(powderXMax, 2, -5));
+			fwhmTxt.setText(Variables.mytoString(powderResolution, 3, -5));
+			isReset = true;
+		} else if (source == qButton) {
+			powderPatternType = 3;
+			powderXMin = powderDinvmin * (2 * Math.PI);
+			powderXMax = powderDinvmax * (2 * Math.PI);
+			powderResolution = powderDinvres * (2 * Math.PI) / ((powderXMin + powderXMax) / 2);
+			minTxt.setText(Variables.mytoString(powderXMin, 2, -5));
+			maxTxt.setText(Variables.mytoString(powderXMax, 2, -5));
+			fwhmTxt.setText(Variables.mytoString(powderResolution, 3, -5));
+			isReset = true;
+		} else if (source == parentButton) {
+			hklType = 1;
+			isReset = true;
+		} else if (source == superButton) {
+			hklType = 2;
+			isReset = true;
+		} else if (source == xrayButton) {
+			isXray = true;
+			variables.readSliders();
+			isReset = true;
+		} else if (source == neutronButton) {
+			isXray = false;
+			variables.readSliders();
+			isReset = true;
+		} else if (source == crystalButton) {
+			isBoth = isPowder = false;
+			showControls();
+			isReset = true;
+		} else if (source == powderButton) {
+			isBoth = !(isPowder = true);
+			showControls();
+			isReset = true;
+		} else if (source == bothButton) {
+			isBoth = isPowder = true;
+			showControls();
+			isReset = true;
+		}
+		updateDisplay();
 	}
 
 }

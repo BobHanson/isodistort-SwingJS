@@ -18,8 +18,6 @@ import java.awt.Color;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
@@ -33,6 +31,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 import javax.swing.Timer;
 
 import org.byu.isodistort.local.IsoApp;
@@ -43,7 +42,7 @@ import org.byu.isodistort.render.Material;
 // import org.byu.isodistort.render.Matrix;
 import org.byu.isodistort.render.RenderPanel3D;
 
-public class IsoDistortApp extends IsoApp implements Runnable {
+public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	public IsoDistortApp() {
 		super(APP_ISODISTORT);
@@ -59,7 +58,7 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 	/** Focal length for renderer. */
 	double fl = 10;
 	/** scale everything down to take out perspective */
-	double perspectivescaler = (double) 1 / 100;
+	double perspectivescaler = (double) 1 / 1000;
 	/**
 	 * Decimal multiplier to make bond radius and cell radius fractions of atom
 	 * radius
@@ -155,12 +154,13 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 	 */
 
 	@Override
-	public void init() {
+	protected void init() {
 		// called from RenderApplet.init()
 		initializePanels();
-		panel.addKeyListener(new keyinputListener());
+		panel.addKeyListener(this);
 		setVariables(readFile());
 	}
+	
 
 	@Override
 	protected void setRenderer() {
@@ -187,19 +187,14 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 //extends renderApplet (in the render package) the remainning code in this initialization
 //section actually refers to renderApplet.*/
 
-		recalcABC(); // do this first to get size
-//		System.out.println("numBonds =  "+rd.numBonds);
-//		System.out.println("maxBondLength =  "+rd.maxBondLength);
-//		for(int b = 0; b < rd.numBonds; b++)
-//		{	
-//			System.out.println(b+"  "+bondInfo[b][0]+"  "+bondInfo[b][1]+"  "+bondInfo[b][2]+"  "+bondInfo[b][3]+"  "+bondInfo[b][4]+"  "+bondInfo[b][5]+"  "+bondInfo[b][6]);
-//		}
-
+		recalcABC();
+		// do this first to get size
+		
 		recalcMaterials();
 
 		// Set background color, field of view and focal length of renderer
 		double fov = 2 * perspectivescaler * scdSize / fl;
-		super.fov0 = fov;
+		fov0 = fov;
 		rp.setBgColor(1, 1, 1);// background color: white
 		rp.setFOV(fov);// field of view
 		rp.setFL(fl);// focal length: zoomed way out
@@ -283,7 +278,7 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		}
 
 //		System.out.println("IDA is focused " + isFocused);
-//		// BH no longer necessary
+//		// BH no longer necessary?
 //		if (isFocused) // if in focus
 //		{
 			if (isAnimate) {
@@ -880,21 +875,20 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 	 * 55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555
 	 */
 
-	/** keyinputListener responds to keyboard commands. */
-	private class keyinputListener implements KeyListener {
-		public void keyPressed(KeyEvent e) {
-		}
-
-		public void keyReleased(KeyEvent e) {
-		}
-
-		public void keyTyped(KeyEvent e) {
-			handleKey(e.getKeyChar());
-		}
+	@Override
+	protected void dispose() {
+		panel.removeKeyListener(this);
+		super.dispose();
 	}
 
-	public void handleKey(char key) {
-		switch (key) {
+	public void keyPressed(KeyEvent e) {
+	}
+
+	public void keyReleased(KeyEvent e) {
+	}
+
+	public void keyTyped(KeyEvent e) {
+		switch (e.getKeyChar()) {
 		case 'r':
 		case 'R':
 			rp.clearAngles();
@@ -977,52 +971,45 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 //		}
 //	} // end class focusIt
 
-	/** listens for the check boxes that highlight a given atomic subtype. */
-	private class checkboxListener implements ItemListener {
-		public void itemStateChanged(ItemEvent event) {
-			updateViewOptions();
-		}
-	}
-
-	/** listens for the applet buttons, which specify the viewing angles. */
-	private class buttonListener implements ItemListener {
-		public void itemStateChanged(ItemEvent event) {
-			if (event.getSource() == nButton) {
-				rp.clearAngles();
-				rp.setRotationAxis(0);
-			}
-			if (event.getSource() == xButton) {
-				rp.clearAngles();
-				rp.setRotationAxis(1);
-			}
-			if (event.getSource() == yButton) {
-				rp.clearAngles();
-				rp.setRotationAxis(2);
-			}
-			if (event.getSource() == zButton) {
-				rp.clearAngles();
-				rp.setRotationAxis(3);
-			}
-			if (event.getSource() == zoomButton) {
-				rp.clearAngles();
-				rp.setRotationAxis(4);
-			}
-
-			if (event.getSource() == superHKL)
-				viewType = 1;
-			if (event.getSource() == superUVW)
-				viewType = 2;
-			if (event.getSource() == parentHKL)
-				viewType = 3;
-			if (event.getSource() == parentUVW)
-				viewType = 4;
-			updateDisplay();
-
-		}
-	}
-
 	public BufferedImage getImage() {
 		return rp.getImage();
+	}
+
+	@Override
+	protected void handleCheckBoxEvent(Object src) {
+		updateViewOptions();
+	}
+
+	@Override
+	protected void handleRadioButtonEvent(Object src) {
+		if (!((JToggleButton) src).isSelected())
+			return;
+		if (src == nButton) {
+			rp.clearAngles();
+			rp.setRotationAxis(0);
+		} else if (src == xButton) {
+			rp.clearAngles();
+			rp.setRotationAxis(1);
+		} else if (src == yButton) {
+			rp.clearAngles();
+			rp.setRotationAxis(2);
+		} else if (src == zButton) {
+			rp.clearAngles();
+			rp.setRotationAxis(3);
+		} else if (src == zoomButton) {
+			rp.clearAngles();
+			rp.setRotationAxis(4);
+		} else if (src == superHKL) {
+			viewType = 1;
+		} else if (src == superUVW) {
+			viewType = 2;
+		} else if (src == parentHKL) {
+			viewType = 3;
+		} else if (src == parentUVW) {
+			viewType = 4;
+		}
+		updateDisplay();
+
 	}
 
 	public void updateViewOptions() {
@@ -1122,11 +1109,12 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		// Add listeners to a the subtype checkboxes -- don't know where else to put it.
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int s = 0; s < variables.numSubTypes[t]; s++)
-				variables.subTypeBox[t][s].addItemListener(new checkboxListener());
+				variables.subTypeBox[t][s].addItemListener(checkboxListener);
 	}
 
 	private JRadioButton newJRadioButton(String label, boolean selected, ButtonGroup g) {
 		JRadioButton b = new JRadioButton(label, selected);
+		b.setName(++buttonID + ":" + label);
 		b.setHorizontalAlignment(JRadioButton.LEFT);
 		b.setVerticalAlignment(JRadioButton.CENTER);
 		b.setFocusable(false);
@@ -1134,20 +1122,22 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		b.setForeground(Color.BLACK);
 		b.setVisible(true);
 		b.setBorderPainted(false);
-		b.addItemListener(new buttonListener());
+		b.addItemListener(buttonListener);
 		g.add(b);
 		return b;
 	}
 
+	static int buttonID = 0;
 	private JCheckBox newJCheckBox(String label, boolean selected) {
 		JCheckBox cb = new JCheckBox(label, selected);
+		cb.setName(++buttonID + ":" + label);
 		cb.setHorizontalAlignment(JCheckBox.LEFT);
 		cb.setVerticalAlignment(JCheckBox.CENTER);
 		cb.setFocusable(false);
 		cb.setVisible(true);
 		cb.setBackground(Color.WHITE);
 		cb.setForeground(Color.BLACK);
-		cb.addItemListener(new checkboxListener());
+		cb.addItemListener(checkboxListener);
 		return cb;
 	}
 

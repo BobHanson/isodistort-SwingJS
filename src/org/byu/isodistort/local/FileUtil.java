@@ -18,21 +18,71 @@ import javax.swing.filechooser.FileFilter;
 public class FileUtil {
 	private static JFileChooser fc;
 
-	public static String getExtension(File f) {
+	/**
+	 * Get a file's final dot-extension and possibly match it against an extension or the beginning of an extension. 
+	 * 
+	 * @param f
+	 * @param fileType null (just retrieve extension) or "xxx" (must match) or "xxx*" (must begin with xxx); must be lower-case if not null
+	 * @return extension or empty string if fileType is null, otherwise lower-case extension if a match or null if not
+	 */ 
+	public static String getExtension(File f, String fileType) {
 		String ext = null;
 		String s = f.getName();
 		int i = s.lastIndexOf('.');
-
-		if (i > 0 && i < s.length() - 1) {
-			ext = s.substring(i + 1).toLowerCase();
-		}
-		return ext;
+		if (i < 0)
+			return (fileType == null ? "" : null);
+		ext = s.substring(i + 1).toLowerCase();
+		if (fileType == null)
+			return ext;
+		String test = (fileType.endsWith("*") ? fileType.substring(0, fileType.length() - 1) : null);
+		boolean isOK = (test == null ? fileType.equals(ext) : ext.startsWith(test));
+		return (isOK ? ext : null);
 	}
 
 	public static void saveDataFile(Component parent, Object data, String fileType, boolean isSilent) {
 		getFileFromDialog(parent, fileType, (file) -> {
 			write(parent, file, data, isSilent);
 		}, isSilent);
+	}
+
+	private static void getFileFromDialog(Component parent, String fileType, Consumer<File> saver, boolean isSilent) {
+		if (fc == null) {
+			fc = new JFileChooser();
+			fc.addChoosableFileFilter(new FileFilter() {
+				public String getDescription() {
+					return "*." + fileType;
+				}
+
+				public boolean accept(File f) {
+					if (f.isDirectory()) {
+						return true;
+					}
+					return (getExtension(f, fileType) != null);
+				}
+			});
+		}
+
+		int okay = fc.showSaveDialog(parent);
+		if (okay == JFileChooser.APPROVE_OPTION) {
+			File file = getSaveSelectedFile(fileType, isSilent);
+			if (file != null) {
+				saver.accept(file);
+			}
+		}
+	}
+
+	private static File getSaveSelectedFile(String fileType, boolean isSilent) {
+		File file = fc.getSelectedFile();
+		String ext = getExtension(file, fileType);
+		if (ext == null) {
+			file = new File(file.getAbsolutePath() + "." + fileType);
+		}
+		if (!isSilent && file.exists()) {
+			if (JOptionPane.showConfirmDialog(null, "File already exists. Overwrite?", "File already exists",
+					JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION)
+				return null;
+		}
+		return file;
 	}
 
 	private static void write(Component parent, File file, Object data, boolean isSilent) {
@@ -52,51 +102,6 @@ public class FileUtil {
 			if (!isSilent)
 				JOptionPane.showMessageDialog(parent, "File " + file + " could not be saved: " + e.getMessage());
 		}
-	}
-
-	private static void getFileFromDialog(Component parent, String fileType, Consumer<File> saver, boolean isSilent) {
-		if (fc == null) {
-			fc = new JFileChooser();
-			fc.addChoosableFileFilter(new FileFilter() {
-				public String getDescription() {
-					return "*." + fileType;
-				}
-
-				public boolean accept(File f) {
-					if (f.isDirectory()) {
-						return true;
-					}
-					String extension = getExtension(f);
-					if (extension != null) {
-						if (extension.equals(fileType))
-							return true;
-					} else
-						return false;
-					return false;
-				}
-			});
-		}
-
-		int okay = fc.showSaveDialog(parent);
-		if (okay == JFileChooser.APPROVE_OPTION) {
-			File file = getSelectedFile(fileType, isSilent);
-			if (file != null) {
-				saver.accept(file);
-			}
-		}
-	}
-
-	private static File getSelectedFile(String fileType, boolean isSilent) {
-		File file = fc.getSelectedFile();
-		if (getExtension(file) == null || !getExtension(file).equals(fileType)) {
-			file = new File(file.getAbsolutePath() + "." + fileType);
-		}
-		if (!isSilent && file.exists()) {
-			if (JOptionPane.showConfirmDialog(null, "File already exists. Overwrite?", "File already exists",
-					JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION)
-				return null;
-		}
-		return file;
 	}
 
 	@SuppressWarnings("serial")

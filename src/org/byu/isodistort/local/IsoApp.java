@@ -10,8 +10,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
@@ -26,6 +30,7 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -43,7 +48,7 @@ import org.byu.isodistort.IsoDistortApp;
  */
 public abstract class IsoApp {
 
-	abstract public void init();
+	abstract protected void init();
 
 	abstract protected boolean setVariables(String dataString);
 
@@ -61,13 +66,34 @@ public abstract class IsoApp {
 
 	abstract public void updateDisplay();
 	
+	abstract protected void handleCheckBoxEvent(Object src);
+
+	abstract protected void handleRadioButtonEvent(Object src);
+	
+	/** listens for the check boxes that highlight a given atomic subtype. */
+	protected ItemListener checkboxListener = new ItemListener() {
+		public void itemStateChanged(ItemEvent event) {
+			handleCheckBoxEvent(event.getSource());
+		}
+	};
+	
+
+	/** listens for the applet buttons, which specify the viewing angles. */
+	protected ItemListener buttonListener = new ItemListener() {
+		public void itemStateChanged(ItemEvent event) {
+			handleRadioButtonEvent(event.getSource());
+		}
+	};
+
 	/**
 	 * The panel displaying this application
 	 */
 	protected JPanel panel;
 
+	protected boolean isEnabled = true;
+	
 	protected boolean isReset = false;
-	protected JButton applyView, saveImage, saveISOVIZ;
+	protected JButton applyView, saveImage, saveISOVIZ, openOther;
 	
 
 	public int initializing = 5; // lead needed to get first display. Why?
@@ -155,10 +181,12 @@ public abstract class IsoApp {
 		applyView = newJButton("Apply View", vl);
 		saveImage = newJButton("Save Image", vl);
 		saveISOVIZ = newJButton("Save ISOVIZ", vl);
-		panel.add(new JLabel("      "));		
+		openOther = newJButton("Open " + (appType == APP_ISODISTORT ? "ISODIFFRACT" : "ISODISTORT"), vl);
+		panel.add(new JLabel("   "));		
 		panel.add(applyView);
 		panel.add(saveImage);
 		panel.add(saveISOVIZ);
+		panel.add(openOther);
 	}
 
 	private static JButton newJButton(String text, ViewListener vl) {
@@ -234,23 +262,122 @@ public abstract class IsoApp {
 		return (s.length() == 0 || s.charAt(0) == '#' ? "" : s + "\n");
 	}
 
+	/**
+	 * Currently only isoviz and isovizq files.
+	 * 
+	 * @param f
+	 * @return
+	 */
 	public boolean loadDroppedFile(File f) {
 		if (f == null)
 			return false;
+		String ext = FileUtil.getExtension(f, "isoviz*");
+		if (ext == null)
+			return false;
+		switch (ext) {
+		case "isoviz":
+		case "isovizq":
+			break;
+		default:
+			return false;
+		}
 		String data = readFileData(f.getAbsolutePath());
 		if (data == null)
 			return false;
-		SwingUtilities.invokeLater(() -> {
-			setVariables(data);
-			updateRenderer();
-			frameResized();
-		});
+		boolean isIsoDistort = (appType == APP_ISODISTORT);
+		boolean isMyType = (isIsoDistort == (ext.equals("isoviz")));
+		boolean doSwitch = false;
+		if (!isMyType) {
+			String msg = "This file is intended for " + (appType == APP_ISODISTORT ? "ISODIFFRACT" : "ISODISTORT")
+					+ ". Would you like to switch to that application?";
+			doSwitch = (JOptionPane.showConfirmDialog(null, msg, "File Drop Application",
+					JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION);
+		}
+		if (doSwitch) {
+			isIsoDistort = !isIsoDistort;
+		}
+
+		openApplication(isIsoDistort ? APP_ISODISTORT : APP_ISODIFFRACT, data);
 		return true;
+
+	}
+
+	private void openApplication(int appType, String data) {
+		if (data == null)
+			return;
+		SwingUtilities.invokeLater(() -> {
+			boolean isIsoDistort = (appType == APP_ISODISTORT);
+			IsoApp app = (isIsoDistort ? new IsoDistortApp() : new IsoDiffractApp());
+			if (args == null || args.length == 0)
+				args = new String[1];
+			args[0] = data;
+			JFrame frame = this.frame;
+			dispose();
+			app.start(frame, args);
+			app.frameResized();
+		});
+	}
+
+	protected void dispose() {
+		isEnabled = false;
+		frame.removeComponentListener(componentListener);
+		frame.removeWindowListener(windowListener);
+		frame.getContentPane().removeAll();
+		frame = null;
 	}
 
 	protected String[] args;
 
-	public void start(JFrame frame, String[] args) {
+	private ComponentListener componentListener = new ComponentAdapter() {
+
+		@Override
+		public void componentResized(ComponentEvent e) {
+			frameResized();
+		}
+	};
+	
+	private WindowListener windowListener  = new WindowAdapter() {
+
+		@Override
+		public void windowClosing(WindowEvent e) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void windowClosed(WindowEvent e) {
+			
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void windowIconified(WindowEvent e) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void windowDeiconified(WindowEvent e) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void windowActivated(WindowEvent e) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void windowDeactivated(WindowEvent e) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+	};
+	
+	private void start(JFrame frame, String[] args) {
 		this.frame = frame;
 		this.args = args;
 		isFramed = true;
@@ -264,53 +391,8 @@ public abstract class IsoApp {
 		frame.setName(frame.getTitle());
 		frame.setTitle(frame.getTitle() + " ver. " + variables.isoversion);
 		frame.setVisible(true);
-		frame.addComponentListener(new ComponentAdapter() {
-
-			@Override
-			public void componentResized(ComponentEvent e) {
-				frameResized();
-			}
-		});
-		frame.addWindowListener(new WindowAdapter() {
-
-			@Override
-			public void windowClosing(WindowEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-
-			@Override
-			public void windowClosed(WindowEvent e) {
-				
-				// TODO Auto-generated method stub
-				
-			}
-
-			@Override
-			public void windowIconified(WindowEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-
-			@Override
-			public void windowDeiconified(WindowEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-
-			@Override
-			public void windowActivated(WindowEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-
-			@Override
-			public void windowDeactivated(WindowEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-			
-		});
+		frame.addComponentListener(componentListener);
+		frame.addWindowListener(windowListener);
 	}
 
 	/**
@@ -330,12 +412,17 @@ public abstract class IsoApp {
 	private class ViewListener implements ActionListener {
 
 		public void actionPerformed(ActionEvent event) {
-			if (event.getSource() == applyView) {
+			Object source = event.getSource();
+			if (source == applyView) {
 				isReset = true;
 				updateDisplay();
-			} else if (event.getSource() == saveImage) {
+				return;
+			}
+			if (source == saveImage) {
 				FileUtil.saveDataFile(frame, getImage(), "png", false);
-			} else if (event.getSource() == saveISOVIZ) {
+				return;
+			}
+			if (source == saveISOVIZ) {
 				getData(new Consumer<String>() {
 
 					@Override
@@ -345,6 +432,11 @@ public abstract class IsoApp {
 					}
 					
 				});
+				return;
+			}
+			if (source == openOther) {
+				openApplication(appType == APP_ISODISTORT ? APP_ISODIFFRACT : APP_ISODISTORT, isoData);
+				return;
 			}
 		}
 	}
@@ -727,5 +819,6 @@ public abstract class IsoApp {
 		}
 		app.start(new JFrame(type), args);
 	}
+
 	
 }

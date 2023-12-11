@@ -11,6 +11,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 import java.awt.image.MemoryImageSource;
 
 import javax.swing.JPanel;
@@ -43,10 +44,10 @@ public class RenderPanel3D extends JPanel
 	 */
 	protected MemoryImageSource mis;
 
-	/**
-	 * Secondary frambuffer for displaying additional information
-	 */
-	protected BufferedImage bufferIm;
+//	/**
+//	 * Secondary frambuffer for displaying additional information
+//	 */
+//	protected BufferedImage bufferIm;
 
 	protected double fov;
 
@@ -92,7 +93,7 @@ public class RenderPanel3D extends JPanel
 
 	private int top = 0; // MATRIX STACK POINTER
 	
-	public String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+	// public String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 	// --- PUBLIC DATA FIELDS
 
@@ -109,7 +110,7 @@ public class RenderPanel3D extends JPanel
 	/**
 	 * Flag that determines whether to display current frame rate.
 	 */
-	public boolean showFPS = false;
+	public boolean showFPS = true;
 
 	/** These doubles determine how far off center the image is */
 	protected double xOff = 0, yOff = 0, zOff = 0;
@@ -173,6 +174,7 @@ public class RenderPanel3D extends JPanel
 			double r, double g, double b) {
 		renderer.addLight(x, y, z, r, g, b);
 	}
+	
 
 	// PUBLIC METHODS TO LET THE PROGRAMMER MANIPULATE A MATRIX STACK
 
@@ -281,38 +283,38 @@ public class RenderPanel3D extends JPanel
 
 	// PUBLIC METHODS TO LET THE PROGRAMMER DEFORM AN OBJECT
 
-	/**
-	 * Deforms a geometric shape according to the beginning, middle, and end
-	 * parameters in each dimension. For each dimesion the three parameters indicate
-	 * the amount of deformation at each position. 0 - beginning, 1 - middle, 2 -
-	 * end. To indicate infinity (a constant transformation) set two adjacent
-	 * parameters to the same value. Setting all three parameters to the same value
-	 * transforms the shape geometry consistently across the entire axis of the
-	 * parameters.
-	 * 
-	 * @param s  shape object to be deformed
-	 * @param x0 location of beginning of deformation along the x axis
-	 * @param x1 location of beginning of deformation along the x axis
-	 * @param x2 location of beginning of deformation along the x axis
-	 * @param y0 location of beginning of deformation along the y axis
-	 * @param y1 location of beginning of deformation along the y axis
-	 * @param y2 location of beginning of deformation along the y axis
-	 * @param z0 location of beginning of deformation along the z axis
-	 * @param z1 location of beginning of deformation along the z axis
-	 * @param z2 location of beginning of deformation along the z axis
-	 * @return 1 if pull operation was successful, 0 otherwise
-	 * @see Geometry#pull
-	 */
-	public int pull(Geometry s, double x0, double x1, double x2, double y0, double y1, double y2, double z0, double z1,
-			double z2) {
-		return s.pull(m(), x0, x1, x2, y0, y1, y2, z0, z1, z2);
-	}
+//	/**
+//	 * Deforms a geometric shape according to the beginning, middle, and end
+//	 * parameters in each dimension. For each dimesion the three parameters indicate
+//	 * the amount of deformation at each position. 0 - beginning, 1 - middle, 2 -
+//	 * end. To indicate infinity (a constant transformation) set two adjacent
+//	 * parameters to the same value. Setting all three parameters to the same value
+//	 * transforms the shape geometry consistently across the entire axis of the
+//	 * parameters.
+//	 * 
+//	 * @param s  shape object to be deformed
+//	 * @param x0 location of beginning of deformation along the x axis
+//	 * @param x1 location of beginning of deformation along the x axis
+//	 * @param x2 location of beginning of deformation along the x axis
+//	 * @param y0 location of beginning of deformation along the y axis
+//	 * @param y1 location of beginning of deformation along the y axis
+//	 * @param y2 location of beginning of deformation along the y axis
+//	 * @param z0 location of beginning of deformation along the z axis
+//	 * @param z1 location of beginning of deformation along the z axis
+//	 * @param z2 location of beginning of deformation along the z axis
+//	 * @return 1 if pull operation was successful, 0 otherwise
+//	 * @see Geometry#pull
+//	 */
+//	public int pull(Geometry s, double x0, double x1, double x2, double y0, double y1, double y2, double z0, double z1,
+//			double z2) {
+//		return s.pull(m(), x0, x1, x2, y0, y1, y2, z0, z1, z2);
+//	}
 
 	// --- SYSTEM LEVEL PUBLIC METHODS ---
 
 	private IsoApp app;
 
-	private Image im;
+	private BufferedImage im;
 
 	public int[] getPix() {
 		return renderer.getPix();
@@ -355,9 +357,9 @@ public class RenderPanel3D extends JPanel
 		if (renderer.lod > 1)
 			renderer.lod--;
 
-		// WRITE RESULTS TO THE SCREEN
-		if (mis != null)
-			mis.newPixels(0, 0, getWidth(), getHeight(), true);
+//		// WRITE RESULTS TO THE SCREEN
+//		if (mis != null)
+//			mis.newPixels(0, 0, getWidth(), getHeight(), true);
 	}
 
 	int renderAreaX;
@@ -372,34 +374,46 @@ public class RenderPanel3D extends JPanel
 			return;
 		}
 		// MEASURE ELAPSED TIME AND FRAMERATE
-		elapsed += getCurrentTime() - currentTime;
+		double dt = (getCurrentTime() - currentTime);
+		elapsed += dt;
 		currentTime = getCurrentTime();
 		if (elapsed > 0.00001)
 			frameRate = 0.9 * frameRate + 0.1 / elapsed;
 		elapsed = 0.0;
-		Graphics gbuf = bufferIm.getGraphics();
-		gbuf.drawImage(im, 0, 0, null);
+// BH opt #2# not necessary to create an additional buffer.
+//		Graphics gbuf = bufferIm.getGraphics();
+//		gbuf.drawImage(im, 0, 0, null);
 		if (showFPS) {
-			gbuf.setColor(Color.white);
-			gbuf.fillRect(0, renderAreaY - 14, 80, 14);
-			gbuf.setColor(Color.black);
-			gbuf.drawString((int) frameRate + "." + ((int) (frameRate * 10) % 10) + " fps ", 1, renderAreaY - 1);
+			String x = "" + //dt;//
+			(int) frameRate + "." + ((int) (frameRate * 10) % 10);
+			/**
+			 * @j2sNative
+			 * 
+			 * document.title = ""+x
+			 */
+			{
+//			gbuf.setColor(Color.white);
+//			gbuf.fillRect(0, renderAreaY - 14, 80, 14);
+//			gbuf.setColor(Color.black);
+//			gbuf.drawString(x + " fps ", 1, renderAreaY - 1);
+			}
 		}
-		gbuf.dispose();
-		g.drawImage(bufferIm, 0, 0, null);
+//		gbuf.dispose();
+		g.drawImage(im, 0, 0, null);
 	}
 
 	private synchronized void recalculateSize(int width, int height) {
 		// Change the size
 		renderAreaX = width;
 		renderAreaY = height;
+		im = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		int[] pixels = ((DataBufferInt)im.getRaster().getDataBuffer()).getData();
+		renderer.reinit(width, height, pixels);		
 		// Reinitialize the renderer
-		renderer.reinit(width, height);
-
-		mis = new MemoryImageSource(width, height, renderer.getPix(), 0, width);
-		mis.setAnimated(true);
-		im = createImage(mis);
-		bufferIm = (BufferedImage) createImage(width, height);
+//		mis = new MemoryImageSource(width, height, renderer.getPix(), 0, width);
+//		mis.setAnimated(true);
+//		im = createImage(mis);
+		//bufferIm = (BufferedImage) createImage(width, height);
 	}
 
 	/**
@@ -615,7 +629,7 @@ public class RenderPanel3D extends JPanel
 		//waitForImage(bufferedImage, im.getWidth(null), im.getHeight(null)); 
 		return bi; 
 	}
-	
+
 //	private static void waitForImage(BufferedImage buf, int width, int height)
 //	{
 //		while ((buf.getHeight() == 0)&&(buf.getWidth() == 0))

@@ -17,7 +17,7 @@ import org.byu.isodistort.local.Vec;
 
 public class Renderer {
 
-	String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+	//String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 	/**
 	 * Flag controls table lookup mode for materials, true means on.
@@ -66,7 +66,7 @@ public class Renderer {
 		return pix;
 	}
 
-	void init(int W, int H, int pix[]) {
+	void init(int W, int H, int[] pix) {
 		nLights = 0;
 		this.pix = pix;
 		this.W = W;
@@ -90,6 +90,21 @@ public class Renderer {
 		zbuffer = null;
 		gzbuffer = null;
 		return pix;
+	}
+
+	/**
+	 * BH avoiding the messiness of a MemoryImageSource. 
+	 * Instead, we just mainline the image pixel buffer.
+	 * @param width
+	 * @param height
+	 * @param pixels
+	 */
+	public void reinit(int width, int height, int[] pixels) {
+		this.W = width;
+		this.H = height;
+		pix = pixels;
+		zbuffer = null;
+		gzbuffer = null;
 	}
 
 	/**
@@ -182,8 +197,14 @@ public class Renderer {
 	/**
 	 * Add a light source where x,y,z are light source direction; r,g,b are light
 	 * source color.
+	 * 
+	 * BH added x = NaN to clear lights
 	 */
 	void addLight(double x, double y, double z, double r, double g, double b) {
+		if (Double.isNaN(x)) {
+			nLights = 0;
+			return;
+		}
 		placeLight(nLights, x, y, z);
 		colorLight(nLights, r, g, b);
 		nLights++;
@@ -610,10 +631,11 @@ public class Renderer {
 
 //CALLED IN RENDER THREAD TO RECOMPUTE CAMERA VALUE
 
+	private	double T[] = new double[3];
+
 	private synchronized void computeCamera() {
 
 		if (this.manualCameraControl) {
-			double T[] = new double[3];
 
 			T[0] = cameraAim[0] - cameraPos[0];
 			T[1] = cameraAim[1] - cameraPos[1];
@@ -644,23 +666,20 @@ public class Renderer {
 			if (theta == 0 && phi == 0 && sigma == 0)
 				return;
 
-			changeCamera(theta, phi, sigma);
+			Matrix.identity(camtmp);
+			camtmp.rotateZ(sigma);
+			camera.postMultiply(camtmp);
+			Matrix.identity(camtmp);
+			camtmp.rotateY(theta);
+			camera.postMultiply(camtmp);
+			Matrix.identity(camtmp);
+			camtmp.rotateX(phi);
+			camera.postMultiply(camtmp);
+
 			theta = phi = sigma = 0; // WE'VE ACCOUNTED FOR ROTATION, SO RESET ANGLES.
 		}
 	}
 
-	private synchronized void changeCamera(double theta, double phi, double sigma)// will also rotate Z-axiz
-	{
-		Matrix.identity(camtmp);
-		camtmp.rotateZ(sigma);
-		camera.postMultiply(camtmp);
-		Matrix.identity(camtmp);
-		camtmp.rotateY(theta);
-		camera.postMultiply(camtmp);
-		Matrix.identity(camtmp);
-		camtmp.rotateX(phi);
-		camera.postMultiply(camtmp);
-	}
 
 //RENDER EVERYTHING IN SCENE
 
@@ -682,8 +701,10 @@ public class Renderer {
 		// RENDER TRANSPARENT OBJECTS
 
 		renderT = true;
+//		long t = System.currentTimeMillis();
 		for (int i = 0; i < nt; i++)
 			renderGeometry(tS[i]);
+//		System.out.println("RenderWorld " + (System.currentTimeMillis() - t) + " " + nDisabled);
 	}
 
 //COUNT HOW MANY TRANSPARENT OBJECTS THERE ARE
@@ -702,16 +723,17 @@ public class Renderer {
 
 //RENDER ONE OBJECT FOR THIS FRAME
 
+	private Matrix cam = new Matrix(); // BH opt #1#
+
 	private void render(Geometry s, Matrix camera) {
 		if (s.child != null) {
-			Matrix cam = new Matrix();
+			//Matrix cam = new Matrix(); // BH opt #1# 
 			cam.copy(camera); // CAMERA MAY MOVE BEFORE CHILD RENDERS
-
-			Matrix mat = new Matrix();
-			mat.copy(s.globalMatrix);
+//			Matrix mat = new Matrix();
+//			mat.copy(s.globalMatrix);
 
 			for (int i = 0; i < s.child.length && s.child[i] != null; i++) {
-				s.child[i].globalMatrix.copy(mat);
+				s.child[i].globalMatrix.copy(s.globalMatrix);
 				s.child[i].globalMatrix.preMultiply(s.child[i].matrix);
 				render(s.child[i], cam);
 			}
@@ -744,8 +766,14 @@ public class Renderer {
 	private int dpixelR[] = new int[8];
 	private int[] dpixel = new int[8];
 
+	int nDisabled = 0;
 	private void renderGeometry(Geometry s) {
 
+		if (!s.isEnabled()) {
+			nDisabled++;
+			return;
+		}	
+		
 		matrix.copy(s.globalMatrix);
 		matrix.postMultiply(camera);
 
@@ -1651,4 +1679,5 @@ public class Renderer {
 	private double cameraPos[] = { 0., 0., FL }; // camera position
 	private double cameraAim[] = { 0., 0., 0. }; // look at point
 	private double cameraUp[] = { 0., 1., 0. }; // camera up vector
+
 }

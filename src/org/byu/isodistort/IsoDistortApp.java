@@ -207,6 +207,7 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		rp.setCamera(0, 0);
 		// Define position and color of light source (x, y, z, r, g, b)
 		double bbb = 0.38;
+		rp.addLight(Double.NaN, 0,0,0,0,0);
 		rp.addLight(.5, .5, .5, 1.7 * bbb, 1.7 * bbb, 1.7 * bbb);
 		rp.addLight(-.5, .5, .5, bbb, bbb, bbb);
 		rp.addLight(.5, -.5, .5, bbb, bbb, bbb);
@@ -298,6 +299,7 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 				isRecalcMat = false;
 			}
 			if (isRecalc) {
+				// virtually all the time is here:
 				recalcABC();
 				renderAtoms();
 				renderBonds();
@@ -328,8 +330,9 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		atommagInfo = new double[variables.numAtoms][3];
 		atomrotInfo = new double[variables.numAtoms][3];
 		atomellipInfo = new double[variables.numAtoms][7];
-		for (int qq = 0; qq < variables.numAtoms; qq++)// iterate over all the types
-			spheres.delete(0);
+		spheres.clear(0);
+//		for (int qq = 0; qq < variables.numAtoms; qq++)// iterate over all the types
+//			spheres.delete(0);
 		int q = 0;
 		for (int t = 0; t < variables.numTypes; t++)// iterate over all the types
 			for (int s = 0; s < variables.numSubTypes[t]; s++)
@@ -347,10 +350,10 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 	 */
 	private void initBonds() {
 		showBonds = showBonds0;
-		bondInfo = new double[variables.numBonds][7];
-		for (int b = 0; b < variables.numBonds; b++)
-			bonds.delete(0);
-		for (int b = 0; b < variables.numBonds; b++)
+		int n = variables.numBonds;
+		bondInfo = new double[n][7];
+		bonds.clear(0);
+		for (int b = 0; b < n; b++)
 			bonds.add().tube(numBondSides).setMaterial(bondMaterial);
 	}
 
@@ -361,8 +364,7 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		showCells = showCells0;
 		parentCellInfo = new double[12][7];
 		superCellInfo = new double[12][7];
-		for (int c = 0; c < 24; c++)
-			cells.delete(0);
+		cells.clear(0);
 		for (int c = 0; c < 12; c++)
 			cells.add().cylinder(numCellSides).setMaterial(parentCellMaterial);
 		for (int c = 0; c < 12; c++)
@@ -397,10 +399,10 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		subMaterial = new Material[variables.numTypes][];
 
 		// Create the subMaterial array;
-		for (int t = 0; t < variables.numTypes; t++)// iterate over types of atoms
+		for (int t = 0, nt = variables.numTypes; t < nt; t++)// iterate over types of atoms
 		{
 			subMaterial[t] = new Material[variables.numSubTypes[t]];
-			for (int s = 0; s < variables.numSubTypes[t]; s++)// iterate over number-of-subtypes
+			for (int s = 0, nst = variables.numSubTypes[t]; s < nst; s++)// iterate over number-of-subtypes
 				subMaterial[t][s] = rp.newMaterial();
 		}
 	}
@@ -462,8 +464,9 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 						temp = rotationMultiplier;
 					else
 						temp = 0;
-					rp.scale(temp, temp, 0.62 + atomrotInfo[q][L] * variables.angstromsPerRadian); // The factor of 0.62
-																									// hides the
+					rp.scale(temp, temp, 0.62 + atomrotInfo[q][L] * variables.angstromsPerRadian); 
+					// The factor of 0.62																				
+					// hides the
 					// zero-length rotations
 					// just inside the surface
 					// of the spheres.
@@ -482,13 +485,12 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		/** Convenient constants for accessing specified element of array */
 		int x = 0, y = 1, z = 2, X = 3, Y = 4;
 		double temp, hide = 1;
-		for (int b = 0; b < variables.numBonds; b++)// iterate over bonds
-		{
+		for (int b = 0; b < variables.numBonds; b++) {
+			// iterate over bonds
 			rp.push();// new matrix
 			{
 				rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);
-				// make everything smaller to take out
-				// perspective
+				// make everything smaller to take out perspective
 				rp.translate(bondInfo[b][x], bondInfo[b][y], bondInfo[b][z]);
 				// position the atom at (x,y,z)
 				rp.rotateY(bondInfo[b][Y]);
@@ -496,10 +498,7 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 				rp.rotateX(bondInfo[b][X]);
 				// x-angle orientation of bond number b
 				temp = variables.atomMaxRadius * bondMultiplier;
-				if (bondInfo[b][6] <= 0.5)
-					hide = 0.001;
-				else
-					hide = 1.00;
+				hide = (bondInfo[b][6] <= 0.5 ? 0.001 : 1);
 				rp.scale(hide * temp, hide * temp, hide * bondInfo[b][5] / 2.0);
 				// The first two indicies are the
 				// cross-section of the bond which is a
@@ -640,29 +639,23 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 			for (int s = 0; s < variables.numSubTypes[t]; s++)
 				for (int a = 0; a < variables.numSubAtoms[t][s]; a++) {
 					atomradInfo[q] = variables.atomFinalOcc[t][s][a];
-
-					for (int i = 0; i < 3; i++)
-						newcoord[i] = variables.atomFinalCoord[t][s][a][i];
+					Vec.set3(newcoord, variables.atomFinalCoord[t][s][a]);
 					Vec.matdotvect(variables.sBasisCart, newcoord, tempvec); // typeless atom in cartesian coords
+				
 					for (int i = 0; i < 3; i++) // recenter in Applet coordinates
 						atomcoordInfo[q][i] = tempvec[i] - variables.sCenterCart[i];
 
-					for (int i = 0; i < 3; i++)
-						newmag[i] = variables.atomFinalMag[t][s][a][i];
+					Vec.set3(newmag, variables.atomFinalMag[t][s][a]);
 					Vec.matdotvect(variables.sBasisCart, newmag, tempvec);
 					Vec.calculatearrow(tempvec, atommagInfo[q]);
 
-					for (int i = 0; i < 3; i++)
-						newrot[i] = variables.atomFinalRot[t][s][a][i];
+					Vec.set3(newrot, variables.atomFinalRot[t][s][a]);
 					Vec.matdotvect(variables.sBasisCart, newrot, tempvec);
 					Vec.calculatearrow(tempvec, atomrotInfo[q]);
 
 //					Ellipsoid work
-					for (int i = 0; i < 6; i++)
-						newellip[i] = variables.atomFinalEllip[t][s][a][i];
-//			        System.out.println ("ellipmat1: "+t+", "+s+", "+a+", "+newellip[0]+", "+newellip[1]+", "+newellip[2]+", "+newellip[3]+", "+newellip[4]+", "+newellip[5]);
+					Vec.copy(variables.atomFinalEllip[t][s][a], newellip);
 					Vec.voigt2matrix(newellip, tempmat);
-//			        System.out.println ("ellipmat2: "+t+", "+s+", "+a+", "+tempmat[0][0]+", "+tempmat[0][1]+", "+tempmat[0][2]+", "+tempmat[1][0]+", "+tempmat[1][1]+", "+tempmat[1][2]+", "+tempmat[2][0]+", "+tempmat[2][1]+", "+tempmat[2][2]);
 					Vec.matdotmat(variables.sBasisCart, tempmat, tempmat2);
 					Vec.matcopy(tempmat2, tempmat);
 					Vec.matdotmat(tempmat, variables.sBasisCartInverse, tempmat2);// ellipsoid in cartesian coords --
@@ -683,11 +676,14 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		{
 			Vec.pairtobond(atomcoordInfo[variables.whichAtomsBond[b][0]], atomcoordInfo[variables.whichAtomsBond[b][1]],
 					bondInfo[b]);
-			if (bondInfo[b][5] >= variables.maxBondLength)
+			if (bondInfo[b][5] >= variables.maxBondLength
+					|| atomradInfo[variables.whichAtomsBond[b][0]] <= variables.minBondOcc
+					|| atomradInfo[variables.whichAtomsBond[b][1]] <= variables.minBondOcc) {
 				bondInfo[b][6] = 0.0;
-			if (atomradInfo[variables.whichAtomsBond[b][0]] <= variables.minBondOcc
-					|| atomradInfo[variables.whichAtomsBond[b][1]] <= variables.minBondOcc)
-				bondInfo[b][6] = 0.0;
+				bonds.child(b).setEnabled(false);
+			} else {
+				bonds.child(b).setEnabled(true);
+			}
 		}
 
 		// calculate the parent and supercell coordinate axes in bond format
@@ -709,6 +705,7 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 			for (int i = 0; i < 3; i++) {
 				extent[i] = -variables.sCenterCart[i] + variables.sBasisCart[i][axis];
 				saxesbegs[axis][i] = extent[i] + 1.5 * variables.atomMaxRadius * tempvec[i];
+
 				saxesends[axis][i] = extent[i] + 4.0 * variables.atomMaxRadius * tempvec[i];
 			}
 			Vec.pairtobond(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3]);
@@ -717,34 +714,29 @@ public class IsoDistortApp extends IsoApp implements Runnable {
 		// Calculate the maximum distance from applet center (used to determine FOV).
 		scdSize = 0;
 		for (int j = 0; j < 8; j++) {
-			for (int i = 0; i < 3; i++)
-				tempvec[i] = variables.superCellVertices[j][i];
+			Vec.set3(tempvec, variables.superCellVertices[j]);
 			tempscalar = Vec.norm(tempvec);
 			if (tempscalar > scdSize)
 				scdSize = tempscalar;
-			for (int i = 0; i < 3; i++)
-				tempvec[i] = variables.parentCellVertices[j][i];
+			Vec.set3(tempvec, variables.parentCellVertices[j]);
 			tempscalar = Vec.norm(tempvec);
 			if (tempscalar > scdSize)
 				scdSize = tempscalar;
 		}
 		for (q = 0; q < variables.numAtoms; q++) {
-			for (int i = 0; i < 3; i++)
-				tempvec[i] = atomcoordInfo[q][i];
+			Vec.set3(tempvec, atomcoordInfo[q]);
 			tempscalar = Vec.norm(tempvec);
 			if (tempscalar > scdSize)
 				scdSize = tempscalar;
 		}
 		for (int axis = 0; axis < 3; axis++) {
-			for (int i = 0; i < 3; i++)
-				tempvec[i] = paxesends[axis][i];
+			Vec.set3(tempvec, paxesends[axis]);
 			tempscalar = Vec.norm(tempvec);
 			if (tempscalar > scdSize)
 				scdSize = tempscalar;
 		}
 		for (int axis = 0; axis < 3; axis++) {
-			for (int i = 0; i < 3; i++)
-				tempvec[i] = saxesends[axis][i];
+			Vec.set3(tempvec, saxesends[axis]);
 			tempscalar = Vec.norm(tempvec);
 			if (tempscalar > scdSize)
 				scdSize = tempscalar;

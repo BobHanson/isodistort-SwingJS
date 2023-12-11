@@ -243,6 +243,7 @@ public abstract class IsoApp {
 		SwingUtilities.invokeLater(() -> {
 			setVariables(data);
 			updateRenderer();
+			frameResized();
 		});
 		return true;
 	}

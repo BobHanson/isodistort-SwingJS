@@ -20,7 +20,7 @@ import org.byu.isodistort.local.Vec;
  */
 
 public class Geometry {
-	String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+	// String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 	/**
 	 * Stores the shape's material properties.
@@ -92,11 +92,11 @@ public class Geometry {
 	 */
 	double[][] vertices;
 
-	/**
-	 * A set of vertices used as an original reference when changes are made to the
-	 * current set of vertices.
-	 */
-	private double[][] refVertices;
+//	/**
+//	 * A set of vertices used as an original reference when changes are made to the
+//	 * current set of vertices.
+//	 */
+//	private double[][] refVertices;
 
 	/**
 	 * Indicates the number of rows in the mesh.
@@ -141,19 +141,19 @@ public class Geometry {
 	 */
 	private boolean isDoubleSided = false;
 
-	/**
-	 * Adjusts the influence-wieght of the pull function.
-	 * 
-	 * @see #pull
-	 */
-	private static double pullWeight = 1;
-	/**
-	 * Used to describe which children are to be transformed using the pull
-	 * function. 0 bits indicate no pull, 1 bits indicate perform pull.
-	 * 
-	 * @see #pull
-	 */
-	private static int pullMask = 0xffffffff;
+//	/**
+//	 * Adjusts the influence-wieght of the pull function.
+//	 * 
+//	 * @see #pull
+//	 */
+//	private static double pullWeight = 1;
+//	/**
+//	 * Used to describe which children are to be transformed using the pull
+//	 * function. 0 bits indicate no pull, 1 bits indicate perform pull.
+//	 * 
+//	 * @see #pull
+//	 */
+//	private static int pullMask = 0xffffffff;
 
 	/**
 	 * Constructor sets up the local and global transformation matrices.
@@ -269,6 +269,22 @@ public class Geometry {
 	}
 
 	/**
+	 * 
+	 * set child[n] to be null, resulting in truncating the list at that point.
+	 * 
+	 * @param n
+	 * @return this
+	 * 
+	 * @author Bob Hanson 2023.12.10
+	 * 
+	 */
+	public Geometry clear(int n) {
+		if (child != null && n >= 0 && n < child.length)
+			child[n] = null;
+		return this;
+	}
+
+	/**
 	 * Set the Material for this shape to be Material m.
 	 * 
 	 * @param m the desired Material
@@ -325,34 +341,34 @@ public class Geometry {
 //		return offset;
 //	}
 //
-	/**
-	 * Returns a new 2-d array with a copy of vertices passed as the parameter. Each
-	 * vertex must consist of 6 values (x,y,z coordinates + x,y,z normal). An
-	 * arbitrary number of vertices is allowed.
-	 * 
-	 * @param src array of vertices to be duplicated.
-	 * @return a new array with a copy of vertices in src
-	 */
-	private double[][] copyVertices(double src[][]) {
-		return copyVertices(src, new double[src.length][src[0].length]);
-	}
-
-	/**
-	 * Copies and returns the contents of vertex array src to dst. Each vertex must
-	 * consist of 6 values (x,y,z coordinates + x,y,z normal). An arbitrary number
-	 * of vertices is allowed, as long as src and dst both have the same
-	 * dimenstions.
-	 * 
-	 * @param src the original vertex array
-	 * @param dst the destination to hold a copy of the original vertices
-	 * @return dst, the copy of the original vertices
-	 */
-	private double[][] copyVertices(double src[][], double dst[][]) {
-		for (int i = 0; i < src.length; i++)
-			for (int j = 0; j < src[i].length; j++)
-				dst[i][j] = src[i][j];
-		return dst;
-	}
+//	/**
+//	 * Returns a new 2-d array with a copy of vertices passed as the parameter. Each
+//	 * vertex must consist of 6 values (x,y,z coordinates + x,y,z normal). An
+//	 * arbitrary number of vertices is allowed.
+//	 * 
+//	 * @param src array of vertices to be duplicated.
+//	 * @return a new array with a copy of vertices in src
+//	 */
+//	private double[][] copyVertices(double src[][]) {
+//		return copyVertices(src, new double[src.length][src[0].length]);
+//	}
+//
+//	/**
+//	 * Copies and returns the contents of vertex array src to dst. Each vertex must
+//	 * consist of 6 values (x,y,z coordinates + x,y,z normal). An arbitrary number
+//	 * of vertices is allowed, as long as src and dst both have the same
+//	 * dimenstions.
+//	 * 
+//	 * @param src the original vertex array
+//	 * @param dst the destination to hold a copy of the original vertices
+//	 * @return dst, the copy of the original vertices
+//	 */
+//	private double[][] copyVertices(double src[][], double dst[][]) {
+//		for (int i = 0; i < src.length; i++)
+//			for (int j = 0; j < src[i].length; j++)
+//				dst[i][j] = src[i][j];
+//		return dst;
+//	}
 
 	/**
 	 * Sets the coordinates and normal values of vertex i.
@@ -408,100 +424,6 @@ public class Geometry {
 //		return this;
 //	}
 //
-//// CUBE
-//	/**
-//	 * Sets the current shape geometry to a unit cube.
-//	 * 
-//	 * @return the current shape geometry
-//	 */
-//	private Geometry cube() {
-//		faces = cubeFaces;
-//		vertices = cubeVertices;
-//		return this;
-//	}
-//
-//	private static int[][] cubeFaces = { { 0, 1, 2, 3 }, { 4, 5, 6, 7 }, { 8, 9, 10, 11 }, { 12, 13, 14, 15 },
-//			{ 16, 17, 18, 19 }, { 20, 21, 22, 23 }, };
-//
-//	private static double N = -1, P = 1;
-//	private static double[][] cubeVertices = { { N, N, N, N, 0, 0 }, { N, N, P, N, 0, 0 }, { N, P, P, N, 0, 0 },
-//			{ N, P, N, N, 0, 0 }, { P, N, N, P, 0, 0 }, { P, P, N, P, 0, 0 }, { P, P, P, P, 0, 0 },
-//			{ P, N, P, P, 0, 0 }, {
-//
-//					N, N, N, 0, N, 0 },
-//			{ P, N, N, 0, N, 0 }, { P, N, P, 0, N, 0 }, { N, N, P, 0, N, 0 }, { N, P, N, 0, P, 0 },
-//			{ N, P, P, 0, P, 0 }, { P, P, P, 0, P, 0 }, { P, P, N, 0, P, 0 }, {
-//
-//					N, N, N, 0, 0, N },
-//			{ N, P, N, 0, 0, N }, { P, P, N, 0, 0, N }, { P, N, N, 0, 0, N }, { N, N, P, 0, 0, P },
-//			{ P, N, P, 0, 0, P }, { P, P, P, 0, 0, P }, { N, P, P, 0, 0, P }, };
-//
-//// BEZELED CUBE
-//	/**
-//	 * Creates a bezeled cube with variable bezel of radius r.
-//	 * 
-//	 * @param r radius of bezel
-//	 * @return the current shape geometry
-//	 */
-//	private Geometry bezeledCube(double r) {
-//		faces = bezeledCubeFaces;
-//		vertices = copyVertices(bezeledCubeVertices);
-//		for (int i = 0; i < vertices.length; i++)
-//			for (int j = 0; j < 3; j++) {
-//				if (vertices[i][j] == n)
-//					vertices[i][j] = r - 1;
-//				if (vertices[i][j] == p)
-//					vertices[i][j] = 1 - r;
-//			}
-//		return this;
-//	}
-//
-//	private static int[][] bezeledCubeFaces = { { 0, 1, 2, 3 }, { 4, 5, 6, 7 }, { 8, 9, 10, 11 }, { 12, 13, 14, 15 },
-//			{ 16, 17, 18, 19 }, { 20, 21, 22, 23 }, { 8, 11, 1, 0 }, { 20, 23, 2, 1 }, { 13, 12, 3, 2 },
-//			{ 17, 16, 0, 3 }, {
-//
-//					16, 19, 9, 8 },
-//			{ 11, 10, 21, 20 }, { 23, 22, 14, 13 }, { 12, 15, 18, 17 }, { 4, 7, 10, 9 }, { 7, 6, 22, 21 },
-//			{ 6, 5, 15, 14 }, { 5, 4, 19, 18 }, {
-//
-//					16, 8, 0 },
-//			{ 11, 20, 1 }, { 23, 13, 2 }, { 12, 17, 3 }, { 9, 19, 4 }, { 21, 10, 7 }, { 14, 22, 6 }, { 18, 15, 5 }, };
-//
-//	private static double n = -.9, p = .9;
-//	private static double[][] bezeledCubeVertices = { { N, n, n, N, 0, 0 }, { N, n, p, N, 0, 0 }, { N, p, p, N, 0, 0 },
-//			{ N, p, n, N, 0, 0 }, { P, n, n, P, 0, 0 }, { P, p, n, P, 0, 0 }, { P, p, p, P, 0, 0 },
-//			{ P, n, p, P, 0, 0 }, {
-//
-//					n, N, n, 0, N, 0 },
-//			{ p, N, n, 0, N, 0 }, { p, N, p, 0, N, 0 }, { n, N, p, 0, N, 0 }, { n, P, n, 0, P, 0 },
-//			{ n, P, p, 0, P, 0 }, { p, P, p, 0, P, 0 }, { p, P, n, 0, P, 0 }, {
-//
-//					n, n, N, 0, 0, N },
-//			{ n, p, N, 0, 0, N }, { p, p, N, 0, 0, N }, { p, n, N, 0, 0, N }, { n, n, P, 0, 0, P },
-//			{ p, n, P, 0, 0, P }, { p, p, P, 0, 0, P }, { n, p, P, 0, 0, P }, };
-//
-//// POLYGON
-//
-//	/**
-//	 * Creates a polygon defined by the X and Y coordinates.
-//	 * 
-//	 * @param X array of x coordinates
-//	 * @param Y array of corresponding y coordinates
-//	 * @return current shape geometry
-//	 */
-//	private Geometry polygon(double X[], double Y[]) {
-//
-//		int k = X.length;
-//		faces = new int[1][k];
-//		vertices = new double[k][verticedepth];
-//
-//		for (int i = 0; i < k; i++) {
-//			faces[0][i] = i;
-//			setVertex(i, X[i], Y[i], 0, 0, 0, 1);
-//		}
-//		return this;
-//	}
-//
 // k-SIDED REGULAR POLYGON APPROXIMATION TO A CIRCULAR DISK
 
 	/**
@@ -524,31 +446,6 @@ public class Geometry {
 		setVertex(k, 0, 0, 0, 0, 0, 1);
 		return this;
 	}
-
-//	/**
-//	 * Creates a 2D gear disk with an nTeetch number of teeth.
-//	 * 
-//	 * @param nTeeth number of teeth on the gear
-//	 * @return the current shape geometry
-//	 * @see #gear
-//	 */
-//	private Geometry gearDisk(int nTeeth) {
-//
-//		int k = 2 * nTeeth;
-//		faces = new int[k][3];
-//		vertices = new double[k + 1][verticedepth];
-//
-//		for (int i = 0; i < k; i++) {
-//			faces[i][0] = i;
-//			faces[i][1] = (i + 1) % k;
-//			faces[i][2] = k;
-//			double theta = 2 * Math.PI * i / k;
-//			double r = i % 2 == 0 ? 1 : 1 - Math.PI / nTeeth;
-//			setVertex(i, r * Math.cos(theta), r * Math.sin(theta), 0, 0, 0, 1);
-//		}
-//		setVertex(k, 0, 0, 0, 0, 0, 1);
-//		return this;
-//	}
 
 	private Matrix m = new Matrix();
 
@@ -579,90 +476,6 @@ public class Geometry {
 		return this;
 	}
 
-//// GEAR
-//	/**
-//	 * Creates a 3D gear with nTeeth number of teeth.
-//	 * 
-//	 * @param nTeeth number of teeth subdivsions
-//	 * @return the shape geometry
-//	 * @see #gearDisk
-//	 */
-//	private Geometry gear(int nTeeth) {
-//
-//		child = null;
-//
-//		add().gearTube(nTeeth);
-//		add().gearDisk(nTeeth);
-//		add().gearDisk(nTeeth);
-//
-//		Matrix.identity(m);
-//		m.scale(1, -1, -1);
-//		m.translate(0, 0, 1);
-//		child[1].setMatrix(m);
-//
-//		Matrix.identity(m);
-//		m.translate(0, 0, 1);
-//		child[2].setMatrix(m);
-//
-//		return this;
-//	}
-//
-//// PILL (TUBE WITH ROUNDED ENDS)
-//	/**
-//	 * Creates a pill with resolution k, length len, and degree of roundness bulge.
-//	 * 
-//	 * @param k     number of subdivisions of regular polygons used in approximating
-//	 *              the actual shapes.
-//	 * @param len   the proportional length (height) of the cylinder
-//	 * @param bulge the degree of roundess of the edges. 1 = half sphere. 0 = flat
-//	 *              surface
-//	 * @return the shape geometry
-//	 * @see #pill(int k, double len, double bulge, double taper)
-//	 */
-//	private Geometry pill(int k, double len, double bulge) {
-//		return pill(k, len, bulge, 1);
-//	}
-//
-//// TAPERED PILL (TAPERED TUBE WITH ROUNDED ENDS)
-//	/**
-//	 * Creates a tapered pill with resolution k, length len, and degree of roundness
-//	 * bulge and a taper of the southern hemisphere. Tapering scales the southern
-//	 * hemisphere of the pill.
-//	 * 
-//	 * @param k     number of subdivisions of regular polygons used in approximating
-//	 *              the actual shapes.
-//	 * @param len   the proportional length (height) of the cylinder
-//	 * @param bulge the degree of roundess of the edges. 1 = half sphere. 0 = flat
-//	 *              surface
-//	 * @param taper additional scaling of the southern hemisphere ( 1 = original
-//	 *              size).
-//	 * @return the shape geometry
-//	 */
-//	private Geometry pill(int k, double len, double bulge, double taper) {
-//
-//		child = null;
-//
-//		add().tube(k, taper); // CYLINDRICAL TUBE
-//		add().globe(k, k / 2, 0, 1, 0, .5); // NORTHERN HEMISPHERE OF A GLOBE
-//		add().globe(k, k / 2, 0, 1, .5, 1); // SOUTHERN HEMISPHERE OF A GLOBE
-//
-//		Matrix.identity(m);
-//		m.scale(1, 1, len);
-//		child[0].setMatrix(m);
-//
-//		Matrix.identity(m);
-//		m.translate(0, 0, -len);
-//		m.scale(1, 1, bulge);
-//		child[1].setMatrix(m);
-//
-//		Matrix.identity(m);
-//		m.translate(0, 0, len);
-//		m.scale(taper, taper, bulge);
-//		child[2].setMatrix(m);
-//
-//		return this;
-//	}
-//
 // BALL
 
 	/**
@@ -716,51 +529,6 @@ public class Geometry {
 		return this;
 	}
 
-//// GLOBE (LONGITUDE/LATITUDE SPHERE)
-//	/**
-//	 * Creates a longitude/latitude partitioned sphere where m and n specify
-//	 * longitude and latitude respectively.
-//	 * 
-//	 * @param m number of longitude subdivisions
-//	 * @param n number of latitude subdivisions
-//	 * @return the shape geometry.
-//	 * @see #ball
-//	 */
-//	private Geometry globe(int m, int n) {
-//		return globe(m, n, 0, 1, 0, 1);
-//	}
-//
-//// PARAMETRIC SUBSECTION OF A GLOBE
-//	/**
-//	 * Creates a longitude/latitude partitioned sphere delimited by ranges in the
-//	 * east-west and north-south directions.
-//	 * 
-//	 * @param m   number of longitude subdivisions
-//	 * @param n   number of latitude subdivisions
-//	 * @param uLo low end of the east-west range [0..1]
-//	 * @param uHi high end of the east-west range [0..1]
-//	 * @param vLo low end of the north-south range [0..1]
-//	 * @param vHi high end of the north-south range [0..1]
-//	 * @return the shape geometry.
-//	 */
-//	private Geometry globe(int m, int n, double uLo, double uHi, double vLo, double vHi) {
-//		newRectangularMesh(m, n);
-//		int N = 0;
-//		for (int j = 0; j <= n; j++)
-//			for (int i = 0; i <= m; i++) {
-//				double u = uLo + i * (uHi - uLo) / m;
-//				double v = vLo + j * (vHi - vLo) / n;
-//				double theta = 2 * u * Math.PI;
-//				double phi = (v - .5) * Math.PI;
-//				double x = Math.cos(phi) * Math.cos(theta);
-//				double y = Math.cos(phi) * Math.sin(theta);
-//				double z = Math.sin(phi);
-//				setVertex(N++, x, y, z, x, y, z);
-//			}
-//		computedMeshNormals = true;
-//		return this;
-//	}
-//
 //Arrow
 	/**
 	 * Creates a k-sided polygon approximation to an arrow.
@@ -805,6 +573,9 @@ public class Geometry {
 		return this;
 	}
 
+	private final static double[][] tubePath = new double[][] { { 0, 0, -1, 1, 0, 0 }, { 0, 0, 0, 1, 0, 0 },
+			{ 0, 0, 1, 1, 0, 0 } };
+
 // TUBE
 	/**
 	 * Creates a hollow cylindrical tube with resolution k.
@@ -814,8 +585,7 @@ public class Geometry {
 	 * @see #tube(int m, double taper)
 	 */
 	public Geometry tube(int k) {
-		double path[][] = { { 0, 0, -1, 1, 0, 0 }, { 0, 0, 0, 1, 0, 0 }, { 0, 0, 1, 1, 0, 0 } };
-		return wire(k, path, 1);
+		return wire(k, tubePath, 1);
 	}
 
 //// GEAR
@@ -1545,156 +1315,166 @@ public class Geometry {
 //		dst[5] = src[5];
 //	}
 
-	/**
-	 * Deforms a geometric shape according to the beginning, middle, and end
-	 * parameters in each dimension. For each dimesion the three parameters indicate
-	 * the amount of deformation at each position. 0 - beginning, 1 - middle, 2 -
-	 * end. To indicate infinity (a constant transformation) set two adjacent
-	 * parameters to the same value. Setting all three parameters to the same value
-	 * transforms the shape geometry consistently across the entire axis of the
-	 * parameters.
-	 * 
-	 * @param m  the object's transformation matrix
-	 * @param x0 location of beginning of deformation along the x axis
-	 * @param x1 location of beginning of deformation along the x axis
-	 * @param x2 location of beginning of deformation along the x axis
-	 * @param y0 location of beginning of deformation along the y axis
-	 * @param y1 location of beginning of deformation along the y axis
-	 * @param y2 location of beginning of deformation along the y axis
-	 * @param z0 location of beginning of deformation along the z axis
-	 * @param z1 location of beginning of deformation along the z axis
-	 * @param z2 location of beginning of deformation along the z axis
-	 * @return 1 if pull operation was successful, 0 otherwise
-	 */
-	int pull(Matrix m, double x0, double x1, double x2, double y0, double y1, double y2, double z0, double z1,
-			double z2) {
-		Matrix tmp1 = new Matrix();
-		Matrix tmp2 = new Matrix();
-
-		tmp1.identity();
-		tmp2.invert(globalMatrix);
-		m.preMultiply(tmp2);
-
-		return pull(tmp1, tmp2, x0, x1, x2, y0, y1, y2, z0, z1, z2);
-	}
-
 	final double UNDEFINED = .001234;
 	double vCache[][];
 
 //	private double A[] = { 0, 0, 0 };
-	private double B[] = { 0, 0, 0 };
+//	private double B[] = { 0, 0, 0 };
 //	private double C[] = { 0, 0, 0 };
-	private Matrix inverseOldRelMatrix = new Matrix();
+//	private Matrix inverseOldRelMatrix = new Matrix();
 
-	/**
-	 * Deforms a geometric shape according to the beginning, middle, and end
-	 * parameters in each dimension. For each dimesion the three parameters indicate
-	 * the amount of deformation at each position. 0 - beginning, 1 - middle, 2 -
-	 * end. To indicate infinity (a constant transformation) set two adjacent
-	 * parameters to the same value. Setting all three parameters to the same value
-	 * transforms the shape geometry consistently across the entire axis of the
-	 * parameters.
-	 * 
-	 * @param oldRelMatrix the object's initial transformation (usually the identity
-	 *                     matrix)
-	 * @param newRelMatrix the object's final transformation matrix
-	 * @param x0           location of beginning of deformation along the x axis
-	 * @param x1           location of beginning of deformation along the x axis
-	 * @param x2           location of beginning of deformation along the x axis
-	 * @param y0           location of beginning of deformation along the y axis
-	 * @param y1           location of beginning of deformation along the y axis
-	 * @param y2           location of beginning of deformation along the y axis
-	 * @param z0           location of beginning of deformation along the z axis
-	 * @param z1           location of beginning of deformation along the z axis
-	 * @param z2           location of beginning of deformation along the z axis
-	 * @return 1 if pull operation was successful, 0 otherwise
-	 */
-	private int pull(Matrix oldRelMatrix, Matrix newRelMatrix, double x0, double x1, double x2, double y0, double y1,
-			double y2, double z0, double z1, double z2) {
-		int mask = 0;
+	private boolean enabled = true;
 
-		if (child != null) {
-			for (int i = 0; i < child.length; i++)
-				if (child[i] != null) {
-
-					Matrix tmp1 = new Matrix();
-					tmp1.copy(oldRelMatrix);
-					child[i].matrix.preMultiply(tmp1);
-
-					Matrix tmp2 = new Matrix();
-					tmp2.copy(newRelMatrix);
-					child[i].matrix.preMultiply(tmp2);
-
-					if ((pullMask & (1 << i)) != 0)
-						if (child[i].pull(tmp1, tmp2, x0, x1, x2, y0, y1, y2, z0, z1, z2) != 0)
-							mask |= (1 << i);
-				}
-			return mask;
-		}
-
-		if (refVertices == null) {
-			refVertices = copyVertices(vertices);
-			vCache = new double[vertices.length][3];
-		}
-		if (!modified) {
-			copyVertices(refVertices, vertices);
-			for (int i = 0; i < vCache.length; i++)
-				vCache[i][0] = UNDEFINED;
-			modified = true;
-		}
-
-		inverseOldRelMatrix.invert(oldRelMatrix);
-
-		boolean pulled = false;
-
-		double f, fx, fy, fz;
-		for (int i = 0; i < vertices.length; i++) {
-			double v[] = vertices[i];
-			double w[] = vCache[i];
-			if (w[0] == UNDEFINED)
-				transform(v, oldRelMatrix, w);
-
-			if ((fx = lump(w[0], x0, x1, x2)) >= 1)
-				continue;
-			if ((fy = lump(w[1], y0, y1, y2)) >= 1)
-				continue;
-			if ((fz = lump(w[2], z0, z1, z2)) >= 1)
-				continue;
-
-			pulled = true;
-
-			if (fx < 0)
-				fx = 0;
-			if (fy < 0)
-				fy = 0;
-			if (fz < 0)
-				fz = 0;
-			f = fx * fx + fy * fy + fz * fz;
-
-			if (f < 1) {
-				if (f == 0)
-					transform(v, newRelMatrix, w);
-				else {
-					transform(v, newRelMatrix, B);
-					f = dropoff[(int) (D * f)] * pullWeight;
-					w[0] += f * (B[0] - w[0]);
-					w[1] += f * (B[1] - w[1]);
-					w[2] += f * (B[2] - w[2]);
-				}
-				transform(w, inverseOldRelMatrix, v);
-			}
-		}
-		if (pulled)
-			computedMeshNormals = false;
-
-		return pulled ? 1 : 0;
+	public void setEnabled(boolean tf) {
+		enabled = tf;
 	}
 
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+//	/**
+//	 * Deforms a geometric shape according to the beginning, middle, and end
+//	 * parameters in each dimension. For each dimesion the three parameters indicate
+//	 * the amount of deformation at each position. 0 - beginning, 1 - middle, 2 -
+//	 * end. To indicate infinity (a constant transformation) set two adjacent
+//	 * parameters to the same value. Setting all three parameters to the same value
+//	 * transforms the shape geometry consistently across the entire axis of the
+//	 * parameters.
+//	 * 
+//	 * @param m  the object's transformation matrix
+//	 * @param x0 location of beginning of deformation along the x axis
+//	 * @param x1 location of beginning of deformation along the x axis
+//	 * @param x2 location of beginning of deformation along the x axis
+//	 * @param y0 location of beginning of deformation along the y axis
+//	 * @param y1 location of beginning of deformation along the y axis
+//	 * @param y2 location of beginning of deformation along the y axis
+//	 * @param z0 location of beginning of deformation along the z axis
+//	 * @param z1 location of beginning of deformation along the z axis
+//	 * @param z2 location of beginning of deformation along the z axis
+//	 * @return 1 if pull operation was successful, 0 otherwise
+//	 */
+//	int pull(Matrix m, double x0, double x1, double x2, double y0, double y1, double y2, double z0, double z1,
+//			double z2) {
+//		Matrix tmp1 = new Matrix();
+//		Matrix tmp2 = new Matrix();
+//
+//		tmp1.identity();
+//		tmp2.invert(globalMatrix);
+//		m.preMultiply(tmp2);
+//
+//		return pull(tmp1, tmp2, x0, x1, x2, y0, y1, y2, z0, z1, z2);
+//	}
+//
+//	/**
+//	 * Deforms a geometric shape according to the beginning, middle, and end
+//	 * parameters in each dimension. For each dimesion the three parameters indicate
+//	 * the amount of deformation at each position. 0 - beginning, 1 - middle, 2 -
+//	 * end. To indicate infinity (a constant transformation) set two adjacent
+//	 * parameters to the same value. Setting all three parameters to the same value
+//	 * transforms the shape geometry consistently across the entire axis of the
+//	 * parameters.
+//	 * 
+//	 * @param oldRelMatrix the object's initial transformation (usually the identity
+//	 *                     matrix)
+//	 * @param newRelMatrix the object's final transformation matrix
+//	 * @param x0           location of beginning of deformation along the x axis
+//	 * @param x1           location of beginning of deformation along the x axis
+//	 * @param x2           location of beginning of deformation along the x axis
+//	 * @param y0           location of beginning of deformation along the y axis
+//	 * @param y1           location of beginning of deformation along the y axis
+//	 * @param y2           location of beginning of deformation along the y axis
+//	 * @param z0           location of beginning of deformation along the z axis
+//	 * @param z1           location of beginning of deformation along the z axis
+//	 * @param z2           location of beginning of deformation along the z axis
+//	 * @return 1 if pull operation was successful, 0 otherwise
+//	 */
+//	private int pull(Matrix oldRelMatrix, Matrix newRelMatrix, double x0, double x1, double x2, double y0, double y1,
+//			double y2, double z0, double z1, double z2) {
+//		int mask = 0;
+//
+//		if (child != null) {
+//			for (int i = 0; i < child.length; i++)
+//				if (child[i] != null) {
+//
+//					Matrix tmp1 = new Matrix();
+//					tmp1.copy(oldRelMatrix);
+//					child[i].matrix.preMultiply(tmp1);
+//
+//					Matrix tmp2 = new Matrix();
+//					tmp2.copy(newRelMatrix);
+//					child[i].matrix.preMultiply(tmp2);
+//
+//					if ((pullMask & (1 << i)) != 0)
+//						if (child[i].pull(tmp1, tmp2, x0, x1, x2, y0, y1, y2, z0, z1, z2) != 0)
+//							mask |= (1 << i);
+//				}
+//			return mask;
+//		}
+//
+//		if (refVertices == null) {
+//			refVertices = copyVertices(vertices);
+//			vCache = new double[vertices.length][3];
+//		}
+//		if (!modified) {
+//			copyVertices(refVertices, vertices);
+//			for (int i = 0; i < vCache.length; i++)
+//				vCache[i][0] = UNDEFINED;
+//			modified = true;
+//		}
+//
+//		inverseOldRelMatrix.invert(oldRelMatrix);
+//
+//		boolean pulled = false;
+//
+//		double f, fx, fy, fz;
+//		for (int i = 0; i < vertices.length; i++) {
+//			double v[] = vertices[i];
+//			double w[] = vCache[i];
+//			if (w[0] == UNDEFINED)
+//				transform(v, oldRelMatrix, w);
+//
+//			if ((fx = lump(w[0], x0, x1, x2)) >= 1)
+//				continue;
+//			if ((fy = lump(w[1], y0, y1, y2)) >= 1)
+//				continue;
+//			if ((fz = lump(w[2], z0, z1, z2)) >= 1)
+//				continue;
+//
+//			pulled = true;
+//
+//			if (fx < 0)
+//				fx = 0;
+//			if (fy < 0)
+//				fy = 0;
+//			if (fz < 0)
+//				fz = 0;
+//			f = fx * fx + fy * fy + fz * fz;
+//
+//			if (f < 1) {
+//				if (f == 0)
+//					transform(v, newRelMatrix, w);
+//				else {
+//					transform(v, newRelMatrix, B);
+//					f = dropoff[(int) (D * f)] * pullWeight;
+//					w[0] += f * (B[0] - w[0]);
+//					w[1] += f * (B[1] - w[1]);
+//					w[2] += f * (B[2] - w[2]);
+//				}
+//				transform(w, inverseOldRelMatrix, v);
+//			}
+//		}
+//		if (pulled)
+//			computedMeshNormals = false;
+//
+//		return pulled ? 1 : 0;
+//	}
+//
 //	private double offset[] = { 0, 0, 0 };
-
-	private static final int D = 1000;
-	private static double dropoff[] = new double[D];
-
+//
+//	private static final int D = 1000;
+//	private static double dropoff[] = new double[D];
+//
 //private static boolean initDropoff = computeDropoff();
 //private static boolean computeDropoff() {
 //   for (int i = 0; i < D; i++) {
@@ -1703,19 +1483,19 @@ public class Geometry {
 //   }
 //   return true;
 //}
-	private double lump(double t, double a, double b, double c) {
-		if (a == c)
-			return 0;
-		t = a == b || (t < b && c < b || t > b && c > b) ? (t - b) / (c - b) : (t - b) / (a - b);
-		return t >= 1 ? 1 : t;
-	}
-
-	private static void transform(double src[], Matrix m, double dst[]) {
-		dst[0] = m.get(0, 0) * src[0] + m.get(0, 1) * src[1] + m.get(0, 2) * src[2] + m.get(0, 3);
-		dst[1] = m.get(1, 0) * src[0] + m.get(1, 1) * src[1] + m.get(1, 2) * src[2] + m.get(1, 3);
-		dst[2] = m.get(2, 0) * src[0] + m.get(2, 1) * src[1] + m.get(2, 2) * src[2] + m.get(2, 3);
-	}
-
+//	private double lump(double t, double a, double b, double c) {
+//		if (a == c)
+//			return 0;
+//		t = a == b || (t < b && c < b || t > b && c > b) ? (t - b) / (c - b) : (t - b) / (a - b);
+//		return t >= 1 ? 1 : t;
+//	}
+//
+//	private static void transform(double src[], Matrix m, double dst[]) {
+//		dst[0] = m.get(0, 0) * src[0] + m.get(0, 1) * src[1] + m.get(0, 2) * src[2] + m.get(0, 3);
+//		dst[1] = m.get(1, 0) * src[0] + m.get(1, 1) * src[1] + m.get(1, 2) * src[2] + m.get(1, 3);
+//		dst[2] = m.get(2, 0) * src[0] + m.get(2, 1) * src[1] + m.get(2, 2) * src[2] + m.get(2, 3);
+//	}
+//
 ////////////// HANDLING BICUBIC SPLINE PATCHES /////////////////
 //
 ///**
@@ -1923,5 +1703,252 @@ public class Geometry {
 //
 //   computedMeshNormals = true;
 //}
+////GLOBE (LONGITUDE/LATITUDE SPHERE)
+//	/**
+//	 * Creates a longitude/latitude partitioned sphere where m and n specify
+//	 * longitude and latitude respectively.
+//	 * 
+//	 * @param m number of longitude subdivisions
+//	 * @param n number of latitude subdivisions
+//	 * @return the shape geometry.
+//	 * @see #ball
+//	 */
+//	private Geometry globe(int m, int n) {
+//		return globe(m, n, 0, 1, 0, 1);
+//	}
+//
+////PARAMETRIC SUBSECTION OF A GLOBE
+//	/**
+//	 * Creates a longitude/latitude partitioned sphere delimited by ranges in the
+//	 * east-west and north-south directions.
+//	 * 
+//	 * @param m   number of longitude subdivisions
+//	 * @param n   number of latitude subdivisions
+//	 * @param uLo low end of the east-west range [0..1]
+//	 * @param uHi high end of the east-west range [0..1]
+//	 * @param vLo low end of the north-south range [0..1]
+//	 * @param vHi high end of the north-south range [0..1]
+//	 * @return the shape geometry.
+//	 */
+//	private Geometry globe(int m, int n, double uLo, double uHi, double vLo, double vHi) {
+//		newRectangularMesh(m, n);
+//		int N = 0;
+//		for (int j = 0; j <= n; j++)
+//			for (int i = 0; i <= m; i++) {
+//				double u = uLo + i * (uHi - uLo) / m;
+//				double v = vLo + j * (vHi - vLo) / n;
+//				double theta = 2 * u * Math.PI;
+//				double phi = (v - .5) * Math.PI;
+//				double x = Math.cos(phi) * Math.cos(theta);
+//				double y = Math.cos(phi) * Math.sin(theta);
+//				double z = Math.sin(phi);
+//				setVertex(N++, x, y, z, x, y, z);
+//			}
+//		computedMeshNormals = true;
+//		return this;
+//	}
+//
+////CUBE
+//	/**
+//	 * Sets the current shape geometry to a unit cube.
+//	 * 
+//	 * @return the current shape geometry
+//	 */
+//	private Geometry cube() {
+//		faces = cubeFaces;
+//		vertices = cubeVertices;
+//		return this;
+//	}
+//
+//	private static int[][] cubeFaces = { { 0, 1, 2, 3 }, { 4, 5, 6, 7 }, { 8, 9, 10, 11 }, { 12, 13, 14, 15 },
+//			{ 16, 17, 18, 19 }, { 20, 21, 22, 23 }, };
+//
+//	private static double N = -1, P = 1;
+//	private static double[][] cubeVertices = { { N, N, N, N, 0, 0 }, { N, N, P, N, 0, 0 }, { N, P, P, N, 0, 0 },
+//			{ N, P, N, N, 0, 0 }, { P, N, N, P, 0, 0 }, { P, P, N, P, 0, 0 }, { P, P, P, P, 0, 0 },
+//			{ P, N, P, P, 0, 0 }, {
+//
+//					N, N, N, 0, N, 0 },
+//			{ P, N, N, 0, N, 0 }, { P, N, P, 0, N, 0 }, { N, N, P, 0, N, 0 }, { N, P, N, 0, P, 0 },
+//			{ N, P, P, 0, P, 0 }, { P, P, P, 0, P, 0 }, { P, P, N, 0, P, 0 }, {
+//
+//					N, N, N, 0, 0, N },
+//			{ N, P, N, 0, 0, N }, { P, P, N, 0, 0, N }, { P, N, N, 0, 0, N }, { N, N, P, 0, 0, P },
+//			{ P, N, P, 0, 0, P }, { P, P, P, 0, 0, P }, { N, P, P, 0, 0, P }, };
+//
+////BEZELED CUBE
+//	/**
+//	 * Creates a bezeled cube with variable bezel of radius r.
+//	 * 
+//	 * @param r radius of bezel
+//	 * @return the current shape geometry
+//	 */
+//	private Geometry bezeledCube(double r) {
+//		faces = bezeledCubeFaces;
+//		vertices = copyVertices(bezeledCubeVertices);
+//		for (int i = 0; i < vertices.length; i++)
+//			for (int j = 0; j < 3; j++) {
+//				if (vertices[i][j] == n)
+//					vertices[i][j] = r - 1;
+//				if (vertices[i][j] == p)
+//					vertices[i][j] = 1 - r;
+//			}
+//		return this;
+//	}
+//
+//	private static int[][] bezeledCubeFaces = { { 0, 1, 2, 3 }, { 4, 5, 6, 7 }, { 8, 9, 10, 11 }, { 12, 13, 14, 15 },
+//			{ 16, 17, 18, 19 }, { 20, 21, 22, 23 }, { 8, 11, 1, 0 }, { 20, 23, 2, 1 }, { 13, 12, 3, 2 },
+//			{ 17, 16, 0, 3 }, {
+//
+//					16, 19, 9, 8 },
+//			{ 11, 10, 21, 20 }, { 23, 22, 14, 13 }, { 12, 15, 18, 17 }, { 4, 7, 10, 9 }, { 7, 6, 22, 21 },
+//			{ 6, 5, 15, 14 }, { 5, 4, 19, 18 }, {
+//
+//					16, 8, 0 },
+//			{ 11, 20, 1 }, { 23, 13, 2 }, { 12, 17, 3 }, { 9, 19, 4 }, { 21, 10, 7 }, { 14, 22, 6 }, { 18, 15, 5 }, };
+//
+//	private static double n = -.9, p = .9;
+//	private static double[][] bezeledCubeVertices = { { N, n, n, N, 0, 0 }, { N, n, p, N, 0, 0 }, { N, p, p, N, 0, 0 },
+//			{ N, p, n, N, 0, 0 }, { P, n, n, P, 0, 0 }, { P, p, n, P, 0, 0 }, { P, p, p, P, 0, 0 },
+//			{ P, n, p, P, 0, 0 }, {
+//
+//					n, N, n, 0, N, 0 },
+//			{ p, N, n, 0, N, 0 }, { p, N, p, 0, N, 0 }, { n, N, p, 0, N, 0 }, { n, P, n, 0, P, 0 },
+//			{ n, P, p, 0, P, 0 }, { p, P, p, 0, P, 0 }, { p, P, n, 0, P, 0 }, {
+//
+//					n, n, N, 0, 0, N },
+//			{ n, p, N, 0, 0, N }, { p, p, N, 0, 0, N }, { p, n, N, 0, 0, N }, { n, n, P, 0, 0, P },
+//			{ p, n, P, 0, 0, P }, { p, p, P, 0, 0, P }, { n, p, P, 0, 0, P }, };
+//
+////POLYGON
+//
+//	/**
+//	 * Creates a polygon defined by the X and Y coordinates.
+//	 * 
+//	 * @param X array of x coordinates
+//	 * @param Y array of corresponding y coordinates
+//	 * @return current shape geometry
+//	 */
+//	private Geometry polygon(double X[], double Y[]) {
+//
+//		int k = X.length;
+//		faces = new int[1][k];
+//		vertices = new double[k][verticedepth];
+//
+//		for (int i = 0; i < k; i++) {
+//			faces[0][i] = i;
+//			setVertex(i, X[i], Y[i], 0, 0, 0, 1);
+//		}
+//		return this;
+//	}
+//
+//	/**
+//	 * Creates a 2D gear disk with an nTeetch number of teeth.
+//	 * 
+//	 * @param nTeeth number of teeth on the gear
+//	 * @return the current shape geometry
+//	 * @see #gear
+//	 */
+//	private Geometry gearDisk(int nTeeth) {
+//
+//		int k = 2 * nTeeth;
+//		faces = new int[k][3];
+//		vertices = new double[k + 1][verticedepth];
+//
+//		for (int i = 0; i < k; i++) {
+//			faces[i][0] = i;
+//			faces[i][1] = (i + 1) % k;
+//			faces[i][2] = k;
+//			double theta = 2 * Math.PI * i / k;
+//			double r = i % 2 == 0 ? 1 : 1 - Math.PI / nTeeth;
+//			setVertex(i, r * Math.cos(theta), r * Math.sin(theta), 0, 0, 0, 1);
+//		}
+//		setVertex(k, 0, 0, 0, 0, 0, 1);
+//		return this;
+//	}
+////GEAR
+//	/**
+//	 * Creates a 3D gear with nTeeth number of teeth.
+//	 * 
+//	 * @param nTeeth number of teeth subdivsions
+//	 * @return the shape geometry
+//	 * @see #gearDisk
+//	 */
+//	private Geometry gear(int nTeeth) {
+//
+//		child = null;
+//
+//		add().gearTube(nTeeth);
+//		add().gearDisk(nTeeth);
+//		add().gearDisk(nTeeth);
+//
+//		Matrix.identity(m);
+//		m.scale(1, -1, -1);
+//		m.translate(0, 0, 1);
+//		child[1].setMatrix(m);
+//
+//		Matrix.identity(m);
+//		m.translate(0, 0, 1);
+//		child[2].setMatrix(m);
+//
+//		return this;
+//	}
+//
+////PILL (TUBE WITH ROUNDED ENDS)
+//	/**
+//	 * Creates a pill with resolution k, length len, and degree of roundness bulge.
+//	 * 
+//	 * @param k     number of subdivisions of regular polygons used in approximating
+//	 *              the actual shapes.
+//	 * @param len   the proportional length (height) of the cylinder
+//	 * @param bulge the degree of roundess of the edges. 1 = half sphere. 0 = flat
+//	 *              surface
+//	 * @return the shape geometry
+//	 * @see #pill(int k, double len, double bulge, double taper)
+//	 */
+//	private Geometry pill(int k, double len, double bulge) {
+//		return pill(k, len, bulge, 1);
+//	}
+//
+////TAPERED PILL (TAPERED TUBE WITH ROUNDED ENDS)
+//	/**
+//	 * Creates a tapered pill with resolution k, length len, and degree of roundness
+//	 * bulge and a taper of the southern hemisphere. Tapering scales the southern
+//	 * hemisphere of the pill.
+//	 * 
+//	 * @param k     number of subdivisions of regular polygons used in approximating
+//	 *              the actual shapes.
+//	 * @param len   the proportional length (height) of the cylinder
+//	 * @param bulge the degree of roundess of the edges. 1 = half sphere. 0 = flat
+//	 *              surface
+//	 * @param taper additional scaling of the southern hemisphere ( 1 = original
+//	 *              size).
+//	 * @return the shape geometry
+//	 */
+//	private Geometry pill(int k, double len, double bulge, double taper) {
+//
+//		child = null;
+//
+//		add().tube(k, taper); // CYLINDRICAL TUBE
+//		add().globe(k, k / 2, 0, 1, 0, .5); // NORTHERN HEMISPHERE OF A GLOBE
+//		add().globe(k, k / 2, 0, 1, .5, 1); // SOUTHERN HEMISPHERE OF A GLOBE
+//
+//		Matrix.identity(m);
+//		m.scale(1, 1, len);
+//		child[0].setMatrix(m);
+//
+//		Matrix.identity(m);
+//		m.translate(0, 0, -len);
+//		m.scale(1, 1, bulge);
+//		child[1].setMatrix(m);
+//
+//		Matrix.identity(m);
+//		m.translate(0, 0, len);
+//		m.scale(taper, taper, bulge);
+//		child[2].setMatrix(m);
+//
+//		return this;
+//	}
+//
 
 }

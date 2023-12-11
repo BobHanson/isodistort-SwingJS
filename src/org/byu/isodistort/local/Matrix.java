@@ -35,39 +35,40 @@ public double scaleX=1.0, scaleY=1.0, scaleZ=1.0;
 */
 public Matrix()
 {
+ return;
 }
 
-/**
-   Constructor takes an array of 16 elements to populate the 4x4 matrix.
-   @param a 4x4 quaternion values
-*/
-public Matrix(double a[])
-{
-   if (a.length == 4) { // quaternion
-      double Nq = a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
-      double s = (Nq > 0.0) ? (2.0 / Nq) : 0.0;
-      double xs = a[0] * s, ys = a[1] * s, zs = a[2] * s;
-      double wx = a[3] * xs, wy = a[3] * ys, wz = a[3] * zs;
-      double xx = a[0] * xs, xy = a[0] * ys, xz = a[0] * zs;
-      double yy = a[1] * ys, yz = a[1] * zs, zz = a[2] * zs;
-
-      mMatrix[(0 << 2) + 0] = 1.0 - (yy + zz);
-      mMatrix[(1 << 2) + 0] = xy + wz;
-      mMatrix[(2 << 2) + 0] = xz - wy;
-      mMatrix[(0 << 2) + 1] = xy - wz;
-      mMatrix[(1 << 2) + 1] = 1.0 - (xx + zz);
-      mMatrix[(2 << 2) + 1] = yz + wx;
-      mMatrix[(0 << 2) + 2] = xz + wy;
-      mMatrix[(1 << 2) + 2] = yz - wx;
-      mMatrix[(2 << 2) + 2] = 1.0 - (xx + yy);
-      mMatrix[(0 << 2) + 3] = mMatrix[(1 << 2) + 3] = mMatrix[(2 << 2) + 3] = mMatrix[(3 << 2) + 0] = mMatrix[(3 << 2) + 1] = mMatrix[(3 << 2) + 2] = 0.0;
-      mMatrix[(3 << 2) + 3] = 1.0;
-   }
-   else
-   {
-      System.arraycopy(a, 0, mMatrix, 0, 16);
-   }
-}
+///**
+//   Constructor takes an array of 16 elements to populate the 4x4 matrix.
+//   @param a 4x4 quaternion values
+//*/
+//public Matrix(double a[])
+//{
+//   if (a.length == 4) { // quaternion
+//      double Nq = a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
+//      double s = (Nq > 0.0) ? (2.0 / Nq) : 0.0;
+//      double xs = a[0] * s, ys = a[1] * s, zs = a[2] * s;
+//      double wx = a[3] * xs, wy = a[3] * ys, wz = a[3] * zs;
+//      double xx = a[0] * xs, xy = a[0] * ys, xz = a[0] * zs;
+//      double yy = a[1] * ys, yz = a[1] * zs, zz = a[2] * zs;
+//
+//      mMatrix[(0 << 2) + 0] = 1.0 - (yy + zz);
+//      mMatrix[(1 << 2) + 0] = xy + wz;
+//      mMatrix[(2 << 2) + 0] = xz - wy;
+//      mMatrix[(0 << 2) + 1] = xy - wz;
+//      mMatrix[(1 << 2) + 1] = 1.0 - (xx + zz);
+//      mMatrix[(2 << 2) + 1] = yz + wx;
+//      mMatrix[(0 << 2) + 2] = xz + wy;
+//      mMatrix[(1 << 2) + 2] = yz - wx;
+//      mMatrix[(2 << 2) + 2] = 1.0 - (xx + yy);
+//      mMatrix[(0 << 2) + 3] = mMatrix[(1 << 2) + 3] = mMatrix[(2 << 2) + 3] = mMatrix[(3 << 2) + 0] = mMatrix[(3 << 2) + 1] = mMatrix[(3 << 2) + 2] = 0.0;
+//      mMatrix[(3 << 2) + 3] = 1.0;
+//   }
+//   else
+//   {
+//      System.arraycopy(a, 0, mMatrix, 0, 16);
+//   }
+//}
 
 /**
    Returns matrix value at m[i, j].

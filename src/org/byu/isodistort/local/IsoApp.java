@@ -388,8 +388,10 @@ public abstract class IsoApp {
 			panel.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
 		frame.pack();		
 		updateRenderer();
-		frame.setName(frame.getTitle());
-		frame.setTitle(frame.getTitle() + " ver. " + variables.isoversion);
+		String title = frame.getTitle();
+		frame.setName(title);
+		if (title.indexOf("ver.") < 0)
+			frame.setTitle(title + " ver. " + variables.isoversion);
 		frame.setVisible(true);
 		frame.addComponentListener(componentListener);
 		frame.addWindowListener(windowListener);

@@ -392,6 +392,7 @@ public class RenderPanel3D extends JPanel
 	int renderAreaX;
 	int renderAreaY;
 	
+	@Override
 	public synchronized void paint(Graphics g) {
 		super.paint(g);
 		System.out.println("RP paint");
@@ -471,15 +472,21 @@ public class RenderPanel3D extends JPanel
 	 */
 	public boolean spin = false; // Branton Campbell
 
+	private boolean mouseZooming;
+
+	@Override
 	public void mouseClicked(MouseEvent e) {
 	}
 
+	@Override
 	public void mouseEntered(MouseEvent e) {
 	}
 
+	@Override
 	public void mouseExited(MouseEvent e) {
 	}
 
+	@Override
 	public void mousePressed(MouseEvent e) {
 		// necessary for SwingJS if mouse has cliked on the page outside of applet
 		requestFocus();
@@ -488,20 +495,37 @@ public class RenderPanel3D extends JPanel
 		renderer.setDragging(true);
 		mx = x;
 		my = y;
+		if (e.isShiftDown()) {
+			clearAngles();
+			setRotationAxis(4);
+			mouseZooming = true;
+		}
+
 	}
 
+	@Override
 	public void mouseReleased(MouseEvent e) {
 		renderer.setDragging(false);
+		if (mouseZooming) {
+			mouseZooming = false;
+			clearAngles();
+			setRotationAxis(0);
+		}
 	}
 
+	@Override
 	public void mouseMoved(MouseEvent e) {
+		if (mouseZooming && !e.isShiftDown()) {
+			mouseZooming = false;
+			clearAngles();
+			setRotationAxis(0);
+		}
 	}
 
+	@Override
 	public void mouseDragged(MouseEvent e) {
 		int x = e.getX();
 		int y = e.getY();
-		System.out.println("RP mouse " + e.getModifiers());
-		
 		
 		// Compare the int representing which buttons are down
 		// with the representation of button 1 being down

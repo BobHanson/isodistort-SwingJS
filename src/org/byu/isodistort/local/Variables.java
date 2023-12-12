@@ -438,6 +438,7 @@ public class Variables implements ChangeListener {
 	/**
 	 * Listens for moving slider bars.
 	 */
+	@Override
 	public void stateChanged(ChangeEvent e)// called when a slider bar is moved
 	{
 		isChanged = true;

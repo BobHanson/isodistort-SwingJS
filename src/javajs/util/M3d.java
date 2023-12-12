@@ -153,7 +153,8 @@ public class M3d extends M34d implements Serializable {
    * @param v
    *        the new value
    */
-  public void setElement(int row, int col, double v) {
+  @Override
+public void setElement(int row, int col, double v) {
     set33(row, col, v);
   }
 
@@ -166,7 +167,8 @@ public class M3d extends M34d implements Serializable {
    *        the column number to be retrieved (zero indexed)
    * @return the value at the indexed element
    */
-  public double getElement(int row, int col) {
+  @Override
+public double getElement(int row, int col) {
     return get33(row, col);
   }
 

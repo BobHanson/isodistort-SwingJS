@@ -75,6 +75,7 @@ public abstract class IsoApp {
 	
 	/** listens for the check boxes that highlight a given atomic subtype. */
 	protected ItemListener checkboxListener = new ItemListener() {
+		@Override
 		public void itemStateChanged(ItemEvent event) {
 			handleCheckBoxEvent(event.getSource());
 		}
@@ -83,6 +84,7 @@ public abstract class IsoApp {
 
 	/** listens for the applet buttons, which specify the viewing angles. */
 	protected ItemListener buttonListener = new ItemListener() {
+		@Override
 		public void itemStateChanged(ItemEvent event) {
 			handleRadioButtonEvent(event.getSource());
 		}
@@ -158,7 +160,12 @@ public abstract class IsoApp {
 		frameContentPane.setTransferHandler(new FileUtil.FileDropHandler(this));
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
-
+		JPanel isoPanel = new JPanel(new BorderLayout()) {
+			@Override
+			public void repaint(int i, int j, int k, int l) {
+				
+			}
+		};
 		if (sliderPanel == null) {
 			sliderPanel = new JPanel();
 			sliderPanel.setBackground(Color.WHITE);
@@ -168,14 +175,15 @@ public abstract class IsoApp {
 
 		sliderPane = new JScrollPane(sliderPanel);
 		sliderPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
-		frameContentPane.add(sliderPane, BorderLayout.EAST);// add to east of Applet
+		isoPanel.add(sliderPane, BorderLayout.EAST);// add to east of Applet
 
 		// controlPane = new JScrollPane(controlPanel);
 		controlPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
-		frameContentPane.add(controlPanel, BorderLayout.SOUTH);// add to east of Applet
+		isoPanel.add(controlPanel, BorderLayout.SOUTH);// add to east of Applet
 
 		drawPanel = new JPanel(new BorderLayout());
-		frameContentPane.add(drawPanel, BorderLayout.CENTER);
+		isoPanel.add(drawPanel, BorderLayout.CENTER);		
+		frame.add(isoPanel);
 	}
 	
 	/**
@@ -422,6 +430,7 @@ public abstract class IsoApp {
 	 */
 	private class ViewListener implements ActionListener {
 
+		@Override
 		public void actionPerformed(ActionEvent event) {
 			Object source = event.getSource();
 			if (source == applyView) {

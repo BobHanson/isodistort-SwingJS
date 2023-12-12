@@ -250,6 +250,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	private boolean isAdjusting = false;
 
+	@Override
 	public void updateDisplay() {
 		if (isAdjusting)
 			return;
@@ -882,12 +883,15 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		super.dispose();
 	}
 
+	@Override
 	public void keyPressed(KeyEvent e) {
 	}
 
+	@Override
 	public void keyReleased(KeyEvent e) {
 	}
 
+	@Override
 	public void keyTyped(KeyEvent e) {
 		switch (e.getKeyChar()) {
 		case 'r':
@@ -972,6 +976,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 //		}
 //	} // end class focusIt
 
+	@Override
 	public BufferedImage getImage() {
 		return rp.getImage();
 	}
@@ -1171,6 +1176,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		timer.start();
 	}
 
+	@Override
 	public void run() {
 		if (!isRunning)
 			return;

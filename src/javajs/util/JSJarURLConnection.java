@@ -55,7 +55,8 @@ public class JSJarURLConnection extends JarURLConnection {
     return new ByteArrayInputStream(/** @j2sNative this.url._streamData || */null);
   }
 
-    public Manifest getManifest() throws IOException {
+    @Override
+	public Manifest getManifest() throws IOException {
       System.err.println("JSJarURLConnection.getManifest is not implemented");
       return null;
     }

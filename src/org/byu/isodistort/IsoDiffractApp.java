@@ -78,6 +78,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		}
 		private BufferedImage im;
 
+		@Override
 		public void paint(Graphics gr) {
 			super.paint(gr);
 			int drawWidth = getWidth();
@@ -235,6 +236,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		super(APP_ISODIFFRACT);
 	}
 
+	@Override
 	protected void init() {
 		initializePanels();
 		drawPanel.addKeyListener(this);
@@ -242,12 +244,14 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		setVariables(readFile());
 	}
 	
+	@Override
 	protected void dispose() {
 		drawPanel.removeKeyListener(this);
 		drawPanel.removeMouseMotionListener(this);
 		super.dispose();
 	}
 
+	@Override
 	protected boolean setVariables(String dataString) {
 		try {
 			if (variables == null) {
@@ -276,6 +280,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		drawPanel.add(rp);
 	}
 
+	@Override
 	public void updateDisplay() {
 		if (isReset || variables.isChanged) {
 			variables.readSliders();
@@ -1607,12 +1612,15 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	/**
 	 * keyinputListener responds to keyboard commands.
 	 */
+	@Override
 	public void keyPressed(KeyEvent e) {
 	}
 
+	@Override
 	public void keyReleased(KeyEvent e) {
 	}
 
+	@Override
 	public void keyTyped(KeyEvent e) {
 		switch (e.getKeyChar()) {
 		case 'r':
@@ -1660,9 +1668,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	/**
 	 * mouseoverListener responds to mouseover-peak events.
 	 */
+	@Override
 	public void mouseDragged(MouseEvent e) {
 	}
 
+	@Override
 	public void mouseMoved(MouseEvent e) {
 		mousePeak(e.getX(), e.getY());
 	}

@@ -322,10 +322,6 @@ public class RenderPanel3D extends JPanel
 
 	private BufferedImage im;
 
-	public int[] getPix() {
-		return renderer.getPix();
-	}
-
 	public void initialize() {
 		renderer = new Renderer();
 		world = renderer.getWorld(); // GET ROOT OF GEOMETRY

@@ -123,7 +123,7 @@ public abstract class IsoApp {
 	/** False for datafile and True for html file */
 	protected boolean readMode = false;
 	/** The datafile to use when readMode is false */
-	protected String whichdatafile = "data/t.txt";//"data/test28.txt";
+	protected String whichdatafile = "data/t-mod.txt";//"data/test28.txt";
 
 	protected boolean isFramed = false;
 

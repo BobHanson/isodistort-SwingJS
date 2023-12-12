@@ -30,8 +30,8 @@
 #rows_are_parent_basis_vectors_in_supercell_units 
 !parentbasis 
    1.00000   0.00000   0.00000
-   0.00000   0.00000  -1.00000
    0.00000   1.00000   0.00000
+   0.00000   0.00000   1.00000
 
 #parentatom/label/element 
 !atomtypelist 
@@ -44,9 +44,16 @@
 #parentatom/type/subatom/x/y/z/_for_each_subatom 
 !atomcoordlist 
     1    1    1   0.00000   0.00000   0.00000 
-    1    1    2   0.00000   0.00000   0.50000
+    1    1    2   1.00000   0.00000   0.0000
+    1    1    3   0.00000   1.00000   0.0000
+    1    1    4   0.00000   0.00000   1.0000
+    1    1    5   1.00000   1.00000   1.0000
 
 #parentatom1/type1/subatom1/parentatom2/type2/subatom2_for_each_bond 
 !bondlist 
     1    1    1      1    1    2 
+    1    1    1      1    1    3 
+    1    1    1      1    1    4 
+    1    1    3      1    1    5 
+    1    1    4      1    1    5 
 

@@ -175,7 +175,7 @@ public class Renderer {
 	 * Set the background fill color.
 	 */
 	void setBgColor(double r, double g, double b) {
-		bgColor = pack(f2i(r), f2i(g), f2i(b));
+		bgColor = toRGB(f2i(r), f2i(g), f2i(b));
 	}
 
 	/**
@@ -555,7 +555,7 @@ public class Renderer {
 			px[i] = r << 16 | g << 8 | b | 0xff000000;
 	}
 
-	private static int pack(int r, int g, int b) {
+	private static int toRGB(int r, int g, int b) {
 		return r << 16 | g << 8 | b | 0xff000000;
 	}
 
@@ -733,7 +733,7 @@ public class Renderer {
 			for (int i = 0; i < s.child.length && s.child[i] != null; i++) {
 				s.child[i].globalMatrix.copy(s.globalMatrix);
 				s.child[i].globalMatrix.preMultiply(s.child[i].matrix);
-				render(s.child[i], cam);
+				render(s.child[i], camera);
 			}
 		}
 		if (s.faces != null && s.vertices != null)
@@ -925,6 +925,7 @@ public class Renderer {
 		v[2] = 1 / (FL - v[2]);
 		v[0] = W / 2 + W * (cX / FL + v[2] * (v[0] - cX)) / FOV;
 		v[1] = H / 2 - W * (cY / FL + v[2] * (v[1] - cY)) / FOV;
+		return;
 	}
 
 	private void transformVertex(Matrix matrix, double v[], int i) {
@@ -943,6 +944,7 @@ public class Renderer {
 			ti[j] = v[j];
 			t[i][j] = (int) (v[j] * pz * (1 << 31 - NB));
 		}
+		return;
 	}
 
 	private void fillAndClipTriangle(Geometry s, int iA, int iB, int iC) {
@@ -1095,6 +1097,7 @@ public class Renderer {
 		 * for (int j=6; j< s.verticedepth; j++) { ti[j] = s.vertices[i][j]; double mt =
 		 * (ti[j] * (1 << 31 - NB)); t[i][j] = (int) mt; }
 		 */
+		return;
 	}
 
 	private void renderVertex(Geometry s, double[] v, int[] tv) {
@@ -1200,8 +1203,12 @@ public class Renderer {
 	 * WHEREVER I COULD. -KEN
 	 */
 
+	int itest = 0;
+	
 	private void fillTrapezoid(int A[], int B[], int C[], int D[], Geometry s) {
 
+		if (itest == 100)
+			System.out.println("R1 " + itest++ + " " + A[0] + " " + A[1] + " " + B[0] + " " + B[1]);
 		int zb[] = zbuffer, px[] = pix; // LOCAL ARRAYS CAN BE FASTER
 
 		int yLo = A[1] >> NB;
@@ -1573,7 +1580,7 @@ public class Renderer {
 		v[5] = Math.max(0, Math.min(255, 255 * blu));
 
 		if (tableMode && m.tableMode)
-			m.setTable(ix, iy, iz, pack((int) v[3], (int) v[4], (int) v[5]));
+			m.setTable(ix, iy, iz, toRGB((int) v[3], (int) v[4], (int) v[5]));
 	}
 
 	/**
@@ -1633,18 +1640,14 @@ public class Renderer {
 
 //--- PRIVATE DATA FIELDS FOR RENDERER
 
+	private int[] pix; // THE FRAME BUFFER (actual integer pixel buffer in image)
+
 	private double FL = 10; // FOCAL LENGTH OF VIEW
 	private double FOV = 1; // FIELD OF VIEW
 	private Geometry world; // THE ROOT OF THE GEOMETRY TREE
 	private int W, H; // THE RESOLUTION OF THE IMAGE
 	private double theta = 0, phi = 0, sigma = 0; // VIEW ROTATION ANGLES
-	private int[] pix; // THE FRAME BUFFER
-	
-	int[] getPix() {
-		return pix;
-	}
-	
-	private int bgColor = pack(0, 0, 0); // BACKGROUND FILL COLOR
+	private int bgColor = toRGB(0, 0, 0); // BACKGROUND FILL COLOR
 	private final int zHuge = 1 << 31; // BIGGEST POSSIBLE ZBUFFER VALUE
 	private int TOP = -1, BOTTOM, LEFT, RIGHT;
 //PIXEL BOUNDS FOR DAMAGED IMAGE
@@ -1659,20 +1662,21 @@ public class Renderer {
 	private double normal[] = new double[3]; // VERTEX NORMAL
 	private Matrix normat = new Matrix(); // NORMAL MATRIX XFORM
 	private double transparency; // TRANSPARENCY FOR CURRENT OBJECT
-	private final int NB = 14; // PRECISION FOR FIXED PT PIXEL OPS
+	private final static int NB = 14; // PRECISION FOR FIXED PT PIXEL OPS
 	//private int NBPower = (int) Math.pow(2, this.NB);
 	private int a[], b[], c[] = new int[6], d[];
 //TEMPS FOR FILLING TRIANGLE
 	//private double refl[] = new double[3]; // TEMP TO COMPUTE REFL VECTOR
-	private final int UNRENDERED = 1234567; // RENDERING PHASE
+	private final static int UNRENDERED = 1234567; // RENDERING PHASE
 
-	private static int nLights = 0; // NUM. OF LIGHT SOURCES DEFINED
-	private static double light[][] = new double[20][6]; // DATA FOR LIGHTS
+	// BH Q: These lights were static???
+	private int nLights = 0; // NUM. OF LIGHT SOURCES DEFINED
+	private double light[][] = new double[20][6]; // DATA FOR LIGHTS
 	private boolean dragging = false;
 	private boolean isOutline = false;
 	private int threshold = 256;
 	private double outline_t = -1;
-	private int black = pack(0, 0, 0), white = pack(255, 255, 255);
+	private int black = toRGB(0, 0, 0), white = toRGB(255, 255, 255);
 
 	private double cameraPos[] = { 0., 0., FL }; // camera position
 	private double cameraAim[] = { 0., 0., 0. }; // look at point

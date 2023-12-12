@@ -58,7 +58,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	/** Focal length for renderer. */
 	double fl = 10;
 	/** scale everything down to take out perspective */
-	double perspectivescaler = (double) 1 / 1000;
+	double perspectivescaler = (double) 1 / 100;
 	/**
 	 * Decimal multiplier to make bond radius and cell radius fractions of atom
 	 * radius
@@ -529,7 +529,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				rp.transform(cells.child(c));
 			}
 			rp.pop();
-
 			rp.push();
 			{
 				rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);// make everything smaller to take out

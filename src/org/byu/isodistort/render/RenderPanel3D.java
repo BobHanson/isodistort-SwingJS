@@ -6,7 +6,6 @@ package org.byu.isodistort.render;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -391,6 +390,7 @@ public class RenderPanel3D extends JPanel
 //		Graphics gbuf = bufferIm.getGraphics();
 //		gbuf.drawImage(im, 0, 0, null);
 		if (showFPS) {
+			@SuppressWarnings("unused")
 			String x = "" + //dt;//
 			(int) frameRate + "." + ((int) (frameRate * 10) % 10);
 			/**

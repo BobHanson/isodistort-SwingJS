@@ -718,8 +718,8 @@ public class Variables implements ChangeListener {
 			int ndata = currentData.size();
 			numAtoms = ndata / dataPerRow;
 			int dataPerRowOld = 10;
-			int numAtomsOld = currentData.size() / dataPerRowOld;
-			if (ndata > 6)
+			int numAtomsOld = ndata / dataPerRowOld;
+			if (numAtomsOld * dataPerRowOld == ndata)
 				try {
 					// If this item isn't an integer, the old data format is used.
 					Integer.parseInt((String) currentData.get(dataPerRow));

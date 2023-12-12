@@ -3,8 +3,6 @@
 
 package org.byu.isodistort.render;
 
-import java.util.Arrays;
-
 import org.byu.isodistort.local.Matrix;
 import org.byu.isodistort.local.Vec;
 
@@ -53,45 +51,45 @@ public class Renderer {
 		world = new Geometry();
 	}
 
-	/**
-	 * Initializes the renderer.
-	 * 
-	 * @param W framebuffer width
-	 * @param H framebuffer height.
-	 * @return framebuffer array.
-	 */
-	int[] init(int W, int H) {
-		int[] pix = new int[W * H];
-		init(W, H, pix);
-		return pix;
-	}
-
-	void init(int W, int H, int[] pix) {
-		nLights = 0;
-		this.pix = pix;
-		this.W = W;
-		this.H = H;
-		Matrix.identity(camera);
-		computeCamera();
-	}
-
-	/**
-	 * Initializes the renderer.
-	 * 
-	 * @param W framebuffer width
-	 * @param H framebuffer height.
-	 * @return framebuffer array.
-	 */
-	synchronized int[] reinit(int W, int H) {
-		this.W = W;
-		this.H = H;
-		pix = new int[W * H];
-		Arrays.fill(pix, -1);
-		zbuffer = null;
-		gzbuffer = null;
-		return pix;
-	}
-
+//	/**
+//	 * Initializes the renderer.
+//	 * 
+//	 * @param W framebuffer width
+//	 * @param H framebuffer height.
+//	 * @return framebuffer array.
+//	 */
+//	int[] init(int W, int H) {
+//		int[] pix = new int[W * H];
+//		init(W, H, pix);
+//		return pix;
+//	}
+//
+//	void init(int W, int H, int[] pix) {
+//		nLights = 0;
+//		this.pix = pix;
+//		this.W = W;
+//		this.H = H;
+//		Matrix.identity(camera);
+//		computeCamera();
+//	}
+//
+//	/**
+//	 * Initializes the renderer.
+//	 * 
+//	 * @param W framebuffer width
+//	 * @param H framebuffer height.
+//	 * @return framebuffer array.
+//	 */
+//	synchronized int[] reinit(int W, int H) {
+//		this.W = W;
+//		this.H = H;
+//		pix = new int[W * H];
+//		Arrays.fill(pix, -1);
+//		zbuffer = null;
+//		gzbuffer = null;
+//		return pix;
+//	}
+//
 	/**
 	 * BH avoiding the messiness of a MemoryImageSource. 
 	 * Instead, we just mainline the image pixel buffer.

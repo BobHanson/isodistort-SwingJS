@@ -216,6 +216,7 @@ public class Geometry {
 	 * @return s the added shape
 	 */
 	private Geometry add(Geometry s) {
+		childCount++;
 		s.parent = this;
 		if (child == null)
 			child = new Geometry[16];
@@ -261,6 +262,7 @@ public class Geometry {
 	 */
 	public Geometry delete(int n) {
 		if (child != null && n >= 0 && n < child.length) {
+			childCount--;
 			for (; n < child.length - 1 && child[n + 1] != null; n++)
 				child[n] = child[n + 1];
 			child[n] = null;
@@ -279,6 +281,7 @@ public class Geometry {
 	 * 
 	 */
 	public Geometry clear(int n) {
+		childCount = n;
 		if (child != null && n >= 0 && n < child.length)
 			child[n] = null;
 		return this;
@@ -295,9 +298,11 @@ public class Geometry {
 //		if (material.hasTexture())
 //			this.verticedepth = 8;
 		if (child != null)
-			for (int i = 0; i < child.length; i++)
-				if (child[i] != null)
+			for (int i = 0; i < child.length; i++) {
+				if (child[i] == null)
+					break;
 					child[i].setMaterial(m);
+			}
 		return this;
 	}
 
@@ -1333,7 +1338,13 @@ public class Geometry {
 		return enabled;
 	}
 
-//	/**
+	int childCount = 0;
+
+	public int getChildCount() {
+		return childCount;
+	}
+	
+	//	/**
 //	 * Deforms a geometric shape according to the beginning, middle, and end
 //	 * parameters in each dimension. For each dimesion the three parameters indicate
 //	 * the amount of deformation at each position. 0 - beginning, 1 - middle, 2 -

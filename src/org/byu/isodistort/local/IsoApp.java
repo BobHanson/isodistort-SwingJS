@@ -194,7 +194,6 @@ public abstract class IsoApp {
 		sliderPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
 		isoPanel.add(sliderPane, BorderLayout.EAST);// add to east of Applet
 
-		// controlPane = new JScrollPane(controlPanel);
 		controlPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
 		isoPanel.add(controlPanel, BorderLayout.SOUTH);// add to east of Applet
 

@@ -22,10 +22,11 @@ public class Renderer {
 	 */
 	private boolean tableMode = true;
 
-	/**
-	 * Set the level of detail for meshes.
-	 */
-	int lod = 1;
+// BH not used in this application; allows multiple passes for meshes
+//	/**
+//	 * Set the level of detail for meshes.
+//	 */
+//	int meshLevelOfDetail = 1;
 
 	/**
 	 * Shows/overlays the geometry mesh in black when true.
@@ -693,7 +694,7 @@ public class Renderer {
 		nt = 0;
 		renderT = false;
 		world.globalMatrix.copy(world.matrix);
-
+		
 		render(world, camera);
 
 		// RENDER TRANSPARENT OBJECTS
@@ -726,7 +727,11 @@ public class Renderer {
 	private void render(Geometry s, Matrix camera) {
 		if (s.child != null) {
 			//Matrix cam = new Matrix(); // BH opt #1# 
-			cam.copy(camera); // CAMERA MAY MOVE BEFORE CHILD RENDERS
+			cam.copy(camera); 
+			
+			
+			// CAMERA MAY MOVE BEFORE CHILD RENDERS
+			// BH nah...
 //			Matrix mat = new Matrix();
 //			mat.copy(s.globalMatrix);
 
@@ -847,41 +852,41 @@ public class Renderer {
 
 		// RECTANGULAR MESH AT COARSE LEVEL OF DETAIL
 
-		if (lod > 1 && m >= 40) {
-			int M = m + 1, N = s.vertices.length / M;
-
-			for (int J = 0; J <= N; J++)
-				for (int I = 0; I <= M; I++) {
-					int k = Math.min(J, N - 1) * M + Math.min(I, M - 1);
-					transformVertex(matrix, s.vertices[k], k);
-					t[k][3] = UNRENDERED;
-				}
-
-			for (int J = 0; J <= N - 1 - lod; J += lod)
-				for (int I = 0; I <= M - 1 - lod; I += lod) {
-					int a = J * M + I;
-					int b = J * M + I + lod;
-					int c = (J + lod) * M + I;
-					int d = (J + lod) * M + I + lod;
-
-					if (b % M >= M - lod)
-						b = (b / M + 1) * M - 1;
-					if (d % M >= M - lod)
-						d = (d / M + 1) * M - 1;
-
-					if (c >= M * (N - lod))
-						c = M * (N - 1) + (c % M);
-					if (d >= M * (N - lod))
-						d = M * (N - 1) + (d % M);
-
-					fillAndClipTriangle(s, a, b, c);
-					fillAndClipTriangle(s, b, d, c);
-				}
-		}
-
-		// ALL OTHER CASES
-
-		else {
+//		if (meshLevelOfDetail > 1 && m >= 40) {
+//			int M = m + 1, N = s.vertices.length / M;
+//
+//			for (int J = 0; J <= N; J++)
+//				for (int I = 0; I <= M; I++) {
+//					int k = Math.min(J, N - 1) * M + Math.min(I, M - 1);
+//					transformVertex(matrix, s.vertices[k], k);
+//					t[k][3] = UNRENDERED;
+//				}
+//
+//			for (int J = 0; J <= N - 1 - meshLevelOfDetail; J += meshLevelOfDetail)
+//				for (int I = 0; I <= M - 1 - meshLevelOfDetail; I += meshLevelOfDetail) {
+//					int a = J * M + I;
+//					int b = J * M + I + meshLevelOfDetail;
+//					int c = (J + meshLevelOfDetail) * M + I;
+//					int d = (J + meshLevelOfDetail) * M + I + meshLevelOfDetail;
+//
+//					if (b % M >= M - meshLevelOfDetail)
+//						b = (b / M + 1) * M - 1;
+//					if (d % M >= M - meshLevelOfDetail)
+//						d = (d / M + 1) * M - 1;
+//
+//					if (c >= M * (N - meshLevelOfDetail))
+//						c = M * (N - 1) + (c % M);
+//					if (d >= M * (N - meshLevelOfDetail))
+//						d = M * (N - 1) + (d % M);
+//
+//					fillAndClipTriangle(s, a, b, c);
+//					fillAndClipTriangle(s, b, d, c);
+//				}
+//		}
+//
+//		// ALL OTHER CASES
+//
+//		else {
 			for (int k = 0; k < s.vertices.length; k++) {
 				transformVertex(matrix, s.vertices[k], k);
 				t[k][3] = UNRENDERED;
@@ -892,7 +897,7 @@ public class Renderer {
 					for (int k = 1; k < f.length - 1; k++)
 						fillAndClipTriangle(s, f[0], f[k], f[k + 1]);
 			}
-		}
+//		}
 	}
 
 	/**
@@ -930,8 +935,8 @@ public class Renderer {
 
 	private void transformVertex(Matrix matrix, double v[], int i) {
 
-		xf(matrix, v[0], v[1], v[2], 1, ti);
-		xf(matrix, v[0], v[1], v[2], 1, t1[i]);
+		matrix.rotTrans(v[0], v[1], v[2], ti);
+		matrix.rotTrans(v[0], v[1], v[2], t1[i]);
 
 		projectPoint(ti);
 		double pz = ti[2];
@@ -1082,7 +1087,7 @@ public class Renderer {
 		double v[] = s.vertices[i];
 		double nn[] = normal;
 
-		xf(normat, v[3], v[4], v[5], 0, nn);
+		normat.rotate(v[3], v[4], v[5], nn);
 		Vec.normalize(nn);
 		for (int j = 0; j < 3; j++)
 			ti[j + 3] = nn[j];
@@ -1104,7 +1109,7 @@ public class Renderer {
 
 		double nn[] = normal;
 
-		xf(normat, v[3], v[4], v[5], 0, nn);
+		normat.rotate(v[3], v[4], v[5], nn);
 		Vec.normalize(nn);
 		for (int j = 0; j < 3; j++)
 			ti[j + 3] = nn[j];
@@ -1418,17 +1423,6 @@ public class Renderer {
 		}
 	}
 
-//TRANSFORM ONE VERTEX OR NORMAL BY A MATRIX
-
-	void xf(Matrix m, double x, double y, double z, double w, double v[]) {
-		if (w == 0)
-			for (int j = 0; j < 3; j++)
-				v[j] = m.get(j, 0) * x + m.get(j, 1) * y + m.get(j, 2) * z;
-		else
-			for (int j = 0; j < 3; j++)
-				v[j] = m.get(j, 0) * x + m.get(j, 1) * y + m.get(j, 2) * z + m.get(j, 3);
-	}
-
 //DO LIGHTING AND SHADING FOR ONE VERTEX
 
 //I WILL BE ABLE TO GET SUBSTANTIAL SPEED-UP IF I CONVERT THIS ENTIRE
@@ -1599,21 +1593,21 @@ public class Renderer {
 		return null;
 	}
 
-	synchronized boolean getPoint(int ix, int iy, double xyz[]) {
-		if (ix < 0 || ix >= W || iy < 0 || iy >= H)
-			return false;
-		int zb = zbuffer[iy * W + ix];
-		if (zb < 0)
-			return false;
-		Matrix cameraInv = new Matrix();
-		double pz = (double) (zb >> NB) / (1 << 31 - NB);
-		double x = (FOV * (ix - W / 2) / W - cX / FL) / pz + cX;
-		double y = -(FOV * (iy - H / 2) / W + cY / FL) / pz + cY;
-		double z = FL - 1 / pz;
-		cameraInv.invert(camera);
-		xf(cameraInv, x, y, z, 1, xyz);
-		return true;
-	}
+//	synchronized boolean getPoint(int ix, int iy, double xyz[]) {
+//		if (ix < 0 || ix >= W || iy < 0 || iy >= H)
+//			return false;
+//		int zb = zbuffer[iy * W + ix];
+//		if (zb < 0)
+//			return false;
+//		Matrix cameraInv = new Matrix();
+//		double pz = (double) (zb >> NB) / (1 << 31 - NB);
+//		double x = (FOV * (ix - W / 2) / W - cX / FL) / pz + cX;
+//		double y = -(FOV * (iy - H / 2) / W + cY / FL) / pz + cY;
+//		double z = FL - 1 / pz;
+//		cameraInv.invert(camera);
+//		cameraInv.rotTrans(x, y, z, xyz);
+//		return true;
+//	}
 
 //	private static double noiseTexture(Material m, double x, double y, double z) {
 //		if (m.noiseA != 0)
@@ -1645,7 +1639,9 @@ public class Renderer {
 	private double FL = 10; // FOCAL LENGTH OF VIEW
 	private double FOV = 1; // FIELD OF VIEW
 	private Geometry world; // THE ROOT OF THE GEOMETRY TREE
-	private int W, H; // THE RESOLUTION OF THE IMAGE
+	int W; // THE RESOLUTION OF THE IMAGE
+
+	int H;
 	private double theta = 0, phi = 0, sigma = 0; // VIEW ROTATION ANGLES
 	private int bgColor = toRGB(0, 0, 0); // BACKGROUND FILL COLOR
 	private final int zHuge = 1 << 31; // BIGGEST POSSIBLE ZBUFFER VALUE

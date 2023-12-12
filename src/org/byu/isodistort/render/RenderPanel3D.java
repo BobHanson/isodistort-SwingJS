@@ -4,6 +4,7 @@
 package org.byu.isodistort.render;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.MouseEvent;
@@ -336,116 +337,104 @@ public class RenderPanel3D extends JPanel
 	public double phi = 0;
 	public double sigma = 0;
 
-	private synchronized void recalculateSize(int width, int height) {
-		// BH we are now just directly tapping the int[] raster of the
-		// buffered image that will be used to draw into the graphics
-		renderAreaX = width;
-		renderAreaY = height;
-		// Reinitialize the renderer
-		// by passing the off-screen image raster to the renderer
-		im = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-		int[] pixels = ((DataBufferInt)im.getRaster().getDataBuffer()).getData();
-		renderer.reinit(width, height, pixels);		
-		// older method was to create an image source
-		// that triggers a copy to an image upon Component.createImage();
-//		mis = new MemoryImageSource(width, height, renderer.getPix(), 0, width);
-//		mis.setAnimated(true);
-//		im = createImage(mis);
-		//bufferIm = (BufferedImage) createImage(width, height);
+//	private synchronized void recalculateSize(int width, int height) {
+//		// BH we are now just directly tapping the int[] raster of the
+//		// buffered image that will be used to draw into the graphics
+//		// Reinitialize the renderer
+//		// by passing the off-screen image raster to the renderer
+//		im = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+//		int[] pixels = ((DataBufferInt)im.getRaster().getDataBuffer()).getData();
+//		renderer.reinit(width, height, pixels);		
+//		// older method was to create an image source
+//		// that triggers a copy to an image upon Component.createImage();
+////		mis = new MemoryImageSource(width, height, renderer.getPix(), 0, width);
+////		mis.setAnimated(true);
+////		im = createImage(mis);
+//		//bufferIm = (BufferedImage) createImage(width, height);
+//	}
+	
+	/**
+	 * Check to see if the renderer is in sync with Java's layout manager. 
+	 * 
+	 * @return true if dimensions are unchanged
+	 */
+	private boolean isInSync() {
+		return (getWidth() == renderer.W && getHeight() == renderer.H);
 	}
 
 	/**
-	 * Makes sure that the renderer is
+	 * Check for a resize prior to rendering, and then carry out the rendering into
+	 * the image raster int[] rgba data buffer
 	 */
-	public synchronized void updateForDisplay(int step) {
-		if (step == 0) {
-			// allow for dynamic resizing of the applet
-			int currentWidth = getWidth();
-			int currentHeight = getHeight();
-			if (currentWidth != renderAreaX || currentHeight != renderAreaY) {
-				recalculateSize(currentWidth, currentHeight);// subtracting here makes things phase in and out
-			}
-		} else {
-			// LET THE APPLICATION PROGRAMMER MOVE THINGS INTO PLACE
-			identity(); // APPLIC. MATRIX STARTS UNTRANSFORMED
-
+	public synchronized void updateForDisplay(Component c) {
+		if (c != null) {
+			// write into the image data buffer
+			identity();
 			renderer.rotateView(theta, phi, sigma);
-
 			if (!spin)
 				theta = phi = sigma = 0;
-
-			// SHADE AND SCAN CONVERT GEOMETRY INTO FRAME BUFFER
 			renderer.render();
-
-			// KEEP REFINING LEVEL OF DETAIL UNTIL PERFECT (WHEN LOD=1)
-			if (renderer.lod > 1)
-				renderer.lod--;
-
-//		// WRITE RESULTS TO THE SCREEN
-//		if (mis != null)
-//			mis.newPixels(0, 0, getWidth(), getHeight(), true);
-
+//// BH this parameter is always 1 here
+//			if (renderer.meshLevelOfDetail > 1)
+//				renderer.meshLevelOfDetail--;
+			c.repaint();
+		} else if (!isInSync()) {
+			// prior to rendering, check for a resize
+			int width = getWidth();
+			int height = getHeight();
+			im = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+			int[] pixels = ((DataBufferInt) im.getRaster().getDataBuffer()).getData();
+			renderer.reinit(width, height, pixels);
 		}
-
 	}
 
-	int renderAreaX;
-	int renderAreaY;
-	
 	@Override
 	public synchronized void paint(Graphics g) {
 		super.paint(g);
-		//System.out.println("RP paint");
-		int currentWidth = getWidth();
-		int currentHeight = getHeight();
-		if (currentWidth != renderAreaX || currentHeight != renderAreaY) 
-		{
-			// allow for dynamic resizing of the applet
+		if (!isInSync()) {
+			// don't paint if we are not ready.
 			return;
 		}
-		
-//		gbuf.dispose();
 		g.drawImage(im, 0, 0, null);
 
-		// MEASURE ELAPSED TIME AND FRAMERATE
+		// debugging, testing ....
+
 		double dt = (getCurrentTime() - currentTime);
 		elapsed += dt;
 		currentTime = getCurrentTime();
 		if (elapsed > 0.00001)
 			frameRate = 0.9 * frameRate + 0.1 / elapsed;
 		elapsed = 0.0;
-// BH opt #2# not necessary to create an additional buffer.
-//		Graphics gbuf = bufferIm.getGraphics();
-//		gbuf.drawImage(im, 0, 0, null);
 		if (showFPS) {
-			String x = "" + //dt;//
-			(int) frameRate + "." + ((int) (frameRate * 10) % 10);
+			String x = "" + // dt;//
+					(int) frameRate + "." + ((int) (frameRate * 10) % 10);
+			// in JavaScript we just put this up in the tab
 			/**
 			 * @j2sNative
 			 * 
-			 * document.title = ""+x
+			 * 			document.title = ""+x
 			 */
 			{
-			g.setColor(Color.white);
-			g.fillRect(0, renderAreaY - 14, 80, 14);
-			g.setColor(Color.black);
-			g.drawString(x + " fps ", 1, renderAreaY - 1);
+				g.setColor(Color.white);
+				g.fillRect(0, renderer.H - 14, 80, 14);
+				g.setColor(Color.black);
+				g.drawString(x + " fps ", 1, renderer.H - 1);
 			}
 		}
-}
-
-	/**
-	 * Returns xyz world coords of the frontmost object at pixel (x,y)
-	 * 
-	 * @param x   x pixel coordinate
-	 * @param y   y pixel coordinate
-	 * @param xyz output point in world coords
-	 * @return true iff not a background pixel
-	 */
-	public boolean getPoint(int x, int y, double xyz[]) {
-		return renderer.getPoint(x, y, xyz);
 	}
 
+//	/**
+//	 * Returns xyz world coords of the frontmost object at pixel (x,y)
+//	 * 
+//	 * @param x   x pixel coordinate
+//	 * @param y   y pixel coordinate
+//	 * @param xyz output point in world coords
+//	 * @return true iff not a background pixel
+//	 */
+//	public boolean getPoint(int x, int y, double xyz[]) {
+//		return renderer.getPoint(x, y, xyz);
+//	}
+//
 	/**
 	 * Returns the Geometry of the frontmost object at the point (x, y) in the image
 	 * (like a z-buffer value of geometries).

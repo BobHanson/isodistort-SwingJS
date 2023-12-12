@@ -281,7 +281,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 //		// BH no longer necessary?
 //		if (isFocused) // if in focus
 //		{
-		rp.updateForDisplay(0);
+		rp.updateForDisplay(null);
 		if (isAnimate) {
 			animPhase += 2 * Math.PI / (5 * rp.getFrameRate());
 			animPhase = animPhase % (2 * Math.PI);
@@ -305,8 +305,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		}
 //		}
 		isAdjusting = false;
-		rp.updateForDisplay(1);
-		drawPanel.repaint();
+		rp.updateForDisplay(drawPanel);
 	}
 
 	/**

@@ -49,6 +49,8 @@ import org.byu.isodistort.IsoDistortApp;
  */
 public abstract class IsoApp {
 
+	final static String minorVersion = ".1";
+	
 	abstract protected void init();
 	
 	abstract protected boolean setVariables(String dataString);
@@ -398,7 +400,7 @@ public abstract class IsoApp {
 		String title = frame.getTitle();
 		frame.setName(title);
 		if (title.indexOf("ver.") < 0)
-			frame.setTitle(title + " ver. " + variables.isoversion);
+			frame.setTitle(title + " ver. " + variables.isoversion + minorVersion);
 		frame.setVisible(true);
 		frame.addComponentListener(componentListener);
 		frame.addWindowListener(windowListener);

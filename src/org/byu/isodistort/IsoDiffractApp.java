@@ -137,6 +137,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	boolean isPowder = false;
 	boolean isBoth = false;
 	boolean isMouseOver = false;
+	boolean wasPowder = false; // for entry to "both"
 
 	/** number of superHKL peaks contained within the display */
 	int peakCount;
@@ -237,29 +238,43 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	protected void init() {
 		initializePanels();
-		panel.addKeyListener(this);
-		panel.addMouseMotionListener(this);
+		drawPanel.addKeyListener(this);
+		drawPanel.addMouseMotionListener(this);
 		setVariables(readFile());
 	}
 	
 	protected void dispose() {
-		panel.removeKeyListener(this);
-		panel.removeMouseMotionListener(this);
+		drawPanel.removeKeyListener(this);
+		drawPanel.removeMouseMotionListener(this);
 		super.dispose();
 	}
 
 	protected boolean setVariables(String dataString) {
 		try {
-			variables = new Variables(this, dataString, true);
-			variables.initPanels(sliderPanel, controlPanel);
-			sliderPanel.setBackground(Color.BLACK);
+			if (variables == null) {
+				variables = new Variables(this, dataString, true);
+				variables.initPanels(sliderPanel, controlPanel);
+				sliderPanel.setBackground(Color.BLACK);
+			}
+			variables.updateForApp();
 			buildControls();
 			showControls();
 		} catch (Exception e) {
-			JOptionPane.showMessageDialog(panel, "Error reading input data " + e.getMessage());
+			JOptionPane.showMessageDialog(frameContentPane, "Error reading input data " + e.getMessage());
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	protected void setRenderer() {
+		drawHalfWidth = drawWidth / 2;
+		drawHalfHeight = drawHeight / 2;
+		rp = new RenderPanel(this);
+		rp.setPreferredSize(drawPanel.getSize());
+		rp.setSize(drawPanel.getSize());
+		drawPanel.removeAll();
+		drawPanel.add(rp);
 	}
 
 	public void updateDisplay() {
@@ -271,8 +286,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				resetCrystalPeaks();
 			isReset = false;
 			variables.isChanged = false;
-			panel.repaint();
-//			panel.requestFocus();
+			drawPanel.repaint();
+			drawPanel.requestFocus();
 			// trick for recovering from loss of focus
 			// -- otherwise keyboard listeners don't work.
 //		} else if (variables.isChanged) {
@@ -362,14 +377,18 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		int x0, y0, x1, y1;
 		gr.setColor(Color.white);
 		double scaleAreaHeight = (isBoth ? shortPowderScaleAreaHeight : powderScaleAreaHeight);
-		double f = (isBoth ? 1d * (shortPowderHeight - shortPowderScaleAreaHeight) / (drawHeight - powderScaleAreaHeight) : 1);
+		double fy =  0.8 * (isBoth ? 1d * (shortPowderHeight - shortPowderScaleAreaHeight) / (drawHeight - powderScaleAreaHeight) : 1) * powderZoom / powderScaleFactor;
+		double yrange = (drawHeight - scaleAreaHeight);
+		int ymin = (isBoth ? drawHeight - shortPowderHeight : 0);
+		double toXPix = 1.0 * drawWidth / powderXRange;
+		x0 = 0;
+		y0 = (int) Math.max(ymin, yrange * (1 - powderY[0] * fy));
 		for (int i = 1; i < powderXRange; i++) {
-			x0 = (int) (drawWidth * ((double) i - 1) / powderXRange);
-			x1 = (int) (drawWidth * ((double) i) / powderXRange);
-			y0 = (int) ((drawHeight - scaleAreaHeight)
-					* (1 - 0.8 * powderY[i - 1] * f * powderZoom / powderScaleFactor));
-			y1 = (int) ((drawHeight - scaleAreaHeight) * (1 - 0.8 * powderY[i] * f * powderZoom / powderScaleFactor));
+			x1 = (int) (i * toXPix);
+			y1 = (int) Math.max(ymin, yrange * (1 - powderY[i] * fy));
 			gr.drawLine(x0, y0, x1, y1);
+			x0 = x1;
+			y0 = y1;
 		}
 	}
 
@@ -1649,17 +1668,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		mousePeak(e.getX(), e.getY());
 	}
 
-	@Override
-	protected void setRenderer() {
-		drawHalfWidth = drawWidth / 2;
-		drawHalfHeight = drawHeight / 2;
-		rp = new RenderPanel(this);
-		rp.setPreferredSize(drawPanel.getSize());
-		rp.setSize(drawPanel.getSize());
-		drawPanel.removeAll();
-		drawPanel.add(rp);
-	}
-
 	/** creates the components of the control panel */
 	private void buildControls() {
 		dButton = new JRadioButton("d", false);
@@ -1864,7 +1872,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	private void showControls() {
 
 		// powder-only
-
+		
+		boolean isPowder = (isBoth && !wasPowder || this.isPowder && !isBoth);
+		wasPowder = false;
 		wavTxt.setVisible(isPowder);
 		minTxt.setVisible(isPowder);
 		maxTxt.setVisible(isPowder);
@@ -1940,7 +1950,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		isSimpleColor = colorBox.isSelected();
 		variables.setColors(isSimpleColor);
 		variables.recolorPanels();
-		panel.repaint();
+		drawPanel.repaint();
 	}
 
 	@Override
@@ -2008,6 +2018,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			showControls();
 			isReset = true;
 		} else if (source == bothButton) {
+			wasPowder = isPowder;
 			isBoth = isPowder = true;
 			showControls();
 			isReset = true;

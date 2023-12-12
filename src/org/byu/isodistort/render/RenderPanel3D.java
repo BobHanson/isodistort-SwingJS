@@ -58,6 +58,13 @@ public class RenderPanel3D extends JPanel
 		initialize();
 	}
 
+	public void dispose() {
+		app = null;
+		removeMouseListener(this);
+		removeMouseMotionListener(this);
+		renderer = null;
+	}
+
 	public void changeFOV(double FOV) {
 		fov = FOV;
 	}

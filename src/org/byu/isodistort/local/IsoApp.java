@@ -34,6 +34,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 import org.byu.isodistort.IsoDiffractApp;
@@ -49,7 +50,7 @@ import org.byu.isodistort.IsoDistortApp;
 public abstract class IsoApp {
 
 	abstract protected void init();
-
+	
 	abstract protected boolean setVariables(String dataString);
 
 	/**
@@ -88,7 +89,7 @@ public abstract class IsoApp {
 	/**
 	 * The panel displaying this application
 	 */
-	protected JPanel panel;
+	protected JPanel frameContentPane;
 
 	protected boolean isEnabled = true;
 	
@@ -107,7 +108,7 @@ public abstract class IsoApp {
 	 * Holds all the slider bars but not the viewPanel above it; added to
 	 * controlPanel
 	 */
-	public JPanel sliderPanel = new JPanel();
+	public JPanel sliderPanel;
 
 	/**
 	 * the central space where the drawing is done; holds the rendering panel
@@ -152,23 +153,27 @@ public abstract class IsoApp {
 	}
 	
 	protected void initializePanels() {
-		panel.setTransferHandler(new FileUtil.FileDropHandler(this));
+		frameContentPane.setTransferHandler(new FileUtil.FileDropHandler(this));
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
 
-		sliderPanel.setBackground(Color.WHITE);
-		sliderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0)); // sets grid length equal to number of rows.
+		if (sliderPanel == null) {
+			sliderPanel = new JPanel();
+			sliderPanel.setBackground(Color.WHITE);
+			sliderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+			// sets grid length equal to number of rows.
+		}
 
 		sliderPane = new JScrollPane(sliderPanel);
 		sliderPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
-		panel.add(sliderPane, BorderLayout.EAST);// add to east of Applet
+		frameContentPane.add(sliderPane, BorderLayout.EAST);// add to east of Applet
 
-		//controlPane = new JScrollPane(controlPanel);
+		// controlPane = new JScrollPane(controlPanel);
 		controlPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
-		panel.add(controlPanel, BorderLayout.SOUTH);// add to east of Applet
-		
+		frameContentPane.add(controlPanel, BorderLayout.SOUTH);// add to east of Applet
+
 		drawPanel = new JPanel(new BorderLayout());
-		panel.add(drawPanel, BorderLayout.CENTER);
+		frameContentPane.add(drawPanel, BorderLayout.CENTER);
 	}
 	
 	/**
@@ -176,7 +181,7 @@ public abstract class IsoApp {
 	 * 
 	 * @param panel
 	 */
-	public void addSaveButtons(JComponent panel) {
+	protected void addSaveButtons(JComponent panel) {
 		ViewListener vl = new ViewListener(); 
 		applyView = newJButton("Apply View", vl);
 		saveImage = newJButton("Save Image", vl);
@@ -193,8 +198,8 @@ public abstract class IsoApp {
 		JButton b = new JButton(text);
 		b.setFocusable(false);
 		b.setMargin(new Insets(-3, 3, -2, 4));
-		b.setHorizontalAlignment(JButton.LEFT);
-		b.setVerticalAlignment(JButton.CENTER);
+		b.setHorizontalAlignment(SwingConstants.LEFT);
+		b.setVerticalAlignment(SwingConstants.CENTER);
 		b.addActionListener(vl);
 		return b;
 	}
@@ -378,15 +383,17 @@ public abstract class IsoApp {
 	};
 	
 	private void start(JFrame frame, String[] args) {
+		isFramed = true;
 		this.frame = frame;
 		this.args = args;
-		isFramed = true;
-		panel = (JPanel) frame.getContentPane();
-		panel.setLayout(new BorderLayout());
+		frameContentPane = (JPanel) frame.getContentPane();
+		boolean haveVariables = (variables != null);
+		frameContentPane.setLayout(new BorderLayout());
 		init();
-		if (variables != null)
-			panel.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
-		frame.pack();		
+		if (!haveVariables) {
+			frameContentPane.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
+			frame.pack();
+		}
 		updateRenderer();
 		String title = frame.getTitle();
 		frame.setName(title);

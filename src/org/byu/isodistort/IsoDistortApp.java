@@ -155,9 +155,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	@Override
 	protected void init() {
-		// called from RenderApplet.init()
 		initializePanels();
-		panel.addKeyListener(this);
 		setVariables(readFile());
 	}
 	
@@ -169,6 +167,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		rp.setSize(drawPanel.getSize());
 		drawPanel.removeAll();
 		drawPanel.add(rp, BorderLayout.CENTER);
+		rp.addKeyListener(this);
 		initMaterials();
 		spheres = rp.world.add();
 		bonds = rp.world.add();
@@ -231,7 +230,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				variables = new Variables(this, dataString, false);
 
 		} catch (Exception e) {
-			JOptionPane.showMessageDialog(panel, "Error reading input data " + e.getMessage());
+			JOptionPane.showMessageDialog(drawPanel, "Error reading input data " + e.getMessage());
 			return false;
 		}
 		return true;
@@ -305,7 +304,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			rp.updateForDisplay();
 //		}
 		isAdjusting = false;
-		panel.repaint();
+		drawPanel.repaint();
 	}
 
 	/**
@@ -877,7 +876,9 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	@Override
 	protected void dispose() {
-		panel.removeKeyListener(this);
+		rp.removeKeyListener(this);
+		rp.dispose();
+		rp = null;
 		super.dispose();
 	}
 

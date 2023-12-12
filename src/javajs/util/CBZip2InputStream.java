@@ -1046,7 +1046,6 @@ public class CBZip2InputStream extends InputStream {
 
   }
 
-  @SuppressWarnings("unused")
   private static void reportCRCError() throws IOException {
     // The clean way would be to throw an exception.
     //throw new IOException("crc error");

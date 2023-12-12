@@ -781,6 +781,7 @@ public class SwingJSUtils {
 		public final static int CANCELED = 4;
 
 		private int id;
+		@SuppressWarnings("unused")
 		private int delay;
 		private int state;
 
@@ -884,6 +885,7 @@ public class SwingJSUtils {
 			return (Timeout) Singleton.getInstance(Timeout.class);
 		}
 
+		@SuppressWarnings("unused")
 		private void startTimer() {
 			if (state != PENDING)
 				return;

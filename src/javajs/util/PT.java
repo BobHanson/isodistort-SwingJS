@@ -532,7 +532,7 @@ public class PT {
      return info instanceof Number || info instanceof Boolean;
   }
 
-	@SuppressWarnings({ "unused", "null" })
+	@SuppressWarnings({ "unused" })
 	public static String toJSON(String infoType, Object info) {
 		if (info == null)
 			return packageJSON(infoType, null);

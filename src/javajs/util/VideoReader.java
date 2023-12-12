@@ -251,7 +251,6 @@ public class VideoReader {
 		return is.readInt() & 0xFFFFFFFFL;
 	}
 
-	@SuppressWarnings("unused")
 	protected boolean isAvail() {
 		try {
 			return (pt != -1 && is.available() > 0);

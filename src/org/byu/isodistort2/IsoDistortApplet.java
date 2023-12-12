@@ -11,48 +11,52 @@
  11111111111111111111111111111111111111111111111111111111111111111111111111111111
  */
 
-package org.byu.isodistort;
+package org.byu.isodistort2;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.image.BufferedImage;
 import java.text.DecimalFormat;
 
 import javax.swing.ButtonGroup;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComponent;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
-import javax.swing.JToggleButton;
-import javax.swing.Timer;
 
-import org.byu.isodistort.local.IsoApp;
-import org.byu.isodistort.local.Variables;
-import org.byu.isodistort.local.Vec;
-import org.byu.isodistort.render.Geometry;
-import org.byu.isodistort.render.Material;
-// import org.byu.isodistort.render.Matrix;
-import org.byu.isodistort.render.RenderPanel3D;
+import org.byu.isodistort2.local.CommonStuff;
+import org.byu.isodistort2.local.ImageSaver;
+import org.byu.isodistort2.render.Geometry;
+import org.byu.isodistort2.render.Material;
+// import org.byu.isodistort2.render.Matrix;
+import org.byu.isodistort2.render.RenderApplet;
+import org.byu.isodistort2.render.Vec;
 
-public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
+/**
+ * @j2sNative
+ * 
+ * J2S._applets.master.__Info.width=1024;
+ * J2S._applets.master.__Info.height=1024/1.6;
+ *
+ */
+public class IsoDistortApplet extends RenderApplet {
+	private static final long serialVersionUID = 1L;
 
-	public IsoDistortApp() {
-		super(APP_ISODISTORT);
+	public IsoDistortApplet() {
+		super();
 	}
 	
-	protected boolean isRunning;
-
-
-
-	// Variables that the user may want to adjust
+// Variables that the user may want to adjust
 	/** Cell-edge tube parameters */
 	int numBondSides = 6, numCellSides = 6, numArrowSides = 8, ballRes = 4;
 	/** Focal length for renderer. */
@@ -142,10 +146,13 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	JRadioButton nButton, xButton, yButton, zButton, zoomButton;
 	/** Buttons to use super or parent cell for view vectors */
 	JRadioButton superHKL, superUVW, parentHKL, parentUVW;
+	/** Button for inputting the view direction */
+	JButton applyView;
+	/** Button for saving the current applet image */
+	JButton saveImage;
 	/** Text fields for inputting viewing angles */
 	JTextField uView, vView, wView;
-	private RenderPanel3D rp;
-
+	
 	/**
 	 * 222222222222222222222222222222222222222222222222222222222222222222222222222222
 	 * 2 2 2 In the second section we initialize everything on the applet that we
@@ -153,89 +160,64 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * 222222222222222222222222222222222222222222222222222222222222222222222222222222
 	 */
 
-	@Override
-	protected void init() {
-		initializePanels();
-		setVariables(readFile());
-	}
-	
-
-	@Override
-	protected void setRenderer() {
-		rp = new RenderPanel3D(this);
-		rp.setPreferredSize(drawPanel.getSize());
-		rp.setSize(drawPanel.getSize());
-		drawPanel.removeAll();
-		drawPanel.add(rp, BorderLayout.CENTER);
-		rp.addKeyListener(this);
+	public void initialize() {
+		this.addKeyListener(new keyinputListener());
+		readFile();
+		rd = new CommonStuff(this, dataString, false);
 		initMaterials();
-		spheres = rp.world.add();
-		bonds = rp.world.add();
-		cells = rp.world.add();
-		axes = rp.world.add();
+		spheres = world.add();
+		bonds = world.add();
+		cells = world.add();
+		axes = world.add();
 		initAtoms();
 		initBonds();
 		initCells();
 		initAxes();
-		buildControls();
-		//viewFocused = true;
-		// the total area of the applet																						// // (e.g. 1024x512)
-		variables.initPanels(sliderPanel, controlPanel);
+		initView();
 
 //and below we initialize the applet part of the panel.  Because crystalAppletHTML
 //extends renderApplet (in the render package) the remainning code in this initialization
 //section actually refers to renderApplet.*/
 
-		recalcABC();
-		// do this first to get size
-		
+		recalcABC(); // do this first to get size
+//		System.out.println("numBonds =  "+rd.numBonds);
+//		System.out.println("maxBondLength =  "+rd.maxBondLength);
+//		for(int b = 0; b < rd.numBonds; b++)
+//		{	
+//			System.out.println(b+"  "+bondInfo[b][0]+"  "+bondInfo[b][1]+"  "+bondInfo[b][2]+"  "+bondInfo[b][3]+"  "+bondInfo[b][4]+"  "+bondInfo[b][5]+"  "+bondInfo[b][6]);
+//		}
+
 		recalcMaterials();
 
 		// Set background color, field of view and focal length of renderer
-		double fov = 2 * perspectivescaler * scdSize / fl;
+		fov = 2 * perspectivescaler * scdSize / fl;
 		fov0 = fov;
-		rp.setBgColor(1, 1, 1);// background color: white
-		rp.setFOV(fov);// field of view
-		rp.setFL(fl);// focal length: zoomed way out
-		rp.changeFOV(fov);
-		rp.setCamera(0, 0);
+		setBgColor(1, 1, 1);// background color: white
+		setFOV(fov);// field of view
+		setFL(fl);// focal length: zoomed way out
+		changeFOV(fov);
+		renderer.setCamera(0, 0);
+
+//		System.out.println("size: "+size);
+//		System.out.println("focal length: "+fl);
+//		System.out.println("scalar: "+scalar);
+//		System.out.println("field of view: "+fov);
+
 		// Define position and color of light source (x, y, z, r, g, b)
 		double bbb = 0.38;
-		rp.addLight(Double.NaN, 0,0,0,0,0);
-		rp.addLight(.5, .5, .5, 1.7 * bbb, 1.7 * bbb, 1.7 * bbb);
-		rp.addLight(-.5, .5, .5, bbb, bbb, bbb);
-		rp.addLight(.5, -.5, .5, bbb, bbb, bbb);
-		rp.addLight(-.5, -.5, .5, bbb, bbb, bbb);
+		addLight(.5, .5, .5, 1.7 * bbb, 1.7 * bbb, 1.7 * bbb);
+		addLight(-.5, .5, .5, bbb, bbb, bbb);
+		addLight(.5, -.5, .5, bbb, bbb, bbb);
+		addLight(-.5, -.5, .5, bbb, bbb, bbb);
 
-// BH this is taken care of in updateDisplay now
-// that Variables.isChanged is set TRUE initially.
-//
-//		// Add the atoms and bonds and cells to applet
-//		renderAtoms();// add the atoms to the renderer
-//		renderBonds();// add the bonds to the renderer
-//		renderCells();// add the cells to the renderer
-//		renderAxes();// add the axes to the renderer
+		// Add the atoms and bonds and cells to applet
+		renderAtoms();// add the atoms to the renderer
+		renderBonds();// add the bonds to the renderer
+		renderCells();// add the cells to the renderer
+		renderAxes();// add the axes to the renderer
+		setTimer();
 	}
-
-	@Override
-	protected void frameResized() {
-		isRecalc = true;
-		updateDisplay();
-	}
-
-	@Override
-	protected boolean setVariables(String dataString) {
-		try {
-			if (dataString != null)
-				variables = new Variables(this, dataString, false);
-
-		} catch (Exception e) {
-			JOptionPane.showMessageDialog(drawPanel, "Error reading input data " + e.getMessage());
-			return false;
-		}
-		return true;
-	}
-
+	
 	/**
 	 * Animation amplitude and phase.
 	 */
@@ -245,67 +227,67 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	boolean isSimpleColor = false;
 	double animPhase = Math.PI / 2;
 	double animAmp = 1;
-//	boolean isFocused = true; // is the Applet in focus? If not, stop updating the display.
-//	boolean viewFocused = false; // are the viewDir fields being accessed?
+	boolean isFocused = true; // is the Applet in focus? If not, stop updating the display.
+	boolean viewFocused = false; // are the viewDir fields being accessed?
+
+	protected void runImpl() {
+		if (!isAnimate && !spin && --initializing < 0)
+			return;
+		updateDisplay();
+		if (initializing == 0 && !isAnimate && !spin)
+			stop();
+	}
 
 	private boolean isAdjusting = false;
-
+	
 	public void updateDisplay() {
 		if (isAdjusting)
 			return;
 		isAdjusting = true;
-// BH if we are here, the frame must have focus
-// this was for when there was a brute-force 20-ms thread running the painting
-// now Java does it for us
-//
-//		boolean v = viewFocused;
-//		/**
-//		 * @j2sNative v = true;
-//		 */
-//		{
-//		}
-//		isFocused = v || this.hasFocus();
-//		// BH: SwingJS isn't reporting this properly
-//
-//		// Stops display updates not in focus.
-//		// Includes the applet focus and the focusable viewDir fields
-//		// which would otherwise stop the display when accessed.
+		boolean v = viewFocused;
+		/**
+		 * @j2sNative v = true;
+		 */
+		{
+		}
+		isFocused = v || this.hasFocus();
+		// BH: SwingJS isn't reporting this properly
 
-		if (variables.isChanged) {
+		// Stops display updates not in focus.
+		// Includes the applet focus and the focusable viewDir fields
+		// which would otherwise stop the display when accessed.
+
+		if (rd.isChanged) {
 			isRecalc = true;
-			variables.isChanged = false;
+			rd.isChanged = false;
 		}
 
-//		System.out.println("IDA is focused " + isFocused);
-//		// BH no longer necessary?
-//		if (isFocused) // if in focus
-//		{
-		rp.updateForDisplay(0);
-		if (isAnimate) {
-			animPhase += 2 * Math.PI / (5 * rp.getFrameRate());
-			animPhase = animPhase % (2 * Math.PI);
-			animAmp = Math.pow(Math.sin(animPhase), 2);
-			variables.masterSlider.setValue((int) Math.round(animAmp * variables.sliderMaxVal));
-			isRecalc = true;
-		}
+		if (isFocused) // if in focus
+		{
+			if (isAnimate) {
+				animPhase += 2 * Math.PI / (5 * frameRate);
+				animPhase = animPhase % (2 * Math.PI);
+				animAmp = Math.pow(Math.sin(animPhase), 2);
+				rd.masterSlider.setValue((int) Math.round(animAmp * rd.sliderMaxVal));
+				isRecalc = true;
+			}
 
-		if (isRecalcMat) {
-			recalcMaterials();
-			isRecalcMat = false;
+			if (isRecalcMat) {
+				recalcMaterials();
+				isRecalcMat = false;
+			}
+			if (isRecalc) {
+				recalcABC();
+				renderAtoms();
+				renderBonds();
+				renderCells();
+				renderAxes();
+				isRecalc = false;
+			}
+			moreRunStuff();
 		}
-		if (isRecalc) {
-			// virtually all the time is here:
-			recalcABC();
-			renderAtoms();
-			renderBonds();
-			renderCells();
-			renderAxes();
-			isRecalc = false;
-		}
-//		}
 		isAdjusting = false;
-		rp.updateForDisplay(1);
-		drawPanel.repaint();
+		repaint();
 	}
 
 	/**
@@ -320,18 +302,17 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 */
 	private void initAtoms() {
 		showAtoms = showAtoms0;
-		atomcoordInfo = new double[variables.numAtoms][3];
-		atomradInfo = new double[variables.numAtoms];
-		atommagInfo = new double[variables.numAtoms][3];
-		atomrotInfo = new double[variables.numAtoms][3];
-		atomellipInfo = new double[variables.numAtoms][7];
-		spheres.clear(0);
-//		for (int qq = 0; qq < variables.numAtoms; qq++)// iterate over all the types
-//			spheres.delete(0);
+		atomcoordInfo = new double[rd.numAtoms][3];
+		atomradInfo = new double[rd.numAtoms];
+		atommagInfo = new double[rd.numAtoms][3];
+		atomrotInfo = new double[rd.numAtoms][3];
+		atomellipInfo = new double[rd.numAtoms][7];
+		for (int qq = 0; qq < rd.numAtoms; qq++)// iterate over all the types
+			spheres.delete(0);
 		int q = 0;
-		for (int t = 0; t < variables.numTypes; t++)// iterate over all the types
-			for (int s = 0; s < variables.numSubTypes[t]; s++)
-				for (int a = 0; a < variables.numSubAtoms[t][s]; a++) {
+		for (int t = 0; t < rd.numTypes; t++)// iterate over all the types
+			for (int s = 0; s < rd.numSubTypes[t]; s++)
+				for (int a = 0; a < rd.numSubAtoms[t][s]; a++) {
 					spheres.add();
 					spheres.child(q).add().ball(ballRes).setMaterial(subMaterial[t][s]);
 					spheres.child(q).add().arrow(numArrowSides).setMaterial(subMaterial[t][s]);
@@ -345,10 +326,10 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 */
 	private void initBonds() {
 		showBonds = showBonds0;
-		int n = variables.numBonds;
-		bondInfo = new double[n][7];
-		bonds.clear(0);
-		for (int b = 0; b < n; b++)
+		bondInfo = new double[rd.numBonds][7];
+		for (int b = 0; b < rd.numBonds; b++)
+			bonds.delete(0);
+		for (int b = 0; b < rd.numBonds; b++)
 			bonds.add().tube(numBondSides).setMaterial(bondMaterial);
 	}
 
@@ -359,7 +340,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		showCells = showCells0;
 		parentCellInfo = new double[12][7];
 		superCellInfo = new double[12][7];
-		cells.clear(0);
+		for (int c = 0; c < 24; c++)
+			cells.delete(0);
 		for (int c = 0; c < 12; c++)
 			cells.add().cylinder(numCellSides).setMaterial(parentCellMaterial);
 		for (int c = 0; c < 12; c++)
@@ -385,20 +367,20 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * from the render package
 	 */
 	private void initMaterials() {
-		parentCellMaterial = rp.newMaterial();
-		superCellMaterial = rp.newMaterial();
-		bondMaterial = rp.newMaterial();
-		xMaterial = rp.newMaterial();
-		yMaterial = rp.newMaterial();
-		zMaterial = rp.newMaterial();
-		subMaterial = new Material[variables.numTypes][];
+		parentCellMaterial = new Material(renderer);
+		superCellMaterial = new Material(renderer);
+		bondMaterial = new Material(renderer);
+		xMaterial = new Material(renderer);
+		yMaterial = new Material(renderer);
+		zMaterial = new Material(renderer);
+		subMaterial = new Material[rd.numTypes][];
 
 		// Create the subMaterial array;
-		for (int t = 0, nt = variables.numTypes; t < nt; t++)// iterate over types of atoms
+		for (int t = 0; t < rd.numTypes; t++)// iterate over types of atoms
 		{
-			subMaterial[t] = new Material[variables.numSubTypes[t]];
-			for (int s = 0, nst = variables.numSubTypes[t]; s < nst; s++)// iterate over number-of-subtypes
-				subMaterial[t][s] = rp.newMaterial();
+			subMaterial[t] = new Material[rd.numSubTypes[t]];
+			for (int s = 0; s < rd.numSubTypes[t]; s++)// iterate over number-of-subtypes
+				subMaterial[t][s] = new Material(renderer);
 		}
 	}
 
@@ -415,58 +397,54 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	private void renderAtoms() {
 		int q = 0, X = 0, Y = 1, L = 2;
 		double temp, tempr, tempx, tempy, tempz;
-		for (int t = 0; t < variables.numTypes; t++)
-			for (int s = 0; s < variables.numSubTypes[t]; s++)// iterate over all subtypes of this type
-				for (int a = 0; a < variables.numSubAtoms[t][s]; a++)// iterate over all atoms of that type
+		for (int t = 0; t < rd.numTypes; t++)
+			for (int s = 0; s < rd.numSubTypes[t]; s++)// iterate over all subtypes of this type
+				for (int a = 0; a < rd.numSubAtoms[t][s]; a++)// iterate over all atoms of that type
 				{
-					rp.push();
-					rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);
-					rp.translate(atomcoordInfo[q]);
-					tempr = variables.atomMaxRadius * atomradInfo[q];
-					rp.scale(tempr, tempr, tempr);
-					rp.transform(spheres.child(q));
-					rp.pop();
+					push();
+					scale(perspectivescaler, perspectivescaler, perspectivescaler);
+					translate(atomcoordInfo[q]);
+					tempr = rd.atomMaxRadius * atomradInfo[q];
+					scale(tempr, tempr, tempr);
+					transform(spheres.child(q));
+					pop();
 
-					rp.push();
-					tempx = (atomellipInfo[q][0] / Math.sqrt(variables.defaultUiso));
-					tempy = (atomellipInfo[q][1] / Math.sqrt(variables.defaultUiso));
-					tempz = (atomellipInfo[q][2] / Math.sqrt(variables.defaultUiso));
+					push();
+					tempx = (atomellipInfo[q][0] / Math.sqrt(rd.defaultUiso));
+					tempy = (atomellipInfo[q][1] / Math.sqrt(rd.defaultUiso));
+					tempz = (atomellipInfo[q][2] / Math.sqrt(rd.defaultUiso));
 //					System.out.println("widths: "+q+", "+tempx+", "+tempy+", "+tempz);
-					rp.scale(tempx, tempy, tempz);
-					rp.transform(spheres.child(q).child(0));
-					rp.pop();
+					scale(tempx, tempy, tempz);
+					transform(spheres.child(q).child(0));
+					pop();
 
-					rp.push();
-					rp.rotateY(atommagInfo[q][Y]);// y-angle orientation of arrow number q
-					rp.rotateX(atommagInfo[q][X]);// x-angle orientation of arrow number q
+					push();
+					rotateY(atommagInfo[q][Y]);// y-angle orientation of arrow number q
+					rotateX(atommagInfo[q][X]);// x-angle orientation of arrow number q
 					if (Math.abs(atommagInfo[q][L]) > 0.1)
 						temp = momentMultiplier;
 					else
 						temp = 0;
-					rp.scale(temp, temp, 0.62 + atommagInfo[q][L] * variables.angstromsPerMagneton); // The factor of
-																										// 0.62
-																										// hides
-					// the zero-length moments
-					// just inside the surface
-					// of the spheres.
-					rp.transform(spheres.child(q).child(1));
-					rp.pop();
+					scale(temp, temp, 0.62 + atommagInfo[q][L] * rd.angstromsPerMagneton); // The factor of 0.62 hides
+																							// the zero-length moments
+																							// just inside the surface
+																							// of the spheres.
+					transform(spheres.child(q).child(1));
+					pop();
 
-					rp.push();
-					rp.rotateY(atomrotInfo[q][Y]);// y-angle orientation of arrow number q
-					rp.rotateX(atomrotInfo[q][X]);// x-angle orientation of arrow number q
+					push();
+					rotateY(atomrotInfo[q][Y]);// y-angle orientation of arrow number q
+					rotateX(atomrotInfo[q][X]);// x-angle orientation of arrow number q
 					if (Math.abs(atomrotInfo[q][L]) > 0.1)
 						temp = rotationMultiplier;
 					else
 						temp = 0;
-					rp.scale(temp, temp, 0.62 + atomrotInfo[q][L] * variables.angstromsPerRadian); 
-					// The factor of 0.62																				
-					// hides the
-					// zero-length rotations
-					// just inside the surface
-					// of the spheres.
-					rp.transform(spheres.child(q).child(2));
-					rp.pop();
+					scale(temp, temp, 0.62 + atomrotInfo[q][L] * rd.angstromsPerRadian); // The factor of 0.62 hides the
+																							// zero-length rotations
+																							// just inside the surface
+																							// of the spheres.
+					transform(spheres.child(q).child(2));
+					pop();
 
 					q++;
 				}
@@ -480,32 +458,26 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		/** Convenient constants for accessing specified element of array */
 		int x = 0, y = 1, z = 2, X = 3, Y = 4;
 		double temp, hide = 1;
-		for (int b = 0; b < variables.numBonds; b++) {
-			// iterate over bonds
-			rp.push();// new matrix
-			{
-				rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);
-				// make everything smaller to take out perspective
-				rp.translate(bondInfo[b][x], bondInfo[b][y], bondInfo[b][z]);
-				// position the atom at (x,y,z)
-				rp.rotateY(bondInfo[b][Y]);
-				// y-angle orientation of bond number b
-				rp.rotateX(bondInfo[b][X]);
-				// x-angle orientation of bond number b
-				temp = variables.atomMaxRadius * bondMultiplier;
-				hide = (bondInfo[b][6] <= 0.5 ? 0.001 : 1);
-				rp.scale(hide * temp, hide * temp, hide * bondInfo[b][5] / 2.0);
-				// The first two indicies are the
-				// cross-section of the bond which is a
-				// fraction of the atomRadius whereas,
-				// the
-				// third index is the length of the tube
-				// and
-				// it is calculated in paramReader.
-				rp.transform(bonds.child(b));
-				// transform and add this bond
-			}
-			rp.pop();
+		for (int b = 0; b < rd.numBonds; b++)// iterate over bonds
+		{
+			push();// new matrix
+			scale(perspectivescaler, perspectivescaler, perspectivescaler);// make everything smaller to take out
+																			// perspective
+			translate(bondInfo[b][x], bondInfo[b][y], bondInfo[b][z]);// position the atom at (x,y,z)
+			rotateY(bondInfo[b][Y]);// y-angle orientation of bond number b
+			rotateX(bondInfo[b][X]);// x-angle orientation of bond number b
+			temp = rd.atomMaxRadius * bondMultiplier;
+			if (bondInfo[b][6] <= 0.5)
+				hide = 0.001;
+			else
+				hide = 1.00;
+			scale(hide * temp, hide * temp, hide * bondInfo[b][5] / 2.0); // The first two indicies are the
+																			// cross-section of the bond which is a
+																			// fraction of the atomRadius whereas, the
+																			// third index is the length of the tube and
+																			// it is calculated in paramReader.
+			transform(bonds.child(b));// transform and add this bond
+			pop();
 		}
 	}
 
@@ -518,29 +490,25 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		int x = 0, y = 1, z = 2;
 		double temp;
 		for (int c = 0; c < 12; c++) {
-			rp.push();
-			{
-				rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);// make everything smaller to take out
-																					// // perspective
-				rp.translate(parentCellInfo[c][x], parentCellInfo[c][y], parentCellInfo[c][z]);
-				rp.rotateY(parentCellInfo[c][4]);
-				rp.rotateX(parentCellInfo[c][3]);
-				temp = variables.atomMaxRadius * cellMultiplier;
-				rp.scale(temp, temp, parentCellInfo[c][5] / 2.0);
-				rp.transform(cells.child(c));
-			}
-			rp.pop();
-			rp.push();
-			{
-				rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);// make everything smaller to take out
-																					// perspective
-				rp.translate(superCellInfo[c][x], superCellInfo[c][y], superCellInfo[c][z]);
-				rp.rotateY(superCellInfo[c][4]);
-				rp.rotateX(superCellInfo[c][3]);
-				rp.scale(temp, temp, superCellInfo[c][5] / 2.0);
-				rp.transform(cells.child(c + 12));
-			}
-			rp.pop();
+			push();
+			scale(perspectivescaler, perspectivescaler, perspectivescaler);// make everything smaller to take out
+																			// perspective
+			translate(parentCellInfo[c][x], parentCellInfo[c][y], parentCellInfo[c][z]);
+			rotateY(parentCellInfo[c][4]);
+			rotateX(parentCellInfo[c][3]);
+			temp = rd.atomMaxRadius * cellMultiplier;
+			scale(temp, temp, parentCellInfo[c][5] / 2.0);
+			transform(cells.child(c));
+			pop();
+			push();
+			scale(perspectivescaler, perspectivescaler, perspectivescaler);// make everything smaller to take out
+																			// perspective
+			translate(superCellInfo[c][x], superCellInfo[c][y], superCellInfo[c][z]);
+			rotateY(superCellInfo[c][4]);
+			rotateX(superCellInfo[c][3]);
+			scale(temp, temp, superCellInfo[c][5] / 2.0);
+			transform(cells.child(c + 12));
+			pop();
 		}
 	}
 
@@ -548,27 +516,20 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		int x = 0, y = 1, z = 2, X = 3, Y = 4;
 		double temp;
 		for (int axis = 0; axis < 6; axis++) {
-			rp.push();
-			{
-				rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);
-				rp.translate(axesInfo[axis][x], axesInfo[axis][y], axesInfo[axis][z]);
-				// position the atom at (x,y,z)
-				rp.rotateY(axesInfo[axis][Y]);
-				// y-angle orientation of bond number b
-				rp.rotateX(axesInfo[axis][X]);
-				// x-angle orientation of bond number b
-				if (axis > 2)
-					temp = variables.atomMaxRadius * axesMultiplier1;
-				else
-					temp = variables.atomMaxRadius * axesMultiplier2;
-				rp.scale(temp, temp, axesInfo[axis][5] / 2.0);
-				// The first two indices are the cross-section, which is a
-				// fraction of the atomRadius, whereas the third index is the
-				// length.
-				rp.transform(axes.child(axis));
-
-			}
-			rp.pop();
+			push();
+			scale(perspectivescaler, perspectivescaler, perspectivescaler);
+			translate(axesInfo[axis][x], axesInfo[axis][y], axesInfo[axis][z]);// position the atom at (x,y,z)
+			rotateY(axesInfo[axis][Y]);// y-angle orientation of bond number b
+			rotateX(axesInfo[axis][X]);// x-angle orientation of bond number b
+			if (axis > 2)
+				temp = rd.atomMaxRadius * axesMultiplier1;
+			else
+				temp = rd.atomMaxRadius * axesMultiplier2;
+			scale(temp, temp, axesInfo[axis][5] / 2.0); // The first two indices are the cross-section, which is a
+														// fraction of the atomRadius, whereas the third index is the
+														// length.
+			transform(axes.child(axis));
+			pop();
 		}
 	}
 
@@ -588,8 +549,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		double[][] tempmat = new double[3][3];
 		double[][] tempmat2 = new double[3][3];
 
-		variables.readSliders();
-		variables.recalcDistortion();
+		rd.readSliders();
+		rd.recalcDistortion();
 
 		// calculate cellInfo (in bond format) associated with each of 12 edges
 		/**
@@ -622,40 +583,45 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		buildCell[11][0] = 3;
 		buildCell[11][1] = 7;
 		for (int c = 0; c < 12; c++) {
-			Vec.pairtobond(variables.parentCellVertices[buildCell[c][0]], variables.parentCellVertices[buildCell[c][1]],
+			Vec.pairtobond(rd.parentCellVertices[buildCell[c][0]], rd.parentCellVertices[buildCell[c][1]],
 					parentCellInfo[c]);
-			Vec.pairtobond(variables.superCellVertices[buildCell[c][0]], variables.superCellVertices[buildCell[c][1]],
+			Vec.pairtobond(rd.superCellVertices[buildCell[c][0]], rd.superCellVertices[buildCell[c][1]],
 					superCellInfo[c]);
 		}
 
 		int q = 0;
-		for (int t = 0; t < variables.numTypes; t++)
-			for (int s = 0; s < variables.numSubTypes[t]; s++)
-				for (int a = 0; a < variables.numSubAtoms[t][s]; a++) {
-					atomradInfo[q] = variables.atomFinalOcc[t][s][a];
-					Vec.set3(newcoord, variables.atomFinalCoord[t][s][a]);
-					Vec.matdotvect(variables.sBasisCart, newcoord, tempvec); // typeless atom in cartesian coords
-				
-					for (int i = 0; i < 3; i++) // recenter in Applet coordinates
-						atomcoordInfo[q][i] = tempvec[i] - variables.sCenterCart[i];
+		for (int t = 0; t < rd.numTypes; t++)
+			for (int s = 0; s < rd.numSubTypes[t]; s++)
+				for (int a = 0; a < rd.numSubAtoms[t][s]; a++) {
+					atomradInfo[q] = rd.atomFinalOcc[t][s][a];
 
-					Vec.set3(newmag, variables.atomFinalMag[t][s][a]);
-					Vec.matdotvect(variables.sBasisCart, newmag, tempvec);
+					for (int i = 0; i < 3; i++)
+						newcoord[i] = rd.atomFinalCoord[t][s][a][i];
+					Vec.matdotvect(rd.sBasisCart, newcoord, tempvec); // typeless atom in cartesian coords
+					for (int i = 0; i < 3; i++) // recenter in Applet coordinates
+						atomcoordInfo[q][i] = tempvec[i] - rd.sCenterCart[i];
+
+					for (int i = 0; i < 3; i++)
+						newmag[i] = rd.atomFinalMag[t][s][a][i];
+					Vec.matdotvect(rd.sBasisCart, newmag, tempvec);
 					Vec.calculatearrow(tempvec, atommagInfo[q]);
 
-					Vec.set3(newrot, variables.atomFinalRot[t][s][a]);
-					Vec.matdotvect(variables.sBasisCart, newrot, tempvec);
+					for (int i = 0; i < 3; i++)
+						newrot[i] = rd.atomFinalRot[t][s][a][i];
+					Vec.matdotvect(rd.sBasisCart, newrot, tempvec);
 					Vec.calculatearrow(tempvec, atomrotInfo[q]);
 
 //					Ellipsoid work
-					Vec.copy(variables.atomFinalEllip[t][s][a], newellip);
+					for (int i = 0; i < 6; i++)
+						newellip[i] = rd.atomFinalEllip[t][s][a][i];
+//			        System.out.println ("ellipmat1: "+t+", "+s+", "+a+", "+newellip[0]+", "+newellip[1]+", "+newellip[2]+", "+newellip[3]+", "+newellip[4]+", "+newellip[5]);
 					Vec.voigt2matrix(newellip, tempmat);
-					Vec.matdotmat(variables.sBasisCart, tempmat, tempmat2);
+//			        System.out.println ("ellipmat2: "+t+", "+s+", "+a+", "+tempmat[0][0]+", "+tempmat[0][1]+", "+tempmat[0][2]+", "+tempmat[1][0]+", "+tempmat[1][1]+", "+tempmat[1][2]+", "+tempmat[2][0]+", "+tempmat[2][1]+", "+tempmat[2][2]);
+					Vec.matdotmat(rd.sBasisCart, tempmat, tempmat2);
 					Vec.matcopy(tempmat2, tempmat);
-					Vec.matdotmat(tempmat, variables.sBasisCartInverse, tempmat2);// ellipsoid in cartesian coords --
-																					// not safe
-					// to use tempmat in 1st and 3rd arguments
-					// simultaneously.
+					Vec.matdotmat(tempmat, rd.sBasisCartInverse, tempmat2);// ellipsoid in cartesian coords -- not safe
+																			// to use tempmat in 1st and 3rd arguments
+																			// simultaneously.
 					Vec.matcopy(tempmat2, tempmat);
 //			        System.out.println ("ellipmat3: "+t+", "+s+", "+a+", "+tempmat[0][0]+", "+tempmat[0][1]+", "+tempmat[0][2]+", "+tempmat[1][0]+", "+tempmat[1][1]+", "+tempmat[1][2]+", "+tempmat[2][0]+", "+tempmat[2][1]+", "+tempmat[2][2]);
 					Vec.calculateellipstuff(tempmat, atomellipInfo[q]); // ellipsoidInfo array filled
@@ -666,41 +632,36 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 //	        System.out.println ("elliplist: "+q+", "+atomellipInfo[q][0]+", "+atomellipInfo[q][1]+", "+atomellipInfo[q][2]+", "+atomellipInfo[q][3]+", "+atomellipInfo[q][4]+", "+atomellipInfo[q][5]+", "+atomellipInfo[q][6]);
 
 		// calculate the new bondInfo in bond format
-		for (int b = 0; b < variables.numBonds; b++) // calculate bondInfo(x-cen, y-cen, z-cen, thetaX, thetaY, length)
+		for (int b = 0; b < rd.numBonds; b++) // calculate bondInfo(x-cen, y-cen, z-cen, thetaX, thetaY, length)
 		{
-			Vec.pairtobond(atomcoordInfo[variables.whichAtomsBond[b][0]], atomcoordInfo[variables.whichAtomsBond[b][1]],
-					bondInfo[b]);
-			if (bondInfo[b][5] >= variables.maxBondLength
-					|| atomradInfo[variables.whichAtomsBond[b][0]] <= variables.minBondOcc
-					|| atomradInfo[variables.whichAtomsBond[b][1]] <= variables.minBondOcc) {
+			Vec.pairtobond(atomcoordInfo[rd.whichAtomsBond[b][0]], atomcoordInfo[rd.whichAtomsBond[b][1]], bondInfo[b]);
+			if (bondInfo[b][5] >= rd.maxBondLength)
 				bondInfo[b][6] = 0.0;
-				bonds.child(b).setEnabled(false);
-			} else {
-				bonds.child(b).setEnabled(true);
-			}
+			if (atomradInfo[rd.whichAtomsBond[b][0]] <= rd.minBondOcc
+					|| atomradInfo[rd.whichAtomsBond[b][1]] <= rd.minBondOcc)
+				bondInfo[b][6] = 0.0;
 		}
 
 		// calculate the parent and supercell coordinate axes in bond format
 		for (int axis = 0; axis < 3; axis++) {
 			for (int i = 0; i < 3; i++)
-				tempvec[i] = variables.pBasisCart[i][axis];
+				tempvec[i] = rd.pBasisCart[i][axis];
 			Vec.normalize(tempvec);
 			for (int i = 0; i < 3; i++) {
-				extent[i] = variables.pOriginCart[i] - variables.sCenterCart[i] + variables.pBasisCart[i][axis];
-				paxesbegs[axis][i] = extent[i] + 2.0 * variables.atomMaxRadius * tempvec[i];
-				paxesends[axis][i] = extent[i] + 3.5 * variables.atomMaxRadius * tempvec[i];
+				extent[i] = rd.pOriginCart[i] - rd.sCenterCart[i] + rd.pBasisCart[i][axis];
+				paxesbegs[axis][i] = extent[i] + 2.0 * rd.atomMaxRadius * tempvec[i];
+				paxesends[axis][i] = extent[i] + 3.5 * rd.atomMaxRadius * tempvec[i];
 				;
 			}
 			Vec.pairtobond(paxesbegs[axis], paxesends[axis], axesInfo[axis]);
 
 			for (int i = 0; i < 3; i++)
-				tempvec[i] = variables.sBasisCart[i][axis];
+				tempvec[i] = rd.sBasisCart[i][axis];
 			Vec.normalize(tempvec);
 			for (int i = 0; i < 3; i++) {
-				extent[i] = -variables.sCenterCart[i] + variables.sBasisCart[i][axis];
-				saxesbegs[axis][i] = extent[i] + 1.5 * variables.atomMaxRadius * tempvec[i];
-
-				saxesends[axis][i] = extent[i] + 4.0 * variables.atomMaxRadius * tempvec[i];
+				extent[i] = -rd.sCenterCart[i] + rd.sBasisCart[i][axis];
+				saxesbegs[axis][i] = extent[i] + 1.5 * rd.atomMaxRadius * tempvec[i];
+				saxesends[axis][i] = extent[i] + 4.0 * rd.atomMaxRadius * tempvec[i];
 			}
 			Vec.pairtobond(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3]);
 		}
@@ -708,60 +669,65 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		// Calculate the maximum distance from applet center (used to determine FOV).
 		scdSize = 0;
 		for (int j = 0; j < 8; j++) {
-			Vec.set3(tempvec, variables.superCellVertices[j]);
+			for (int i = 0; i < 3; i++)
+				tempvec[i] = rd.superCellVertices[j][i];
 			tempscalar = Vec.norm(tempvec);
 			if (tempscalar > scdSize)
 				scdSize = tempscalar;
-			Vec.set3(tempvec, variables.parentCellVertices[j]);
-			tempscalar = Vec.norm(tempvec);
-			if (tempscalar > scdSize)
-				scdSize = tempscalar;
-		}
-		for (q = 0; q < variables.numAtoms; q++) {
-			Vec.set3(tempvec, atomcoordInfo[q]);
+			for (int i = 0; i < 3; i++)
+				tempvec[i] = rd.parentCellVertices[j][i];
 			tempscalar = Vec.norm(tempvec);
 			if (tempscalar > scdSize)
 				scdSize = tempscalar;
 		}
-		for (int axis = 0; axis < 3; axis++) {
-			Vec.set3(tempvec, paxesends[axis]);
+		for (q = 0; q < rd.numAtoms; q++) {
+			for (int i = 0; i < 3; i++)
+				tempvec[i] = atomcoordInfo[q][i];
 			tempscalar = Vec.norm(tempvec);
 			if (tempscalar > scdSize)
 				scdSize = tempscalar;
 		}
 		for (int axis = 0; axis < 3; axis++) {
-			Vec.set3(tempvec, saxesends[axis]);
+			for (int i = 0; i < 3; i++)
+				tempvec[i] = paxesends[axis][i];
+			tempscalar = Vec.norm(tempvec);
+			if (tempscalar > scdSize)
+				scdSize = tempscalar;
+		}
+		for (int axis = 0; axis < 3; axis++) {
+			for (int i = 0; i < 3; i++)
+				tempvec[i] = saxesends[axis][i];
 			tempscalar = Vec.norm(tempvec);
 			if (tempscalar > scdSize)
 				scdSize = tempscalar;
 		}
 
-		scdSize += 2 * variables.atomMaxRadius; // this includes the width of atoms that might be at the extremes of the
-		// longest cell diagonal.
+		scdSize += 2 * rd.atomMaxRadius; // this includes the width of atoms that might be at the extremes of the
+											// longest cell diagonal.
 	}
 
 	/** recalculates the atom colors after a checkbox has been set. */
 	private void recalcMaterials() {
 		double rrr, ggg, bbb, k;
 
-		variables.setColors(isSimpleColor);
-		variables.recolorPanels();
+		rd.setColors(isSimpleColor);
+		rd.recolorPanels();
 //		Reset the atom colors.			
-		for (int t = 0; t < variables.numTypes; t++)// iterate over types of atoms
+		for (int t = 0; t < rd.numTypes; t++)// iterate over types of atoms
 		{
-			rrr = variables.color[t].getRed() / 255.0;
-			ggg = variables.color[t].getGreen() / 255.0;
-			bbb = variables.color[t].getBlue() / 255.0;
-			for (int s = 0; s < variables.numSubTypes[t]; s++)// iterate over number-of-subtypes-selected; 0 means 1 is
-			// selected
+			rrr = rd.color[t].getRed() / 255.0;
+			ggg = rd.color[t].getGreen() / 255.0;
+			bbb = rd.color[t].getBlue() / 255.0;
+			for (int s = 0; s < rd.numSubTypes[t]; s++)// iterate over number-of-subtypes-selected; 0 means 1 is
+														// selected
 			{
-				if (!variables.subTypeBox[t][s].isSelected())
+				if (!rd.subTypeBox[t][s].isSelected())
 					subMaterial[t][s].setColor(rrr, ggg, bbb, 0.3, 0.3, 0.3, 1, .0001, .0001, .0001);// makes the atom
 																										// color same as
 																										// above type
 																										// color
 				else {
-					k = (double) 0.1 + 0.8 * s / variables.numSubTypes[t];
+					k = (double) 0.1 + 0.8 * s / rd.numSubTypes[t];
 //					subMaterial[t][s].setColor(rrr, ggg, bbb, k, k, k, 1, k, k, k); // graduated color scheme
 					subMaterial[t][s].setColor(0, 0, 0, k, k, k, 1, k, k, k);
 				}
@@ -825,19 +791,19 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		viewIndices[1] = Double.parseDouble(vView.getText());
 		viewIndices[2] = Double.parseDouble(wView.getText());
 
-		Vec.matinverse(variables.sBasisCart, tempmat);
+		Vec.matinverse(rd.sBasisCart, tempmat);
 		Vec.mattranspose(tempmat, recipsuperCell);
-		Vec.matinverse(variables.pBasisCart, tempmat);
+		Vec.matinverse(rd.pBasisCart, tempmat);
 		Vec.mattranspose(tempmat, recipparentCell);
 
 		if (viewType == 1)
 			Vec.mattranspose(recipsuperCell, tempmat);
 		if (viewType == 2)
-			Vec.mattranspose(variables.sBasisCart, tempmat);
+			Vec.mattranspose(rd.sBasisCart, tempmat);
 		if (viewType == 3)
 			Vec.mattranspose(recipparentCell, tempmat);
 		if (viewType == 4)
-			Vec.mattranspose(variables.pBasisCart, tempmat);
+			Vec.mattranspose(rd.pBasisCart, tempmat);
 
 		Vec.matdotvect(tempmat, viewIndices, viewDir);
 
@@ -858,12 +824,12 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 					tY = -Math.atan2(xV, zV);
 			}
 
-			rp.clearAngles();
-			rp.setCamera(tY, tX);// y-angle rotation first then x-angle rotation
+			theta = phi = sigma = 0;
+			renderer.setCamera(tY, tX);// y-angle rotation first then x-angle rotation
 //			System.out.println("viewDir: "+viewDir[0]+", "+viewDir[1]+", "+viewDir[2]);
 //			System.out.println("xV: "+xV+", yV: "+yV+", zV: "+zV);
 //			System.out.println("sigma(tx): "+tX+", theta(ty): "+tY);
-//			requestFocus(); // trick for recovering from loss of applet focus
+			requestFocus(); // trick for recovering from loss of applet focus
 		}
 	}
 
@@ -874,168 +840,202 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * 55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555
 	 */
 
-	@Override
-	protected void dispose() {
-		rp.removeKeyListener(this);
-		rp.dispose();
-		rp = null;
-		super.dispose();
-	}
-
-	public void keyPressed(KeyEvent e) {
-	}
-
-	public void keyReleased(KeyEvent e) {
-	}
-
-	public void keyTyped(KeyEvent e) {
-		switch (e.getKeyChar()) {
-		case 'r':
-		case 'R':
-			rp.clearAngles();
-			animPhase = Math.PI / 2;
-			animAmp = 1;
-			variables.resetSliders();
-			variables.readSliders();
-			variables.recalcDistortion();
-			showAtoms = showAtoms0;
-			aBox.setSelected(showAtoms);
-			showBonds = showBonds0;
-			bBox.setSelected(showBonds);
-			showCells = showCells0;
-			cBox.setSelected(showCells);
-			showAxes = showAxes0;
-			axesBox.setSelected(showAxes);
-			animBox.setSelected(false);
-			spinBox.setSelected(false);
-			colorBox.setSelected(false);
-			nButton.setSelected(true);
-			uView.setText("0");
-			vView.setText("0");
-			wView.setText("1");
-			superHKL.setSelected(true);
-
-			// resetViewDirection();
-			rp.setCamera(0, 0);
-
-			rp.setFOV(fov0);
-			for (int t = 0; t < variables.numTypes; t++)
-				for (int s = 0; s < variables.numSubTypes[t]; s++)
-					variables.subTypeBox[t][s].setSelected(false);
-
-			centerImage();
-			break;
-		case 'z':
-		case 'Z':
-			variables.zeroSliders();
-			break;
-		case 'i':
-		case 'I':
-			variables.resetSliders();
-			break;
-		case 's':
-		case 'S':
-			variables.toggleIrrepSliders();
-			break;
-		case 'n':
-		case 'N':
-			rp.invert();
-			break;
-		case 'c':
-		case 'C':
-			centerImage();
-			break;
+	/** keyinputListener responds to keyboard commands. */
+	private class keyinputListener implements KeyListener {
+		public void keyPressed(KeyEvent e) {
 		}
-		updateDisplay();
-	}
 
-	private void centerImage() {
-		rp.clearOffsets();
-		rp.push();
-		{
-			rp.identity();
-			rp.translate(0, 0, 0);
-			rp.transformWorld();
+		public void keyReleased(KeyEvent e) {
 		}
-		rp.pop();
-	}
 
-//	/** listens for changes in focus in the ViewDirection fields. */
-//	private class focusListener implements FocusListener {
-//		public void focusGained(FocusEvent event) {
-//			viewFocused = true; // Record the fact that we have focus.
-//			updateDisplay();
-//		}
-//
-//		public void focusLost(FocusEvent event) {
-//			viewFocused = false; // Record the fact that we don't have focus.
-//		}
-//	} // end class focusIt
+		public void keyTyped(KeyEvent e) {
+			char key = e.getKeyChar();
 
-	public BufferedImage getImage() {
-		return rp.getImage();
-	}
+			switch (key) {
+			case 'r':
+			case 'R':
+				theta = phi = sigma = 0;
+				animPhase = Math.PI / 2;
+				animAmp = 1;
+				rd.resetSliders();
+				rd.readSliders();
+				rd.recalcDistortion();
+				showAtoms = showAtoms0;
+				aBox.setSelected(showAtoms);
+				showBonds = showBonds0;
+				bBox.setSelected(showBonds);
+				showCells = showCells0;
+				cBox.setSelected(showCells);
+				showAxes = showAxes0;
+				axesBox.setSelected(showAxes);
+				animBox.setSelected(false);
+				spinBox.setSelected(false);
+				colorBox.setSelected(false);
+				nButton.setSelected(true);
+				uView.setText("0");
+				vView.setText("0");
+				wView.setText("1");
+				superHKL.setSelected(true);
 
-	@Override
-	protected void handleCheckBoxEvent(Object src) {
-		updateViewOptions();
-	}
+				// resetViewDirection();
+				renderer.setCamera(0, 0);
 
-	@Override
-	protected void handleRadioButtonEvent(Object src) {
-		if (!((JToggleButton) src).isSelected())
-			return;
-		if (src == nButton) {
-			rp.clearAngles();
-			rp.setRotationAxis(0);
-		} else if (src == xButton) {
-			rp.clearAngles();
-			rp.setRotationAxis(1);
-		} else if (src == yButton) {
-			rp.clearAngles();
-			rp.setRotationAxis(2);
-		} else if (src == zButton) {
-			rp.clearAngles();
-			rp.setRotationAxis(3);
-		} else if (src == zoomButton) {
-			rp.clearAngles();
-			rp.setRotationAxis(4);
-		} else if (src == superHKL) {
-			viewType = 1;
-		} else if (src == superUVW) {
-			viewType = 2;
-		} else if (src == parentHKL) {
-			viewType = 3;
-		} else if (src == parentUVW) {
-			viewType = 4;
-		}
-		updateDisplay();
+				setFOV(fov0);
+				for (int t = 0; t < rd.numTypes; t++)
+					for (int s = 0; s < rd.numSubTypes[t]; s++)
+						rd.subTypeBox[t][s].setSelected(false);
 
-	}
-
-	public void updateViewOptions() {
-		showAtoms = aBox.isSelected();
-		showBonds = bBox.isSelected();
-		showCells = cBox.isSelected();
-		showAxes = axesBox.isSelected();
-		boolean spin = spinBox.isSelected();
-		isSimpleColor = colorBox.isSelected();
-		isAnimate = animBox.isSelected();
-		isRecalcMat = true;
-		rp.setSpinning(spin);
-		if (isAnimate || spin) {
-			start();
-		} else {
-			variables.isChanged = true;
+				centerImage();
+				break;
+			case 'z':
+			case 'Z':
+				rd.zeroSliders();
+				break;
+			case 'i':
+			case 'I':
+				rd.resetSliders();
+				break;
+			case 's':
+			case 'S':
+				rd.toggleIrrepSliders();
+				break;
+			case 'n':
+			case 'N':
+				invert *= -1;
+				break;
+			case 'c':
+			case 'C':
+				centerImage();
+				break;
+			}
 			updateDisplay();
 		}
+
+		private void centerImage() {
+			xOff = 0;
+			yOff = 0;
+			zOff = 0;
+			invert = 1;
+
+			push();
+			identity();
+			translate(0, 0, 0);
+			for (int i = 0; i < 16; i++)
+				if (world.child(i) != null)
+					transform(world.child(i));
+			pop();
+		}
+	}
+
+	/** listens for changes in focus in the ViewDirection fields. */
+	private class focusListener implements FocusListener {
+		public void focusGained(FocusEvent event) {
+			viewFocused = true; // Record the fact that we have focus.
+			updateDisplay();
+		}
+
+		public void focusLost(FocusEvent event) {
+			viewFocused = false; // Record the fact that we don't have focus.
+		}
+	} // end class focusIt
+
+	/** listens for the check boxes that highlight a given atomic subtype. */
+	private class checkboxListener implements ItemListener {
+		public void itemStateChanged(ItemEvent event) {
+			showAtoms = aBox.isSelected();
+			showBonds = bBox.isSelected();
+			showCells = cBox.isSelected();
+			showAxes = axesBox.isSelected();
+			spin = spinBox.isSelected();
+			isSimpleColor = colorBox.isSelected();
+			isAnimate = animBox.isSelected();
+			isRecalcMat = true;
+			if (isAnimate || spin) {
+				start();
+			} else {
+				updateDisplay();
+			}
+		}
+	}
+
+	/** listens for the applet buttons, which specify the viewing angles. */
+	private class buttonListener implements ItemListener {
+		public void itemStateChanged(ItemEvent event) {
+			if (event.getSource() == nButton) {
+				theta = phi = sigma = 0;
+				rotAxis = 0;
+			}
+			if (event.getSource() == xButton) {
+				theta = phi = sigma = 0;
+				rotAxis = 1;
+			}
+			if (event.getSource() == yButton) {
+				theta = phi = sigma = 0;
+				rotAxis = 2;
+			}
+			if (event.getSource() == zButton) {
+				theta = phi = sigma = 0;
+				rotAxis = 3;
+			}
+			if (event.getSource() == zoomButton) {
+				theta = phi = sigma = 0;
+				rotAxis = 4;
+			}
+
+			if (event.getSource() == superHKL)
+				viewType = 1;
+			if (event.getSource() == superUVW)
+				viewType = 2;
+			if (event.getSource() == parentHKL)
+				viewType = 3;
+			if (event.getSource() == parentUVW)
+				viewType = 4;
+			updateDisplay();
+
+		}
+	}
+
+	/** Resets the view when the applyView button is pushed. */
+	private class viewListener implements ActionListener {
+		public void actionPerformed(ActionEvent event) {
+			if (event.getSource() == applyView)
+				resetViewDirection();
+			if (event.getSource() == saveImage)
+				ImageSaver.saveImageFile(im, IsoDistortApplet.this);
+			updateDisplay();
+		}
+	}
+
+	/**
+	 * 6666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666
+	 * 6 6 6 The sixth (last) section has the methods called from initialize() which
+	 * create the GUI. 6 6 6
+	 * 6666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666
+	 **/
+
+	/**
+	 * Sets up the applet window and scroll and control panels
+	 */
+	private void initView() {
+		setSize(rd.appletWidth, rd.appletHeight);// the total area of the applet (e.g. 1024x512)
+		
+		// BH: On a page, an applet dimension is not settable
+		
+		setLayout(new BorderLayout());// allows for adding slider panel to the side (east or west) of rendering area
+		setBackground(Color.WHITE);
+		rd.initPanels();
+		buildControls();
+		add(rd.controlPane, BorderLayout.SOUTH);// add to south of Applet
+		add(rd.scrollPane, BorderLayout.EAST);// add to east of Applet
+		setRenderArea(rd.renderingWidth, rd.renderingHeight);// the rendering area of the applet (e.g. 512x512)
+		updateDisplay();
 	}
 
 	/**
 	 * creates the components of the control panel
 	 */
 	private void buildControls() {
-
+		
 		aBox = newJCheckBox("Atoms", showAtoms);
 		bBox = newJCheckBox("Bonds", showBonds);
 		cBox = newJCheckBox("Cells", showCells);
@@ -1043,8 +1043,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		animBox = newJCheckBox("Animate", false);
 		spinBox = newJCheckBox("Spin", false);
 		colorBox = newJCheckBox("Color", false);
-		colorBox.setVisible(variables.needSimpleColor);
-
+		colorBox.setVisible(rd.needSimpleColor);
+		
 		ButtonGroup xyzButtons = new ButtonGroup();
 		nButton = newJRadioButton("Normal", true, xyzButtons);
 		xButton = newJRadioButton("Xrot", false, xyzButtons);
@@ -1063,17 +1063,31 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		uView = new JTextField(3);
 		uView.setText("0");
 		uView.setMargin(new Insets(-2, 0, -1, -10));
-//		uView.addFocusListener(new focusListener());
-
-		vView = new JTextField(3);
+		uView.addFocusListener(new focusListener());
+		
+		vView = new JTextField(3); 
 		vView.setText("0");
 		vView.setMargin(new Insets(-2, 0, -1, -10));
-//		vView.addFocusListener(new focusListener());
+		vView.addFocusListener(new focusListener());
 
 		wView = new JTextField(3);
 		wView.setText("1");
 		wView.setMargin(new Insets(-2, 0, -1, -10));
-//		wView.addFocusListener(new focusListener());
+		wView.addFocusListener(new focusListener());
+
+		applyView = new JButton("Apply View");
+		applyView.setFocusable(false);
+		applyView.setMargin(new Insets(-3, 3, -2, 4));
+		applyView.setHorizontalAlignment(JButton.LEFT);
+		applyView.setVerticalAlignment(JButton.CENTER);
+		applyView.addActionListener(new viewListener());
+
+		saveImage = new JButton("Save Image");		 
+		saveImage.setFocusable(false);
+		saveImage.setMargin(new Insets(-3, 3, -2, 4));
+		saveImage.setHorizontalAlignment(JButton.LEFT);
+		saveImage.setVerticalAlignment(JButton.CENTER);
+		saveImage.addActionListener(new viewListener());
 
 		JPanel topControlPanel = new JPanel();
 		topControlPanel.setBackground(Color.WHITE);
@@ -1097,25 +1111,25 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		botControlPanel.add(superUVW);
 		botControlPanel.add(parentHKL);
 		botControlPanel.add(parentUVW);
-		botControlPanel.add(new JLabel("          Direction: "));
+		botControlPanel.add(new JLabel("                          Direction: "));
 		botControlPanel.add(uView);
 		botControlPanel.add(vView);
 		botControlPanel.add(wView);
+		botControlPanel.add(applyView);
+		botControlPanel.add(saveImage);
+		botControlPanel.add(new JLabel("                           "));
 
-		addSaveButtons((JComponent) botControlPanel);
-
-		controlPanel.add(topControlPanel);
-		controlPanel.add(botControlPanel);
+		rd.controlPanel.add(topControlPanel);
+		rd.controlPanel.add(botControlPanel);
 
 		// Add listeners to a the subtype checkboxes -- don't know where else to put it.
-		for (int t = 0; t < variables.numTypes; t++)
-			for (int s = 0; s < variables.numSubTypes[t]; s++)
-				variables.subTypeBox[t][s].addItemListener(checkboxListener);
+		for (int t = 0; t < rd.numTypes; t++)
+			for (int s = 0; s < rd.numSubTypes[t]; s++)
+				rd.subTypeBox[t][s].addItemListener(new checkboxListener());
 	}
 
 	private JRadioButton newJRadioButton(String label, boolean selected, ButtonGroup g) {
 		JRadioButton b = new JRadioButton(label, selected);
-		b.setName(++buttonID + ":" + label);
 		b.setHorizontalAlignment(JRadioButton.LEFT);
 		b.setVerticalAlignment(JRadioButton.CENTER);
 		b.setFocusable(false);
@@ -1123,78 +1137,22 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		b.setForeground(Color.BLACK);
 		b.setVisible(true);
 		b.setBorderPainted(false);
-		b.addItemListener(buttonListener);
+		b.addItemListener(new buttonListener());
 		g.add(b);
 		return b;
 	}
 
-	static int buttonID = 0;
 	private JCheckBox newJCheckBox(String label, boolean selected) {
 		JCheckBox cb = new JCheckBox(label, selected);
-		cb.setName(++buttonID + ":" + label);
 		cb.setHorizontalAlignment(JCheckBox.LEFT);
 		cb.setVerticalAlignment(JCheckBox.CENTER);
 		cb.setFocusable(false);
 		cb.setVisible(true);
 		cb.setBackground(Color.WHITE);
 		cb.setForeground(Color.BLACK);
-		cb.addItemListener(checkboxListener);
+		cb.addItemListener(new checkboxListener());
 		return cb;
 	}
 
-	/**
-	 * Starts the renderer thread.
-	 */
+} // end isoDistortApplet.class
 
-	private Timer timer;
-
-	protected void setTimer() {
-		if (timer == null) {
-			int delay = (/** @j2sNative true ? 50 : */
-					100);
-
-			timer = new Timer(delay, new ActionListener() {
-
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					run();
-				}
-
-			});
-			timer.setRepeats(true);
-		}
-	}
-
-	public void start() {
-		setTimer();
-		isRunning = true;
-		timer.start();
-	}
-
-	public void run() {
-		if (!isRunning)
-			return;
-		boolean animating = (isAnimate || rp.isSpinning());
-		if (!animating && --initializing < 0)
-			return;
-		updateDisplay();
-		if (initializing == 0 && !animating)
-			stop();
-	}
-
-	/**
-	 * Stops the renderer thread.
-	 */
-	public void stop() {
-		if (timer != null) {
-			isRunning = false;
-			timer.stop();
-		}
-		timer = null;
-	}
-
-	public static void main(String[] args) {
-		create("IsoDistort", args);
-	}
-
-}

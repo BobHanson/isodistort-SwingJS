@@ -33,7 +33,6 @@ import org.byu.isodistort.local.Matrix;
  * @author Ken Perlin 2001
  */
 
-@SuppressWarnings("serial")
 public class RenderPanel3D extends JPanel
 // APS (April 2009): edits thanks to: http://www.dgp.toronto.edu/~mjmcguff/learn/java/04-mouseInput/
 		implements MouseListener, MouseMotionListener {
@@ -337,31 +336,57 @@ public class RenderPanel3D extends JPanel
 	public double phi = 0;
 	public double sigma = 0;
 
-	public synchronized void updateForDisplay() {
-		int currentWidth = getWidth();// originally "=bounds().width;" -David Tanner
-		int currentHeight = getHeight();// originally "=bounds().height;" -David Tanner
-		if (currentWidth != renderAreaX || currentHeight != renderAreaY) // allow for dynamic resizing of the applet
-		{
-			recalculateSize(currentWidth, currentHeight);// subtracting here makes things phase in and out
-		}
-		// LET THE APPLICATION PROGRAMMER MOVE THINGS INTO PLACE
-		identity(); // APPLIC. MATRIX STARTS UNTRANSFORMED
-		
-		renderer.rotateView(theta, phi, sigma);
+	private synchronized void recalculateSize(int width, int height) {
+		// BH we are now just directly tapping the int[] raster of the
+		// buffered image that will be used to draw into the graphics
+		renderAreaX = width;
+		renderAreaY = height;
+		// Reinitialize the renderer
+		// by passing the off-screen image raster to the renderer
+		im = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		int[] pixels = ((DataBufferInt)im.getRaster().getDataBuffer()).getData();
+		renderer.reinit(width, height, pixels);		
+		// older method was to create an image source
+		// that triggers a copy to an image upon Component.createImage();
+//		mis = new MemoryImageSource(width, height, renderer.getPix(), 0, width);
+//		mis.setAnimated(true);
+//		im = createImage(mis);
+		//bufferIm = (BufferedImage) createImage(width, height);
+	}
 
-		if (!spin)
-			theta = phi = sigma = 0;
+	/**
+	 * Makes sure that the renderer is
+	 */
+	public synchronized void updateForDisplay(int step) {
+		if (step == 0) {
+			// allow for dynamic resizing of the applet
+			int currentWidth = getWidth();
+			int currentHeight = getHeight();
+			if (currentWidth != renderAreaX || currentHeight != renderAreaY) {
+				recalculateSize(currentWidth, currentHeight);// subtracting here makes things phase in and out
+			}
+		} else {
+			// LET THE APPLICATION PROGRAMMER MOVE THINGS INTO PLACE
+			identity(); // APPLIC. MATRIX STARTS UNTRANSFORMED
 
-		// SHADE AND SCAN CONVERT GEOMETRY INTO FRAME BUFFER
-		renderer.render();
+			renderer.rotateView(theta, phi, sigma);
 
-		// KEEP REFINING LEVEL OF DETAIL UNTIL PERFECT (WHEN LOD=1)
-		if (renderer.lod > 1)
-			renderer.lod--;
+			if (!spin)
+				theta = phi = sigma = 0;
+
+			// SHADE AND SCAN CONVERT GEOMETRY INTO FRAME BUFFER
+			renderer.render();
+
+			// KEEP REFINING LEVEL OF DETAIL UNTIL PERFECT (WHEN LOD=1)
+			if (renderer.lod > 1)
+				renderer.lod--;
 
 //		// WRITE RESULTS TO THE SCREEN
 //		if (mis != null)
 //			mis.newPixels(0, 0, getWidth(), getHeight(), true);
+
+		}
+
 	}
 
 	int renderAreaX;
@@ -369,12 +394,18 @@ public class RenderPanel3D extends JPanel
 	
 	public synchronized void paint(Graphics g) {
 		super.paint(g);
-		int currentWidth = getWidth();// originally "=bounds().width;" -David Tanner
-		int currentHeight = getHeight();// originally "=bounds().height;" -David Tanner
-		if (currentWidth != renderAreaX || currentHeight != renderAreaY) // allow for dynamic resizing of the applet
+		System.out.println("RP paint");
+		int currentWidth = getWidth();
+		int currentHeight = getHeight();
+		if (currentWidth != renderAreaX || currentHeight != renderAreaY) 
 		{
+			// allow for dynamic resizing of the applet
 			return;
 		}
+		
+//		gbuf.dispose();
+		g.drawImage(im, 0, 0, null);
+
 		// MEASURE ELAPSED TIME AND FRAMERATE
 		double dt = (getCurrentTime() - currentTime);
 		elapsed += dt;
@@ -386,7 +417,6 @@ public class RenderPanel3D extends JPanel
 //		Graphics gbuf = bufferIm.getGraphics();
 //		gbuf.drawImage(im, 0, 0, null);
 		if (showFPS) {
-			@SuppressWarnings("unused")
 			String x = "" + //dt;//
 			(int) frameRate + "." + ((int) (frameRate * 10) % 10);
 			/**
@@ -395,29 +425,13 @@ public class RenderPanel3D extends JPanel
 			 * document.title = ""+x
 			 */
 			{
-//			gbuf.setColor(Color.white);
-//			gbuf.fillRect(0, renderAreaY - 14, 80, 14);
-//			gbuf.setColor(Color.black);
-//			gbuf.drawString(x + " fps ", 1, renderAreaY - 1);
+			g.setColor(Color.white);
+			g.fillRect(0, renderAreaY - 14, 80, 14);
+			g.setColor(Color.black);
+			g.drawString(x + " fps ", 1, renderAreaY - 1);
 			}
 		}
-//		gbuf.dispose();
-		g.drawImage(im, 0, 0, null);
-	}
-
-	private synchronized void recalculateSize(int width, int height) {
-		// Change the size
-		renderAreaX = width;
-		renderAreaY = height;
-		im = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-		int[] pixels = ((DataBufferInt)im.getRaster().getDataBuffer()).getData();
-		renderer.reinit(width, height, pixels);		
-		// Reinitialize the renderer
-//		mis = new MemoryImageSource(width, height, renderer.getPix(), 0, width);
-//		mis.setAnimated(true);
-//		im = createImage(mis);
-		//bufferIm = (BufferedImage) createImage(width, height);
-	}
+}
 
 	/**
 	 * Returns xyz world coords of the frontmost object at pixel (x,y)
@@ -486,6 +500,9 @@ public class RenderPanel3D extends JPanel
 	public void mouseDragged(MouseEvent e) {
 		int x = e.getX();
 		int y = e.getY();
+		System.out.println("RP mouse " + e.getModifiers());
+		
+		
 		// Compare the int representing which buttons are down
 		// with the representation of button 1 being down
 		if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) != 0) {

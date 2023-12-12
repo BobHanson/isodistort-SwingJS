@@ -81,7 +81,7 @@ public class JSJarURLConnection extends JarURLConnection {
     }
 
  // dont use @Override
-  @SuppressWarnings({ "unused", "null" })
+  @SuppressWarnings({ "unused" })
   public void getBytesAsync(Function<byte[], Void> whenDone) {
     byte[] bytes = null;
     try {

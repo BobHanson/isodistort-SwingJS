@@ -68,6 +68,7 @@ public class AjaxURLConnection extends HttpURLConnection {
 
 	private Object ajax;
 	Object info;
+	@SuppressWarnings("unused")
 	private String statusText;
 
 	@Override
@@ -138,7 +139,7 @@ public class AjaxURLConnection extends HttpURLConnection {
 	 * 
 	 * 
 	 */
-	@SuppressWarnings("null")
+	@SuppressWarnings({ "null", "unused" })
 	private Object doAjax(boolean isBinary, Function<Object, Void> whenDone) {
 		getBytesOut();
 		J2SObjectInterface J2S = /** @j2sNative self.J2S || */
@@ -244,6 +245,7 @@ public class AjaxURLConnection extends HttpURLConnection {
 		return result;
 	}
 
+	@SuppressWarnings("unused")
 	private void setJQueryResponseCodeFromJQuery(Object result) {
 		// the problem is that jsmol.php is still returning crlf even if output is 0
 		// bytes
@@ -349,6 +351,7 @@ public class AjaxURLConnection extends HttpURLConnection {
 									 */
 			null);
 			if (formData instanceof Map<?, ?>) {
+				@SuppressWarnings("unchecked")
 				Map<String, Object> data = (Map<String, Object>) formData;
 				for (Entry<String, Object> e : data.entrySet()) {
 					String key = e.getKey();
@@ -402,7 +405,7 @@ public class AjaxURLConnection extends HttpURLConnection {
 		return streamOut = new ByteArrayOutputStream();
 	}
 
-	@SuppressWarnings({ "null", "unused" })
+	@SuppressWarnings({ "unused" })
   @Override
 	public InputStream getInputStream() throws IOException {
 	  BufferedInputStream is = /** @j2sNative this.is || */null;
@@ -444,7 +447,7 @@ public class AjaxURLConnection extends HttpURLConnection {
 
 	}
 
-	@SuppressWarnings({ "null", "unused" })
+	@SuppressWarnings({ "unused" })
   private void getInputStreamAsync(Function<InputStream, Void> whenDone) {
 	  BufferedInputStream is = /** @j2sNative is = this.is || */null;
 		if (is != null) {
@@ -612,7 +615,6 @@ public class AjaxURLConnection extends HttpURLConnection {
 	 * @param url
 	 * @return String, SB, or byte[], or JSON data
 	 */
-	@SuppressWarnings("unused")
 	public static BufferedInputStream getAttachedStreamData(URL url, boolean andDelete) {
 
 		Object data = null;

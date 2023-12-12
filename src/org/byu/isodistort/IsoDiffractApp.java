@@ -69,7 +69,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 * @author hanso
 	 *
 	 */
-	@SuppressWarnings("serial")
 	private static class RenderPanel extends JPanel {
 		
 		private IsoDiffractApp app;

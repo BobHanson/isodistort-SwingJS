@@ -212,7 +212,6 @@ public class GifEncoder extends ImageEncoder {
    * a color point in normalized L*a*b space with a flag indicating whether it
    * is the background color
    */
-  @SuppressWarnings("serial")
   private class ColorItem extends P3 {
     /**
 	 * 

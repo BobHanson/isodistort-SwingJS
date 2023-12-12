@@ -508,7 +508,6 @@ public class SimpleHttpClient implements HttpClient {
 					if (method.equals(HttpRequest.METHOD_HEAD)) {
 						state = conn.getResponseCode();
 					} else {
-						@SuppressWarnings("unused")
 						Function<byte[], Void> f = new Function<byte[], Void>() {
 
 							@Override

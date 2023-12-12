@@ -444,6 +444,8 @@ public class Variables implements ChangeListener {
 		app.updateDisplay();
 	}
 
+	public String currentTag;
+
 	/**
 	 * Parses the data string that is a tag-based format
 	 * 
@@ -451,8 +453,8 @@ public class Variables implements ChangeListener {
 	 */
 	private void parseDataTags(String dataString) {
 		double temp1, temp2;
+		currentTag = "";
 		ArrayList<String> currentData = null;
-		String currentTag = "";
 		Map<String, ArrayList<String>> myMap = getDataMap(dataString);
 		isoversion = myMap.get("isoversion").get(0);
 		// find parentcell parameters
@@ -1476,7 +1478,7 @@ public class Variables implements ChangeListener {
 		Vec.matdotmat(pBasisCart0, TmatInverseTranspose, sBasisCart0);
 	}
 
-	private static Map<String, ArrayList<String>> getDataMap(String dataString) {
+	private Map<String, ArrayList<String>> getDataMap(String dataString) {
 		Map<String, ArrayList<String>> myMap = new TreeMap<String, ArrayList<String>>();
 		StringTokenizer getData = new StringTokenizer(dataString);
 		ArrayList<String> currentData = null;
@@ -1520,14 +1522,15 @@ public class Variables implements ChangeListener {
 	 *              <li>2 = Invalid input<br>
 	 *              <li>3 = Missing required tag
 	 */
-	private static void parseError(String error, int type) {
-		if (type == 1)
-			throw new RuntimeException(("Invalid number of arguments for tag: " + error));
-		if (type == 2)
-			throw new RuntimeException(error);
-		if (type == 3)
-			throw new RuntimeException(("Required tag missing: " + error));
-		return;
+	private void parseError(String error, int type) {
+		switch (type) {
+		case 1:
+			throw new RuntimeException("Variables: Invalid number of arguments for tag " + currentTag + ": " + error);
+		case 2:
+			throw new RuntimeException("Variables: " + error + " processing " + currentTag);
+		case 3:
+			throw new RuntimeException("Variables: Required tag " + currentTag +" missing: " + error);
+		}
 	}
 
 	/** Determines the unique atom type of each non-unique atom type. */

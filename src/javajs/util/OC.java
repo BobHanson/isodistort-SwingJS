@@ -299,7 +299,7 @@ public class OC extends OutputStream implements GenericOutputChannel {
   }
 
   @Override
-  @SuppressWarnings({ "unused", "null" })
+  @SuppressWarnings({ "unused" })
   public String closeChannel() {
     if (closed)
       return null;

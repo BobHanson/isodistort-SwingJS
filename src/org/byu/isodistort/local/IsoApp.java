@@ -49,7 +49,7 @@ import org.byu.isodistort.IsoDistortApp;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".1";
+	final static String minorVersion = ".2a";
 	
 	abstract protected void init();
 	
@@ -160,12 +160,29 @@ public abstract class IsoApp {
 		frameContentPane.setTransferHandler(new FileUtil.FileDropHandler(this));
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
-		JPanel isoPanel = new JPanel(new BorderLayout()) {
-			@Override
-			public void repaint(int i, int j, int k, int l) {
-				
-			}
-		};
+		JPanel isoPanel = new JPanel(new BorderLayout()) 
+//		{	// BH testing paints
+////			@Override 
+////			public void paint(Graphics g) {
+////				// only happens initially and on resize
+////				System.out.println("IA paint");
+////				super.paint(g);
+////			}
+//			
+////			@Override
+////			public void repaint() {
+////				// only initially and upon resize
+////				System.out.println("IA repaint");
+////				super.repaint();
+////			}
+////			@Override
+////			public void repaint(int x, int y, int width, int height) {
+////				// does not happen
+////				System.out.println("IA repaint4");
+////				super.repaint(x, y, width, height);
+////			}
+//		}
+		;
 		if (sliderPanel == null) {
 			sliderPanel = new JPanel();
 			sliderPanel.setBackground(Color.WHITE);

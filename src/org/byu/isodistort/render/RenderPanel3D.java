@@ -395,7 +395,7 @@ public class RenderPanel3D extends JPanel
 	@Override
 	public synchronized void paint(Graphics g) {
 		super.paint(g);
-		System.out.println("RP paint");
+		//System.out.println("RP paint");
 		int currentWidth = getWidth();
 		int currentHeight = getHeight();
 		if (currentWidth != renderAreaX || currentHeight != renderAreaY) 
@@ -472,7 +472,7 @@ public class RenderPanel3D extends JPanel
 	 */
 	public boolean spin = false; // Branton Campbell
 
-	private boolean mouseZooming;
+	private boolean isMouseZooming;
 
 	@Override
 	public void mouseClicked(MouseEvent e) {
@@ -489,6 +489,9 @@ public class RenderPanel3D extends JPanel
 	@Override
 	public void mousePressed(MouseEvent e) {
 		// necessary for SwingJS if mouse has cliked on the page outside of applet
+		
+		//System.out.println("RP mouseDown " + e.getButton() + " " + e.getModifiers());
+
 		requestFocus();
 		int x = e.getX();
 		int y = e.getY();
@@ -498,7 +501,7 @@ public class RenderPanel3D extends JPanel
 		if (e.isShiftDown()) {
 			clearAngles();
 			setRotationAxis(4);
-			mouseZooming = true;
+			isMouseZooming = true;
 		}
 
 	}
@@ -506,8 +509,8 @@ public class RenderPanel3D extends JPanel
 	@Override
 	public void mouseReleased(MouseEvent e) {
 		renderer.setDragging(false);
-		if (mouseZooming) {
-			mouseZooming = false;
+		if (isMouseZooming) {
+			isMouseZooming = false;
 			clearAngles();
 			setRotationAxis(0);
 		}
@@ -515,8 +518,8 @@ public class RenderPanel3D extends JPanel
 
 	@Override
 	public void mouseMoved(MouseEvent e) {
-		if (mouseZooming && !e.isShiftDown()) {
-			mouseZooming = false;
+		if (isMouseZooming && !e.isShiftDown()) {
+			isMouseZooming = false;
 			clearAngles();
 			setRotationAxis(0);
 		}
@@ -524,9 +527,12 @@ public class RenderPanel3D extends JPanel
 
 	@Override
 	public void mouseDragged(MouseEvent e) {
+		
+		
 		int x = e.getX();
 		int y = e.getY();
 		
+		//System.out.println("RP mouse " + e.getButton() + " " + e.getModifiers() + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
 		// Compare the int representing which buttons are down
 		// with the representation of button 1 being down
 		if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) != 0) {
@@ -571,6 +577,8 @@ public class RenderPanel3D extends JPanel
 				my = y;
 			}
 		} else {
+			// panning
+			
 			// If we want this to be only at right click, then
 			// we would need to check e.getModifiers with
 			// MouseEvent.BUTTON2_MASK or MouseEvent.BUTTON3_MASK

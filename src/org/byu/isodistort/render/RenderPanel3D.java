@@ -7,13 +7,13 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.awt.image.MemoryImageSource;
-import java.util.Arrays;
 
 import javax.swing.JPanel;
 
@@ -480,10 +480,10 @@ public class RenderPanel3D extends JPanel
 
 	@Override
 	public void mousePressed(MouseEvent e) {
-		// necessary for SwingJS if mouse has cliked on the page outside of applet
 		
 		//System.out.println("RP mouseDown " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
 
+		// requestFocus is necessary for SwingJS if mouse has clicked on the page outside of applet
 		requestFocus();
 		int x = e.getX();
 		int y = e.getY();
@@ -526,11 +526,16 @@ public class RenderPanel3D extends JPanel
 		int x = e.getX();
 		int y = e.getY();
 		
-		//System.out.println("RP mouseDrag " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
+//		System.out.println("RP mouseDrag " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()) 
+//		+ "" + e.isControlDown());
 
-		// Compare the int representing which buttons are down
-		// with the representation of button 1 being down
-		if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) != 0) {
+		/**
+		 * LEFT-DRAG but not CTRL-LEFT-DRAG for rotation
+		 */
+		boolean isRotation = ((e.getModifiersEx() & InputEvent.BUTTON1_DOWN_MASK) != 0  
+				&& !e.isControlDown());
+		
+		if (isRotation) {
 
 			double spinrate;
 			if (spin)

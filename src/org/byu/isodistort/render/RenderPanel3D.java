@@ -481,7 +481,7 @@ public class RenderPanel3D extends JPanel
 	public void mousePressed(MouseEvent e) {
 		// necessary for SwingJS if mouse has cliked on the page outside of applet
 		
-		//System.out.println("RP mouseDown " + e.getButton() + " " + e.getModifiers());
+		//System.out.println("RP mouseDown " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
 
 		requestFocus();
 		int x = e.getX();
@@ -499,6 +499,8 @@ public class RenderPanel3D extends JPanel
 
 	@Override
 	public void mouseReleased(MouseEvent e) {
+		//System.out.println("RP mouseUP " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
+
 		renderer.setDragging(false);
 		if (isMouseZooming) {
 			isMouseZooming = false;
@@ -523,7 +525,7 @@ public class RenderPanel3D extends JPanel
 		int x = e.getX();
 		int y = e.getY();
 		
-		//System.out.println("RP mouse " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
+		//System.out.println("RP mouseDrag " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
 
 		// Compare the int representing which buttons are down
 		// with the representation of button 1 being down

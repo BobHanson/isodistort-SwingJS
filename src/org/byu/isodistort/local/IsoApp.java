@@ -127,7 +127,7 @@ public abstract class IsoApp {
 	/** False for datafile and True for html file */
 	protected boolean readMode = false;
 	/** The datafile to use when readMode is false */
-	protected String whichdatafile = "data/t-mod.txt";//"data/test28.txt";
+	protected String whichdatafile = "data/test28.txt";//"data/test28.txt";
 
 	protected boolean isFramed = false;
 
@@ -328,7 +328,10 @@ public abstract class IsoApp {
 			isIsoDistort = !isIsoDistort;
 		}
 
-		openApplication(isIsoDistort ? APP_ISODISTORT : APP_ISODIFFRACT, data);
+		int appType = isIsoDistort ? APP_ISODISTORT : APP_ISODIFFRACT;
+		SwingUtilities.invokeLater(() -> {
+			openApplication(appType, data);
+		});
 		return true;
 
 	}
@@ -842,7 +845,6 @@ public abstract class IsoApp {
 			+ "   0.00000   0.00000   0.00000 \r\n" + "   0.00000   0.00000   0.00000 \r\n"
 			+ "   0.00000   0.00000   0.00000 \r\n" + "   0.00000   0.00000   0.00000 \r\n"
 			+ "   0.00000   0.00000   0.00000 \r\n" + "   0.00000   0.00000   0.00000 \r\n" + "\r\n" + "";
-	public double fov0;
 
 	public static void create(String type, String[] args) {
 		IsoApp app = null;

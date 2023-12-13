@@ -56,7 +56,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	/** Cell-edge tube parameters */
 	int numBondSides = 6, numCellSides = 6, numArrowSides = 8, ballRes = 4;
 	/** Focal length for renderer. */
-	double fl = 10;
+	final static double fl = 10;
 	/** scale everything down to take out perspective */
 	double perspectivescaler = (double) 1 / 100;
 	/**
@@ -91,39 +91,34 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * Array (not by type) of atom coordinates for whichAtomsBond to refer to. [atom
 	 * number][x, y, z]
 	 */
-	double[][] atomcoordInfo;
+	double[][] atomCoordInfo;
 	/** Array (not by type) of atom radii. [Atom number][radius] */
-	double[] atomradInfo;
+	double[] atomRadiusInfo;
 	/**
 	 * Array (not by type) of atom magnetic moments in Bohr magnetons. [Atom
 	 * number][magnitude, X-angle, Y-angle]
 	 */
-	double[][] atommagInfo;
+	double[][] atomMagneticMomentInfo;
 	/**
 	 * Array (not by type) of pivot-atom rotations in radians. [Atom
 	 * number][magnitude, X-angle, Y-angle]
 	 */
-	double[][] atomrotInfo;
+	double[][] atomRotatonInfo;
 	/**
 	 * Final information needed to render bonds [atom number][xwidth, ywidth,
 	 * zwidth, rotaxis-x, rotaxis-y, rotaxis-z, theta]
 	 */
-	double[][] atomellipInfo;
+	double[][] atomEllipseInfo;
 	/**
 	 * Final information needed to render bonds [bond number][x, y, z, x-angle
 	 * orientation, y-angle orientation, length, displayflag]
 	 */
 	double[][] bondInfo;
 	/**
-	 * Final information needed to render parent cell. [edge number][x, y, z,
-	 * x-angle orientation, y-angle orientation, length, displayflag]
+	 * Final information needed to render parent cell (first 12) and super cell (last 12). 
+	 * [edge number][x, y, z, x-angle orientation, y-angle orientation, length, displayflag]
 	 */
-	double[][] parentCellInfo;
-	/**
-	 * Final information needed to render super cell. [edge number][x, y, z, x-angle
-	 * orientation, y-angle orientation, length, displayflag]
-	 */
-	double[][] superCellInfo;
+	double[][] cellInfo;
 	/**
 	 * Final information needed to render bonds [bond number][x, y, z, x-angle ,
 	 * y-angle, length, displayflag]
@@ -132,7 +127,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	// Global variables that are related to material properties.
 	/** Materials for coloring bonds and cells. */
-	Material bondMaterial, parentCellMaterial, superCellMaterial, xMaterial, yMaterial, zMaterial;
+	Material bondMaterial, parentCellMaterial, superCellMaterial, xAxisMaterial, yAxisMaterial, zAxisMaterial;
 	/** Array of materials for coloring atoms[type][subtype][regular,highlighted] */
 	Material[][] subMaterial;
 
@@ -192,20 +187,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		recalcMaterials();
 
 		// Set background color, field of view and focal length of renderer
-		double fov = 2 * perspectivescaler * scdSize / fl;
-		fov0 = fov;
-		rp.setBgColor(1, 1, 1);// background color: white
-		rp.setFOV(fov);// field of view
-		rp.setFL(fl);// focal length: zoomed way out
-		rp.changeFOV(fov);
-		rp.setCamera(0, 0);
-		// Define position and color of light source (x, y, z, r, g, b)
-		double bbb = 0.38;
-		rp.addLight(Double.NaN, 0,0,0,0,0);
-		rp.addLight(.5, .5, .5, 1.7 * bbb, 1.7 * bbb, 1.7 * bbb);
-		rp.addLight(-.5, .5, .5, bbb, bbb, bbb);
-		rp.addLight(.5, -.5, .5, bbb, bbb, bbb);
-		rp.addLight(-.5, -.5, .5, bbb, bbb, bbb);
+		rp.initializeSettings(perspectivescaler, scdSize);
 
 // BH this is taken care of in updateDisplay now
 // that Variables.isChanged is set TRUE initially.
@@ -286,7 +268,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			animPhase += 2 * Math.PI / (5 * rp.getFrameRate());
 			animPhase = animPhase % (2 * Math.PI);
 			animAmp = Math.pow(Math.sin(animPhase), 2);
-			variables.masterSlider.setValue((int) Math.round(animAmp * variables.sliderMaxVal));
+			variables.setAnimationAmplitude(animAmp);
 			isRecalc = true;
 		}
 
@@ -320,23 +302,19 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 */
 	private void initAtoms() {
 		showAtoms = showAtoms0;
-		atomcoordInfo = new double[variables.numAtoms][3];
-		atomradInfo = new double[variables.numAtoms];
-		atommagInfo = new double[variables.numAtoms][3];
-		atomrotInfo = new double[variables.numAtoms][3];
-		atomellipInfo = new double[variables.numAtoms][7];
+		atomCoordInfo = new double[variables.numAtoms][3];
+		atomRadiusInfo = new double[variables.numAtoms];
+		atomMagneticMomentInfo = new double[variables.numAtoms][3];
+		atomRotatonInfo = new double[variables.numAtoms][3];
+		atomEllipseInfo = new double[variables.numAtoms][7];
 		spheres.clear(0);
-//		for (int qq = 0; qq < variables.numAtoms; qq++)// iterate over all the types
-//			spheres.delete(0);
-		int q = 0;
-		for (int t = 0; t < variables.numTypes; t++)// iterate over all the types
+		for (int q = 0, t = 0; t < variables.numTypes; t++)
 			for (int s = 0; s < variables.numSubTypes[t]; s++)
-				for (int a = 0; a < variables.numSubAtoms[t][s]; a++) {
+				for (int a = 0; a < variables.numSubAtoms[t][s]; a++, q++) {
 					spheres.add();
 					spheres.child(q).add().ball(ballRes).setMaterial(subMaterial[t][s]);
 					spheres.child(q).add().arrow(numArrowSides).setMaterial(subMaterial[t][s]);
 					spheres.child(q).add().arrow(numArrowSides).setMaterial(subMaterial[t][s]);
-					q++;
 				}
 	}
 
@@ -357,13 +335,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 */
 	private void initCells() {
 		showCells = showCells0;
-		parentCellInfo = new double[12][7];
-		superCellInfo = new double[12][7];
+		cellInfo = new double[24][7];
 		cells.clear(0);
-		for (int c = 0; c < 12; c++)
-			cells.add().cylinder(numCellSides).setMaterial(parentCellMaterial);
-		for (int c = 0; c < 12; c++)
-			cells.add().cylinder(numCellSides).setMaterial(superCellMaterial);
+		for (int c = 0; c < 24; c++) {
+			cells.add().cylinder(numCellSides).setMaterial(c < 12 ? parentCellMaterial : superCellMaterial);
+		}
 	}
 
 	/**
@@ -372,12 +348,12 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	private void initAxes() {
 		showAxes = showAxes0;
 		axesInfo = new double[6][7];
-		axes.add().arrow(numArrowSides).setMaterial(xMaterial);
-		axes.add().arrow(numArrowSides).setMaterial(yMaterial);
-		axes.add().arrow(numArrowSides).setMaterial(zMaterial);
-		axes.add().arrow(numArrowSides).setMaterial(xMaterial);
-		axes.add().arrow(numArrowSides).setMaterial(yMaterial);
-		axes.add().arrow(numArrowSides).setMaterial(zMaterial);
+		axes.add().arrow(numArrowSides).setMaterial(xAxisMaterial);
+		axes.add().arrow(numArrowSides).setMaterial(yAxisMaterial);
+		axes.add().arrow(numArrowSides).setMaterial(zAxisMaterial);
+		axes.add().arrow(numArrowSides).setMaterial(xAxisMaterial);
+		axes.add().arrow(numArrowSides).setMaterial(yAxisMaterial);
+		axes.add().arrow(numArrowSides).setMaterial(zAxisMaterial);
 	}
 
 	/**
@@ -387,10 +363,21 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	private void initMaterials() {
 		parentCellMaterial = rp.newMaterial();
 		superCellMaterial = rp.newMaterial();
+		// parent cell slightly red
+		parentCellMaterial.setColor(.8, .5, .5, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+		// super cell slightly blue
+		superCellMaterial.setColor(.5, .5, .8, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+
 		bondMaterial = rp.newMaterial();
-		xMaterial = rp.newMaterial();
-		yMaterial = rp.newMaterial();
-		zMaterial = rp.newMaterial();
+		bondMaterial.setColor(0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 20, 0.2, 0.2, 0.2);// bonds are black
+		
+		xAxisMaterial = rp.newMaterial();
+		yAxisMaterial = rp.newMaterial();
+		zAxisMaterial = rp.newMaterial();
+		xAxisMaterial.setColor(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 20, 0.0, 0.0, 0.0);// bonds are black
+		yAxisMaterial.setColor(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 20, 0.5, 0.5, 0.5);// bonds are black
+		zAxisMaterial.setColor(0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 20, 0.25, 0.25, 0.25);// bonds are black		
+
 		subMaterial = new Material[variables.numTypes][];
 
 		// Create the subMaterial array;
@@ -400,6 +387,22 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			for (int s = 0, nst = variables.numSubTypes[t]; s < nst; s++)// iterate over number-of-subtypes
 				subMaterial[t][s] = rp.newMaterial();
 		}
+	}
+
+	final static int X = 0, Y = 1, L = 2, Z = 2, RX = 3, RY = 4, ZSCALE = 5;
+
+
+	public void renderCells(Geometry child, double[] cellInfo, double xyScale) {
+		rp.push();
+		rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);
+		// make everything smaller to take out
+		// perspective
+		rp.translate(cellInfo[X], cellInfo[Y], cellInfo[Z]);
+		rp.rotateY(cellInfo[RY]);
+		rp.rotateX(cellInfo[RX]);
+		rp.scale(xyScale, xyScale, cellInfo[ZSCALE] / 2.0);
+		rp.transform(child);
+		rp.pop();
 	}
 
 	/**
@@ -413,64 +416,55 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * which will be rendered as our crystal.
 	 */
 	private void renderAtoms() {
-		int q = 0, X = 0, Y = 1, L = 2;
-		double temp, tempr, tempx, tempy, tempz;
-		for (int t = 0; t < variables.numTypes; t++)
-			for (int s = 0; s < variables.numSubTypes[t]; s++)// iterate over all subtypes of this type
-				for (int a = 0; a < variables.numSubAtoms[t][s]; a++)// iterate over all atoms of that type
-				{
-					rp.push();
-					rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);
-					rp.translate(atomcoordInfo[q]);
-					tempr = variables.atomMaxRadius * atomradInfo[q];
-					rp.scale(tempr, tempr, tempr);
-					rp.transform(spheres.child(q));
-					rp.pop();
-
-					rp.push();
-					tempx = (atomellipInfo[q][0] / Math.sqrt(variables.defaultUiso));
-					tempy = (atomellipInfo[q][1] / Math.sqrt(variables.defaultUiso));
-					tempz = (atomellipInfo[q][2] / Math.sqrt(variables.defaultUiso));
-//					System.out.println("widths: "+q+", "+tempx+", "+tempy+", "+tempz);
-					rp.scale(tempx, tempy, tempz);
-					rp.transform(spheres.child(q).child(0));
-					rp.pop();
-
-					rp.push();
-					rp.rotateY(atommagInfo[q][Y]);// y-angle orientation of arrow number q
-					rp.rotateX(atommagInfo[q][X]);// x-angle orientation of arrow number q
-					if (Math.abs(atommagInfo[q][L]) > 0.1)
-						temp = momentMultiplier;
-					else
-						temp = 0;
-					rp.scale(temp, temp, 0.62 + atommagInfo[q][L] * variables.angstromsPerMagneton); // The factor of
-																										// 0.62
-																										// hides
-					// the zero-length moments
-					// just inside the surface
-					// of the spheres.
-					rp.transform(spheres.child(q).child(1));
-					rp.pop();
-
-					rp.push();
-					rp.rotateY(atomrotInfo[q][Y]);// y-angle orientation of arrow number q
-					rp.rotateX(atomrotInfo[q][X]);// x-angle orientation of arrow number q
-					if (Math.abs(atomrotInfo[q][L]) > 0.1)
-						temp = rotationMultiplier;
-					else
-						temp = 0;
-					rp.scale(temp, temp, 0.62 + atomrotInfo[q][L] * variables.angstromsPerRadian); 
-					// The factor of 0.62																				
-					// hides the
-					// zero-length rotations
-					// just inside the surface
-					// of the spheres.
-					rp.transform(spheres.child(q).child(2));
-					rp.pop();
-
-					q++;
+		for (int t = 0, q = 0; t < variables.numTypes; t++) {
+			for (int s = 0; s < variables.numSubTypes[t]; s++) {
+				for (int a = 0; a < variables.numSubAtoms[t][s]; a++) {					
+					renderAtom(t, s, a, q++);
 				}
+			}
+		}
 	}
+
+	private void renderAtom(int t, int s, int a, int q) {
+		renderScaledAtom(spheres.child(q), atomCoordInfo[q], atomRadiusInfo[q] * variables.atomMaxRadius);
+		renderEllipsoid(spheres.child(q).child(0), atomEllipseInfo[q], 1/Math.sqrt(variables.defaultUiso));
+		renderAtomChild(spheres.child(q).child(1), atomMagneticMomentInfo[q], momentMultiplier, variables.angstromsPerMagneton);
+		renderAtomChild(spheres.child(q).child(2), atomRotatonInfo[q], rotationMultiplier, variables.angstromsPerRadian);
+	}
+
+	private void renderScaledAtom(Geometry child, double[] xyz, double r) {
+		rp.push();
+		rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);
+		rp.translate(xyz);
+		rp.scale(r, r, r);
+		rp.transform(child);
+		rp.pop();
+	}
+
+	private void renderEllipsoid(Geometry child, double[] info, double f) {
+		rp.push();
+		rp.scale(info[0] * f, info[1] * f, info[2] * f);
+		rp.transform(child);
+		rp.pop();
+	}
+
+	private void renderAtomChild(Geometry child, double[] info, double multiplier, double scale) {
+		rp.push();
+		rp.rotateY(info[Y]);// y-angle orientation of arrow number q
+		rp.rotateX(info[X]);// x-angle orientation of arrow number q
+		double d = (Math.abs(info[L]) > 0.1 ? multiplier : 0);
+		rp.scale(d, d, 0.62 + info[L] * scale);
+		// The factor
+		// of
+		// 0.62
+		// hides
+		// the zero-length moments
+		// just inside the surface
+		// of the spheres.
+		rp.transform(child);
+		rp.pop();
+	}
+
 
 	/**
 	 * renderBonds iterates through all the bonds and puts them into the geometry.
@@ -515,32 +509,9 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * renderBonds() but adds all sides of both cells as one single shape: "cells".
 	 */
 	private void renderCells() {
-		int x = 0, y = 1, z = 2;
-		double temp;
-		for (int c = 0; c < 12; c++) {
-			rp.push();
-			{
-				rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);// make everything smaller to take out
-																					// // perspective
-				rp.translate(parentCellInfo[c][x], parentCellInfo[c][y], parentCellInfo[c][z]);
-				rp.rotateY(parentCellInfo[c][4]);
-				rp.rotateX(parentCellInfo[c][3]);
-				temp = variables.atomMaxRadius * cellMultiplier;
-				rp.scale(temp, temp, parentCellInfo[c][5] / 2.0);
-				rp.transform(cells.child(c));
-			}
-			rp.pop();
-			rp.push();
-			{
-				rp.scale(perspectivescaler, perspectivescaler, perspectivescaler);// make everything smaller to take out
-																					// perspective
-				rp.translate(superCellInfo[c][x], superCellInfo[c][y], superCellInfo[c][z]);
-				rp.rotateY(superCellInfo[c][4]);
-				rp.rotateX(superCellInfo[c][3]);
-				rp.scale(temp, temp, superCellInfo[c][5] / 2.0);
-				rp.transform(cells.child(c + 12));
-			}
-			rp.pop();
+		double xyScale = variables.atomMaxRadius * cellMultiplier;
+		for (int c = 0; c < 24; c++) {
+			renderCells(cells.child(c), cellInfo[c], xyScale);
 		}
 	}
 
@@ -574,7 +545,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	/** recalculates structural distortions and bond configurations. */
 	private void recalcABC() {
-		double tempscalar;
 		double[][] paxesbegs = new double[3][3];
 		double[][] paxesends = new double[3][3];
 		double[][] saxesbegs = new double[3][3];
@@ -621,31 +591,28 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		buildCell[10][1] = 6;
 		buildCell[11][0] = 3;
 		buildCell[11][1] = 7;
-		for (int c = 0; c < 12; c++) {
-			Vec.pairtobond(variables.parentCellVertices[buildCell[c][0]], variables.parentCellVertices[buildCell[c][1]],
-					parentCellInfo[c]);
-			Vec.pairtobond(variables.superCellVertices[buildCell[c][0]], variables.superCellVertices[buildCell[c][1]],
-					superCellInfo[c]);
+		for (int c = 0; c < 24; c++) {
+			double[][] vertices = (c < 12 ? variables.parentCellVertices : variables.superCellVertices);
+			Vec.pairtobond(vertices[buildCell[c % 12][0]], vertices[buildCell[c % 12][1]], cellInfo[c]);
 		}
 
-		int q = 0;
-		for (int t = 0; t < variables.numTypes; t++)
+		for (int q = 0, t = 0; t < variables.numTypes; t++)
 			for (int s = 0; s < variables.numSubTypes[t]; s++)
-				for (int a = 0; a < variables.numSubAtoms[t][s]; a++) {
-					atomradInfo[q] = variables.atomFinalOcc[t][s][a];
+				for (int a = 0; a < variables.numSubAtoms[t][s]; a++, q++) {
+					atomRadiusInfo[q] = variables.atomFinalOcc[t][s][a];
 					Vec.set3(newcoord, variables.atomFinalCoord[t][s][a]);
 					Vec.matdotvect(variables.sBasisCart, newcoord, tempvec); // typeless atom in cartesian coords
-				
+
 					for (int i = 0; i < 3; i++) // recenter in Applet coordinates
-						atomcoordInfo[q][i] = tempvec[i] - variables.sCenterCart[i];
+						atomCoordInfo[q][i] = tempvec[i] - variables.sCenterCart[i];
 
 					Vec.set3(newmag, variables.atomFinalMag[t][s][a]);
 					Vec.matdotvect(variables.sBasisCart, newmag, tempvec);
-					Vec.calculatearrow(tempvec, atommagInfo[q]);
+					Vec.calculatearrow(tempvec, atomMagneticMomentInfo[q]);
 
 					Vec.set3(newrot, variables.atomFinalRot[t][s][a]);
 					Vec.matdotvect(variables.sBasisCart, newrot, tempvec);
-					Vec.calculatearrow(tempvec, atomrotInfo[q]);
+					Vec.calculatearrow(tempvec, atomRotatonInfo[q]);
 
 //					Ellipsoid work
 					Vec.copy(variables.atomFinalEllip[t][s][a], newellip);
@@ -658,8 +625,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 					// simultaneously.
 					Vec.matcopy(tempmat2, tempmat);
 //			        System.out.println ("ellipmat3: "+t+", "+s+", "+a+", "+tempmat[0][0]+", "+tempmat[0][1]+", "+tempmat[0][2]+", "+tempmat[1][0]+", "+tempmat[1][1]+", "+tempmat[1][2]+", "+tempmat[2][0]+", "+tempmat[2][1]+", "+tempmat[2][2]);
-					Vec.calculateellipstuff(tempmat, atomellipInfo[q]); // ellipsoidInfo array filled
-					q++;
+					Vec.calculateellipstuff(tempmat, atomEllipseInfo[q]); // ellipsoidInfo array filled
 				}
 
 //		for (q=0; q<rd.numAtoms; q++)
@@ -668,11 +634,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		// calculate the new bondInfo in bond format
 		for (int b = 0; b < variables.numBonds; b++) // calculate bondInfo(x-cen, y-cen, z-cen, thetaX, thetaY, length)
 		{
-			Vec.pairtobond(atomcoordInfo[variables.whichAtomsBond[b][0]], atomcoordInfo[variables.whichAtomsBond[b][1]],
+			Vec.pairtobond(atomCoordInfo[variables.whichAtomsBond[b][0]], atomCoordInfo[variables.whichAtomsBond[b][1]],
 					bondInfo[b]);
 			if (bondInfo[b][5] >= variables.maxBondLength
-					|| atomradInfo[variables.whichAtomsBond[b][0]] <= variables.minBondOcc
-					|| atomradInfo[variables.whichAtomsBond[b][1]] <= variables.minBondOcc) {
+					|| atomRadiusInfo[variables.whichAtomsBond[b][0]] <= variables.minBondOcc
+					|| atomRadiusInfo[variables.whichAtomsBond[b][1]] <= variables.minBondOcc) {
 				bondInfo[b][6] = 0.0;
 				bonds.child(b).setEnabled(false);
 			} else {
@@ -699,7 +665,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			for (int i = 0; i < 3; i++) {
 				extent[i] = -variables.sCenterCart[i] + variables.sBasisCart[i][axis];
 				saxesbegs[axis][i] = extent[i] + 1.5 * variables.atomMaxRadius * tempvec[i];
-
 				saxesends[axis][i] = extent[i] + 4.0 * variables.atomMaxRadius * tempvec[i];
 			}
 			Vec.pairtobond(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3]);
@@ -709,71 +674,70 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		scdSize = 0;
 		for (int j = 0; j < 8; j++) {
 			Vec.set3(tempvec, variables.superCellVertices[j]);
-			tempscalar = Vec.norm(tempvec);
-			if (tempscalar > scdSize)
-				scdSize = tempscalar;
+			double d = Vec.norm(tempvec);
+			if (d > scdSize)
+				scdSize = d;
 			Vec.set3(tempvec, variables.parentCellVertices[j]);
-			tempscalar = Vec.norm(tempvec);
-			if (tempscalar > scdSize)
-				scdSize = tempscalar;
+			d = Vec.norm(tempvec);
+			if (d > scdSize)
+				scdSize = d;
 		}
-		for (q = 0; q < variables.numAtoms; q++) {
-			Vec.set3(tempvec, atomcoordInfo[q]);
-			tempscalar = Vec.norm(tempvec);
-			if (tempscalar > scdSize)
-				scdSize = tempscalar;
+		for (int i = 0; i < variables.numAtoms; i++) {
+			Vec.set3(tempvec, atomCoordInfo[i]);
+			double d = Vec.norm(tempvec);
+			if (d > scdSize)
+				scdSize = d;
 		}
 		for (int axis = 0; axis < 3; axis++) {
 			Vec.set3(tempvec, paxesends[axis]);
-			tempscalar = Vec.norm(tempvec);
-			if (tempscalar > scdSize)
-				scdSize = tempscalar;
+			double d = Vec.norm(tempvec);
+			if (d > scdSize)
+				scdSize = d;
 		}
 		for (int axis = 0; axis < 3; axis++) {
 			Vec.set3(tempvec, saxesends[axis]);
-			tempscalar = Vec.norm(tempvec);
-			if (tempscalar > scdSize)
-				scdSize = tempscalar;
+			double d = Vec.norm(tempvec);
+			if (d > scdSize)
+				scdSize = d;
 		}
 
-		scdSize += 2 * variables.atomMaxRadius; // this includes the width of atoms that might be at the extremes of the
+		scdSize += 2 * variables.atomMaxRadius; 
+		// this includes the width of atoms that might be at the extremes of the
 		// longest cell diagonal.
 	}
 
 	/** recalculates the atom colors after a checkbox has been set. */
 	private void recalcMaterials() {
-		double rrr, ggg, bbb, k;
-
 		variables.setColors(isSimpleColor);
 		variables.recolorPanels();
-//		Reset the atom colors.			
-		for (int t = 0; t < variables.numTypes; t++)// iterate over types of atoms
-		{
-			rrr = variables.color[t].getRed() / 255.0;
-			ggg = variables.color[t].getGreen() / 255.0;
-			bbb = variables.color[t].getBlue() / 255.0;
-			for (int s = 0; s < variables.numSubTypes[t]; s++)// iterate over number-of-subtypes-selected; 0 means 1 is
-			// selected
-			{
-				if (!variables.subTypeBox[t][s].isSelected())
-					subMaterial[t][s].setColor(rrr, ggg, bbb, 0.3, 0.3, 0.3, 1, .0001, .0001, .0001);// makes the atom
-																										// color same as
-																										// above type
-																										// color
-				else {
-					k = (double) 0.1 + 0.8 * s / variables.numSubTypes[t];
-//					subMaterial[t][s].setColor(rrr, ggg, bbb, k, k, k, 1, k, k, k); // graduated color scheme
-					subMaterial[t][s].setColor(0, 0, 0, k, k, k, 1, k, k, k);
-				}
-				if (showAtoms)
-					subMaterial[t][s].setTransparency(0.0);
-				else
-					subMaterial[t][s].setTransparency(1.0);
-			}
-		}
+		recalcSpheres();
+		recalcCells();
+		recalcBonds();
+		recalcAxes();
+	}
 
-		parentCellMaterial.setColor(.8, .5, .5, 1.5, 1.5, 1.5, 20, .30, .30, .30);// parent cell slightly red
-		superCellMaterial.setColor(.5, .5, .8, 1.5, 1.5, 1.5, 20, .30, .30, .30);// super cell slightly blue
+	private void recalcAxes() {
+		if (showAxes) {
+			xAxisMaterial.setTransparency(0.0);// make the cells translucent
+			yAxisMaterial.setTransparency(0.0);// make the cells translucent
+			zAxisMaterial.setTransparency(0.0);// make the cells translucent
+		} else {
+			xAxisMaterial.setTransparency(1.0);// make the cells translucent
+			yAxisMaterial.setTransparency(1.0);// make the cells translucent
+			zAxisMaterial.setTransparency(1.0);// make the cells translucent
+		}
+	}
+
+
+	private void recalcBonds() {
+		if (showBonds)
+			bondMaterial.setTransparency(0.0);// make the cells translucent
+		else
+			bondMaterial.setTransparency(1.0);// make the cells translucent
+	}
+
+
+	private void recalcCells() {
 		if (showCells) {
 			parentCellMaterial.setTransparency(0.0);// make the cells translucent
 			superCellMaterial.setTransparency(0.0);// make the cells translucent
@@ -782,25 +746,33 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			superCellMaterial.setTransparency(1.0);// make the cells translucent
 		}
 
-		bondMaterial.setColor(0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 20, 0.2, 0.2, 0.2);// bonds are black
-		if (showBonds)
-			bondMaterial.setTransparency(0.0);// make the cells translucent
-		else
-			bondMaterial.setTransparency(1.0);// make the cells translucent
+	}
 
-		xMaterial.setColor(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 20, 0.0, 0.0, 0.0);// bonds are black
-		yMaterial.setColor(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 20, 0.5, 0.5, 0.5);// bonds are black
-		zMaterial.setColor(0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 20, 0.25, 0.25, 0.25);// bonds are black
-		if (showAxes) {
-			xMaterial.setTransparency(0.0);// make the cells translucent
-			yMaterial.setTransparency(0.0);// make the cells translucent
-			zMaterial.setTransparency(0.0);// make the cells translucent
-		} else {
-			xMaterial.setTransparency(1.0);// make the cells translucent
-			yMaterial.setTransparency(1.0);// make the cells translucent
-			zMaterial.setTransparency(1.0);// make the cells translucent
+
+	private void recalcSpheres() {		
+//		Reset the atom colors.
+		double[] rgb = new double[3];
+		for (int q = 0, t = 0; t < variables.numTypes; t++) {
+			variables.getColors(t, rgb);
+			for (int s = 0; s < variables.numSubTypes[t]; s++) {
+				// 1 means selected
+				if (!variables.isSubTypeSelected(t, s))
+					subMaterial[t][s].setColor(rgb[0], rgb[1], rgb[2], 0.3, 0.3, 0.3, 1, .0001, .0001, .0001);
+				// makes the atom
+				// color same as
+				// above type
+				// color
+				else {
+					double k = (double) 0.1 + 0.8 * s / variables.numSubTypes[t];
+//					subMaterial[t][s].setColor(rgb[0], rgb[1], rgb[2], k, k, k, 1, k, k, k); 
+					// graduated color scheme
+					subMaterial[t][s].setColor(0, 0, 0, k, k, k, 1, k, k, k);
+				}
+				subMaterial[t][s].setTransparency(showAtoms ? 0 : 1);
+			}
 		}
 	}
+
 
 	/** resets the viewing direction without changing anything else */
 	public void resetViewDirection() {
@@ -918,14 +890,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			wView.setText("1");
 			superHKL.setSelected(true);
 
-			// resetViewDirection();
-			rp.setCamera(0, 0);
-
-			rp.setFOV(fov0);
-			for (int t = 0; t < variables.numTypes; t++)
-				for (int s = 0; s < variables.numSubTypes[t]; s++)
-					variables.subTypeBox[t][s].setSelected(false);
-
+			rp.resetView();
+			variables.setSubtypesSelected(false);
 			centerImage();
 			break;
 		case 'z':
@@ -966,7 +932,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 //	/** listens for changes in focus in the ViewDirection fields. */
 //	private class focusListener implements FocusListener {
 //		public void focusGained(FocusEvent event) {
-//			viewFocused = true; // Record the fact that we have focus.
+//			viewFocusedouble d =true; // Record the fact that we have focus.
 //			updateDisplay();
 //		}
 //
@@ -1112,9 +1078,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		controlPanel.add(botControlPanel);
 
 		// Add listeners to a the subtype checkboxes -- don't know where else to put it.
-		for (int t = 0; t < variables.numTypes; t++)
-			for (int s = 0; s < variables.numSubTypes[t]; s++)
-				variables.subTypeBox[t][s].addItemListener(checkboxListener);
+		variables.setApp(this);
 	}
 
 	private JRadioButton newJRadioButton(String label, boolean selected, ButtonGroup g) {

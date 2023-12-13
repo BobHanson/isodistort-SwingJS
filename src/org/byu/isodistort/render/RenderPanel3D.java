@@ -463,6 +463,8 @@ public class RenderPanel3D extends JPanel
 
 	private boolean isMouseZooming;
 
+	private double fov0;
+
 	@Override
 	public void mouseClicked(MouseEvent e) {
 	}
@@ -521,7 +523,8 @@ public class RenderPanel3D extends JPanel
 		int x = e.getX();
 		int y = e.getY();
 		
-		//System.out.println("RP mouse " + e.getButton() + " " + e.getModifiers() + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
+		//System.out.println("RP mouse " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
+
 		// Compare the int representing which buttons are down
 		// with the representation of button 1 being down
 		if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) != 0) {
@@ -669,6 +672,29 @@ public class RenderPanel3D extends JPanel
 		// how can this take any time? It's a standard image
 		//waitForImage(bufferedImage, im.getWidth(null), im.getHeight(null)); 
 		return bi; 
+	}
+
+	public void initializeSettings(double perspectivescaler, double scdSize) {
+		double fl = 10;
+		double fov = 2 * perspectivescaler * scdSize / fl;
+		fov0 = fov;
+		setBgColor(1, 1, 1);// background color: white
+		setFOV(fov);// field of view
+		setFL(fl);// focal length: zoomed way out
+		changeFOV(fov);
+		setCamera(0, 0);
+		// Define position and color of light source (x, y, z, r, g, b)
+		double intensity = 0.38;
+		addLight(Double.NaN, 0,0,0,0,0);
+		addLight(.5, .5, .5, 1.7 * intensity, 1.7 * intensity, 1.7 * intensity);
+		addLight(-.5, .5, .5, intensity, intensity, intensity);
+		addLight(.5, -.5, .5, intensity, intensity, intensity);
+		addLight(-.5, -.5, .5, intensity, intensity, intensity);
+	}
+
+	public void resetView() {
+		setCamera(0, 0);
+		setFOV(fov0);
 	}
 
 //	private static void waitForImage(BufferedImage buf, int width, int height)

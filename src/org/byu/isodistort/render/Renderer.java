@@ -36,7 +36,7 @@ public class Renderer {
 	/**
 	 * Allocate space for transparent objects when true.
 	 */
-	private boolean updateTransparency = true;
+	private boolean updateTransparency = false;
 
 	/**
 	 * Flag that determines whether to keep a z-buffer of geometries, to to know the
@@ -769,11 +769,9 @@ public class Renderer {
 	private int dpixelR[] = new int[8];
 	private int[] dpixel = new int[8];
 
-	int nDisabled = 0;
 	private void renderGeometry(Geometry s) {
 
-		if (!s.isEnabled()) {
-			nDisabled++;
+		if (!s.isEnabled() || transparencyOf(s) == 1) {
 			return;
 		}	
 		

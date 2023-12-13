@@ -461,7 +461,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 						&& (peakColor[p] < currentcolor)) {
 					currentpeak = p;
 					currentcolor = peakColor[p];
-					valuestring = Variables.mytoString(powderPeakY[p], 2, -2);
+					valuestring = Variables.varToString(powderPeakY[p], 2, -2);
 					switch (powderPatternType) {
 					case POWDER_PATTERN_TYPE_2THETA:
 						specifictext = "2\u0398 = " + valuestring + " Degrees";
@@ -490,10 +490,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				hkls[n] = crystalPeakHKL[currentpeak][n];
 			Vec.matdotvect(variables.Tmat, hkls, hklp);
 
-			mouseovertext = "Parent HKL = (" + Variables.mytoString(hklp[0], 2, -2) + ", "
-					+ Variables.mytoString(hklp[1], 2, -2) + ", " + Variables.mytoString(hklp[2], 2, -2)
-					+ ")       Super HKL = (" + Variables.mytoString(hkls[0], 2, -2) + ", "
-					+ Variables.mytoString(hkls[1], 2, -2) + ", " + Variables.mytoString(hkls[2], 2, -2) + ")     "
+			mouseovertext = "Parent HKL = (" + Variables.varToString(hklp[0], 2, -2) + ", "
+					+ Variables.varToString(hklp[1], 2, -2) + ", " + Variables.varToString(hklp[2], 2, -2)
+					+ ")       Super HKL = (" + Variables.varToString(hkls[0], 2, -2) + ", "
+					+ Variables.varToString(hkls[1], 2, -2) + ", " + Variables.varToString(hkls[2], 2, -2) + ")     "
 					+ specifictext;
 			isMouseOver = true;
 		} else {
@@ -1247,7 +1247,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		powderAxisTickCount = 0;
 		for (double t = tickmin; t < tickmax + tol; t += tickspacing) {
 			powderAxisTickX[powderAxisTickCount] = drawWidth * ((t - powderXMin) / (powderXMax - powderXMin));
-			powderAxisTickLabel[powderAxisTickCount++] = Variables.mytoString(t, 2, -5);
+			powderAxisTickLabel[powderAxisTickCount++] = Variables.varToString(t, 2, -5);
 		}
 
 	}
@@ -1875,6 +1875,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		controlPanel.add(topControlPanel);
 		controlPanel.add(botControlPanel);
+		
+		// clear checkbox listeners
+		variables.setApp(this);
 	}
 
 	/** loads the control components into the control panel */
@@ -1982,27 +1985,27 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				t = 1;
 			powderXMax = (180 / Math.PI) * 2 * Math.asin(t);
 			powderResolution = powderDinvres * powderWavelength / (Math.PI / 180);
-			minTxt.setText(Variables.mytoString(powderXMin, 2, -5));
-			maxTxt.setText(Variables.mytoString(powderXMax, 2, -5));
-			fwhmTxt.setText(Variables.mytoString(powderResolution, 3, -5));
+			minTxt.setText(Variables.varToString(powderXMin, 2, -5));
+			maxTxt.setText(Variables.varToString(powderXMax, 2, -5));
+			fwhmTxt.setText(Variables.varToString(powderResolution, 3, -5));
 			isReset = true;
 		} else if (source == dButton) {
 			powderPatternType = 2;
 			powderXMax = 1 / powderDinvmin;
 			powderXMin = 1 / powderDinvmax;
 			powderResolution = powderDinvres * Math.pow((powderXMin + powderXMax), 2) / 4;
-			minTxt.setText(Variables.mytoString(powderXMin, 2, -5));
-			maxTxt.setText(Variables.mytoString(powderXMax, 2, -5));
-			fwhmTxt.setText(Variables.mytoString(powderResolution, 3, -5));
+			minTxt.setText(Variables.varToString(powderXMin, 2, -5));
+			maxTxt.setText(Variables.varToString(powderXMax, 2, -5));
+			fwhmTxt.setText(Variables.varToString(powderResolution, 3, -5));
 			isReset = true;
 		} else if (source == qButton) {
 			powderPatternType = 3;
 			powderXMin = powderDinvmin * (2 * Math.PI);
 			powderXMax = powderDinvmax * (2 * Math.PI);
 			powderResolution = powderDinvres * (2 * Math.PI) / ((powderXMin + powderXMax) / 2);
-			minTxt.setText(Variables.mytoString(powderXMin, 2, -5));
-			maxTxt.setText(Variables.mytoString(powderXMax, 2, -5));
-			fwhmTxt.setText(Variables.mytoString(powderResolution, 3, -5));
+			minTxt.setText(Variables.varToString(powderXMin, 2, -5));
+			maxTxt.setText(Variables.varToString(powderXMax, 2, -5));
+			fwhmTxt.setText(Variables.varToString(powderResolution, 3, -5));
 			isReset = true;
 		} else if (source == parentButton) {
 			hklType = 1;

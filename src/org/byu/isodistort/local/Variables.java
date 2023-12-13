@@ -2339,18 +2339,18 @@ public class Variables implements ChangeListener {
 				ellipmodeSlider[t] = new JSlider[ellipmodePerType[t]];// creates the array of slider bars
 				ellipmodeSliderLabel[t] = new JLabel[ellipmodePerType[t]];// creates array of labels
 				ellipmodeSliderVal[t] = new double[ellipmodePerType[t]];
-
+				Color c = color[t];
 				// typeNamePanel
 				typeLabel[t] = new JLabel();
 				typeLabel[t].setText("" + atomTypeName[t] + " Modes");
 				typeLabel[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight));// size of slider labels
-				typeLabel[t].setBackground(color[t]);// color labels
+				typeLabel[t].setBackground(c);// color labels
 				typeLabel[t].setForeground(Color.WHITE);
 				typeLabel[t].setHorizontalAlignment(JLabel.CENTER);
 				typeLabel[t].setVerticalAlignment(JLabel.CENTER);
 				typeNamePanel[t] = new JPanel(new GridLayout(1, 1, 0, 0));// make a new panel to hold color/checkboxes and label
 				typeNamePanel[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-				typeNamePanel[t].setBackground(color[t]);
+				typeNamePanel[t].setBackground(c);
 				typeNamePanel[t].add(typeLabel[t]);
 //				System.out.println("t: "+t+", numSubTypes[t]: "+numSubTypes[t]+", boxesPerRow[t]: "+boxesPerRow[t]+", numCheckRows[t]: "+numCheckRows[t]);
 
@@ -2359,12 +2359,12 @@ public class Variables implements ChangeListener {
 				// typeDataPanel
 				typeDataPanel[t] = new JPanel(new GridLayout(numSubRows[t], subTypesPerRow[t], 0, 0));
 				typeDataPanel[t].setPreferredSize(new Dimension(sliderPanelWidth, numSubRows[t] * barheight + 10));
-				typeDataPanel[t].setBackground(color[t]);
+				typeDataPanel[t].setBackground(c);
 				for (int s = 0; s < numSubTypes[t]; s++) {
 					subTypeBox[t][s] = new JCheckBox("");
 					subTypeBox[t][s].setPreferredSize(new Dimension(subTypeBoxWidth, barheight));
 					subTypeBox[t][s].setFocusable(false);
-					subTypeBox[t][s].setBackground(color[t]);
+					subTypeBox[t][s].setBackground(c);
 					subTypeBox[t][s].setForeground(Color.WHITE);
 					subTypeBox[t][s].setHorizontalAlignment(JCheckBox.LEFT);
 //					subTypeBox[t][s].setVerticalAlignment(JCheckBox.CENTER);
@@ -2372,14 +2372,13 @@ public class Variables implements ChangeListener {
 					subTypeBox[t][s].setEnabled(!isDiffraction);
 					subTypeLabel[t][s] = new JLabel();
 					subTypeLabel[t][s].setPreferredSize(new Dimension(subTypeWidth - subTypeBoxWidth, barheight));
-					subTypeLabel[t][s].setBackground(color[t]);
+					subTypeLabel[t][s].setBackground(c);
 					subTypeLabel[t][s].setForeground(Color.WHITE);
 					subTypeLabel[t][s].setHorizontalAlignment(JLabel.LEFT);
 //					subTypeLabel[t][s].setVerticalAlignment(JLabel.TOP);
 					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
 					p.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-					p.setOpaque(false);
-			        
+					p.setBackground(c);			        
 					p.add(subTypeBox[t][s]);
 					p.add(subTypeLabel[t][s]);
 					typeDataPanel[t].add(p);
@@ -2396,13 +2395,13 @@ public class Variables implements ChangeListener {
 				// size of
 																												// slider
 																												// labels
-				dispPanel[t].setBackground(color[t]);
+				dispPanel[t].setBackground(c);
 				for (int m = 0; m < dispmodePerType[t]; m++)// iterate through array of slider bars
 				{
 					dispmodeSliderLabel[t][m] = new JLabel();// add label to left panel
 					dispmodeSliderLabel[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
 																											// labels
-					dispmodeSliderLabel[t][m].setBackground(color[t]);// color labels
+					dispmodeSliderLabel[t][m].setBackground(c);// color labels
 					dispmodeSliderLabel[t][m].setForeground(Color.WHITE);// color labels
 					dispmodeSliderLabel[t][m].setHorizontalAlignment(JLabel.LEFT);
 					dispmodeSliderLabel[t][m].setVerticalAlignment(JLabel.CENTER);
@@ -2411,7 +2410,7 @@ public class Variables implements ChangeListener {
 							(int) ((dispmodeInitAmp[t][m] / dispmodeMaxAmp[t][m]) * sliderMax));// put a slider bar in the
 																								// ith slot
 					dispmodeSlider[t][m].setPreferredSize(new Dimension(sliderWidth, barheight));// size of slider labels
-					dispmodeSlider[t][m].setBackground(color[t]);// set the slider bar's color
+					dispmodeSlider[t][m].setBackground(c);// set the slider bar's color
 					dispmodeSlider[t][m].addChangeListener(Variables.this);// add to it a listener for slider value changes
 					dispmodeSlider[t][m].setFocusable(false);
 

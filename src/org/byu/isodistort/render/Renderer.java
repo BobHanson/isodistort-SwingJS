@@ -674,9 +674,12 @@ public class Renderer {
 			Matrix.identity(camtmp);
 			camtmp.rotateX(phi);
 			camera.postMultiply(camtmp);
-
-			theta = phi = sigma = 0; // WE'VE ACCOUNTED FOR ROTATION, SO RESET ANGLES.
+			clearAngles();
 		}
+	}
+
+	void clearAngles() {
+		theta = phi = sigma = 0; 
 	}
 
 

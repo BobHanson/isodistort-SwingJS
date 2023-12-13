@@ -59,6 +59,8 @@ public abstract class IsoApp {
 	 * only after size has been established after frame packing
 	 */
 	abstract protected void setRenderer();
+	
+	abstract protected void applyView();
 
 	/**
 	 * frame has been resized -- update renderer and display
@@ -73,6 +75,15 @@ public abstract class IsoApp {
 
 	abstract protected void handleRadioButtonEvent(Object src);
 	
+	abstract protected double[][] getPerspective();
+	
+	abstract protected void setPerspective(double[][] params);
+	
+	abstract protected void setControlsFrom(IsoApp app);
+	
+	abstract protected void stopSpin();
+	
+	
 	/** listens for the check boxes that highlight a given atomic subtype. */
 	protected ItemListener checkboxListener = new ItemListener() {
 		@Override
@@ -83,7 +94,7 @@ public abstract class IsoApp {
 	
 
 	/** listens for the applet buttons, which specify the viewing angles. */
-	protected ItemListener buttonListener = new ItemListener() {
+	protected ItemListener radioListener = new ItemListener() {
 		@Override
 		public void itemStateChanged(ItemEvent event) {
 			handleRadioButtonEvent(event.getSource());
@@ -96,8 +107,11 @@ public abstract class IsoApp {
 	protected JPanel frameContentPane;
 
 	protected boolean isEnabled = true;
-	
-	protected boolean isReset = false;
+
+	protected boolean isAdjusting = false;
+
+	protected boolean needsRecalc = true;
+
 	protected JButton applyView, saveImage, saveISOVIZ, openOther;
 	
 
@@ -148,9 +162,12 @@ public abstract class IsoApp {
 	protected int drawHeight;
 
 	protected int appType;
+
+
+	private JPanel isoPanel;
 	
-	final static protected int APP_ISODISTORT = 1;
-	final static protected int APP_ISODIFFRACT = 2;
+	final static protected int APP_ISODISTORT = 0;
+	final static protected int APP_ISODIFFRACT = 1;
 	
 	protected IsoApp(int appType) {
 		this.appType = appType;
@@ -160,7 +177,7 @@ public abstract class IsoApp {
 		frameContentPane.setTransferHandler(new FileUtil.FileDropHandler(this));
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
-		JPanel isoPanel = new JPanel(new BorderLayout()) 
+		isoPanel = new JPanel(new BorderLayout()) 
 //		{	// BH testing paints
 ////			@Override 
 ////			public void paint(Graphics g) {
@@ -230,10 +247,20 @@ public abstract class IsoApp {
 		return b;
 	}
 
-	protected static JTextField newTextField(String text, int insetRight, ActionListener l) {
+	protected ActionListener textBoxListener = new ActionListener() {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			needsRecalc = true;
+			updateDisplay();
+		}
+		
+	};
+	
+	protected JTextField newTextField(String text, int insetRight) {
 		JTextField t = new JTextField(text, 3);
 		t.setMargin(new Insets(-2, 0, -1, insetRight));
-		t.addActionListener(l);
+		t.addActionListener(textBoxListener);
 		return t;
 	}
 
@@ -330,28 +357,60 @@ public abstract class IsoApp {
 
 		int appType = isIsoDistort ? APP_ISODISTORT : APP_ISODIFFRACT;
 		SwingUtilities.invokeLater(() -> {
-			openApplication(appType, data);
+			openApplication(appType, data, true);
 		});
 		return true;
 
 	}
 
-	private void openApplication(int appType, String data) {
+	final static int SETTINGS_PERSPECTIVE = 0;
+	final static int SETTINGS_APP = 1;
+	
+	private Object[][] appSettings = new Object[2][2];
+
+	void preserveAppData() {
+		appSettings[appType][SETTINGS_PERSPECTIVE] = getPerspective();
+		appSettings[appType][SETTINGS_APP] = this;
+	}
+
+	private void clearSettings() {
+		appSettings = new Object[2][2];
+	}
+
+	private void openApplication(int appType, String data, boolean isDrop) {
 		if (data == null)
 			return;
+		IsoApp me = this;
+		stopSpin();
 		SwingUtilities.invokeLater(() -> {
 			boolean isIsoDistort = (appType == APP_ISODISTORT);
+			
+			
+			
 			IsoApp app = (isIsoDistort ? new IsoDistortApp() : new IsoDiffractApp());
+			
+			
+			
+			
 			if (args == null || args.length == 0)
 				args = new String[1];
 			args[0] = data;
-			JFrame frame = this.frame;
+			JFrame frame = me.frame;
 			dispose();
 			app.start(frame, args);
+			if (isDrop) {
+				clearSettings();
+			} else {
+				app.appSettings = appSettings;
+				app.variables.setValuesFrom(variables);
+				app.setControlsFrom((IsoApp) appSettings[app.appType][SETTINGS_APP]);
+				app.setPerspective((double[][]) appSettings[app.appType][SETTINGS_PERSPECTIVE]);
+			}
 			app.frameResized();
 		});
 	}
 
+	
 	protected void dispose() {
 		isEnabled = false;
 		frame.removeComponentListener(componentListener);
@@ -453,8 +512,7 @@ public abstract class IsoApp {
 		public void actionPerformed(ActionEvent event) {
 			Object source = event.getSource();
 			if (source == applyView) {
-				isReset = true;
-				updateDisplay();
+				applyView();
 				return;
 			}
 			if (source == saveImage) {
@@ -474,7 +532,8 @@ public abstract class IsoApp {
 				return;
 			}
 			if (source == openOther) {
-				openApplication(appType == APP_ISODISTORT ? APP_ISODIFFRACT : APP_ISODISTORT, isoData);
+				preserveAppData();
+				openApplication(appType == APP_ISODISTORT ? APP_ISODIFFRACT : APP_ISODISTORT, isoData, false);
 				return;
 			}
 		}
@@ -846,7 +905,7 @@ public abstract class IsoApp {
 			+ "   0.00000   0.00000   0.00000 \r\n" + "   0.00000   0.00000   0.00000 \r\n"
 			+ "   0.00000   0.00000   0.00000 \r\n" + "   0.00000   0.00000   0.00000 \r\n" + "\r\n" + "";
 
-	public static void create(String type, String[] args) {
+	protected static void create(String type, String[] args) {
 		IsoApp app = null;
 		switch (type) {
 		case "IsoDistort":
@@ -856,6 +915,11 @@ public abstract class IsoApp {
 			app = new IsoDiffractApp();
 		}
 		app.start(new JFrame(type), args);
+	}
+
+	public void updateViewOptions() {
+		// TODO Auto-generated method stub
+		
 	}
 
 	

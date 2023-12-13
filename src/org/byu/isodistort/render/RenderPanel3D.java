@@ -13,6 +13,7 @@ import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.awt.image.MemoryImageSource;
+import java.util.Arrays;
 
 import javax.swing.JPanel;
 
@@ -697,6 +698,21 @@ public class RenderPanel3D extends JPanel
 	public void resetView() {
 		setCamera(0, 0);
 		setFOV(fov0);
+	}
+
+	public double[][] getPerspective() {
+		double[] m = new double[16];
+		System.arraycopy(renderer.getCamera().getUnsafe(), 0, m, 0, 16);
+		return new double[][] {
+				new double[] { fov0, fov }, m }; 
+	}
+
+	public void setPerspective(double[][] params) {
+		double[] v = params[0];
+		fov0 = v[0];
+		fov = v[1];
+		renderer.setFOV(fov);
+		System.arraycopy(params[1], 0, renderer.getCamera().getUnsafe(), 0, 16);
 	}
 
 //	private static void waitForImage(BufferedImage buf, int width, int height)

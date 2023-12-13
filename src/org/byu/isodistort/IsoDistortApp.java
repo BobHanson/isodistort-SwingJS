@@ -15,7 +15,6 @@ package org.byu.isodistort;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -49,9 +48,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	}
 	
 	protected boolean isRunning;
-
-
-
+	
 	// Variables that the user may want to adjust
 	/** Cell-edge tube parameters */
 	int numBondSides = 6, numCellSides = 6, numArrowSides = 8, ballRes = 4;
@@ -201,7 +198,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	@Override
 	protected void frameResized() {
-		isRecalc = true;
+		needsRecalc = true;
 		updateDisplay();
 	}
 
@@ -221,7 +218,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	/**
 	 * Animation amplitude and phase.
 	 */
-	boolean isRecalc = true;
 	boolean isRecalcMat = false;
 	boolean isAnimate = false;
 	boolean isSimpleColor = false;
@@ -229,8 +225,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	double animAmp = 1;
 //	boolean isFocused = true; // is the Applet in focus? If not, stop updating the display.
 //	boolean viewFocused = false; // are the viewDir fields being accessed?
-
-	private boolean isAdjusting = false;
 
 	@Override
 	public void updateDisplay() {
@@ -255,7 +249,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 //		// which would otherwise stop the display when accessed.
 
 		if (variables.isChanged) {
-			isRecalc = true;
+			needsRecalc = true;
 			variables.isChanged = false;
 		}
 
@@ -269,21 +263,21 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			animPhase = animPhase % (2 * Math.PI);
 			animAmp = Math.pow(Math.sin(animPhase), 2);
 			variables.setAnimationAmplitude(animAmp);
-			isRecalc = true;
+			needsRecalc = true;
 		}
 
 		if (isRecalcMat) {
 			recalcMaterials();
 			isRecalcMat = false;
 		}
-		if (isRecalc) {
+		if (needsRecalc) {
 			// virtually all the time is here:
 			recalcABC();
 			renderAtoms();
 			renderBonds();
 			renderCells();
 			renderAxes();
-			isRecalc = false;
+			needsRecalc = false;
 		}
 //		}
 		isAdjusting = false;
@@ -390,6 +384,13 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	}
 
 	final static int X = 0, Y = 1, L = 2, Z = 2, RX = 3, RY = 4, ZSCALE = 5;
+
+
+
+	private static final int VIEW_TYPE_SUPER_HKL  = 1;
+	private static final int VIEW_TYPE_SUPER_UVW  = 2;
+	private static final int VIEW_TYPE_PARENT_HKL = 3;
+	private static final int VIEW_TYPE_PARENT_UVW = 4;
 
 
 	public void renderCells(Geometry child, double[] cellInfo, double xyScale) {
@@ -752,7 +753,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	private void recalcSpheres() {		
 //		Reset the atom colors.
 		double[] rgb = new double[3];
-		for (int q = 0, t = 0; t < variables.numTypes; t++) {
+		for (int t = 0; t < variables.numTypes; t++) {
 			variables.getColors(t, rgb);
 			for (int s = 0; s < variables.numSubTypes[t]; s++) {
 				// 1 means selected
@@ -775,7 +776,9 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 
 	/** resets the viewing direction without changing anything else */
-	public void resetViewDirection() {
+	void resetViewDirection(int type) {
+		if (type >= 0)
+			viewType = type;
 		/** The hkl or uvw view direction indices in lattice coordinates */
 		double[] viewIndices = new double[3];
 		/** The view direction in cartesian coordinates */
@@ -802,15 +805,20 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		Vec.matinverse(variables.pBasisCart, tempmat);
 		Vec.mattranspose(tempmat, recipparentCell);
 
-		if (viewType == 1)
+		switch (viewType) {
+		case VIEW_TYPE_SUPER_HKL:
 			Vec.mattranspose(recipsuperCell, tempmat);
-		if (viewType == 2)
+			break;
+		case VIEW_TYPE_SUPER_UVW:
 			Vec.mattranspose(variables.sBasisCart, tempmat);
-		if (viewType == 3)
+			break;
+		case VIEW_TYPE_PARENT_HKL:
 			Vec.mattranspose(recipparentCell, tempmat);
-		if (viewType == 4)
+			break;
+		case VIEW_TYPE_PARENT_UVW:
 			Vec.mattranspose(variables.pBasisCart, tempmat);
-
+			break;
+		}
 		Vec.matdotvect(tempmat, viewIndices, viewDir);
 
 		if (Vec.norm(viewDir) > 0.000001) {
@@ -831,7 +839,10 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			}
 
 			rp.clearAngles();
-			rp.setCamera(tY, tX);// y-angle rotation first then x-angle rotation
+			rp.setCamera(tY, tX);
+			
+			updateDisplay();
+			// y-angle rotation first then x-angle rotation
 //			System.out.println("viewDir: "+viewDir[0]+", "+viewDir[1]+", "+viewDir[2]);
 //			System.out.println("xV: "+xV+", yV: "+yV+", zV: "+zV);
 //			System.out.println("sigma(tx): "+tX+", theta(ty): "+tY);
@@ -948,6 +959,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	@Override
 	protected void handleCheckBoxEvent(Object src) {
+		if (isAdjusting)
+			return;
 		updateViewOptions();
 	}
 
@@ -971,18 +984,19 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			rp.clearAngles();
 			rp.setRotationAxis(4);
 		} else if (src == superHKL) {
-			viewType = 1;
+			resetViewDirection(VIEW_TYPE_SUPER_HKL);
 		} else if (src == superUVW) {
-			viewType = 2;
+			resetViewDirection(VIEW_TYPE_SUPER_UVW);
 		} else if (src == parentHKL) {
-			viewType = 3;
+			resetViewDirection(VIEW_TYPE_PARENT_HKL);
 		} else if (src == parentUVW) {
-			viewType = 4;
+			resetViewDirection(VIEW_TYPE_PARENT_UVW);
 		}
 		updateDisplay();
 
 	}
 
+	@Override
 	public void updateViewOptions() {
 		showAtoms = aBox.isSelected();
 		showBonds = bBox.isSelected();
@@ -1016,34 +1030,22 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		colorBox.setVisible(variables.needSimpleColor);
 
 		ButtonGroup xyzButtons = new ButtonGroup();
-		nButton = newJRadioButton("Normal", true, xyzButtons);
-		xButton = newJRadioButton("Xrot", false, xyzButtons);
-		yButton = newJRadioButton("Yrot", false, xyzButtons);
-		zButton = newJRadioButton("Zrot", false, xyzButtons);
-		zoomButton = newJRadioButton("Zoom", false, xyzButtons);
+		nButton = newRadioButton("Normal", true, xyzButtons);
+		xButton = newRadioButton("Xrot", false, xyzButtons);
+		yButton = newRadioButton("Yrot", false, xyzButtons);
+		zButton = newRadioButton("Zrot", false, xyzButtons);
+		zoomButton = newRadioButton("Zoom", false, xyzButtons);
 
-		viewType = 1; // initial view type
+		viewType = VIEW_TYPE_SUPER_HKL;
 
 		ButtonGroup cellButtons = new ButtonGroup();
-		superHKL = newJRadioButton("SupHKL", true, cellButtons); // initial view type
-		superUVW = newJRadioButton("SupUVW", false, cellButtons);
-		parentHKL = newJRadioButton("ParHKL", false, cellButtons);
-		parentUVW = newJRadioButton("ParUVW", false, cellButtons);
-
-		uView = new JTextField(3);
-		uView.setText("0");
-		uView.setMargin(new Insets(-2, 0, -1, -10));
-//		uView.addFocusListener(new focusListener());
-
-		vView = new JTextField(3);
-		vView.setText("0");
-		vView.setMargin(new Insets(-2, 0, -1, -10));
-//		vView.addFocusListener(new focusListener());
-
-		wView = new JTextField(3);
-		wView.setText("1");
-		wView.setMargin(new Insets(-2, 0, -1, -10));
-//		wView.addFocusListener(new focusListener());
+		superHKL = newRadioButton("SupHKL", true, cellButtons);
+		superUVW = newRadioButton("SupUVW", false, cellButtons);
+		parentHKL = newRadioButton("ParHKL", false, cellButtons);
+		parentUVW = newRadioButton("ParUVW", false, cellButtons);
+		uView = newTextField("0", -10);
+		vView = newTextField("0", -10);
+		wView = newTextField("1", -10);
 
 		JPanel topControlPanel = new JPanel();
 		topControlPanel.setBackground(Color.WHITE);
@@ -1081,7 +1083,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		variables.setApp(this);
 	}
 
-	private JRadioButton newJRadioButton(String label, boolean selected, ButtonGroup g) {
+	private JRadioButton newRadioButton(String label, boolean selected, ButtonGroup g) {
 		JRadioButton b = new JRadioButton(label, selected);
 		b.setName(++buttonID + ":" + label);
 		b.setHorizontalAlignment(JRadioButton.LEFT);
@@ -1091,7 +1093,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		b.setForeground(Color.BLACK);
 		b.setVisible(true);
 		b.setBorderPainted(false);
-		b.addItemListener(buttonListener);
+		b.addItemListener(radioListener);
 		g.add(b);
 		return b;
 	}
@@ -1166,4 +1168,56 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		create("IsoDistort", args);
 	}
 
+
+	@Override
+	protected double[][] getPerspective() {
+		return rp.getPerspective();
+	}
+
+
+	@Override
+	protected void setPerspective(double[][] params) {
+		if (params == null)
+			return;
+		rp.setPerspective(params);
+		updateDisplay();
+	}
+
+
+	@Override
+	protected void stopSpin() {
+		isAnimate = false;
+		rp.setSpinning(false);
+	}
+
+	@Override
+	protected void setControlsFrom(IsoApp a) {
+		if (a == null)
+			return;
+		IsoDistortApp app = (IsoDistortApp) a;
+		aBox.setSelected(app.showAtoms);
+		bBox.setSelected(app.showBonds);
+		cBox.setSelected(app.showCells);
+		axesBox.setSelected(app.showAxes);
+		colorBox.setSelected(isSimpleColor);
+		// skipping spin and animation
+		// skipping rotation state buttons
+		superHKL.setSelected(app.superHKL.isSelected());
+		superUVW.setSelected(app.superUVW.isSelected());
+		parentHKL.setSelected(app.parentHKL.isSelected());
+		parentUVW.setSelected(app.parentUVW.isSelected());
+		uView.setText(app.uView.getText());
+		vView.setText(app.vView.getText());
+		wView.setText(app.wView.getText());
+		variables.isChanged = true;
+		updateViewOptions();
+	}
+
+
+	@Override
+	protected void applyView() {
+		resetViewDirection(-1);
+	}
+
+	
 }

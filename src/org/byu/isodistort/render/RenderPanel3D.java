@@ -367,8 +367,8 @@ public class RenderPanel3D extends JPanel
 	 * Check for a resize prior to rendering, and then carry out the rendering into
 	 * the image raster int[] rgba data buffer
 	 */
-	public synchronized void updateForDisplay(Component c) {
-		if (c != null) {
+	public synchronized void updateForDisplay(boolean doPaint) {
+		if (doPaint) {
 			// write into the image data buffer
 			identity();
 			renderer.rotateView(theta, phi, sigma);
@@ -378,7 +378,8 @@ public class RenderPanel3D extends JPanel
 //// BH this parameter is always 1 here
 //			if (renderer.meshLevelOfDetail > 1)
 //				renderer.meshLevelOfDetail--;
-			c.repaint();
+			
+			repaint();
 		} else if (!isInSync()) {
 			// prior to rendering, check for a resize
 			int width = getWidth();
@@ -670,15 +671,9 @@ public class RenderPanel3D extends JPanel
 
 	public BufferedImage getImage() {
 		BufferedImage bi = new BufferedImage(im.getWidth(null), im.getHeight(null), BufferedImage.TYPE_INT_ARGB); 
-//		for(int i = 0; i < image.getWidth(null);i++) 
-//		for(int j = 0; j < image.getHeight(null);j++) 
-//		bufferedImage.setRGB(i, j, Color.WHITE.getRGB()); 
 		Graphics2D g = bi.createGraphics();
-		//g.setBackground(Color.WHITE); 
 		g.drawImage(im, null, null); 
 		g.dispose();
-		// how can this take any time? It's a standard image
-		//waitForImage(bufferedImage, im.getWidth(null), im.getHeight(null)); 
 		return bi; 
 	}
 

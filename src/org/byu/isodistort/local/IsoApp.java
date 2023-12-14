@@ -38,6 +38,7 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
@@ -87,13 +88,13 @@ public abstract class IsoApp {
 	
 	abstract protected void stopSpin();
 	
-	private List<JComponent> listenerList = new ArrayList<>();
+	private List<JToggleButton> listenerList = new ArrayList<>();
 	
 	/** listens for the check boxes that highlight a given atomic subtype. */
 	protected ItemListener buttonListener = new ItemListener() {
 		@Override
 		public void itemStateChanged(ItemEvent event) {
-			JComponent src = (JComponent) event.getSource();
+			JToggleButton src = (JToggleButton) event.getSource();
 			listenerList.add(src);
 			if (src instanceof JCheckBox) {
 				handleCheckBoxEvent(event.getSource());
@@ -416,8 +417,10 @@ public abstract class IsoApp {
 	
 	protected void dispose() {
 		isEnabled = false;
-		while (listenerList.size() > 0)
-			listenerList.remove(listenerList.size() - 1);
+		while (listenerList.size() > 0) {
+			JToggleButton c = listenerList.remove(listenerList.size() - 1);
+			c.removeItemListener(buttonListener);
+		}
 		frame.removeComponentListener(componentListener);
 		frame.removeWindowListener(windowListener);
 		frame.getContentPane().removeAll();

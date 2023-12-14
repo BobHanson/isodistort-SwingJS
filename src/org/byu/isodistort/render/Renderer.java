@@ -728,9 +728,11 @@ public class Renderer {
 	private Matrix cam = new Matrix(); // BH opt #1#
 
 	private void render(Geometry s, Matrix camera) {
+		if (!s.isEnabled())
+			return;
 		if (s.child != null) {
 			//Matrix cam = new Matrix(); // BH opt #1# 
-			cam.copy(camera); 
+			//cam.copy(camera); 
 			
 			
 			// CAMERA MAY MOVE BEFORE CHILD RENDERS

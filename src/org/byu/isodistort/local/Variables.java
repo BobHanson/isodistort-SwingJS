@@ -2369,7 +2369,7 @@ public class Variables implements ChangeListener {
 					subTypeBox[t][s].setHorizontalAlignment(JCheckBox.LEFT);
 //					subTypeBox[t][s].setVerticalAlignment(JCheckBox.CENTER);
 					subTypeBox[t][s].addItemListener(app.buttonListener);
-					subTypeBox[t][s].setEnabled(!isDiffraction);
+					subTypeBox[t][s].setVisible(!isDiffraction);
 					subTypeLabel[t][s] = new JLabel();
 					subTypeLabel[t][s].setPreferredSize(new Dimension(subTypeWidth - subTypeBoxWidth, barheight));
 					subTypeLabel[t][s].setBackground(c);

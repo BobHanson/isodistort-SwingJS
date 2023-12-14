@@ -656,7 +656,7 @@ public class Variables implements ChangeListener {
 					d = 0;
 					for (int i = 0; i < 3; i++)
 						for (int j = 0; j < 3; j++)
-							d += Math.pow(tempmat[i][j], 2);
+							d += tempmat[i][j] * tempmat[i][j];
 					if (d > maxellip)
 						maxellip = d;
 
@@ -873,7 +873,8 @@ public class Variables implements ChangeListener {
 				}
 			} else // Set atom max radius to default value
 			{
-				defaultUiso = Math.pow(atomMaxRadius / 2.0, 2);
+				double d = atomMaxRadius / 2.0;
+				defaultUiso = d * d;
 			}
 
 			// find maximum radius of atoms
@@ -1796,7 +1797,7 @@ public class Variables implements ChangeListener {
 			if (isRhombParentSetting) {
 				// defined row by row
 				double temp1 = Math.sin(pLatt0[5] / 2);
-				double temp2 = Math.sqrt(Math.pow(temp1, -2) - (4.0 / 3.0));
+				double temp2 = Math.sqrt(1 / temp1 / temp1 - 4.0 / 3.0);
 				pBasisCart0[0][0] = pLatt0[0] * temp1 * (1);
 				pBasisCart0[0][1] = pLatt0[0] * temp1 * (-1);
 				pBasisCart0[0][2] = pLatt0[0] * temp1 * (0);
@@ -1808,8 +1809,10 @@ public class Variables implements ChangeListener {
 				pBasisCart0[2][2] = pLatt0[0] * temp1 * temp2;
 			} else {
 				// defined column by column
-				double temp1 = (Math.cos(pLatt0[3]) - Math.cos(pLatt0[4]) * Math.cos(pLatt0[5])) / Math.sin(pLatt0[5]);
-				double temp2 = Math.sqrt(1 - Math.pow(Math.cos(pLatt0[4]), 2) - Math.pow(temp1, 2));
+				double d = Math.cos(pLatt0[4]);
+				double temp1 = (Math.cos(pLatt0[3]) - d * Math.cos(pLatt0[5])) / Math.sin(pLatt0[5]);
+				d = 1 - d * d - temp1 * temp1;
+				double temp2 = Math.sqrt(d < 0 ? 0 : d);
 				pBasisCart0[0][0] = pLatt0[0];
 				pBasisCart0[1][0] = 0;
 				pBasisCart0[2][0] = 0;

@@ -22,6 +22,14 @@ public class Vec {
 				v[i] /= s;
 	}	
 
+	public static double len3(double[] xyz) {
+		return Math.sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1] + xyz[2] * xyz[2]);
+	}
+	
+	public static double lenSq3(double[] xyz) {
+		return xyz[0] * xyz[0] + xyz[1] * xyz[1] + xyz[2] * xyz[2];
+	}
+	
 	/**
 	 * Computes the magnitude of the vector.
 	 * 
@@ -264,10 +272,10 @@ public class Vec {
 		for (int i = 0; i < 3; i++) {
 			bond[i] = (atom2[i] + atom1[i]) / 2.0;
 			orien[i] = (atom2[i] - atom1[i]);
-			lensq += Math.pow(orien[i], 2);
+			lensq += orien[i] * orien[i];
 		}
 
-		if (Math.sqrt(lensq) < 0.000001)
+		if (lensq < 0.000000000001) // BH Q: this is REALLY small!!! was sqrt() <= 0.000001
 			return;
 
 		for (int i = 0; i < 3; i++)
@@ -289,21 +297,22 @@ public class Vec {
 		double lensq = 0;
 
 		for (int i = 0; i < 3; i++)
-			lensq += Math.pow(orien[i], 2);
+			lensq += orien[i] * orien[i];
 
-		if (Math.sqrt(lensq) < 0.000001) {
+		if (lensq < 0.000000000001) {
 			arrowstuff[X] = 0;
 			arrowstuff[Y] = 0;
 			arrowstuff[L] = 0;
 			return;
 		}
 
+		double d = Math.sqrt(lensq);
 		for (int i = 0; i < 3; i++)
-			orien[i] = orien[i] / Math.sqrt(lensq);
+			orien[i] /= d;
 
 		arrowstuff[X] = -Math.asin(orien[y]); // X rotation
 		arrowstuff[Y] = Math.atan2(orien[x], orien[z]); // Y rotation
-		arrowstuff[L] = Math.sqrt(lensq); // Length
+		arrowstuff[L] = d; // Length
 	}
 
 	/**
@@ -329,7 +338,7 @@ public class Vec {
 //		det = matdeterminant(matrixform);
 //		for (int i = 0; i < 3; i++)
 //			for (int j = 0; j < 3; j++)
-//				lensq += Math.pow(matrixform[i][j], 2);
+//				lensq += matrixform[i][j]* matrixform[i][j];
 //
 //		if ((Math.sqrt(lensq) < 0.000001) || (det < 0.000001) || true) // "true" temporarily bypasses the ellipoidal
 																		// analysis.

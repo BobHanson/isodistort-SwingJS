@@ -241,7 +241,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		if (isAnimate) {
 			animPhase += 2 * Math.PI / (5 * rp.getFrameRate());
 			animPhase = animPhase % (2 * Math.PI);
-			animAmp = Math.pow(Math.sin(animPhase), 2);
+			double d = Math.sin(animPhase);
+			animAmp = d * d;
 			variables.setAnimationAmplitude(animAmp);
 			needsRecalc = true;
 		}
@@ -595,15 +596,17 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 		if (showBonds) {
 			// calculate the new bondInfo in bond format
-			for (int b = 0; b < variables.numBonds; b++) // calculate bondInfo(x-cen, y-cen, z-cen, thetaX, thetaY,
-															// length)
-			{
-				Vec.pairtobond(atomCoordInfo[variables.whichAtomsBond[b][0]],
-						atomCoordInfo[variables.whichAtomsBond[b][1]], bondInfo[b]);
-				if (bondInfo[b][5] >= variables.maxBondLength
-						|| atomRadiusInfo[variables.whichAtomsBond[b][0]] <= variables.minBondOcc
-						|| atomRadiusInfo[variables.whichAtomsBond[b][1]] <= variables.minBondOcc) {
-					bondInfo[b][6] = 0.0;
+			for (int b = 0; b < variables.numBonds; b++) {
+				// calculate bondInfo(x-cen, y-cen, z-cen, thetaX, thetaY,
+				// length)
+				int[] bond = variables.whichAtomsBond[b];
+				int a0 = bond[0];
+				int a1 = bond[1];
+				double[] info = bondInfo[b];
+				Vec.pairtobond(atomCoordInfo[a0], atomCoordInfo[a1], info);
+				if (info[5] >= variables.maxBondLength || atomRadiusInfo[a0] <= variables.minBondOcc
+						|| atomRadiusInfo[a1] <= variables.minBondOcc) {
+					info[6] = 0.0;
 					bondObjects.child(b).setEnabled(false);
 				} else {
 					bondObjects.child(b).setEnabled(true);
@@ -620,7 +623,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				extent[i] = variables.pOriginCart[i] - variables.sCenterCart[i] + variables.pBasisCart[i][axis];
 				paxesbegs[axis][i] = extent[i] + 2.0 * variables.atomMaxRadius * tempvec[i];
 				paxesends[axis][i] = extent[i] + 3.5 * variables.atomMaxRadius * tempvec[i];
-				;
 			}
 			Vec.pairtobond(paxesbegs[axis], paxesends[axis], axesInfo[axis]);
 
@@ -636,37 +638,37 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		}
 
 		// Calculate the maximum distance from applet center (used to determine FOV).
-		scdSize = 0;
+		double d2 = 0;
 		for (int j = 0; j < 8; j++) {
 			Vec.set3(tempvec, variables.superCellVertices[j]);
-			double d = Vec.norm(tempvec);
-			if (d > scdSize)
-				scdSize = d;
+			double d = Vec.lenSq3(tempvec);
+			if (d > d2)
+				d2 = d;
 			Vec.set3(tempvec, variables.parentCellVertices[j]);
-			d = Vec.norm(tempvec);
-			if (d > scdSize)
-				scdSize = d;
+			d = Vec.lenSq3(tempvec);
+			if (d > d2)
+				d2 = d;
 		}
 		for (int i = 0; i < variables.numAtoms; i++) {
 			Vec.set3(tempvec, atomCoordInfo[i]);
-			double d = Vec.norm(tempvec);
-			if (d > scdSize)
-				scdSize = d;
+			double d = Vec.lenSq3(tempvec);
+			if (d > d2)
+				d2 = d;
 		}
 		for (int axis = 0; axis < 3; axis++) {
 			Vec.set3(tempvec, paxesends[axis]);
-			double d = Vec.norm(tempvec);
-			if (d > scdSize)
-				scdSize = d;
+			double d = Vec.lenSq3(tempvec);
+			if (d > d2)
+				d2 = d;
 		}
 		for (int axis = 0; axis < 3; axis++) {
 			Vec.set3(tempvec, saxesends[axis]);
-			double d = Vec.norm(tempvec);
-			if (d > scdSize)
-				scdSize = d;
+			double d = Vec.lenSq3(tempvec);
+			if (d > d2)
+				d2 = d;
 		}
 
-		scdSize += 2 * variables.atomMaxRadius;
+		scdSize = Math.sqrt(d2) + 2 * variables.atomMaxRadius;
 		// this includes the width of atoms that might be at the extremes of the
 		// longest cell diagonal.
 	}
@@ -793,7 +795,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		}
 		Vec.matdotvect(tempmat, viewIndices, viewDir);
 
-		if (Vec.norm(viewDir) > 0.000001) {
+		if (Vec.lenSq3(viewDir) > 0.000000000001) {
 			Vec.normalize(viewDir);
 			xV = viewDir[0];
 			yV = viewDir[1];
@@ -1053,36 +1055,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 		// Add listeners to a the subtype checkboxes -- don't know where else to put it.
 		variables.setApp(this);
-	}
-
-	private JRadioButton newRadioButton(String label, boolean selected, ButtonGroup g) {
-		JRadioButton b = new JRadioButton(label, selected);
-		b.setName(++buttonID + ":" + label);
-		b.setHorizontalAlignment(JRadioButton.LEFT);
-		b.setVerticalAlignment(JRadioButton.CENTER);
-		b.setFocusable(false);
-		b.setBackground(Color.WHITE);
-		b.setForeground(Color.BLACK);
-		b.setVisible(true);
-		b.setBorderPainted(false);
-		b.addItemListener(buttonListener);
-		g.add(b);
-		return b;
-	}
-
-	static int buttonID = 0;
-
-	private JCheckBox newJCheckBox(String label, boolean selected) {
-		JCheckBox cb = new JCheckBox(label, selected);
-		cb.setName(++buttonID + ":" + label);
-		cb.setHorizontalAlignment(JCheckBox.LEFT);
-		cb.setVerticalAlignment(JCheckBox.CENTER);
-		cb.setFocusable(false);
-		cb.setVisible(true);
-		cb.setBackground(Color.WHITE);
-		cb.setForeground(Color.BLACK);
-		cb.addItemListener(buttonListener);
-		return cb;
 	}
 
 	/**

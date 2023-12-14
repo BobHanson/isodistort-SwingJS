@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
@@ -104,6 +105,36 @@ public abstract class IsoApp {
 		}
 	};
 	
+	static int buttonID = 0;
+
+	protected JRadioButton newRadioButton(String label, boolean selected, ButtonGroup g) {
+		JRadioButton b = new JRadioButton(label, selected);
+		b.setName(++buttonID + ":" + label);
+		b.setHorizontalAlignment(JRadioButton.LEFT);
+		b.setVerticalAlignment(JRadioButton.CENTER);
+		b.setFocusable(false);
+		b.setBackground(Color.WHITE);
+		b.setForeground(Color.BLACK);
+		b.setVisible(true);
+		b.setBorderPainted(false);
+		b.addItemListener(buttonListener);
+		g.add(b);
+		return b;
+	}
+
+	protected JCheckBox newJCheckBox(String label, boolean selected) {
+		JCheckBox cb = new JCheckBox(label, selected);
+		cb.setName(++buttonID + ":" + label);
+		cb.setHorizontalAlignment(JCheckBox.LEFT);
+		cb.setVerticalAlignment(JCheckBox.CENTER);
+		cb.setFocusable(false);
+		cb.setVisible(true);
+		cb.setBackground(Color.WHITE);
+		cb.setForeground(Color.BLACK);
+		cb.addItemListener(buttonListener);
+		return cb;
+	}
+
 
 	/**
 	 * The panel displaying this application

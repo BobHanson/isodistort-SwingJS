@@ -18,7 +18,7 @@ import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-public class Variables implements ChangeListener {
+public class Variables {
 	
 	private IsoApp app;
 
@@ -289,17 +289,17 @@ public class Variables implements ChangeListener {
 	public int[] strainmodeIrrep;
 
 	/** The master slider bar value. */
-	public double masterSliderVal;
+	public double superSliderVal;
 	/** Array of displacement mode slider bar values. */
-	public double[][] dispmodeSliderVal;
+	public double[][] dispmodeSliderVals;
 	/** Array of scalar mode slider bar values. */
-	public double[][] scalarmodeSliderVal;
+	public double[][] scalarmodeSliderVals;
 	/** Array of magnetic mode slider bar values. */
-	public double[][] magmodeSliderVal;
+	public double[][] magmodeSliderVals;
 	/** Array of rotational mode slider bar values. */
-	public double[][] rotmodeSliderVal;
+	public double[][] rotmodeSliderVals;
 	/** Array of ellipsoidal mode slider bar values. */
-	public double[][] ellipmodeSliderVal;
+	public double[][] ellipmodeSliderVals;
 	/** Array of strain slider bar values. */
 	public double[] strainmodeSliderVal;
 	/** Array of irrep slider bar values. */
@@ -342,18 +342,6 @@ public class Variables implements ChangeListener {
 		gui.recolorPanels();
 	}
 
-	/**
-	 * Listens for moving slider bars.
-	 */
-	@Override
-	public void stateChanged(ChangeEvent e)// called when a slider bar is moved
-	{
-		if (isAdjusting)
-			return;
-		isChanged = true;
-		app.updateDisplay();
-	}
-
 	/** Determines the unique atom type of each non-unique atom type. */
 	private void identifyUniqueAtoms() {
 		// Determine the unique atoms types.
@@ -385,7 +373,7 @@ public class Variables implements ChangeListener {
 
 	public void setValuesFrom(Variables v) {
 		isAdjusting = true;
-		gui.setSlidersFrom(v);
+		gui.setComponentValuesFrom(v);
 		gui.readSliders();
 		isChanged = true;
 		isAdjusting = false;
@@ -419,7 +407,7 @@ public class Variables implements ChangeListener {
 		// coords
 		for (int n = 0; n < 6; n++)
 			for (int m = 0; m < strainmodeNum; m++) {
-				tempval = strainmodeSliderVal[m] * irrepmodeSliderVal[strainmodeIrrep[m]] * masterSliderVal;
+				tempval = strainmodeSliderVal[m] * irrepmodeSliderVal[strainmodeIrrep[m]] * superSliderVal;
 				pStrainVoigt[n] += strainmodeVect[m][n] * tempval;
 			}
 		// calculate (strain tensor)+(identity matrix) from voigt strain components
@@ -564,8 +552,8 @@ public class Variables implements ChangeListener {
 					for (int m = 0; m < scalarmodePerType[t]; m++)// sum up the scalar vectors for all the modes for
 																	// each atom of given type
 					{
-						d = scalarmodeSliderVal[t][m] * irrepmodeSliderVal[scalarmodeIrrep[t][m]]
-								* masterSliderVal;
+						d = scalarmodeSliderVals[t][m] * irrepmodeSliderVal[scalarmodeIrrep[t][m]]
+								* superSliderVal;
 						deltaOcc += scalarmodeVect[t][m][s][a] * d;
 					}
 					atomFinalOcc[t][s][a] = atomInitOcc[t][s][a] + deltaOcc;
@@ -575,8 +563,8 @@ public class Variables implements ChangeListener {
 						for (int m = 0; m < dispmodePerType[t]; m++)// sum up the displacement vectors for all the modes
 																	// for each atom of given type
 						{
-							d = dispmodeSliderVal[t][m] * irrepmodeSliderVal[dispmodeIrrep[t][m]]
-									* masterSliderVal;
+							d = dispmodeSliderVals[t][m] * irrepmodeSliderVal[dispmodeIrrep[t][m]]
+									* superSliderVal;
 							deltaCoord[i] += dispmodeVect[t][m][s][a][i] * d; // change in unitless position
 						}
 						atomFinalCoord[t][s][a][i] = atomInitCoord[t][s][a][i] + deltaCoord[i]; // total position in
@@ -592,7 +580,7 @@ public class Variables implements ChangeListener {
 						for (int m = 0; m < magmodePerType[t]; m++)// sum up the magnetic moment vectors for all the
 																	// modes for each atom of given type
 						{
-							d = magmodeSliderVal[t][m] * irrepmodeSliderVal[magmodeIrrep[t][m]] * masterSliderVal;
+							d = magmodeSliderVals[t][m] * irrepmodeSliderVal[magmodeIrrep[t][m]] * superSliderVal;
 							deltaMag[i] += magmodeVect[t][m][s][a][i] * d; // change in magnetic moment
 						}
 						atomFinalMag[t][s][a][i] = atomInitMag[t][s][a][i] + deltaMag[i]; // total magnetic moment
@@ -606,7 +594,7 @@ public class Variables implements ChangeListener {
 						for (int m = 0; m < rotmodePerType[t]; m++)// sum up the rotational vectors for all the modes
 																	// for each atom of given type
 						{
-							d = rotmodeSliderVal[t][m] * irrepmodeSliderVal[rotmodeIrrep[t][m]] * masterSliderVal;
+							d = rotmodeSliderVals[t][m] * irrepmodeSliderVal[rotmodeIrrep[t][m]] * superSliderVal;
 							deltaRot[i] += rotmodeVect[t][m][s][a][i] * d; // change in rotation angle
 						}
 						atomFinalRot[t][s][a][i] = atomInitRot[t][s][a][i] + deltaRot[i]; // total rotation angle
@@ -619,8 +607,8 @@ public class Variables implements ChangeListener {
 						for (int m = 0; m < ellipmodePerType[t]; m++)// sum up the ellipsoid vectors for all the modes
 																		// for each atom of given type
 						{
-							d = ellipmodeSliderVal[t][m] * irrepmodeSliderVal[ellipmodeIrrep[t][m]]
-									* masterSliderVal;
+							d = ellipmodeSliderVals[t][m] * irrepmodeSliderVal[ellipmodeIrrep[t][m]]
+									* superSliderVal;
 							deltaEllip[i] += ellipmodeVect[t][m][s][a][i] * d; // change in ellipsoid
 //							System.out.println("ellipcheck: "+t+", "+s+", "+a+", "+i+", "+deltaEllip[i]);
 						}
@@ -705,9 +693,9 @@ public class Variables implements ChangeListener {
 
 	public void setApp(IsoApp app) {
 		this.app = app;
-		if (gui != null) {
-			gui.setCheckboxListeners(app.appType == IsoApp.APP_ISODISTORT ? app.buttonListener : null);
-		}
+//		if (gui != null) {
+//			gui.setCheckboxListeners(app.appType == IsoApp.APP_ISODISTORT ? app.buttonListener : null);
+//		}
 	}
 
 	private class VariableParser {
@@ -1885,7 +1873,7 @@ public class Variables implements ChangeListener {
 
 	}
 
-	private class VariableGUI {
+	private class VariableGUI implements ChangeListener {
 
 		private final static int subTypeWidth = 170;
 		private final static int controlPanelHeight = 55, roomForScrollBar = 15, padding = 4, barheight = 20;
@@ -1921,49 +1909,49 @@ public class Variables implements ChangeListener {
 		 * Master (top most) slider bar controls all slider bars for superpositioning of
 		 * modes.
 		 */
-		private JSlider masterSlider;
+		private JSlider superSlider;
 		/** Array of displacement mode slider bars for animating displacement modes. */
-		private JSlider[][] dispmodeSlider;
+		private JSlider[][] dispmodeSliders;
 		/** Array of scalar mode slider bars for animating displacement modes. */
-		private JSlider[][] scalarmodeSlider;
+		private JSlider[][] scalarmodeSliders;
 		/** Array of magnetic mode slider bars for animating magnetic modes. */
-		private JSlider[][] magmodeSlider;
+		private JSlider[][] magmodeSliders;
 		/** Array of rotational mode slider bars for animating magnetic modes. */
-		private JSlider[][] rotmodeSlider;
+		private JSlider[][] rotmodeSliders;
 		/** Array of magnetic mode slider bars for animating ellipsoidal modes. */
-		private JSlider[][] ellipmodeSlider;
+		private JSlider[][] ellipsemodeSliders;
 		/** Array of strain mode slider bars. */
 		private JSlider[] strainmodeSlider;
 		/** Array of irrep mode slider bars. */
 		private JSlider[] irrepmodeSlider;
 
 		/** Label for master slider bar. */
-		private JLabel masterSliderLabel;
+		private JLabel superSliderLabel;
 		/**
 		 * Array of labels for displacement mode slider bars. Label specifies name of
 		 * mode and mode bar displacement.
 		 */
-		private JLabel[][] dispmodeSliderLabel;
+		private JLabel[][] dispmodeSliderLabels;
 		/**
 		 * Array of labels for scalar mode slider bars. Label specifies name of mode and
 		 * mode bar displacement.
 		 */
-		private JLabel[][] scalarmodeSliderLabel;
+		private JLabel[][] scalarmodeSliderLabels;
 		/**
 		 * Array of labels for magnetic mode slider bars. Label specifies name of mode
 		 * and mode bar displacement.
 		 */
-		private JLabel[][] magmodeSliderLabel;
+		private JLabel[][] magmodeSliderLabels;
 		/**
 		 * Array of labels for rotational mode slider bars. Label specifies name of mode
 		 * and mode bar displacement.
 		 */
-		private JLabel[][] rotmodeSliderLabel;
+		private JLabel[][] rotmodeSliderLabels;
 		/**
 		 * Array of labels for ellipsoidal mode slider bars. Label specifies name of
 		 * mode and mode bar displacement.
 		 */
-		private JLabel[][] ellipmodeSliderLabel;
+		private JLabel[][] ellipmodeSliderLabels;
 		/**
 		 * Array of labels for strain mode slider bars. Label specifies name of mode and
 		 * mode bar displacement.
@@ -1983,23 +1971,23 @@ public class Variables implements ChangeListener {
 		/** Array of labels for atom types */
 		private JLabel typeLabel[];
 		/** subTypeLabels */
-		private JLabel[][] subTypeLabel;
+		private JLabel[][] subTypeLabels;
 		/** Array of checkboxes -- one for each atomic subtype */
-		private JCheckBox[][] subTypeBox;
+		private JCheckBox[][] subTypeBoxes;
 
 		/** Panel which holds master slider bar and it's label; added scrollPanel */
 		private JPanel masterSliderPanel;
 		/** Panel which holds the parent atom type */
-		private JPanel typeNamePanel[];
+		private JPanel typeNamePanels[];
 		/**
 		 * Panel which holds the occupancy check boxes for each atom subtype associated
 		 * with a type
 		 */
-		private JPanel typeDataPanel[];
+		private JPanel typeDataPanels[];
 		/**
 		 * Temporary Panel which holds a slider bar and it's label; added to scrollPanel
 		 */
-		private JPanel dispPanel[], scalarPanel[], magPanel[], rotPanel[], ellipPanel[], strainPanel, irrepPanel;
+		private JPanel dispPanels[], scalarPanels[], magPanels[], rotPanels[], ellipsePanels[], strainPanel, irrepPanel;
 
 		/**
 		 * Maximum slider bar value. The slider bar only takes integer values. So the
@@ -2016,46 +2004,46 @@ public class Variables implements ChangeListener {
 			for (int t = 0; t < numTypes; t++) // Reset the SliderBarPanel colors.
 			{
 				typeLabel[t].setBackground(color[t]);// color labels
-				typeNamePanel[t].setBackground(color[t]);
-				typeDataPanel[t].setBackground(color[t]);
+				typeNamePanels[t].setBackground(color[t]);
+				typeDataPanels[t].setBackground(color[t]);
 				for (int s = 0; s < numSubTypes[t]; s++) {
-					subTypeBox[t][s].setBackground(color[t]);
-					subTypeLabel[t][s].setBackground(color[t]);
+					subTypeBoxes[t][s].setBackground(color[t]);
+					subTypeLabels[t][s].setBackground(color[t]);
 				}
 
-				dispPanel[t].setBackground(color[t]);
+				dispPanels[t].setBackground(color[t]);
 				for (int m = 0; m < dispmodePerType[t]; m++)// iterate through array of slider bars
 				{
-					dispmodeSliderLabel[t][m].setBackground(color[t]);// color labels
-					dispmodeSlider[t][m].setBackground(color[t]);// set the slider bar's color
+					dispmodeSliderLabels[t][m].setBackground(color[t]);// color labels
+					dispmodeSliders[t][m].setBackground(color[t]);// set the slider bar's color
 				}
 
-				scalarPanel[t].setBackground(scalarcolor[t]);
+				scalarPanels[t].setBackground(scalarcolor[t]);
 				for (int m = 0; m < scalarmodePerType[t]; m++)// iterate through array of slider bars
 				{
-					scalarmodeSliderLabel[t][m].setBackground(scalarcolor[t]);// color labels
-					scalarmodeSlider[t][m].setBackground(scalarcolor[t]);// set the slider bar's color
+					scalarmodeSliderLabels[t][m].setBackground(scalarcolor[t]);// color labels
+					scalarmodeSliders[t][m].setBackground(scalarcolor[t]);// set the slider bar's color
 				}
 
-				magPanel[t].setBackground(magcolor[t]);
+				magPanels[t].setBackground(magcolor[t]);
 				for (int m = 0; m < magmodePerType[t]; m++)// iterate through array of slider bars
 				{
-					magmodeSliderLabel[t][m].setBackground(magcolor[t]);// color labels
-					magmodeSlider[t][m].setBackground(magcolor[t]);// set the slider bar's color
+					magmodeSliderLabels[t][m].setBackground(magcolor[t]);// color labels
+					magmodeSliders[t][m].setBackground(magcolor[t]);// set the slider bar's color
 				}
 
-				rotPanel[t].setBackground(rotcolor[t]);
+				rotPanels[t].setBackground(rotcolor[t]);
 				for (int m = 0; m < rotmodePerType[t]; m++)// iterate through array of slider bars
 				{
-					rotmodeSliderLabel[t][m].setBackground(rotcolor[t]);// color labels
-					rotmodeSlider[t][m].setBackground(rotcolor[t]);// set the slider bar's color
+					rotmodeSliderLabels[t][m].setBackground(rotcolor[t]);// color labels
+					rotmodeSliders[t][m].setBackground(rotcolor[t]);// set the slider bar's color
 				}
 
-				ellipPanel[t].setBackground(ellipcolor[t]);
+				ellipsePanels[t].setBackground(ellipcolor[t]);
 				for (int m = 0; m < ellipmodePerType[t]; m++)// iterate through array of slider bars
 				{
-					ellipmodeSliderLabel[t][m].setBackground(ellipcolor[t]);// color labels
-					ellipmodeSlider[t][m].setBackground(ellipcolor[t]);// set the slider bar's color
+					ellipmodeSliderLabels[t][m].setBackground(ellipcolor[t]);// color labels
+					ellipsemodeSliders[t][m].setBackground(ellipcolor[t]);// set the slider bar's color
 				}
 			}
 
@@ -2100,22 +2088,22 @@ public class Variables implements ChangeListener {
 		}
 
 		void zeroSliders() {
-			masterSlider.setValue(sliderMax);
+			superSlider.setValue(sliderMax);
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < dispmodePerType[t]; m++)
-					dispmodeSlider[t][m].setValue(0);
+					dispmodeSliders[t][m].setValue(0);
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < scalarmodePerType[t]; m++)
-					scalarmodeSlider[t][m].setValue(0);
+					scalarmodeSliders[t][m].setValue(0);
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < magmodePerType[t]; m++)
-					magmodeSlider[t][m].setValue(0);
+					magmodeSliders[t][m].setValue(0);
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < rotmodePerType[t]; m++)
-					rotmodeSlider[t][m].setValue(0);
+					rotmodeSliders[t][m].setValue(0);
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < ellipmodePerType[t]; m++)
-					ellipmodeSlider[t][m].setValue(0);
+					ellipsemodeSliders[t][m].setValue(0);
 			for (int m = 0; m < strainmodeNum; m++)
 				strainmodeSlider[m].setValue(0);
 			for (int m = 0; m < numIrreps; m++)
@@ -2123,45 +2111,53 @@ public class Variables implements ChangeListener {
 		}
 
 		void resetSliders() {
-			masterSlider.setValue(sliderMax);
+			superSlider.setValue(sliderMax);
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < dispmodePerType[t]; m++)
-					dispmodeSlider[t][m].setValue((int) ((dispmodeInitAmp[t][m] / dispmodeMaxAmp[t][m]) * sliderMax));
+					dispmodeSliders[t][m].setValue((int) ((dispmodeInitAmp[t][m] / dispmodeMaxAmp[t][m]) * sliderMax));
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < scalarmodePerType[t]; m++)
-					scalarmodeSlider[t][m].setValue((int) ((scalarmodeInitAmp[t][m] / scalarmodeMaxAmp[t][m]) * sliderMax));
+					scalarmodeSliders[t][m].setValue((int) ((scalarmodeInitAmp[t][m] / scalarmodeMaxAmp[t][m]) * sliderMax));
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < magmodePerType[t]; m++)
-					magmodeSlider[t][m].setValue((int) ((magmodeInitAmp[t][m] / magmodeMaxAmp[t][m]) * sliderMax));
+					magmodeSliders[t][m].setValue((int) ((magmodeInitAmp[t][m] / magmodeMaxAmp[t][m]) * sliderMax));
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < rotmodePerType[t]; m++)
-					rotmodeSlider[t][m].setValue((int) ((rotmodeInitAmp[t][m] / rotmodeMaxAmp[t][m]) * sliderMax));
+					rotmodeSliders[t][m].setValue((int) ((rotmodeInitAmp[t][m] / rotmodeMaxAmp[t][m]) * sliderMax));
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < ellipmodePerType[t]; m++)
-					ellipmodeSlider[t][m].setValue((int) ((ellipmodeInitAmp[t][m] / ellipmodeMaxAmp[t][m]) * sliderMax));
+					ellipsemodeSliders[t][m].setValue((int) ((ellipmodeInitAmp[t][m] / ellipmodeMaxAmp[t][m]) * sliderMax));
 			for (int m = 0; m < strainmodeNum; m++)
 				strainmodeSlider[m].setValue((int) ((strainmodeInitAmp[m] / strainmodeMaxAmp[m]) * sliderMax));
 			for (int m = 0; m < numIrreps; m++)
 				irrepmodeSlider[m].setValue(sliderMax);
 		}
 
-		void setSlidersFrom(Variables v) {
-			masterSlider.setValue(v.gui.sliderMax);
+		void setComponentValuesFrom(Variables v) {
+	
+			for (int t = subTypeBoxes.length; --t >= 0;) {
+				JCheckBox[] boxes = subTypeBoxes[t];
+				for (int s = boxes.length; --s >= 0;) {
+					boxes[s].setSelected(v.gui.subTypeBoxes[t][s].isSelected());
+				}
+			}
+			
+			superSlider.setValue(v.gui.sliderMax);
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < dispmodePerType[t]; m++)
-					dispmodeSlider[t][m].setValue((int) v.gui.dispmodeSlider[t][m].getValue());
+					dispmodeSliders[t][m].setValue((int) v.gui.dispmodeSliders[t][m].getValue());
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < scalarmodePerType[t]; m++)
-					scalarmodeSlider[t][m].setValue((int) v.gui.scalarmodeSlider[t][m].getValue());
+					scalarmodeSliders[t][m].setValue((int) v.gui.scalarmodeSliders[t][m].getValue());
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < magmodePerType[t]; m++)
-					magmodeSlider[t][m].setValue((int) v.gui.magmodeSlider[t][m].getValue());
+					magmodeSliders[t][m].setValue((int) v.gui.magmodeSliders[t][m].getValue());
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < rotmodePerType[t]; m++)
-					rotmodeSlider[t][m].setValue((int) v.gui.rotmodeSlider[t][m].getValue());
+					rotmodeSliders[t][m].setValue((int) v.gui.rotmodeSliders[t][m].getValue());
 			for (int t = 0; t < numTypes; t++)
 				for (int m = 0; m < ellipmodePerType[t]; m++)
-					ellipmodeSlider[t][m].setValue((int) v.gui.ellipmodeSlider[t][m].getValue());
+					ellipsemodeSliders[t][m].setValue((int) v.gui.ellipsemodeSliders[t][m].getValue());
 			for (int m = 0; m < strainmodeNum; m++)
 				strainmodeSlider[m].setValue((int) v.gui.strainmodeSlider[m].getValue());
 			for (int m = 0; m < numIrreps; m++)
@@ -2171,8 +2167,8 @@ public class Variables implements ChangeListener {
 		void readSliders() {
 			double d;
 
-			masterSliderVal = masterSlider.getValue() / sliderMaxVal;
-			masterSliderLabel.setText(varToString(masterSliderVal, 2, -8) + "  Master Slider");
+			superSliderVal = superSlider.getValue() / sliderMaxVal;
+			superSliderLabel.setText(varToString(superSliderVal, 2, -8) + "                    super");
 			// change the master label to
 			// display the new amplitude
 			// value
@@ -2181,39 +2177,39 @@ public class Variables implements ChangeListener {
 			{
 				for (int m = 0; m < dispmodePerType[t]; m++)// iterate through types of modes
 				{
-					dispmodeSliderVal[t][m] = dispmodeMaxAmp[t][m] * (dispmodeSlider[t][m].getValue() / sliderMaxVal);
-					d = dispmodeSliderVal[t][m] * irrepmodeSliderVal[dispmodeIrrep[t][m]] * masterSliderVal;
-					dispmodeSliderLabel[t][m].setText(varToString(d, 2, -8) + "  " + dispmodeName[t][m]);
+					dispmodeSliderVals[t][m] = dispmodeMaxAmp[t][m] * (dispmodeSliders[t][m].getValue() / sliderMaxVal);
+					d = dispmodeSliderVals[t][m] * irrepmodeSliderVal[dispmodeIrrep[t][m]] * superSliderVal;
+					dispmodeSliderLabels[t][m].setText(varToString(d, 2, -8) + "  " + dispmodeName[t][m]);
 				}
 				for (int m = 0; m < scalarmodePerType[t]; m++)// iterate through types of modes
 				{
-					scalarmodeSliderVal[t][m] = scalarmodeMaxAmp[t][m] * (scalarmodeSlider[t][m].getValue() / sliderMaxVal);
-					d = scalarmodeSliderVal[t][m] * irrepmodeSliderVal[scalarmodeIrrep[t][m]] * masterSliderVal;
-					scalarmodeSliderLabel[t][m].setText(varToString(d, 2, -8) + "  " + scalarmodeName[t][m]);
+					scalarmodeSliderVals[t][m] = scalarmodeMaxAmp[t][m] * (scalarmodeSliders[t][m].getValue() / sliderMaxVal);
+					d = scalarmodeSliderVals[t][m] * irrepmodeSliderVal[scalarmodeIrrep[t][m]] * superSliderVal;
+					scalarmodeSliderLabels[t][m].setText(varToString(d, 2, -8) + "  " + scalarmodeName[t][m]);
 				}
 				for (int m = 0; m < magmodePerType[t]; m++)// iterate through types of modes
 				{
-					magmodeSliderVal[t][m] = magmodeMaxAmp[t][m] * (magmodeSlider[t][m].getValue() / sliderMaxVal);
-					d = magmodeSliderVal[t][m] * irrepmodeSliderVal[magmodeIrrep[t][m]] * masterSliderVal;
-					magmodeSliderLabel[t][m].setText(varToString(d, 2, -8) + "  " + magmodeName[t][m]);
+					magmodeSliderVals[t][m] = magmodeMaxAmp[t][m] * (magmodeSliders[t][m].getValue() / sliderMaxVal);
+					d = magmodeSliderVals[t][m] * irrepmodeSliderVal[magmodeIrrep[t][m]] * superSliderVal;
+					magmodeSliderLabels[t][m].setText(varToString(d, 2, -8) + "  " + magmodeName[t][m]);
 				}
 				for (int m = 0; m < rotmodePerType[t]; m++)// iterate through types of modes
 				{
-					rotmodeSliderVal[t][m] = rotmodeMaxAmp[t][m] * (rotmodeSlider[t][m].getValue() / sliderMaxVal);
-					d = rotmodeSliderVal[t][m] * irrepmodeSliderVal[rotmodeIrrep[t][m]] * masterSliderVal;
-					rotmodeSliderLabel[t][m].setText(varToString(d, 2, -8) + "  " + rotmodeName[t][m]);
+					rotmodeSliderVals[t][m] = rotmodeMaxAmp[t][m] * (rotmodeSliders[t][m].getValue() / sliderMaxVal);
+					d = rotmodeSliderVals[t][m] * irrepmodeSliderVal[rotmodeIrrep[t][m]] * superSliderVal;
+					rotmodeSliderLabels[t][m].setText(varToString(d, 2, -8) + "  " + rotmodeName[t][m]);
 				}
 				for (int m = 0; m < ellipmodePerType[t]; m++)// iterate through types of modes
 				{
-					ellipmodeSliderVal[t][m] = ellipmodeMaxAmp[t][m] * (ellipmodeSlider[t][m].getValue() / sliderMaxVal);
-					d = ellipmodeSliderVal[t][m] * irrepmodeSliderVal[ellipmodeIrrep[t][m]] * masterSliderVal;
-					ellipmodeSliderLabel[t][m].setText(varToString(d, 2, -8) + "  " + ellipmodeName[t][m]);
+					ellipmodeSliderVals[t][m] = ellipmodeMaxAmp[t][m] * (ellipsemodeSliders[t][m].getValue() / sliderMaxVal);
+					d = ellipmodeSliderVals[t][m] * irrepmodeSliderVal[ellipmodeIrrep[t][m]] * superSliderVal;
+					ellipmodeSliderLabels[t][m].setText(varToString(d, 2, -8) + "  " + ellipmodeName[t][m]);
 				}
 			}
 			for (int m = 0; m < strainmodeNum; m++)// iterate through strain modes
 			{
 				strainmodeSliderVal[m] = strainmodeMaxAmp[m] * (strainmodeSlider[m].getValue() / sliderMaxVal);
-				d = strainmodeSliderVal[m] * irrepmodeSliderVal[strainmodeIrrep[m]] * masterSliderVal;
+				d = strainmodeSliderVal[m] * irrepmodeSliderVal[strainmodeIrrep[m]] * superSliderVal;
 				strainmodeSliderLabel[m].setText(varToString(d, 3, -8) + "  " + strainmodeName[m]);
 			}
 			for (int m = 0; m < numIrreps; m++)// iterate through strain modes
@@ -2265,83 +2261,82 @@ public class Variables implements ChangeListener {
 			sliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, rowNumber * barheight));
 		}
 
+		private int sliderWidth;
+		
 		private void addControls(JPanel sliderPanel, JPanel controlPanel, int sliderPanelWidth, int rowNumber) {
-			int sliderWidth = sliderPanelWidth / 2;
+		
+			sliderWidth = sliderPanelWidth / 2;
 
 			// Master Slider Panel
-			masterSliderLabel = new JLabel();// label for master slider bar
-			masterSliderLabel.setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of master slider bar's
+			superSliderLabel = new JLabel();// label for master slider bar
+			superSliderLabel.setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of master slider bar's
 																							// label
-			masterSliderLabel.setBackground(Color.WHITE);
-			masterSliderLabel.setForeground(Color.BLACK);
-			masterSliderLabel.setHorizontalAlignment(JLabel.CENTER);
-			masterSliderLabel.setVerticalAlignment(JLabel.CENTER);
-
-			masterSlider = new JSlider(JSlider.HORIZONTAL, 0, sliderMax, sliderMax);
-			masterSlider.setPreferredSize(new Dimension(sliderWidth, barheight));// size of slider labels
-			masterSlider.setBackground(Color.WHITE);// color of master slider bar
-			masterSlider.addChangeListener(Variables.this);// add to it a listener for slider value changes
-			masterSlider.setFocusable(false);
-
+			superSliderLabel.setBackground(Color.WHITE);
+			superSliderLabel.setForeground(Color.BLACK);
+			superSliderLabel.setHorizontalAlignment(JLabel.CENTER);
+			superSliderLabel.setVerticalAlignment(JLabel.CENTER);
+			superSlider = newSlider("super", 0, sliderMax, sliderMax, Color.WHITE);
+			
 			masterSliderPanel = new JPanel(new GridLayout(1, 2));
 			masterSliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
 			masterSliderPanel.setBackground(Color.WHITE);
-			masterSliderPanel.add(masterSlider);// add master slider bar to left panel
-			masterSliderPanel.add(masterSliderLabel);// add master slider bar's label to right panel
+			masterSliderPanel.add(new JLabel("parent"));// add master slider bar to left panel
+			masterSliderPanel.add(superSlider);// add master slider bar to left panel
+			masterSliderPanel.add(superSliderLabel);// add master slider bar's label to right panel
 
 			sliderPanel.add(masterSliderPanel);// add master slider bar to top of scrollPanel
 
 			// Initialize type-specific subpanels of scrollPanel
 			typeLabel = new JLabel[numTypes];
-			typeNamePanel = new JPanel[numTypes];
-			typeDataPanel = new JPanel[numTypes];
-			subTypeBox = new JCheckBox[numTypes][];
-			subTypeLabel = new JLabel[numTypes][];
+			typeNamePanels = new JPanel[numTypes];
+			typeDataPanels = new JPanel[numTypes];
+			subTypeBoxes = new JCheckBox[numTypes][];
+			subTypeLabels = new JLabel[numTypes][];
 
-			dispPanel = new JPanel[numTypes];
-			dispmodeSlider = new JSlider[numTypes][];// creates the array of slider bars
-			dispmodeSliderLabel = new JLabel[numTypes][];// creates array of labels
-			dispmodeSliderVal = new double[numTypes][];
+			dispPanels = new JPanel[numTypes];
+			dispmodeSliders = new JSlider[numTypes][];// creates the array of slider bars
+			dispmodeSliderLabels = new JLabel[numTypes][];// creates array of labels
+			dispmodeSliderVals = new double[numTypes][];
 
-			scalarPanel = new JPanel[numTypes];
-			scalarmodeSlider = new JSlider[numTypes][];// creates the array of slider bars
-			scalarmodeSliderLabel = new JLabel[numTypes][];// creates array of labels
-			scalarmodeSliderVal = new double[numTypes][];
+			scalarPanels = new JPanel[numTypes];
+			scalarmodeSliders = new JSlider[numTypes][];// creates the array of slider bars
+			scalarmodeSliderLabels = new JLabel[numTypes][];// creates array of labels
+			scalarmodeSliderVals = new double[numTypes][];
 
-			magPanel = new JPanel[numTypes];
-			magmodeSlider = new JSlider[numTypes][];// creates the array of slider bars
-			magmodeSliderLabel = new JLabel[numTypes][];// creates array of labels
-			magmodeSliderVal = new double[numTypes][];
+			magPanels = new JPanel[numTypes];
+			magmodeSliders = new JSlider[numTypes][];// creates the array of slider bars
+			magmodeSliderLabels = new JLabel[numTypes][];// creates array of labels
+			magmodeSliderVals = new double[numTypes][];
 
-			rotPanel = new JPanel[numTypes];
-			rotmodeSlider = new JSlider[numTypes][];// creates the array of slider bars
-			rotmodeSliderLabel = new JLabel[numTypes][];// creates array of labels
-			rotmodeSliderVal = new double[numTypes][];
+			rotPanels = new JPanel[numTypes];
+			rotmodeSliders = new JSlider[numTypes][];// creates the array of slider bars
+			rotmodeSliderLabels = new JLabel[numTypes][];// creates array of labels
+			rotmodeSliderVals = new double[numTypes][];
 
-			ellipPanel = new JPanel[numTypes];
-			ellipmodeSlider = new JSlider[numTypes][];// creates the array of slider bars
-			ellipmodeSliderLabel = new JLabel[numTypes][];// creates array of labels
-			ellipmodeSliderVal = new double[numTypes][];
+			ellipsePanels = new JPanel[numTypes];
+			ellipsemodeSliders = new JSlider[numTypes][];// creates the array of slider bars
+			ellipmodeSliderLabels = new JLabel[numTypes][];// creates array of labels
+			ellipmodeSliderVals = new double[numTypes][];
 
 			// The big loop over types
 			for (int t = 0; t < numTypes; t++) {
-				subTypeBox[t] = new JCheckBox[numSubTypes[t]];// initialize
-				subTypeLabel[t] = new JLabel[numSubTypes[t]];
-				dispmodeSlider[t] = new JSlider[dispmodePerType[t]];// creates the array of slider bars
-				dispmodeSliderLabel[t] = new JLabel[dispmodePerType[t]];// creates array of labels
-				dispmodeSliderVal[t] = new double[dispmodePerType[t]];
-				scalarmodeSlider[t] = new JSlider[scalarmodePerType[t]];// creates the array of slider bars
-				scalarmodeSliderLabel[t] = new JLabel[scalarmodePerType[t]];// creates array of labels
-				scalarmodeSliderVal[t] = new double[scalarmodePerType[t]];
-				magmodeSlider[t] = new JSlider[magmodePerType[t]];// creates the array of slider bars
-				magmodeSliderLabel[t] = new JLabel[magmodePerType[t]];// creates array of labels
-				magmodeSliderVal[t] = new double[magmodePerType[t]];
-				rotmodeSlider[t] = new JSlider[rotmodePerType[t]];// creates the array of slider bars
-				rotmodeSliderLabel[t] = new JLabel[rotmodePerType[t]];// creates array of labels
-				rotmodeSliderVal[t] = new double[rotmodePerType[t]];
-				ellipmodeSlider[t] = new JSlider[ellipmodePerType[t]];// creates the array of slider bars
-				ellipmodeSliderLabel[t] = new JLabel[ellipmodePerType[t]];// creates array of labels
-				ellipmodeSliderVal[t] = new double[ellipmodePerType[t]];
+				subTypeBoxes[t] = new JCheckBox[numSubTypes[t]];// initialize
+				subTypeLabels[t] = new JLabel[numSubTypes[t]];
+				dispmodeSliders[t] = new JSlider[dispmodePerType[t]];// creates the array of slider bars
+				dispmodeSliderLabels[t] = new JLabel[dispmodePerType[t]];// creates array of labels
+				dispmodeSliderVals[t] = new double[dispmodePerType[t]];
+				scalarmodeSliders[t] = new JSlider[scalarmodePerType[t]];// creates the array of slider bars
+				scalarmodeSliderLabels[t] = new JLabel[scalarmodePerType[t]];// creates array of labels
+				scalarmodeSliderVals[t] = new double[scalarmodePerType[t]];
+				magmodeSliders[t] = new JSlider[magmodePerType[t]];// creates the array of slider bars
+				magmodeSliderLabels[t] = new JLabel[magmodePerType[t]];// creates array of labels
+				magmodeSliderVals[t] = new double[magmodePerType[t]];
+				rotmodeSliders[t] = new JSlider[rotmodePerType[t]];// creates the array of slider bars
+				rotmodeSliderLabels[t] = new JLabel[rotmodePerType[t]];// creates array of labels
+				rotmodeSliderVals[t] = new double[rotmodePerType[t]];
+				ellipsemodeSliders[t] = new JSlider[ellipmodePerType[t]];// creates the array of slider bars
+				ellipmodeSliderLabels[t] = new JLabel[ellipmodePerType[t]];// creates array of labels
+				ellipmodeSliderVals[t] = new double[ellipmodePerType[t]];
 				Color c = color[t];
 				// typeNamePanel
 				typeLabel[t] = new JLabel();
@@ -2351,203 +2346,166 @@ public class Variables implements ChangeListener {
 				typeLabel[t].setForeground(Color.WHITE);
 				typeLabel[t].setHorizontalAlignment(JLabel.CENTER);
 				typeLabel[t].setVerticalAlignment(JLabel.CENTER);
-				typeNamePanel[t] = new JPanel(new GridLayout(1, 1, 0, 0));// make a new panel to hold color/checkboxes and label
-				typeNamePanel[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-				typeNamePanel[t].setBackground(c);
-				typeNamePanel[t].add(typeLabel[t]);
+				typeNamePanels[t] = new JPanel(new GridLayout(1, 1, 0, 0));// make a new panel to hold color/checkboxes and label
+				typeNamePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight));
+				typeNamePanels[t].setBackground(c);
+				typeNamePanels[t].add(typeLabel[t]);
 //				System.out.println("t: "+t+", numSubTypes[t]: "+numSubTypes[t]+", boxesPerRow[t]: "+boxesPerRow[t]+", numCheckRows[t]: "+numCheckRows[t]);
 
-				sliderPanel.add(typeNamePanel[t]);
+				sliderPanel.add(typeNamePanels[t]);
 
 				// typeDataPanel
-				typeDataPanel[t] = new JPanel(new GridLayout(numSubRows[t], subTypesPerRow[t], 0, 0));
-				typeDataPanel[t].setPreferredSize(new Dimension(sliderPanelWidth, numSubRows[t] * barheight));
-				typeDataPanel[t].setBackground(c);
+				typeDataPanels[t] = new JPanel(new GridLayout(numSubRows[t], subTypesPerRow[t], 0, 0));
+				typeDataPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, numSubRows[t] * barheight));
+				typeDataPanels[t].setBackground(c);
 				for (int s = 0; s < numSubTypes[t]; s++) {
-					subTypeBox[t][s] = new JCheckBox("");
-					subTypeBox[t][s].setPreferredSize(new Dimension(subTypeBoxWidth, barheight));
-					subTypeBox[t][s].setFocusable(false);
-					subTypeBox[t][s].setBackground(c);
-					subTypeBox[t][s].setForeground(Color.WHITE);
-					subTypeBox[t][s].setHorizontalAlignment(JCheckBox.LEFT);
-//					subTypeBox[t][s].setVerticalAlignment(JCheckBox.CENTER);
-					subTypeBox[t][s].addItemListener(app.buttonListener);
-					subTypeBox[t][s].setVisible(!isDiffraction);
-					subTypeLabel[t][s] = new JLabel();
-					subTypeLabel[t][s].setPreferredSize(new Dimension(subTypeWidth - subTypeBoxWidth, barheight));
-					subTypeLabel[t][s].setBackground(c);
-					subTypeLabel[t][s].setForeground(Color.WHITE);
-					subTypeLabel[t][s].setHorizontalAlignment(JLabel.LEFT);
-//					subTypeLabel[t][s].setVerticalAlignment(JLabel.TOP);
+					subTypeBoxes[t][s] = newCheckbox("subType_" + t + "_" + s, c);
+					subTypeLabels[t][s] = new JLabel();
+					subTypeLabels[t][s].setPreferredSize(new Dimension(subTypeWidth - subTypeBoxWidth, barheight));
+					subTypeLabels[t][s].setBackground(c);
+					subTypeLabels[t][s].setForeground(Color.WHITE);
+					subTypeLabels[t][s].setHorizontalAlignment(JLabel.LEFT);
 					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
 					p.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
 					p.setBackground(c);			        
-					p.add(subTypeBox[t][s]);
-					p.add(subTypeLabel[t][s]);
-					typeDataPanel[t].add(p);
-					
-//					
-//					typeDataPanel[t].add(subTypeBox[t][s]);
-//					typeDataPanel[t].add(subTypeLabel[t][s]);
-
+					p.add(subTypeBoxes[t][s]);
+					p.add(subTypeLabels[t][s]);
+					typeDataPanels[t].add(p);
 				}
 				for (int s = numSubTypes[t]; s < numSubRows[t] * subTypesPerRow[t]; s++)
-					typeDataPanel[t].add(new JLabel("")); // Makes sure that each subtype row is full for allignment
+					typeDataPanels[t].add(new JLabel("")); // Makes sure that each subtype row is full for allignment
 															// purposes
 
-				sliderPanel.add(typeDataPanel[t]);
+				sliderPanel.add(typeDataPanels[t]);
 
-				// dispPanel
-				dispPanel[t] = new JPanel(new GridLayout(dispmodePerType[t], 2, 0, 0));
-				dispPanel[t].setPreferredSize(new Dimension(sliderPanelWidth, dispmodePerType[t] * barheight));
-				// size of
-																												// slider
+				dispPanels[t] = new JPanel(new GridLayout(dispmodePerType[t], 2, 0, 0));
+				dispPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, dispmodePerType[t] * barheight));
 																												// labels
-				dispPanel[t].setBackground(c);
+				dispPanels[t].setBackground(c);
 				for (int m = 0; m < dispmodePerType[t]; m++)// iterate through array of slider bars
 				{
-					dispmodeSliderLabel[t][m] = new JLabel();// add label to left panel
-					dispmodeSliderLabel[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
+					dispmodeSliderLabels[t][m] = new JLabel();// add label to left panel
+					dispmodeSliderLabels[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
 																											// labels
-					dispmodeSliderLabel[t][m].setBackground(c);// color labels
-					dispmodeSliderLabel[t][m].setForeground(Color.WHITE);// color labels
-					dispmodeSliderLabel[t][m].setHorizontalAlignment(JLabel.LEFT);
-					dispmodeSliderLabel[t][m].setVerticalAlignment(JLabel.CENTER);
+					dispmodeSliderLabels[t][m].setBackground(c);// color labels
+					dispmodeSliderLabels[t][m].setForeground(Color.WHITE);// color labels
+					dispmodeSliderLabels[t][m].setHorizontalAlignment(JLabel.LEFT);
+					dispmodeSliderLabels[t][m].setVerticalAlignment(JLabel.CENTER);
 
-					dispmodeSlider[t][m] = new JSlider(JSlider.HORIZONTAL, -(int) sliderMax, (int) sliderMax,
-							(int) ((dispmodeInitAmp[t][m] / dispmodeMaxAmp[t][m]) * sliderMax));// put a slider bar in the
-																								// ith slot
-					dispmodeSlider[t][m].setPreferredSize(new Dimension(sliderWidth, barheight));// size of slider labels
-					dispmodeSlider[t][m].setBackground(c);// set the slider bar's color
-					dispmodeSlider[t][m].addChangeListener(Variables.this);// add to it a listener for slider value changes
-					dispmodeSlider[t][m].setFocusable(false);
-
-					dispPanel[t].add(dispmodeSlider[t][m]);// add slider bar to left of modePanel
-					dispPanel[t].add(dispmodeSliderLabel[t][m]);// add slider bar to left of modePanel
+					dispmodeSliders[t][m] = newSlider("disp_"+t+"_" + m, -(int) sliderMax, (int) sliderMax,
+							(int) ((dispmodeInitAmp[t][m] / dispmodeMaxAmp[t][m]) * sliderMax), c);
+					
+					dispPanels[t].add(dispmodeSliders[t][m]);// add slider bar to left of modePanel
+					dispPanels[t].add(dispmodeSliderLabels[t][m]);// add slider bar to left of modePanel
 				}
 
-				sliderPanel.add(dispPanel[t]);// add this modePanel to scrollPanel
+				sliderPanel.add(dispPanels[t]);// add this modePanel to scrollPanel
 
 				// scalarPanel
-				scalarPanel[t] = new JPanel(new GridLayout(scalarmodePerType[t], 2, 0, 0));
-				scalarPanel[t].setPreferredSize(new Dimension(sliderPanelWidth, scalarmodePerType[t] * barheight));// size
+				scalarPanels[t] = new JPanel(new GridLayout(scalarmodePerType[t], 2, 0, 0));
+				scalarPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, scalarmodePerType[t] * barheight));// size
 																													// of
 																													// slider
 																													// labels
-				scalarPanel[t].setBackground(scalarcolor[t]);
+				scalarPanels[t].setBackground(scalarcolor[t]);
+				Color color = scalarcolor[t];
+
 				for (int m = 0; m < scalarmodePerType[t]; m++)// iterate through array of slider bars
 				{
-					scalarmodeSliderLabel[t][m] = new JLabel();// add label to left panel
-					scalarmodeSliderLabel[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of
+					scalarmodeSliderLabels[t][m] = new JLabel();// add label to left panel
+					scalarmodeSliderLabels[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of
 																												// slider
 																												// labels
-					scalarmodeSliderLabel[t][m].setBackground(scalarcolor[t]);// color labels
-					scalarmodeSliderLabel[t][m].setForeground(Color.WHITE);// color labels
-					scalarmodeSliderLabel[t][m].setHorizontalAlignment(JLabel.LEFT);
-					scalarmodeSliderLabel[t][m].setVerticalAlignment(JLabel.CENTER);
-					scalarmodeSlider[t][m] = new JSlider(JSlider.HORIZONTAL, -(int) sliderMax, (int) sliderMax,
-							(int) ((scalarmodeInitAmp[t][m] / scalarmodeMaxAmp[t][m]) * sliderMax));// put a slider bar in
-																									// the ith slot
-					scalarmodeSlider[t][m].setPreferredSize(new Dimension(sliderWidth, barheight));// size of slider labels
-					scalarmodeSlider[t][m].setBackground(scalarcolor[t]);// set the slider bar's color
-					scalarmodeSlider[t][m].addChangeListener(Variables.this);// add to it a listener for slider value changes
-					scalarmodeSlider[t][m].setFocusable(false);
-
-					scalarPanel[t].add(scalarmodeSlider[t][m]);// add slider bar to left of modePanel
-					scalarPanel[t].add(scalarmodeSliderLabel[t][m]);// add slider bar to right of modePanel
+					scalarmodeSliderLabels[t][m].setBackground(scalarcolor[t]);// color labels
+					scalarmodeSliderLabels[t][m].setForeground(Color.WHITE);// color labels
+					scalarmodeSliderLabels[t][m].setHorizontalAlignment(JLabel.LEFT);
+					scalarmodeSliderLabels[t][m].setVerticalAlignment(JLabel.CENTER);
+					scalarmodeSliders[t][m] = newSlider("scalar_"+t+"_" + m,  -(int) sliderMax, (int) sliderMax,
+							(int) ((scalarmodeInitAmp[t][m] / scalarmodeMaxAmp[t][m]) * sliderMax), color);
+					
+					scalarPanels[t].add(scalarmodeSliders[t][m]);// add slider bar to left of modePanel
+					scalarPanels[t].add(scalarmodeSliderLabels[t][m]);// add slider bar to right of modePanel
 				}
 
-				sliderPanel.add(scalarPanel[t]);// add this modePanel to scrollPanel
+				sliderPanel.add(scalarPanels[t]);// add this modePanel to scrollPanel
 
 				// magPanel
-				magPanel[t] = new JPanel(new GridLayout(magmodePerType[t], 2, 0, 0));
-				magPanel[t].setPreferredSize(new Dimension(sliderPanelWidth, magmodePerType[t] * barheight));// size of
+				magPanels[t] = new JPanel(new GridLayout(magmodePerType[t], 2, 0, 0));
+				magPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, magmodePerType[t] * barheight));// size of
 																												// slider
 																												// labels
-				magPanel[t].setBackground(magcolor[t]);
+				magPanels[t].setBackground(magcolor[t]);
+				color = magcolor[t];
 				for (int m = 0; m < magmodePerType[t]; m++)// iterate through array of slider bars
 				{
-					magmodeSliderLabel[t][m] = new JLabel();// add label to left panel
-					magmodeSliderLabel[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
+					magmodeSliderLabels[t][m] = new JLabel();// add label to left panel
+					magmodeSliderLabels[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
 																											// labels
-					magmodeSliderLabel[t][m].setBackground(magcolor[t]);// color labels
-					magmodeSliderLabel[t][m].setForeground(Color.WHITE);// color labels
-					magmodeSliderLabel[t][m].setHorizontalAlignment(JLabel.LEFT);
-					magmodeSliderLabel[t][m].setVerticalAlignment(JLabel.CENTER);
+					magmodeSliderLabels[t][m].setBackground(magcolor[t]);// color labels
+					magmodeSliderLabels[t][m].setForeground(Color.WHITE);// color labels
+					magmodeSliderLabels[t][m].setHorizontalAlignment(JLabel.LEFT);
+					magmodeSliderLabels[t][m].setVerticalAlignment(JLabel.CENTER);
 
-					magmodeSlider[t][m] = new JSlider(JSlider.HORIZONTAL, -(int) sliderMax, (int) sliderMax,
-							(int) ((magmodeInitAmp[t][m] / magmodeMaxAmp[t][m]) * sliderMax));// put a slider bar in the ith
-																								// slot
-					magmodeSlider[t][m].setPreferredSize(new Dimension(sliderWidth, barheight));// size of slider labels
-					magmodeSlider[t][m].setBackground(magcolor[t]);// set the slider bar's color
-					magmodeSlider[t][m].addChangeListener(Variables.this);// add to it a listener for slider value changes
-					magmodeSlider[t][m].setFocusable(false);
+					magmodeSliders[t][m] = newSlider("mag_"+t+"_" + m, -(int) sliderMax, (int) sliderMax,
+							(int) ((magmodeInitAmp[t][m] / magmodeMaxAmp[t][m]) * sliderMax), color);
 
-					magPanel[t].add(magmodeSlider[t][m]);// add slider bar to left of modePanel
-					magPanel[t].add(magmodeSliderLabel[t][m]);// add slider bar to left of modePanel
+					magPanels[t].add(magmodeSliders[t][m]);// add slider bar to left of modePanel
+					magPanels[t].add(magmodeSliderLabels[t][m]);// add slider bar to left of modePanel
 				}
 
-				sliderPanel.add(magPanel[t]);// add this modePanel to scrollPanel
+				sliderPanel.add(magPanels[t]);// add this modePanel to scrollPanel
 
 				// rotPanel
-				rotPanel[t] = new JPanel(new GridLayout(rotmodePerType[t], 2, 0, 0));
-				rotPanel[t].setPreferredSize(new Dimension(sliderPanelWidth, rotmodePerType[t] * barheight));// size of
+				rotPanels[t] = new JPanel(new GridLayout(rotmodePerType[t], 2, 0, 0));
+				rotPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, rotmodePerType[t] * barheight));// size of
 																												// slider
 																												// labels
-				rotPanel[t].setBackground(rotcolor[t]);
+				rotPanels[t].setBackground(rotcolor[t]);
+				color = rotcolor[t];
 				for (int m = 0; m < rotmodePerType[t]; m++)// iterate through array of slider bars
 				{
-					rotmodeSliderLabel[t][m] = new JLabel();// add label to left panel
-					rotmodeSliderLabel[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
+					rotmodeSliderLabels[t][m] = new JLabel();// add label to left panel
+					rotmodeSliderLabels[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
 																											// labels
-					rotmodeSliderLabel[t][m].setBackground(rotcolor[t]);// color labels
-					rotmodeSliderLabel[t][m].setForeground(Color.WHITE);// color labels
-					rotmodeSliderLabel[t][m].setHorizontalAlignment(JLabel.LEFT);
-					rotmodeSliderLabel[t][m].setVerticalAlignment(JLabel.CENTER);
+					rotmodeSliderLabels[t][m].setBackground(rotcolor[t]);// color labels
+					rotmodeSliderLabels[t][m].setForeground(Color.WHITE);// color labels
+					rotmodeSliderLabels[t][m].setHorizontalAlignment(JLabel.LEFT);
+					rotmodeSliderLabels[t][m].setVerticalAlignment(JLabel.CENTER);
 
-					rotmodeSlider[t][m] = new JSlider(JSlider.HORIZONTAL, -(int) sliderMax, (int) sliderMax,
-							(int) ((rotmodeInitAmp[t][m] / rotmodeMaxAmp[t][m]) * sliderMax));// put a slider bar in the ith
-																								// slot
-					rotmodeSlider[t][m].setPreferredSize(new Dimension(sliderWidth, barheight));// size of slider labels
-					rotmodeSlider[t][m].setBackground(rotcolor[t]);// set the slider bar's color
-					rotmodeSlider[t][m].addChangeListener(Variables.this);// add to it a listener for slider value changes
-					rotmodeSlider[t][m].setFocusable(false);
-
-					rotPanel[t].add(rotmodeSlider[t][m]);// add slider bar to left of modePanel
-					rotPanel[t].add(rotmodeSliderLabel[t][m]);// add slider bar to left of modePanel
+					rotmodeSliders[t][m] = newSlider("rot_"+t+"_" + m, -(int) sliderMax, (int) sliderMax,
+							(int) ((rotmodeInitAmp[t][m] / rotmodeMaxAmp[t][m]) * sliderMax), color);
+					
+					rotPanels[t].add(rotmodeSliders[t][m]);// add slider bar to left of modePanel
+					rotPanels[t].add(rotmodeSliderLabels[t][m]);// add slider bar to left of modePanel
 				}
 
-				sliderPanel.add(rotPanel[t]);// add this modePanel to scrollPanel
+				sliderPanel.add(rotPanels[t]);// add this modePanel to scrollPanel
 
 				// ellipPanel
-				ellipPanel[t] = new JPanel(new GridLayout(ellipmodePerType[t], 2, 0, 0));
-				ellipPanel[t].setPreferredSize(new Dimension(sliderPanelWidth, ellipmodePerType[t] * barheight));// size of
+				ellipsePanels[t] = new JPanel(new GridLayout(ellipmodePerType[t], 2, 0, 0));
+				ellipsePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, ellipmodePerType[t] * barheight));// size of
 																													// slider
 																													// labels
-				ellipPanel[t].setBackground(ellipcolor[t]);
+				ellipsePanels[t].setBackground(ellipcolor[t]);
+				color = ellipcolor[t];
 				for (int m = 0; m < ellipmodePerType[t]; m++)// iterate through array of slider bars
 				{
-					ellipmodeSliderLabel[t][m] = new JLabel();// add label to left panel
-					ellipmodeSliderLabel[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of
+					ellipmodeSliderLabels[t][m] = new JLabel();// add label to left panel
+					ellipmodeSliderLabels[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of
 																											// slider labels
-					ellipmodeSliderLabel[t][m].setBackground(ellipcolor[t]);// color labels
-					ellipmodeSliderLabel[t][m].setForeground(Color.WHITE);// color labels
-					ellipmodeSliderLabel[t][m].setHorizontalAlignment(JLabel.LEFT);
-					ellipmodeSliderLabel[t][m].setVerticalAlignment(JLabel.CENTER);
+					ellipmodeSliderLabels[t][m].setBackground(ellipcolor[t]);// color labels
+					ellipmodeSliderLabels[t][m].setForeground(Color.WHITE);// color labels
+					ellipmodeSliderLabels[t][m].setHorizontalAlignment(JLabel.LEFT);
+					ellipmodeSliderLabels[t][m].setVerticalAlignment(JLabel.CENTER);
 
-					ellipmodeSlider[t][m] = new JSlider(JSlider.HORIZONTAL, -(int) sliderMax, (int) sliderMax,
-							(int) ((ellipmodeInitAmp[t][m] / ellipmodeMaxAmp[t][m]) * sliderMax));// put a slider bar in the
-																									// ith slot
-					ellipmodeSlider[t][m].setPreferredSize(new Dimension(sliderWidth, barheight));// size of slider labels
-					ellipmodeSlider[t][m].setBackground(ellipcolor[t]);// set the slider bar's color
-					ellipmodeSlider[t][m].addChangeListener(Variables.this);// add to it a listener for slider value changes
-					ellipmodeSlider[t][m].setFocusable(false);
+					ellipsemodeSliders[t][m] = newSlider("ellipse_" + t + "_" + m, -(int) sliderMax, (int) sliderMax,
+							(int) ((ellipmodeInitAmp[t][m] / ellipmodeMaxAmp[t][m]) * sliderMax), color);
 
-					ellipPanel[t].add(ellipmodeSlider[t][m]);// add slider bar to left of modePanel
-					ellipPanel[t].add(ellipmodeSliderLabel[t][m]);// add slider bar to left of modePanel
+					ellipsePanels[t].add(ellipsemodeSliders[t][m]);// add slider bar to left of modePanel
+					ellipsePanels[t].add(ellipmodeSliderLabels[t][m]);// add slider bar to left of modePanel
 				}
 
-				sliderPanel.add(ellipPanel[t]);// add this modePanel to scrollPanel
+				sliderPanel.add(ellipsePanels[t]);// add this modePanel to scrollPanel
 			}
 
 			// strainTitlePanel
@@ -2625,13 +2583,8 @@ public class Variables implements ChangeListener {
 				strainmodeSliderLabel[m].setHorizontalAlignment(JLabel.LEFT);
 				strainmodeSliderLabel[m].setVerticalAlignment(JLabel.CENTER);
 
-				strainmodeSlider[m] = new JSlider(JSlider.HORIZONTAL, -(int) sliderMax, (int) sliderMax,
-						(int) ((strainmodeInitAmp[m] / strainmodeMaxAmp[m]) * sliderMax));// put a slider bar in the ith
-																							// slot
-				strainmodeSlider[m].setPreferredSize(new Dimension(sliderWidth, barheight));
-				strainmodeSlider[m].setBackground(Color.DARK_GRAY);// set the slider bar's color
-				strainmodeSlider[m].addChangeListener(Variables.this);// add to it a listener for slider value changes
-				strainmodeSlider[m].setFocusable(false);
+				strainmodeSlider[m] = newSlider("strain_" + m, -(int) sliderMax, (int) sliderMax,
+						(int) ((strainmodeInitAmp[m] / strainmodeMaxAmp[m]) * sliderMax), Color.DARK_GRAY);
 
 				strainPanel.add(strainmodeSlider[m]);// add slider bar to left of modePanel
 				strainPanel.add(strainmodeSliderLabel[m]);// add slider bar's label to right of modePanel
@@ -2671,12 +2624,7 @@ public class Variables implements ChangeListener {
 				irrepmodeSliderLabel[m].setHorizontalAlignment(JLabel.LEFT);
 				irrepmodeSliderLabel[m].setVerticalAlignment(JLabel.CENTER);
 
-				irrepmodeSlider[m] = new JSlider(JSlider.HORIZONTAL, 0, (int) sliderMax, sliderMax);// put a slider bar in
-																									// the ith slot
-				irrepmodeSlider[m].setPreferredSize(new Dimension(sliderWidth, barheight));
-				irrepmodeSlider[m].setBackground(Color.LIGHT_GRAY);// set the slider bar's color
-				irrepmodeSlider[m].addChangeListener(Variables.this);// add to it a listener for slider value changes
-				irrepmodeSlider[m].setFocusable(false);
+				irrepmodeSlider[m] = newSlider("irrep_" + m, 0, (int) sliderMax, sliderMax, Color.LIGHT_GRAY);
 
 				irrepPanel.add(irrepmodeSlider[m]);// add slider bar to left of modePanel
 				irrepPanel.add(irrepmodeSliderLabel[m]);// add slider bar's label to right of modePanel
@@ -2684,6 +2632,44 @@ public class Variables implements ChangeListener {
 				sliderPanel.add(irrepPanel);// add this modePanel to scrollPanel
 			}
 		}
+
+		private JCheckBox newCheckbox(String name, Color c) {
+			JCheckBox b = new JCheckBox("");
+			b.setName(name);
+			b.setPreferredSize(new Dimension(subTypeBoxWidth, barheight));
+			b.setFocusable(false);
+			b.setBackground(c);
+			b.setForeground(Color.WHITE);
+			b.setHorizontalAlignment(JCheckBox.LEFT);
+			b.setVerticalAlignment(JCheckBox.CENTER);
+			b.addItemListener(app.buttonListener);
+			b.setVisible(!isDiffraction);
+			return b;
+		}
+
+		private JSlider newSlider(String name, int min, int max, int val, Color color) {
+			JSlider s = new JSlider(JSlider.HORIZONTAL, min, max, val);
+			s.setName(name);
+			s.setPreferredSize(new Dimension(sliderWidth, barheight));// size of slider labels
+			if (color != null)
+				s.setBackground(color);
+			s.addChangeListener(this);
+			s.setFocusable(false);
+			return s;
+		}
+
+		/**
+		 * Listens for moving slider bars.
+		 */
+		@Override
+		public void stateChanged(ChangeEvent e)// called when a slider bar is moved
+		{
+			if (isAdjusting)
+				return;
+			isChanged = true;
+			app.updateDisplay();
+		}
+
 
 		void setLattLabels(double[] pLatt, double[] sLatt) {
 			// set the parent and supercell lattice parameter labels
@@ -2707,7 +2693,7 @@ public class Variables implements ChangeListener {
 		 * @param maxellip not implemented
 		 */
 		void setSubTypeText(int t, int s, double maxdisp, double avgocc, double maxmag, double maxrot, double maxellip) {
-			subTypeLabel[t][s].setText(" " + subTypeName[t][s] + "  [" + varToString(maxdisp, 2, -4) + ", "
+			subTypeLabels[t][s].setText(" " + subTypeName[t][s] + "  [" + varToString(maxdisp, 2, -4) + ", "
 					+ varToString(avgocc, 2, -4) + ", " + varToString(maxmag, 2, -4) + ", "
 					+ varToString(maxrot, 2, -4) + "]");
 		}
@@ -2723,13 +2709,13 @@ public class Variables implements ChangeListener {
 			if (currentListener != null) {
 				for (int t = 0; t < numTypes; t++)
 					for (int s = 0; s < numSubTypes[t]; s++)
-						subTypeBox[t][s].removeItemListener(currentListener);
+						subTypeBoxes[t][s].removeItemListener(currentListener);
 			}
 			currentListener = null;
 			if (l != null) {
 				for (int t = 0; t < numTypes; t++)
 					for (int s = 0; s < numSubTypes[t]; s++)
-						subTypeBox[t][s].addItemListener(l);
+						subTypeBoxes[t][s].addItemListener(l);
 			}
 		}
 
@@ -2742,15 +2728,15 @@ public class Variables implements ChangeListener {
 	}
 
 	public void setAnimationAmplitude(double animAmp) {
-		gui.masterSlider.setValue((int) Math.round(animAmp * gui.sliderMaxVal));
+		gui.superSlider.setValue((int) Math.round(animAmp * gui.sliderMaxVal));
 	}
 
 	public boolean isSubTypeSelected(int t, int s) {
-		return gui.subTypeBox[t][s].isSelected();
+		return gui.subTypeBoxes[t][s].isSelected();
 	}
 
 	public void setSubtypeSelected(int t, int s, boolean b) {
-		gui.subTypeBox[t][s].setSelected(b);
+		gui.subTypeBoxes[t][s].setSelected(b);
 	}
 
 	public void setSubtypesSelected(boolean b) {

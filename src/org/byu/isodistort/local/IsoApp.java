@@ -55,7 +55,7 @@ import org.byu.isodistort.IsoDistortApp;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".4";
+	final static String minorVersion = ".5";
 	
 	abstract protected void init();
 	

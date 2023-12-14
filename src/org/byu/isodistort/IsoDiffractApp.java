@@ -958,8 +958,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		
 		// Save the old strain slider values
 		variables.readSliders();
-		masterTemp = variables.masterSliderVal;
-		variables.masterSliderVal = 1;
+		masterTemp = variables.superSliderVal;
+		variables.superSliderVal = 1;
 		for (int m = 0; m < variables.strainmodeNum; m++)
 			strainTemp[m] = variables.strainmodeSliderVal[m];
 
@@ -978,7 +978,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		MathUtil.matcopy(metric, randommetric2);
 
 		// restore the strains to their original values
-		variables.masterSliderVal = masterTemp;
+		variables.superSliderVal = masterTemp;
 		for (int m = 0; m < variables.strainmodeNum; m++)
 			variables.strainmodeSliderVal[m] = strainTemp[m];
 
@@ -1091,13 +1091,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		if (peakCount > powderMaxVisiblePeaks)
 			peakCount = powderMaxVisiblePeaks;
 
-		masterTemp = variables.masterSliderVal;
-		variables.masterSliderVal = 0;
+		masterTemp = variables.superSliderVal;
+		variables.superSliderVal = 0;
 		isXrayTemp = isXray;
 		isXray = true;
 		recalcPowder();
 		isXray = isXrayTemp;
-		variables.masterSliderVal = masterTemp;
+		variables.superSliderVal = masterTemp;
 
 		// Calculate the x-ray powder-pattern scale factor
 		setPowderScaleFactor();
@@ -1501,24 +1501,24 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		}
 
 		// Save old masterSliderVal and set it to 1.0
-		masterTemp = variables.masterSliderVal;
-		variables.masterSliderVal = 1.0;
+		masterTemp = variables.superSliderVal;
+		variables.superSliderVal = 1.0;
 
 		// Save and zero all displacive, scalar and magnetic mode values
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.dispmodePerType[t]; m++) {
-				dispTemp[t][m] = variables.dispmodeSliderVal[t][m];
-				variables.dispmodeSliderVal[t][m] = 0;
+				dispTemp[t][m] = variables.dispmodeSliderVals[t][m];
+				variables.dispmodeSliderVals[t][m] = 0;
 			}
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.scalarmodePerType[t]; m++) {
-				scalarTemp[t][m] = variables.scalarmodeSliderVal[t][m];
-				variables.scalarmodeSliderVal[t][m] = 0;
+				scalarTemp[t][m] = variables.scalarmodeSliderVals[t][m];
+				variables.scalarmodeSliderVals[t][m] = 0;
 			}
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.magmodePerType[t]; m++) {
-				magTemp[t][m] = variables.magmodeSliderVal[t][m];
-				variables.magmodeSliderVal[t][m] = 0;
+				magTemp[t][m] = variables.magmodeSliderVals[t][m];
+				variables.magmodeSliderVals[t][m] = 0;
 			}
 
 		// Randomize all GM1 mode values
@@ -1527,20 +1527,20 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			for (int m = 0; m < variables.dispmodePerType[t]; m++)
 				if (variables.dispmodeName[t][m].startsWith("GM1")
 						&& !variables.dispmodeName[t][m].startsWith("GM1-")) {
-					variables.dispmodeSliderVal[t][m] = (2 * rval.nextFloat() - 1) * variables.dispmodeMaxAmp[t][m];
+					variables.dispmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.dispmodeMaxAmp[t][m];
 //					System.out.println(rd.dispmodeName[t][m]+" "+dispTemp[t][m]);
 				}
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.scalarmodePerType[t]; m++)
 				if (variables.scalarmodeName[t][m].startsWith("GM1")
 						&& !variables.scalarmodeName[t][m].startsWith("GM1-")) {
-					variables.scalarmodeSliderVal[t][m] = (2 * rval.nextFloat() - 1) * variables.scalarmodeMaxAmp[t][m];
+					variables.scalarmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.scalarmodeMaxAmp[t][m];
 //					System.out.println(scalarmodeName[t][m]+" "+scalarTemp[t][m]);
 				}
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.magmodePerType[t]; m++)
 				if (variables.magmodeName[t][m].startsWith("GM1") && !variables.magmodeName[t][m].startsWith("GM1-")) {
-					variables.magmodeSliderVal[t][m] = (2 * rval.nextFloat() - 1) * variables.magmodeMaxAmp[t][m];
+					variables.magmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.magmodeMaxAmp[t][m];
 //					System.out.println(rd.magmodeName[t][m]+" "+magTemp[t][m]);
 				}
 		variables.recalcDistortion();
@@ -1556,21 +1556,21 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			for (int m = 0; m < variables.dispmodePerType[t]; m++)
 				if (!(variables.dispmodeName[t][m].startsWith("GM1")
 						&& !variables.dispmodeName[t][m].startsWith("GM1-"))) {
-					variables.dispmodeSliderVal[t][m] = (2 * rval.nextFloat() - 1) * variables.dispmodeMaxAmp[t][m];
+					variables.dispmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.dispmodeMaxAmp[t][m];
 //					System.out.println(rd.dispmodeName[t][m]+" "+dispTemp[t][m]);
 				}
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.scalarmodePerType[t]; m++)
 				if (!(variables.scalarmodeName[t][m].startsWith("GM1")
 						&& !variables.scalarmodeName[t][m].startsWith("GM1-"))) {
-					variables.scalarmodeSliderVal[t][m] = (2 * rval.nextFloat() - 1) * variables.scalarmodeMaxAmp[t][m];
+					variables.scalarmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.scalarmodeMaxAmp[t][m];
 //					System.out.println(rd.scalarmodeName[t][m]+" "+scalarTemp[t][m]);
 				}
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.magmodePerType[t]; m++)
 				if (!(variables.magmodeName[t][m].startsWith("GM1")
 						&& !variables.magmodeName[t][m].startsWith("GM1-"))) {
-					variables.magmodeSliderVal[t][m] = (2 * rval.nextFloat() - 1) * variables.magmodeMaxAmp[t][m];
+					variables.magmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.magmodeMaxAmp[t][m];
 //					System.out.println(rd.magmodeName[t][m]+" "+magTemp[t][m]);
 				}
 		variables.recalcDistortion();
@@ -1580,16 +1580,16 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				peakColor[p] = 4;
 
 		// Restore all displacement and scalar mode values to their original values.
-		variables.masterSliderVal = masterTemp;
+		variables.superSliderVal = masterTemp;
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.dispmodePerType[t]; m++)
-				variables.dispmodeSliderVal[t][m] = dispTemp[t][m];
+				variables.dispmodeSliderVals[t][m] = dispTemp[t][m];
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.scalarmodePerType[t]; m++)
-				variables.scalarmodeSliderVal[t][m] = scalarTemp[t][m];
+				variables.scalarmodeSliderVals[t][m] = scalarTemp[t][m];
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.magmodePerType[t]; m++)
-				variables.magmodeSliderVal[t][m] = magTemp[t][m];
+				variables.magmodeSliderVals[t][m] = magTemp[t][m];
 		variables.recalcDistortion();
 		recalcIntensities();
 

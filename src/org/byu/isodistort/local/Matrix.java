@@ -15,13 +15,12 @@ public class Matrix {
 
 	String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
-	private static double identity[] = new double[16];
-	static {
-		for (int i = 0; i < 4; i++)
-			for (int j = 0; j < 4; j++) {
-				identity[(i << 2) + j] = (i == j ? 1 : 0);
-			}
-	}
+	private static double identity[] = new double[] { //
+			1, 0, 0, 0, //
+			0, 1, 0, 0, //
+			0, 0, 1, 0, //
+			0, 0, 0, 1  //
+	};
 	private double mMatrix[] = new double[16];
 	private double tmp[] = new double[16];
 	private double tmp2[] = new double[16];
@@ -31,40 +30,8 @@ public class Matrix {
 	 * Default constructor.
 	 */
 	public Matrix() {
-		return;
 	}
 
-///**
-//   Constructor takes an array of 16 elements to populate the 4x4 matrix.
-//   @param a 4x4 quaternion values
-//*/
-//public Matrix(double a[])
-//{
-//   if (a.length == 4) { // quaternion
-//      double Nq = a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
-//      double s = (Nq > 0.0) ? (2.0 / Nq) : 0.0;
-//      double xs = a[0] * s, ys = a[1] * s, zs = a[2] * s;
-//      double wx = a[3] * xs, wy = a[3] * ys, wz = a[3] * zs;
-//      double xx = a[0] * xs, xy = a[0] * ys, xz = a[0] * zs;
-//      double yy = a[1] * ys, yz = a[1] * zs, zz = a[2] * zs;
-//
-//      mMatrix[(0 << 2) + 0] = 1.0 - (yy + zz);
-//      mMatrix[(1 << 2) + 0] = xy + wz;
-//      mMatrix[(2 << 2) + 0] = xz - wy;
-//      mMatrix[(0 << 2) + 1] = xy - wz;
-//      mMatrix[(1 << 2) + 1] = 1.0 - (xx + zz);
-//      mMatrix[(2 << 2) + 1] = yz + wx;
-//      mMatrix[(0 << 2) + 2] = xz + wy;
-//      mMatrix[(1 << 2) + 2] = yz - wx;
-//      mMatrix[(2 << 2) + 2] = 1.0 - (xx + yy);
-//      mMatrix[(0 << 2) + 3] = mMatrix[(1 << 2) + 3] = mMatrix[(2 << 2) + 3] = mMatrix[(3 << 2) + 0] = mMatrix[(3 << 2) + 1] = mMatrix[(3 << 2) + 2] = 0.0;
-//      mMatrix[(3 << 2) + 3] = 1.0;
-//   }
-//   else
-//   {
-//      System.arraycopy(a, 0, mMatrix, 0, 16);
-//   }
-//}
 
 	/**
 	 * Returns matrix value at m[i, j].
@@ -97,18 +64,6 @@ public class Matrix {
 	public final double[] getUnsafe() {
 		return mMatrix;
 	}
-
-//	/**
-//	 * Returns a copy of matrix (thread-safe)/
-//	 * 
-//	 * @return a copy of the matrix array (16 elements).
-//	 * @see #getUnsafe
-//	 */
-//	public final double[] get() {
-//		double m[] = new double[16];
-//		System.arraycopy(mMatrix, 0, m, 0, 16);
-//		return m;
-//	}
 
 	/**
 	 * Sets the desired matrix to the identity matrix.
@@ -194,8 +149,6 @@ public class Matrix {
 		postMultiply(mb.mMatrix);
 	}
 
-//----- ROUTINES TO ROTATE AND TRANSLATE MATRICES -----
-
 	/**
 	 * Applies a translation by x, y, z to the obeject matrix. The shape or
 	 * orientation of the object are not affected.
@@ -277,67 +230,6 @@ public class Matrix {
 		return "" + scaleX + ", " + scaleY + ", " + scaleZ;
 	}
 
-//----- INVERTING A 4x4 THAT WAS CREATED BY TRANSLATIONS+ROTATIONS+SCALES
-
-//	/**
-//	 * Inverts the 4x4 matrix and stores the result in the object matrix.
-//	 * 
-//	 * @param msrc original matrix to be inverted
-//	 */
-//	public final void invert(Matrix msrc) {
-//		double src[] = msrc.mMatrix;
-//		double dst[] = mMatrix;
-//
-//		// COMPUTE ADJOINT COFACTOR MATRIX FOR THE ROTATION+SCALE 3x3
-//
-//		for (int i = 0; i < 3; i++)
-//			for (int j = 0; j < 3; j++) {
-//				int i0 = ((i + 1) % 3) << 2;
-//				int i1 = ((i + 2) % 3) << 2;
-//				int j0 = (j + 1) % 3;
-//				int j1 = (j + 2) % 3;
-//				dst[(j << 2) + i] = src[i0 + j0] * src[i1 + j1] 
-//						- src[i0 + j1] * src[i1 + j0];
-//			}
-//
-//		// RENORMALIZE BY DETERMINANT TO GET ROTATION+SCALE 3x3 INVERSE
-//
-//		double determinant = src[(0 << 2) + 0] * dst[(0 << 2) + 0] 
-//				+ src[(1 << 2) + 0] * dst[(0 << 2) + 1]
-//				+ src[(2 << 2) + 0] * dst[(0 << 2) + 2];
-//		double invd = 1.0 / determinant;
-//		for (int i = 0; i < 12; i+=4)
-//			for (int j = 0; j < 3; j++)
-//				dst[i + j] *= invd;
-//
-//		// COMPUTE INVERSE TRANSLATION
-//
-//		for (int i = 0; i < 3; i++)
-//			dst[(i << 2) + 3] = -dst[(i << 2) + 0] * src[(0 << 2) + 3] - dst[(i << 2) + 1] * src[(1 << 2) + 3]
-//					- dst[(i << 2) + 2] * src[(2 << 2) + 3];
-//	}
-
-//----- FOR DEBUGGING -----
-	/**
-	 * Converts the transformation matrix to a String.
-	 * 
-	 * @param m matrix to be translated to text
-	 * @return a textual representation of the matrix
-	 */
-	public final String toString(Matrix mm) {
-		double m[] = mm.mMatrix;
-		String s = "{";
-		for (int i = 0; i < 4; i++) {
-			s += "{";
-			for (int j = 0; j < 4; j++) {
-				int n = (int) (100 * m[(i << 2) + j]);
-				s += (n / 100.) + (j == 3 ? "" : ",");
-			}
-			s += "}" + (i == 3 ? "" : ",");
-		}
-		return s + "}";
-	}
-
 //----- ROUTINES TO GENERATE TRANSFORMATION MATRICES -----
 
 	private static void makeTranslationMatrix(double m[], double x, double y, double z) {
@@ -392,6 +284,26 @@ public class Matrix {
 	}
 
 
+	/**
+	 * Converts the transformation matrix to a pretty String.
+	 * 
+	 * @param m matrix to be translated to text
+	 * @return a textual representation of the matrix
+	 */
+	static public String stringify(Matrix mm) {
+		double m[] = mm.mMatrix;
+		String s = "{";
+		for (int i = 0; i < 4; i++) {
+			s += "{";
+			for (int j = 0; j < 4; j++) {
+				int n = (int) (100 * m[(i << 2) + j]);
+				s += (n / 100.) + (j == 3 ? "" : ",");
+			}
+			s += "}" + (i == 3 ? "" : ",");
+		}
+		return s + "}";
+	}
+
 
 	@Override
 	public String toString() {
@@ -406,5 +318,87 @@ public class Matrix {
 		s += "]";
 		return s;
 	}
+	///**
+//  Constructor takes an array of 16 elements to populate the 4x4 matrix.
+//  @param a 4x4 quaternion values
+//*/
+//public Matrix(double a[])
+//{
+//  if (a.length == 4) { // quaternion
+//     double Nq = a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
+//     double s = (Nq > 0.0) ? (2.0 / Nq) : 0.0;
+//     double xs = a[0] * s, ys = a[1] * s, zs = a[2] * s;
+//     double wx = a[3] * xs, wy = a[3] * ys, wz = a[3] * zs;
+//     double xx = a[0] * xs, xy = a[0] * ys, xz = a[0] * zs;
+//     double yy = a[1] * ys, yz = a[1] * zs, zz = a[2] * zs;
+//
+//     mMatrix[(0 << 2) + 0] = 1.0 - (yy + zz);
+//     mMatrix[(1 << 2) + 0] = xy + wz;
+//     mMatrix[(2 << 2) + 0] = xz - wy;
+//     mMatrix[(0 << 2) + 1] = xy - wz;
+//     mMatrix[(1 << 2) + 1] = 1.0 - (xx + zz);
+//     mMatrix[(2 << 2) + 1] = yz + wx;
+//     mMatrix[(0 << 2) + 2] = xz + wy;
+//     mMatrix[(1 << 2) + 2] = yz - wx;
+//     mMatrix[(2 << 2) + 2] = 1.0 - (xx + yy);
+//     mMatrix[(0 << 2) + 3] = mMatrix[(1 << 2) + 3] = mMatrix[(2 << 2) + 3] = mMatrix[(3 << 2) + 0] = mMatrix[(3 << 2) + 1] = mMatrix[(3 << 2) + 2] = 0.0;
+//     mMatrix[(3 << 2) + 3] = 1.0;
+//  }
+//  else
+//  {
+//     System.arraycopy(a, 0, mMatrix, 0, 16);
+//  }
+//}
+//	/**
+//	 * Returns a copy of matrix (thread-safe)/
+//	 * 
+//	 * @return a copy of the matrix array (16 elements).
+//	 * @see #getUnsafe
+//	 */
+//	public final double[] get() {
+//		double m[] = new double[16];
+//		System.arraycopy(mMatrix, 0, m, 0, 16);
+//		return m;
+//	}
+
+	//----- INVERTING A 4x4 THAT WAS CREATED BY TRANSLATIONS+ROTATIONS+SCALES
+
+//	/**
+//	 * Inverts the 4x4 matrix and stores the result in the object matrix.
+//	 * 
+//	 * @param msrc original matrix to be inverted
+//	 */
+//	public final void invert(Matrix msrc) {
+//		double src[] = msrc.mMatrix;
+//		double dst[] = mMatrix;
+//
+//		// COMPUTE ADJOINT COFACTOR MATRIX FOR THE ROTATION+SCALE 3x3
+//
+//		for (int i = 0; i < 3; i++)
+//			for (int j = 0; j < 3; j++) {
+//				int i0 = ((i + 1) % 3) << 2;
+//				int i1 = ((i + 2) % 3) << 2;
+//				int j0 = (j + 1) % 3;
+//				int j1 = (j + 2) % 3;
+//				dst[(j << 2) + i] = src[i0 + j0] * src[i1 + j1] 
+//						- src[i0 + j1] * src[i1 + j0];
+//			}
+//
+//		// RENORMALIZE BY DETERMINANT TO GET ROTATION+SCALE 3x3 INVERSE
+//
+//		double determinant = src[(0 << 2) + 0] * dst[(0 << 2) + 0] 
+//				+ src[(1 << 2) + 0] * dst[(0 << 2) + 1]
+//				+ src[(2 << 2) + 0] * dst[(0 << 2) + 2];
+//		double invd = 1.0 / determinant;
+//		for (int i = 0; i < 12; i+=4)
+//			for (int j = 0; j < 3; j++)
+//				dst[i + j] *= invd;
+//
+//		// COMPUTE INVERSE TRANSLATION
+//
+//		for (int i = 0; i < 3; i++)
+//			dst[(i << 2) + 3] = -dst[(i << 2) + 0] * src[(0 << 2) + 3] - dst[(i << 2) + 1] * src[(1 << 2) + 3]
+//					- dst[(i << 2) + 2] * src[(2 << 2) + 3];
+//	}
 
 }

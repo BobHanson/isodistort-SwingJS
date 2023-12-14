@@ -1,4 +1,14 @@
 /**
+	@Override
+	protected void frameResized() {
+		if (rp == null)
+			return;
+		rp.im = null;
+		drawPanel.setBackground(Color.red);
+		needsRecalc = true;
+		updateDisplay();
+	}
+
  * Bob Hanson 2023.12.08
  * 
  * Reconfigured java.applet.Applet as Swing JPanel
@@ -35,6 +45,7 @@
 package org.byu.isodistort;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -48,7 +59,6 @@ import java.util.Random;
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
@@ -56,8 +66,8 @@ import javax.swing.JToggleButton;
 
 import org.byu.isodistort.local.Elements;
 import org.byu.isodistort.local.IsoApp;
-import org.byu.isodistort.local.Variables;
 import org.byu.isodistort.local.MathUtil;
+import org.byu.isodistort.local.Variables;
 
 public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionListener {
 
@@ -68,25 +78,26 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 *
 	 */
 	private static class RenderPanel extends JPanel {
-		
+
 		private IsoDiffractApp app;
 
 		RenderPanel(IsoDiffractApp app) {
 			this.app = app;
 		}
+
 		private BufferedImage im;
 
 		@Override
 		public void paint(Graphics gr) {
 			super.paint(gr);
-			int drawWidth = getWidth();
-			int drawHeight = getHeight();
+			Dimension d = getSize();
+			System.out.println("paint isodif " + getSize());
 			if (im == null)
-				im = (BufferedImage) createImage(drawWidth, drawHeight);
+				im = (BufferedImage) createImage(d.width, d.height);
 			Graphics g = im.getGraphics();
 			app.render(g);
 			g.dispose();
-			gr.drawImage(im, 0, 0, drawWidth, drawHeight, this);
+			gr.drawImage(im, 0, 0, d.width, d.height, this);
 		}
 
 	}
@@ -118,7 +129,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	private final static int POWDER_PATTERN_TYPE_2THETA = 1;
 	private final static int POWDER_PATTERN_TYPE_DSPACE = 2;
 	private final static int POWDER_PATTERN_TYPE_Q = 3;
-	
+
 	// Other global variables.
 	int hklType = 1;
 	/** Horizontal axis choice for powder pattern: (1) 2theta, (2) d-space, (3) q */
@@ -137,7 +148,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	boolean wasPowder; // for entry to "both"
 
 	boolean isMouseOver;
-	
+
 	/** number of superHKL peaks contained within the display */
 	int peakCount;
 	/** List of peak multiplicities for powder pattern */
@@ -158,11 +169,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	/** transforms properly-rotated XYZ cartesian to superHKL */
 	double[][] rotcart2slatt = new double[3][3];
 
-
 	/** distance (in pixels) to the nearest peak from the center */
 	double crystalNearestDistanceToOrigin;
 	/** maximum peak radius */
-	double crystalMaxPeakRadius;	/** The hkl horizonal direction, upper direction, and center, */
+	double crystalMaxPeakRadius;
+	/** The hkl horizonal direction, upper direction, and center, */
 	double[] crystalHklCenter = new double[3];
 	/** number of single-crystal tickmarks to be displayed */
 	int[] crystalTickCount = new int[2];
@@ -182,7 +193,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	double crystalDInvRange;
 	/** The hkl horizonal and upper directions, */
 	double[][] crystalHkldirections = new double[2][3];
-	
 
 	/** List of positions of powder peaks in either 2th, d or q units */
 	double[] powderPeakY = new double[maxPeaks];
@@ -224,7 +234,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			qButton, tButton;
 	/** Radio button groups -- only one element from a group can be selected */
 	ButtonGroup xnButtons, hklButtons, pscButtons, rangeButtons;
-	
+
 	/** Text fields for inputting viewing region */
 	JTextField hHTxt, kHTxt, lHTxt, hVTxt, kVTxt, lVTxt, hOTxt, kOTxt, lOTxt, qTxt;
 	JTextField wavTxt, minTxt, maxTxt, fwhmTxt, zoomTxt;
@@ -236,14 +246,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	}
 
 	@Override
-	protected void init() {
-		initializePanels();
-		drawPanel.addKeyListener(this);
-		drawPanel.addMouseMotionListener(this);
-		setVariables(readFile());
-	}
-	
-	@Override
 	protected void dispose() {
 		drawPanel.removeKeyListener(this);
 		drawPanel.removeMouseMotionListener(this);
@@ -251,34 +253,33 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	}
 
 	@Override
-	protected boolean setVariables(String dataString) {
-		try {
-			if (variables == null) {
-				variables = new Variables(this, dataString, true);
-				variables.initPanels(sliderPanel, controlPanel);
-//				sliderPanel.setBackground(Color.BLACK);
-			}
-			variables.updateForApp();
-			buildControls();
-			showControls();
-		} catch (Exception e) {
-			JOptionPane.showMessageDialog(frameContentPane, "Error reading input data " + e.getMessage());
-			return false;
-		}
-		return true;
-	}
-
-	@Override
-	protected void setRenderer() {
-		drawHalfWidth = drawWidth / 2;
-		drawHalfHeight = drawHeight / 2;
+	protected void init() {
+		drawPanel.addKeyListener(this);
+		drawPanel.addMouseMotionListener(this);
+		buildControls();
+		showControls();
 		rp = new RenderPanel(this);
-		rp.setPreferredSize(drawPanel.getSize());
-		rp.setSize(drawPanel.getSize());
-		drawPanel.removeAll();
 		drawPanel.add(rp);
 	}
 
+	@Override
+	protected void frameResized() {
+		if (rp == null)
+			return;
+		rp.im = null;
+		drawPanel.setBackground(Color.red);
+		needsRecalc = true;
+		updateDisplay();
+	}
+
+	@Override
+	protected void updateDimensions() {
+		super.updateDimensions(); 
+		drawHalfWidth = drawWidth / 2;
+		drawHalfHeight = drawHeight / 2;
+
+	}
+	
 	@Override
 	public void updateDisplay() {
 		if (isAdjusting)
@@ -309,7 +310,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 * 
 	 * @param g
 	 */
-    void render(Graphics g) {
+	void render(Graphics g) {
 		g.setColor(Color.BLACK);
 		if (isBoth || !isPowder) {
 			g.fillRect(0, 0, drawWidth, drawHeight);
@@ -350,8 +351,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	void drawCrystalAxes(Graphics gr) {
 		for (int i = 0; i < 2; i++) {
-			drawDash(gr, crystalAxesXYDirXYLen[i][0], crystalAxesXYDirXYLen[i][1], crystalAxesXYDirXYLen[i][2], crystalAxesXYDirXYLen[i][3],
-					crystalAxesXYDirXYLen[i][4], lineThickness, 0);
+			drawDash(gr, crystalAxesXYDirXYLen[i][0], crystalAxesXYDirXYLen[i][1], crystalAxesXYDirXYLen[i][2],
+					crystalAxesXYDirXYLen[i][3], crystalAxesXYDirXYLen[i][4], lineThickness, 0);
 			for (int j = 0; j < crystalTickCount[i]; j++) {
 				drawDash(gr, crystalTickXY2[i][j][0], crystalTickXY2[i][j][1], crystalTickXY2[i][j][2],
 						crystalTickXY2[i][j][3], normalTickLength, lineThickness, 0);
@@ -374,7 +375,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		int x0, y0, x1, y1;
 		gr.setColor(Color.white);
 		double scaleAreaHeight = (isBoth ? shortPowderScaleAreaHeight : powderScaleAreaHeight);
-		double fy =  0.8 * (isBoth ? 1d * (shortPowderHeight - shortPowderScaleAreaHeight) / (drawHeight - powderScaleAreaHeight) : 1) * powderZoom / powderScaleFactor;
+		double fy = 0.8
+				* (isBoth ? 1d * (shortPowderHeight - shortPowderScaleAreaHeight) / (drawHeight - powderScaleAreaHeight)
+						: 1)
+				* powderZoom / powderScaleFactor;
 		double yrange = (drawHeight - scaleAreaHeight);
 		int ymin = (isBoth ? drawHeight - shortPowderHeight : 0);
 		double toXPix = 1.0 * drawWidth / powderXRange;
@@ -443,7 +447,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 */
 	private void mousePeak(double x, double y) {
 
-		double tol2 = (isPowder ? 2*2 : 6*6);
+		double tol2 = (isPowder ? 2 * 2 : 6 * 6);
 		int currentpeak = -1, currentcolor = 5;
 		String mouseovertext, valuestring = "", specifictext = "";
 		boolean isPowder = (this.isPowder || isBoth && y > drawHeight - shortPowderHeight);
@@ -608,8 +612,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 						}
 					}
 			Intensity000 = zzzNR * zzzNR + zzzNI * zzzNI + MathUtil.lenSq3(zzzM);
-			peakIntensity[p] = thermal * (pppNR * pppNR + pppNI * pppNI + MathUtil.lenSq3(pppM)) 
-					/ Intensity000;
+			peakIntensity[p] = thermal * (pppNR * pppNR + pppNI * pppNI + MathUtil.lenSq3(pppM)) / Intensity000;
 		}
 	}
 
@@ -630,8 +633,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			MathUtil.vecadd(crystalPeakHKL[p], 1.0, crystalHklCenter, -1.0, tempvec0);
 			MathUtil.matdotvect(slatt2rotcart, tempvec0, tempvec);
 			double x = tempvec[0] * (drawHalfWidth / crystalDInvRange) + drawHalfWidth;
-			double y = -tempvec[1] * (drawHalfHeight / crystalDInvRange) + drawHalfHeight; // minus sign turns the picture
-																					// upside right.
+			double y = -tempvec[1] * (drawHalfHeight / crystalDInvRange) + drawHalfHeight; // minus sign turns the
+																							// picture
+			// upside right.
 			crystalPeakXY[p][0] = x;
 			crystalPeakXY[p][1] = y;
 //			System.out.println("peak: "+p+", "+peaktypeList[p]+", supHKL: ("+peakhklList[p][0]+" "+peakhklList[p][1]+" "+peakhklList[p][2]+"), Cart: ("+tempvec[0]/dinvrange+" "+tempvec[1]/dinvrange+" "+tempvec[2]+"), Int: "+peakintList[p]);
@@ -670,8 +674,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			for (int m = 0; m < crystalTickCount[n]; m++) {
 				MathUtil.matdotvect(slatt2rotcart, crystalTickHKL[n][m], tempvec);
 				double x = tempvec[0] * (drawHalfWidth / crystalDInvRange) + drawHalfWidth;
-				double y = -tempvec[1] * (drawHalfHeight / crystalDInvRange) + drawHalfHeight; // minus sign turns the picture
-																						// upside right.
+				double y = -tempvec[1] * (drawHalfHeight / crystalDInvRange) + drawHalfHeight; // minus sign turns the
+																								// picture
+				// upside right.
 				// z = tempvec[2] * (drawHalfWidth / crystalDInvRange); // BH I guess...
 				crystalTickXY2[n][m][0] = x;
 				crystalTickXY2[n][m][1] = y;
@@ -690,8 +695,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		// update the logarithmic peak radii
 		for (int p = 0; p < peakCount; p++)
-			crystalPeakRadius[p] = crystalMaxPeakRadius * (Math.max(Math.log(peakIntensity[p]) / 2.3025, -logfac) + logfac)
-					/ logfac;
+			crystalPeakRadius[p] = crystalMaxPeakRadius
+					* (Math.max(Math.log(peakIntensity[p]) / 2.3025, -logfac) + logfac) / logfac;
 
 	}
 
@@ -794,11 +799,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			hklrange[ii][0] = (int) Math.floor(tempmin);
 			hklrange[ii][1] = (int) Math.ceil(tempmax);
 		}
-//		for (int nn=0; nn<8; nn++)
-//			System.out.println(nn+" ("+limits[nn][0]+" "+limits[nn][1]+" "+limits[nn][2]+")");
-//		System.out.println("H: "+hklrange[0][0]+" "+hklrange[0][1]);
-//		System.out.println("K: "+hklrange[1][0]+" "+hklrange[1][1]);
-//		System.out.println("L: "+hklrange[2][0]+" "+hklrange[2][1]);
 
 		// Identify the peaks to display.
 		peakCount = 0;
@@ -823,13 +823,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 						MathUtil.copy(superhkl, crystalPeakHKL[peakCount]);
 						peakMultiplicities[peakCount] = 1;
 
-						tempscalar = (superhklcart[0] * superhklcart[0]
-								 + superhklcart[1] * superhklcart[1])
+						tempscalar = (superhklcart[0] * superhklcart[0] + superhklcart[1] * superhklcart[1])
 								* (drawHalfWidth / crystalDInvRange);
 						if ((Math.abs(tempscalar) > 0.1) && (tempscalar < crystalNearestDistanceToOrigin))
 							crystalNearestDistanceToOrigin = tempscalar;
 
-//						System.out.println(peaknum+", "+peaktypeList[peaknum]+", sHKL=("+superhklvec[0]+" "+superhklvec[1]+" "+superhklvec[2]+"), pHKL=("+parenthklvec[0]+" "+parenthklvec[1]+" "+parenthklvec[2]+"), xyz=("+tempvec[0]+" "+tempvec[1]+" "+tempvec[2]+"), int="+peakintList[peaknum]);
 						peakCount++;
 					}
 				}
@@ -910,8 +908,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			int right = Math.min((int) Math.ceil(center + 5 * sigmapix), powderXRange - 1);
 			for (int i = left; i <= right; i++) {
 				double d = (i - center) / sigmapix;
-				powderY[i] += Math.exp(-d * d / 2) * peakIntensity[p]
-						* peakMultiplicities[p];
+				powderY[i] += Math.exp(-d * d / 2) * peakIntensity[p] * peakMultiplicities[p];
 			}
 		}
 	}
@@ -928,7 +925,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		double[] dinvlist1 = new double[maxPeaks];// randomly strained list of dinverse values
 		double[] dinvlist2 = new double[maxPeaks];// randomly strained list of dinverse values
 		double[] superhkl = new double[3];
-		//double[] parenthkl = new double[3];
+		// double[] parenthkl = new double[3];
 		boolean createNewPeak = false, isXrayTemp;
 		Random rval = new Random();
 		double masterTemp;
@@ -955,7 +952,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				&& ((Math.abs(powderXMin) < tol) || (Math.abs(powderXMax) < tol)))
 			return;
 		setPowderDinvMinMaxRes();
-		
+
 		// Save the old strain slider values
 		variables.readSliders();
 		masterTemp = variables.superSliderVal;
@@ -1048,8 +1045,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 						createNewPeak = true;
 						for (int p = 0; p < peakCount; p++) {
 							boolean isrobustlycoincident = approxEqual(dinv0, dinvlist0[p], tol)
-									&& approxEqual(dinv1, dinvlist1[p], tol) 
-									&& approxEqual(dinv2, dinvlist2[p], tol);
+									&& approxEqual(dinv1, dinvlist1[p], tol) && approxEqual(dinv2, dinvlist2[p], tol);
 							if (isrobustlycoincident) {
 								boolean isequivalent = checkPowderPeakEquiv(superhkl, crystalPeakHKL[p], tmat);
 								if (isequivalent) {
@@ -1106,12 +1102,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		recalcPowder(); // recalculate intensities and positions
 	}
 
-	private static class PowderPeakSorter implements Comparator<Integer>{
+	private static class PowderPeakSorter implements Comparator<Integer> {
 
 		private double[] dinv;
 		private double tol;
 		private double[][] hkls;
-		
 
 		PowderPeakSorter(double[] dinv, double[][] HKLs, double tol) {
 			this.dinv = dinv;
@@ -1125,7 +1120,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			int j = o2.intValue();
 			boolean sameDinv = approxEqual(dinv[i], dinv[j], tol);
 			boolean firstHigher = !sameDinv && dinv[i] > dinv[j];
-			boolean firstHKLnicerThanSecond = comparePowderHKL(hkls[i], hkls[j]); 
+			boolean firstHKLnicerThanSecond = comparePowderHKL(hkls[i], hkls[j]);
 			// we must return -1 if order is OK, 0 if equal, and 1 if they need switching
 			return (firstHigher ? 1 : !sameDinv || !firstHKLnicerThanSecond ? -1 : 0);
 		}
@@ -1144,20 +1139,20 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		Arrays.sort(sortList, new PowderPeakSorter(dinvlist0, crystalPeakHKL, tol));
 		double[][] hkls = new double[maxPeaks][3];
 		double[] mults = new double[maxPeaks];
-		// for testing only 
+		// for testing only
 		// double[] dlist = new double[peakCount];
 		for (int i = 0; i < peakCount; i++) {
 			int j = sortList[i];
 			hkls[i] = crystalPeakHKL[j];
 			mults[i] = peakMultiplicities[j];
-			//testing only
-			//dlist[i] = dinvlist0[j];
+			// testing only
+			// dlist[i] = dinvlist0[j];
 		}
 		crystalPeakHKL = hkls;
 		peakMultiplicities = mults;
-		//testing only 
-		//dinvlist0 = dlist;
-		
+		// testing only
+		// dinvlist0 = dlist;
+
 //BH let Java do the sort in the most efficient way.
 // test is that the above, with dlist uncommented, 
 // results in no changes below.
@@ -1220,9 +1215,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			powderScaleFactor = 1;
 	}
 
-	private final static double[] tickspacecandidates = new double[] {
-		0.01, 0.02, 0.05, .10, .2, .5, 1, 2, 5, 10, 20, 50 	
-	};
+	private final static double[] tickspacecandidates = new double[] { 0.01, 0.02, 0.05, .10, .2, .5, 1, 2, 5, 10, 20,
+			50 };
 
 	private void setPowderAxisTicks(double tol) {
 		// calculate the list of horizontal-axis tick-mark positions
@@ -1253,20 +1247,21 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 * 
 	 * "Nicer" in order of check:
 	 * 
-	 *  1) more zeros   [100] better than [110]
-	 *  
-	 *  2) smaller sum of absolute values [011] better than [012]
-	 *  
-	 *  3) fewer negative values  [-111] better than [1-1-1]
-	 *  
-	 *  4) later zeros [100] better than [001]; [110] better than [101]
-	 *  
-	 *  5) earlier high absolute values in second and third digits:
-	 *  
-	 *   	[0-12] better than [0-21]; [341] better than [242]
-	 *  
-	 *  6) earlier non-negative values in second and third digits  [01-2] better than [0-12]
-	 *  
+	 * 1) more zeros [100] better than [110]
+	 * 
+	 * 2) smaller sum of absolute values [011] better than [012]
+	 * 
+	 * 3) fewer negative values [-111] better than [1-1-1]
+	 * 
+	 * 4) later zeros [100] better than [001]; [110] better than [101]
+	 * 
+	 * 5) earlier high absolute values in second and third digits:
+	 * 
+	 * [0-12] better than [0-21]; [341] better than [242]
+	 * 
+	 * 6) earlier non-negative values in second and third digits [01-2] better than
+	 * [0-12]
+	 * 
 	 * 
 	 * Called by resetPowderPeaks.
 	 * 
@@ -1277,13 +1272,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		// x.. 0 or 0
 		// .x. 1 or x
 		// ..x 2 or 2x
-		
+
 		// xy. 1 or y (x ignored)
 		// x.y 2 or 2y (x ignored)
 		// .xy 5 or x + 2y
-		
+
 		// xyz 6 or y + 2z (x ignored)
-		
+
 		int nZerosA = 0;
 		int nZerosB = 0; // number of zeros
 		int distZerosA = 0;
@@ -1297,7 +1292,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		int distAbsValA = 0;
 		int distAbsValB = 0; // distribution of absolute-valued indices
 		for (int i = 0; i < 3; i++) {
-		    int a = (int) hkla[i];
+			int a = (int) hkla[i];
 			int b = (int) hklb[i];
 
 			if (a == 0) {
@@ -1308,7 +1303,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				nZerosB++;
 				distZerosB += i;
 			}
-						
+
 			sumAbsValA += Math.abs(a);
 			sumAbsValB += Math.abs(b);
 
@@ -1316,7 +1311,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			// so this is just between 2nd and 3rd digits
 			// e.g. [333] (3*1 + 2*3) < (better than) [234] (3*1 + 2*4) here
 			// and [341] < [242]
-			
+
 			distAbsValA += i * Math.abs(a);
 			distAbsValB += i * Math.abs(b);
 
@@ -1327,7 +1322,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			if (b < 0) {
 				nMinusB++;
 				distMinusB += i;
-			}			
+			}
 		}
 
 		if (nZerosA != nZerosB)
@@ -1341,8 +1336,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		if (distAbsValA != distAbsValB)
 			return (distAbsValA < distAbsValB); // [042] better than [024]
 		return (distMinusA >= distMinusB);
-		
-		
+
 //		was:
 //		boolean anicerthanb = true;
 //			if (za < zb)
@@ -1429,10 +1423,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 //				}
 //			}
 //
-		return ((sa[0] == sb[0]) && (sa[1] == sb[1]) && (sa[2] == sb[2]) 
-				&& approxEqual(pa[0], pb[0], tol)
-				&& approxEqual(pa[1], pb[1], tol)
-				&& approxEqual(pa[2], pb[2], tol));
+		return ((sa[0] == sb[0]) && (sa[1] == sb[1]) && (sa[2] == sb[2]) && approxEqual(pa[0], pb[0], tol)
+				&& approxEqual(pa[1], pb[1], tol) && approxEqual(pa[2], pb[2], tol));
 
 //		if (!sameCheck) {
 //		boolean fullCheck;
@@ -1466,7 +1458,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	}
 
 	private static boolean approxEqual(double a, double b, double tol) {
-		return (Math.abs(a - b) < tol); 	
+		return (Math.abs(a - b) < tol);
 	}
 
 	/**
@@ -1528,20 +1520,18 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				if (variables.dispmodeName[t][m].startsWith("GM1")
 						&& !variables.dispmodeName[t][m].startsWith("GM1-")) {
 					variables.dispmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.dispmodeMaxAmp[t][m];
-//					System.out.println(rd.dispmodeName[t][m]+" "+dispTemp[t][m]);
 				}
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.scalarmodePerType[t]; m++)
 				if (variables.scalarmodeName[t][m].startsWith("GM1")
 						&& !variables.scalarmodeName[t][m].startsWith("GM1-")) {
-					variables.scalarmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.scalarmodeMaxAmp[t][m];
-//					System.out.println(scalarmodeName[t][m]+" "+scalarTemp[t][m]);
+					variables.scalarmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1)
+							* variables.scalarmodeMaxAmp[t][m];
 				}
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.magmodePerType[t]; m++)
 				if (variables.magmodeName[t][m].startsWith("GM1") && !variables.magmodeName[t][m].startsWith("GM1-")) {
 					variables.magmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.magmodeMaxAmp[t][m];
-//					System.out.println(rd.magmodeName[t][m]+" "+magTemp[t][m]);
 				}
 		variables.recalcDistortion();
 		recalcIntensities();
@@ -1557,21 +1547,19 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				if (!(variables.dispmodeName[t][m].startsWith("GM1")
 						&& !variables.dispmodeName[t][m].startsWith("GM1-"))) {
 					variables.dispmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.dispmodeMaxAmp[t][m];
-//					System.out.println(rd.dispmodeName[t][m]+" "+dispTemp[t][m]);
 				}
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.scalarmodePerType[t]; m++)
 				if (!(variables.scalarmodeName[t][m].startsWith("GM1")
 						&& !variables.scalarmodeName[t][m].startsWith("GM1-"))) {
-					variables.scalarmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.scalarmodeMaxAmp[t][m];
-//					System.out.println(rd.scalarmodeName[t][m]+" "+scalarTemp[t][m]);
+					variables.scalarmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1)
+							* variables.scalarmodeMaxAmp[t][m];
 				}
 		for (int t = 0; t < variables.numTypes; t++)
 			for (int m = 0; m < variables.magmodePerType[t]; m++)
 				if (!(variables.magmodeName[t][m].startsWith("GM1")
 						&& !variables.magmodeName[t][m].startsWith("GM1-"))) {
 					variables.magmodeSliderVals[t][m] = (2 * rval.nextFloat() - 1) * variables.magmodeMaxAmp[t][m];
-//					System.out.println(rd.magmodeName[t][m]+" "+magTemp[t][m]);
 				}
 		variables.recalcDistortion();
 		recalcIntensities();
@@ -1593,9 +1581,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		variables.recalcDistortion();
 		recalcIntensities();
 
-//		for (int p=0; p<peaknum; p++)
-//			if (peaktypeList[p]==3)
-//				System.out.println("hkl = ("+peakhklList[p][0]+","+peakhklList[p][1]+","+peakhklList[p][2]+"), Int = "+peakintList[p]);
 	}
 
 	/**
@@ -1639,7 +1624,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		variables.resetSliders();
 		needsRecalc = true;
 	}
-	
+
 	@Override
 	protected void setControlsFrom(IsoApp a) {
 		if (a == null)
@@ -1664,14 +1649,14 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		xrayButton.setSelected(app.xrayButton.isSelected());
 		neutronButton.setSelected(app.neutronButton.isSelected());
-		
+
 		superButton.setSelected(app.superButton.isSelected());
 		parentButton.setSelected(app.parentButton.isSelected());
 
 		tButton.setSelected(app.tButton.isSelected());
 		dButton.setSelected(app.dButton.isSelected());
 		qButton.setSelected(app.qButton.isSelected());
-				
+
 		crystalButton.setSelected(app.crystalButton.isSelected());
 		powderButton.setSelected(app.powderButton.isSelected());
 		bothButton.setSelected(app.bothButton.isSelected());
@@ -1682,9 +1667,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		isAdjusting = false;
 		updateDisplay();
 	}
-
-
-
 
 	@Override
 	public void keyTyped(KeyEvent e) {
@@ -1831,7 +1813,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		controlPanel.add(topControlPanel);
 		controlPanel.add(botControlPanel);
-		
+
 		// clear checkbox listeners
 		variables.setApp(this);
 	}
@@ -1840,7 +1822,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	private void showControls() {
 
 		// powder-only
-		
+
 		boolean isPowder = (isBoth && !wasPowder || this.isPowder && !isBoth);
 		wasPowder = false;
 		wavTxt.setVisible(isPowder);
@@ -1900,35 +1882,23 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		return rp.im;
 	}
 
-	@Override
-	protected void frameResized() {
-		if (rp == null)
-			return;
-		rp.im = null;
-		needsRecalc = true;
-		updateDisplay();
-	}
-
 	public static void main(String[] args) {
 		create("IsoDiffract", args);
 	}
 
 	@Override
-	protected void handleCheckBoxEvent(Object src) {
-		isSimpleColor = colorBox.isSelected();
-		variables.setColors(isSimpleColor);
-		variables.recolorPanels();
-		drawPanel.repaint();
-	}
-
-	@Override
-	protected void handleRadioButtonEvent(Object source) {
-		if (!((JToggleButton) source).isSelected())
+	protected void handleButtonEvent(Object src) {
+		if (src instanceof JCheckBox) {
+			isSimpleColor = colorBox.isSelected();
+			variables.setColors(isSimpleColor);
+			variables.recolorPanels();
+			drawPanel.repaint();
 			return;
-		System.out.println(
-				"UB1 " + powderXMax + " " + powderXMin + " " + powderDinvmin + " " + powderDinvmax + " " + source);
+		} 
+		if (!((JToggleButton) src).isSelected())
+			return;
 		boolean setTextBoxes = false;
-		if (source == tButton) {
+		if (src == tButton) {
 			powderPatternType = 1;
 			double t = powderDinvmin * powderWavelength / 2;
 			if (t < -1)
@@ -1945,7 +1915,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			powderResolution = powderDinvres * powderWavelength / (Math.PI / 180);
 			setTextBoxes = true;
 			needsRecalc = true;
-		} else if (source == dButton) {
+		} else if (src == dButton) {
 			powderPatternType = 2;
 			powderXMax = 1 / powderDinvmin;
 			powderXMin = 1 / powderDinvmax;
@@ -1953,36 +1923,36 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			powderResolution = powderDinvres * d * d / 4;
 			setTextBoxes = true;
 			needsRecalc = true;
-		} else if (source == qButton) {
+		} else if (src == qButton) {
 			powderPatternType = 3;
 			powderXMin = powderDinvmin * (2 * Math.PI);
 			powderXMax = powderDinvmax * (2 * Math.PI);
 			powderResolution = powderDinvres * (2 * Math.PI) / ((powderXMin + powderXMax) / 2);
 			setTextBoxes = true;
 			needsRecalc = true;
-		} else if (source == parentButton) {
+		} else if (src == parentButton) {
 			hklType = 1;
 			needsRecalc = true;
-		} else if (source == superButton) {
+		} else if (src == superButton) {
 			hklType = 2;
 			needsRecalc = true;
-		} else if (source == xrayButton) {
+		} else if (src == xrayButton) {
 			isXray = true;
 			variables.readSliders();
 			needsRecalc = true;
-		} else if (source == neutronButton) {
+		} else if (src == neutronButton) {
 			isXray = false;
 			variables.readSliders();
 			needsRecalc = true;
-		} else if (source == crystalButton) {
+		} else if (src == crystalButton) {
 			isBoth = isPowder = false;
 			showControls();
 			needsRecalc = true;
-		} else if (source == powderButton) {
+		} else if (src == powderButton) {
 			isBoth = !(isPowder = true);
 			showControls();
 			needsRecalc = true;
-		} else if (source == bothButton) {
+		} else if (src == bothButton) {
 			wasPowder = isPowder;
 			isBoth = isPowder = true;
 			showControls();
@@ -1995,28 +1965,15 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		}
 		updateDisplay();
 	}
-	
 
 	@Override
-	protected double[][] getPerspective() {
-		// n/a
-		return null;
-	}
-
-	@Override
-	protected void setPerspective(double[][] params) {
-		// n/a
-	}
-
-	@Override
-	protected void stopSpin() {
-		// n/a
+	protected boolean prepareToSwapOut() {
+		return true;
 	}
 
 	@Override
 	protected void applyView() {
-		// TODO Auto-generated method stub
-		
+		updateDisplay();
 	}
 
 }

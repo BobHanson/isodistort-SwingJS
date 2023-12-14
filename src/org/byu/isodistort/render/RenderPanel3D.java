@@ -4,7 +4,6 @@
 package org.byu.isodistort.render;
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.InputEvent;
@@ -382,8 +381,8 @@ public class RenderPanel3D extends JPanel
 			repaint();
 		} else if (!isInSync()) {
 			// prior to rendering, check for a resize
-			int width = getWidth();
-			int height = getHeight();
+			int width = Math.max(1, getWidth());
+			int height = Math.max(1, getHeight());
 			im = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 			int[] pixels = ((DataBufferInt) im.getRaster().getDataBuffer()).getData();
 			renderer.reinit(width, height, pixels);
@@ -624,6 +623,10 @@ public class RenderPanel3D extends JPanel
 		renderer.setCamera(t, p);
 	}
 
+	public void setSpinning(boolean spin) {
+		this.spin = spin;
+	}
+
 	public boolean isSpinning() {
 		return spin;
 	}
@@ -663,10 +666,6 @@ public class RenderPanel3D extends JPanel
 
 	public void setRotationAxis(int i) {
 		rotAxis = i;
-	}
-
-	public void setSpinning(boolean spin) {
-		this.spin = spin;
 	}
 
 	public BufferedImage getImage() {
@@ -714,20 +713,5 @@ public class RenderPanel3D extends JPanel
 		renderer.setFOV(fov);
 		System.arraycopy(params[1], 0, renderer.getCamera().getUnsafe(), 0, 16);
 	}
-
-//	private static void waitForImage(BufferedImage buf, int width, int height)
-//	{
-//		while ((buf.getHeight() == 0)&&(buf.getWidth() == 0))
-//		{
-//			try
-//			{
-//				Thread.sleep(300);
-//			} catch (InterruptedException e)
-//			{
-//
-//			}
-//		}
-//	}
-//
 
 }

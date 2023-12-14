@@ -40,6 +40,7 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
@@ -55,39 +56,86 @@ import org.byu.isodistort.IsoDistortApp;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".5";
+	final static String minorVersion = ".6";
 	
+	/**
+	 * The variables are all read. Time to do any app-specific 
+	 * initialization before we make the frame visible. 
+	 */
 	abstract protected void init();
 	
-	abstract protected boolean setVariables(String dataString);
-
-	/**
-	 * only after size has been established after frame packing
-	 */
-	abstract protected void setRenderer();
-	
-	abstract protected void applyView();
-
 	/**
 	 * frame has been resized -- update renderer and display
 	 */
 	abstract protected void frameResized();
-	
+
+	/**
+	 * Get the image from the renderer for saving. 
+	 * 
+	 * @return the current image of drawing frame.
+	 */
 	abstract protected BufferedImage getImage();
 
+	/**
+	 * Something has changed. 
+	 */
 	abstract public void updateDisplay();
 	
-	abstract protected void handleCheckBoxEvent(Object src);
+	/**
+	 * The "Apply View" action.
+	 * 
+	 */
+	abstract protected void applyView();
 
-	abstract protected void handleRadioButtonEvent(Object src);
+	/**
+	 * The click callback comes to IsoApp and is distributed
+	 * to the applet by this method.
+	 * 
+	 * @param src
+	 */
+	abstract protected void handleButtonEvent(Object src);
 	
-	abstract protected double[][] getPerspective();
-	
-	abstract protected void setPerspective(double[][] params);
-	
+	/**
+	 * When an app is swapped back in, this method allows the 
+	 * app to reload its settings. 
+	 * 
+	 * @param app
+	 */
 	abstract protected void setControlsFrom(IsoApp app);
+
+	/**
+	 * This method allows the current application to finish up 
+	 * what it is doing prior to swapping out. 
+	 * 
+	 * @return false to disallow swapping out at this moment.
+	 * 
+	 */
+	abstract protected boolean prepareToSwapOut();
 	
-	abstract protected void stopSpin();
+
+	final static int SETTINGS_PERSPECTIVE = 0;
+	final static int SETTINGS_APP = 1;
+
+	private static final int padding = 4;
+	private static final int controlPanelHeight = 55;
+	private final static int roomForScrollBar = 15;
+	
+	protected String[] args;
+
+	private IsoApp[] appSettings = new IsoApp[2];
+
+	/**
+	 * Preserve just the app itself and its current perspective
+	 */
+	void preserveAppData() {
+		appSettings[appType] = this;
+	}
+
+	private void clearSettings() {
+		appSettings = new IsoApp[2];
+	}
+
+	
 	
 	private List<JToggleButton> listenerList = new ArrayList<>();
 	
@@ -95,13 +143,7 @@ public abstract class IsoApp {
 	protected ItemListener buttonListener = new ItemListener() {
 		@Override
 		public void itemStateChanged(ItemEvent event) {
-			JToggleButton src = (JToggleButton) event.getSource();
-			listenerList.add(src);
-			if (src instanceof JCheckBox) {
-				handleCheckBoxEvent(event.getSource());
-			} else if (src instanceof JRadioButton) {
-				handleRadioButtonEvent(event.getSource());			
-			}
+			handleButtonEvent(event.getSource());
 		}
 	};
 	
@@ -119,6 +161,7 @@ public abstract class IsoApp {
 		b.setBorderPainted(false);
 		b.addItemListener(buttonListener);
 		g.add(b);
+		listenerList.add(b);
 		return b;
 	}
 
@@ -132,6 +175,7 @@ public abstract class IsoApp {
 		cb.setBackground(Color.WHITE);
 		cb.setForeground(Color.BLACK);
 		cb.addItemListener(buttonListener);
+		listenerList.add(cb);
 		return cb;
 	}
 
@@ -156,7 +200,7 @@ public abstract class IsoApp {
 	private JScrollPane sliderPane;
 
 	/** Panel that holds all control components */
-	public JPanel controlPanel = new JPanel();
+	public JPanel controlPanel;
 	/**
 	 * Holds all the slider bars but not the viewPanel above it; added to
 	 * controlPanel
@@ -210,9 +254,11 @@ public abstract class IsoApp {
 	
 	protected void initializePanels() {
 		frameContentPane.setTransferHandler(new FileUtil.FileDropHandler(this));
+		frameContentPane.removeAll();
+		controlPanel = new JPanel();
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
-		isoPanel = new JPanel(new BorderLayout()) 
+		isoPanel = new JPanel(new BorderLayout())
 //		{	// BH testing paints
 ////			@Override 
 ////			public void paint(Graphics g) {
@@ -242,7 +288,8 @@ public abstract class IsoApp {
 			// sets grid length equal to number of rows.
 		}
 
-		sliderPane = new JScrollPane(sliderPanel);
+		sliderPane = new JScrollPane(sliderPanel, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		sliderPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
 		isoPanel.add(sliderPane, BorderLayout.EAST);// add to east of Applet
 
@@ -250,7 +297,7 @@ public abstract class IsoApp {
 		isoPanel.add(controlPanel, BorderLayout.SOUTH);// add to east of Applet
 
 		drawPanel = new JPanel(new BorderLayout());
-		isoPanel.add(drawPanel, BorderLayout.CENTER);		
+		isoPanel.add(drawPanel, BorderLayout.CENTER);
 		frame.add(isoPanel);
 	}
 	
@@ -398,54 +445,32 @@ public abstract class IsoApp {
 
 	}
 
-	final static int SETTINGS_PERSPECTIVE = 0;
-	final static int SETTINGS_APP = 1;
-	
-	private Object[][] appSettings = new Object[2][2];
-
-	void preserveAppData() {
-		appSettings[appType][SETTINGS_PERSPECTIVE] = getPerspective();
-		appSettings[appType][SETTINGS_APP] = this;
-	}
-
-	private void clearSettings() {
-		appSettings = new Object[2][2];
-	}
-
 	private void openApplication(int appType, String data, boolean isDrop) {
 		if (data == null)
 			return;
+		if (!prepareToSwapOut())
+			return;
 		IsoApp me = this;
-		stopSpin();
 		SwingUtilities.invokeLater(() -> {
 			boolean isIsoDistort = (appType == APP_ISODISTORT);
-			
-			
-			
 			IsoApp app = (isIsoDistort ? new IsoDistortApp() : new IsoDiffractApp());
-			
-			
-			
-			
 			if (args == null || args.length == 0)
 				args = new String[1];
 			args[0] = data;
 			JFrame frame = me.frame;
 			dispose();
-			app.start(frame, args);
+			app.start(frame, args, variables);
 			if (isDrop) {
 				clearSettings();
 			} else {
 				app.appSettings = appSettings;
 				app.variables.setValuesFrom(variables);
-				app.setControlsFrom((IsoApp) appSettings[app.appType][SETTINGS_APP]);
-				app.setPerspective((double[][]) appSettings[app.appType][SETTINGS_PERSPECTIVE]);
+				app.setControlsFrom((IsoApp) appSettings[app.appType]);				
 			}
 			app.frameResized();
 		});
 	}
 
-	
 	protected void dispose() {
 		isEnabled = false;
 		while (listenerList.size() > 0) {
@@ -458,12 +483,11 @@ public abstract class IsoApp {
 		frame = null;
 	}
 
-	protected String[] args;
-
 	private ComponentListener componentListener = new ComponentAdapter() {
 
 		@Override
 		public void componentResized(ComponentEvent e) {
+			updateDimensions();
 			frameResized();
 		}
 	};
@@ -509,37 +533,50 @@ public abstract class IsoApp {
 		
 	};
 	
-	private void start(JFrame frame, String[] args) {
+	private void start(JFrame frame, String[] args, Variables oldVariables) {
 		isFramed = true;
 		this.frame = frame;
 		this.args = args;
 		frameContentPane = (JPanel) frame.getContentPane();
-		boolean haveVariables = (variables != null);
 		frameContentPane.setLayout(new BorderLayout());
-		init();
-		if (!haveVariables) {
-			frameContentPane.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
+		try {
+			initializePanels();
+			variables = new Variables(this, readFile(), appType == APP_ISODIFFRACT);
+			if (oldVariables == null) {
+				frameContentPane.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
+			} else {
+				frameContentPane.setPreferredSize(frameContentPane.getSize());
+			}
 			frame.pack();
+			// frame is packed, so OUTER sizes are set now.
+			// but we still have to set the sliderPanel width 
+			// and height. We provide a provisional setting here 
+			// and let Variables adjust it as necessary.
+			int sliderPaneHeight = frameContentPane.getHeight() - controlPanelHeight - padding;
+			int sliderPanelWidth = frameContentPane.getWidth() - sliderPaneHeight - roomForScrollBar - padding;
+			int sliderPanelHeight = sliderPaneHeight - padding;			
+			sliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, sliderPanelHeight));
+			variables.initSliderPanel(sliderPanel);
+			frame.pack();
+			updateDimensions();
+			init();
+			frame.setVisible(true);
+			String title = frame.getTitle();
+			frame.setName(title);
+				frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion);
+			frame.addComponentListener(componentListener);
+			frame.addWindowListener(windowListener);
+		} catch (Throwable e) {
+			JOptionPane.showMessageDialog(frame, "Error reading input data " + e.getMessage());
+			e.printStackTrace();
 		}
-		updateRenderer();
-		String title = frame.getTitle();
-		frame.setName(title);
-		if (title.indexOf("ver.") < 0)
-			frame.setTitle(title + " ver. " + variables.isoversion + minorVersion);
-		frame.setVisible(true);
-		frame.addComponentListener(componentListener);
-		frame.addWindowListener(windowListener);
+
 	}
 
-	/**
-	 * Frame resized
-	 */
-	private void updateRenderer() {
+	protected void updateDimensions() {
 		drawWidth = drawPanel.getWidth();
 		drawHeight = drawPanel.getHeight();
-		setRenderer();
 	}
-
 
 	/**
 	 * viewListener class listens for the applet buttons and the inside methods
@@ -953,7 +990,7 @@ public abstract class IsoApp {
 		case "IsoDiffract":
 			app = new IsoDiffractApp();
 		}
-		app.start(new JFrame(type), args);
+		app.start(new JFrame(type), args, null);
 	}
 
 	public void updateViewOptions() {

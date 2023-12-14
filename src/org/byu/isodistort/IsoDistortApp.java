@@ -26,7 +26,6 @@ import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
@@ -34,7 +33,6 @@ import javax.swing.JToggleButton;
 import javax.swing.Timer;
 
 import org.byu.isodistort.local.IsoApp;
-import org.byu.isodistort.local.Variables;
 import org.byu.isodistort.local.MathUtil;
 import org.byu.isodistort.render.Geometry;
 import org.byu.isodistort.render.Material;
@@ -42,10 +40,6 @@ import org.byu.isodistort.render.Material;
 import org.byu.isodistort.render.RenderPanel3D;
 
 public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
-
-	public IsoDistortApp() {
-		super(APP_ISODISTORT);
-	}
 
 	protected boolean isRunning;
 
@@ -139,21 +133,12 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	JTextField uView, vView, wView;
 	private RenderPanel3D rp;
 
-	/**
-	 * 222222222222222222222222222222222222222222222222222222222222222222222222222222
-	 * 2 2 2 In the second section we initialize everything on the applet that we
-	 * want. 2 2 2
-	 * 222222222222222222222222222222222222222222222222222222222222222222222222222222
-	 */
-
-	@Override
-	protected void init() {
-		initializePanels();
-		setVariables(readFile());
+	public IsoDistortApp() {
+		super(APP_ISODISTORT);
 	}
 
 	@Override
-	protected void setRenderer() {
+	protected void init() {
 		rp = new RenderPanel3D(this);
 		rp.setPreferredSize(drawPanel.getSize());
 		rp.setSize(drawPanel.getSize());
@@ -170,7 +155,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		initCells();
 		initAxes();
 		buildControls();
-		variables.initPanels(sliderPanel, controlPanel);
 		recalcABC();
 		recalcMaterials();
 		rp.initializeSettings(perspectivescaler, scdSize);
@@ -180,19 +164,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	protected void frameResized() {
 		needsRecalc = true;
 		updateDisplay();
-	}
-
-	@Override
-	protected boolean setVariables(String dataString) {
-		try {
-			if (dataString != null)
-				variables = new Variables(this, dataString, false);
-
-		} catch (Exception e) {
-			JOptionPane.showMessageDialog(drawPanel, "Error reading input data " + e.getMessage());
-			return false;
-		}
-		return true;
 	}
 
 	/**
@@ -834,8 +805,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	@Override
 	protected void dispose() {
 		rp.removeKeyListener(this);
-		rp.dispose();
-		rp = null;
+//		rp.dispose();
+//		rp = null;
 		super.dispose();
 	}
 
@@ -932,14 +903,12 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	}
 
 	@Override
-	protected void handleCheckBoxEvent(Object src) {
-		if (isAdjusting)
+	protected void handleButtonEvent(Object src) {
+		if (src instanceof JCheckBox) {
+			if (!isAdjusting)
+				updateViewOptions();
 			return;
-		updateViewOptions();
-	}
-
-	@Override
-	protected void handleRadioButtonEvent(Object src) {
+		}
 		if (!((JToggleButton) src).isSelected())
 			return;
 		if (src == nButton) {
@@ -1057,6 +1026,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		variables.setApp(this);
 	}
 
+	@Override
+	protected void applyView() {
+		resetViewDirection(-1);
+	}
+
 	/**
 	 * Starts the renderer thread.
 	 */
@@ -1114,22 +1088,10 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	}
 
 	@Override
-	protected double[][] getPerspective() {
-		return rp.getPerspective();
-	}
-
-	@Override
-	protected void setPerspective(double[][] params) {
-		if (params == null)
-			return;
-		rp.setPerspective(params);
-		updateDisplay();
-	}
-
-	@Override
-	protected void stopSpin() {
+	protected boolean prepareToSwapOut() {
 		isAnimate = false;
 		rp.setSpinning(false);
+		return true;
 	}
 
 	@Override
@@ -1137,6 +1099,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		if (a == null)
 			return;
 		IsoDistortApp app = (IsoDistortApp) a;
+		rp.setPerspective(app.rp.getPerspective());		
 		aBox.setSelected(app.showAtoms);
 		bBox.setSelected(app.showBonds);
 		cBox.setSelected(app.showCells);
@@ -1153,11 +1116,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		wView.setText(app.wView.getText());
 		variables.isChanged = true;
 		updateViewOptions();
-	}
-
-	@Override
-	protected void applyView() {
-		resetViewDirection(-1);
+		updateDisplay();
 	}
 
 }

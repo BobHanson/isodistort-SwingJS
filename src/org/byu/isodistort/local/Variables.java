@@ -4,7 +4,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
-import java.awt.event.ItemListener;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
@@ -312,14 +311,15 @@ public class Variables {
 
 	private boolean isAdjusting;
 
+	public Map<String, ArrayList<String>> myMap;
+
 	/**
 	 * instantiates and initializes the scroll and control panels.
 	 * 
-	 * @param controlPanel
 	 * @param sliderPanel
 	 */
-	public void initPanels(JPanel sliderPanel, JPanel controlPanel) {
-		gui.initPanels(sliderPanel, controlPanel);
+	public void initSliderPanel(JPanel sliderPanel) {
+		gui.initPanels(sliderPanel);
 	}
 
 	public Variables(IsoApp app, String dataString, boolean isDiffraction) {
@@ -327,10 +327,9 @@ public class Variables {
 		this.isDiffraction = isDiffraction;
 		this.gui = new VariableGUI();
 		
-		new VariableParser().parseDataTags(dataString);
+		new VariableParser().parse(dataString);
 		identifyUniqueAtoms();
 		setColors(false);
-		initPanels(app.sliderPanel, app.controlPanel);
 	}
 
 	/** calculates the parent atom colors */
@@ -686,11 +685,6 @@ public class Variables {
 		return s;
 	}
 
-	public void updateForApp() {
-		// TODO Auto-generated method stub
-
-	}
-
 	public void setApp(IsoApp app) {
 		this.app = app;
 //		if (gui != null) {
@@ -698,6 +692,33 @@ public class Variables {
 //		}
 	}
 
+	/** An ordered list
+	 * 
+	 */
+    final static String[] knownTags = new String[] {//
+    	"isoversion",//
+    	"atommaxradius",//
+    	"angstromspermagneton",//
+    	"angstromsperradian",//
+    	"defaultuiso",//
+    	"maxbondlength",//
+    	"appletwidth",//
+    	"parentcell",//
+    	"parentorigin",//
+    	"parentbasis",//
+    	"atomtypelist",//
+    	"atomsubtypelist",//
+    	"atomcoordlist",//
+    	"atomocclist",//
+    	"atommaglist",//
+    	"atomrotlist",//
+    	"bondlist",//
+    	"irreplist",//
+    	"strainmodelist",//
+    	"displacivemodelist"//
+    };
+    	
+    
 	private class VariableParser {
 		public String currentTag;
 		private ArrayList<String> currentData;
@@ -707,11 +728,11 @@ public class Variables {
 		 * 
 		 * @param dataString
 		 */
-		private void parseDataTags(String dataString) {
+		void parse(String dataString) {
 			currentTag = "";
 			currentData = null;
 			try {
-				Map<String, ArrayList<String>> myMap = getDataMap(dataString);
+				myMap = getDataMap(dataString);
 				isoversion = myMap.get("isoversion").get(0);
 				parseAppletSettings(myMap);
 				parseCrystalSettings(myMap);
@@ -1876,9 +1897,11 @@ public class Variables {
 	private class VariableGUI implements ChangeListener {
 
 		private final static int subTypeWidth = 170;
-		private final static int controlPanelHeight = 55, roomForScrollBar = 15, padding = 4, barheight = 20;
+		private final static int barheight = 20;
 		private final static int subTypeBoxWidth = 15, sliderLabelWidth = 36, lattWidth = 60;
 
+		
+		
 		/**
 		 * Array of colors for slider bars, they correspond to which atoms they move.
 		 */
@@ -2220,28 +2243,27 @@ public class Variables {
 			}
 		}
 
-		void initPanels(JPanel sliderPanel, JPanel controlPanel) {
+		/**
+		 * Set the sizes of panels based on 
+		 * @param sliderPanel
+		 * @param controlPanel
+		 */
+		void initPanels(JPanel sliderPanel) {
 		//  Divide the applet area with structure on the left and controls on the right.
 
-			sliderPanel.removeAll();
+			Dimension dim = sliderPanel.getPreferredSize();			
 
-			int controlPaneHeight = controlPanelHeight + padding;
-			int sliderPaneHeight = appletHeight - controlPaneHeight;
-			int sliderPanelHeight = sliderPaneHeight - padding;
-			int controlPaneWidth = appletWidth;
-			int controlPanelWidth = controlPaneWidth - padding;
-			int sliderPaneWidth = appletWidth - sliderPaneHeight;
-			int sliderPanelWidth = sliderPaneWidth - roomForScrollBar - padding;
+			// width - height to create a roughly square panel
 
 			// Calculate numRows of each subtype
 			/** Number of extra rows above slider bar panel (for view panel) */
 			int numExtraRows = 5; // One for master slider bar, one for strainTitle, one for irrepTitle, and 2 for
 									// the lattice params.
 			/** Minimum number of rows in grid that will keep the rows thin */
-			int minRowNumber = (int) Math.floor(sliderPanelHeight / barheight);
+			int minRowNumber = (int) Math.floor(dim.height / barheight);
 
 			/** Maximum number of check boxes per row the GUI will hold */
-			int maxSubTypesPerRow = (int) Math.floor(sliderPanelWidth / subTypeWidth);
+			int maxSubTypesPerRow = (int) Math.floor(dim.width / subTypeWidth);
 
 			int numSubRowsTotal = 0;
 			numSubRows = new int[numTypes];
@@ -2255,15 +2277,14 @@ public class Variables {
 			int rowCount = dispmodeNum + scalarmodeNum + magmodeNum + rotmodeNum + ellipmodeNum + strainmodeNum + numIrreps
 					+ numTypes + numExtraRows + numSubRowsTotal;
 			int rowNumber = Math.max(rowCount, minRowNumber);
-			addControls(sliderPanel, controlPanel, sliderPanelWidth, rowNumber);
-			controlPanel.setPreferredSize(new Dimension(controlPanelWidth, controlPanelHeight));
-			// size of master slider bar's label
-			sliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, rowNumber * barheight));
+			
+			addControls(sliderPanel, dim.width, rowNumber);
+			sliderPanel.setPreferredSize(new Dimension(dim.width, rowNumber * barheight));
 		}
 
 		private int sliderWidth;
 		
-		private void addControls(JPanel sliderPanel, JPanel controlPanel, int sliderPanelWidth, int rowNumber) {
+		private void addControls(JPanel sliderPanel, int sliderPanelWidth, int rowNumber) {
 		
 			sliderWidth = sliderPanelWidth / 2;
 
@@ -2280,7 +2301,7 @@ public class Variables {
 			masterSliderPanel = new JPanel(new GridLayout(1, 2));
 			masterSliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
 			masterSliderPanel.setBackground(Color.WHITE);
-			masterSliderPanel.add(new JLabel("parent"));// add master slider bar to left panel
+			masterSliderPanel.add(new JLabel("  parent"));// add master slider bar to left panel
 			masterSliderPanel.add(superSlider);// add master slider bar to left panel
 			masterSliderPanel.add(superSliderLabel);// add master slider bar's label to right panel
 
@@ -2698,28 +2719,7 @@ public class Variables {
 					+ varToString(maxrot, 2, -4) + "]");
 		}
 
-		private ItemListener currentListener;
-		
-		/**
-		 * Set or remove checkbox listeners. IsoDistortApp will add these; IsoDiffractApp will remove them.
-		 * 
-		 * @param l
-		 */
-		void setCheckboxListeners(ItemListener l) {
-			if (currentListener != null) {
-				for (int t = 0; t < numTypes; t++)
-					for (int s = 0; s < numSubTypes[t]; s++)
-						subTypeBoxes[t][s].removeItemListener(currentListener);
-			}
-			currentListener = null;
-			if (l != null) {
-				for (int t = 0; t < numTypes; t++)
-					for (int s = 0; s < numSubTypes[t]; s++)
-						subTypeBoxes[t][s].addItemListener(l);
-			}
-		}
-
-		public void getColors(int t, double[] rgb) {
+ 		public void getColors(int t, double[] rgb) {
 			rgb[0] = color[t].getRed() / 255.0;
 			rgb[1] = color[t].getGreen() / 255.0;
 			rgb[2] = color[t].getBlue() / 255.0;

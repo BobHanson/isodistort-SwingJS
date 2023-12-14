@@ -4,7 +4,7 @@
 package org.byu.isodistort.render;
 
 import org.byu.isodistort.local.Matrix;
-import org.byu.isodistort.local.Vec;
+import org.byu.isodistort.local.MathUtil;
 
 /**
  * Provides the computational functionality to render geometric objects in
@@ -640,17 +640,17 @@ public class Renderer {
 			T[1] = cameraAim[1] - cameraPos[1];
 			T[2] = cameraAim[2] - cameraPos[2];
 
-			Vec.normalize(T);
+			MathUtil.normalize(T);
 
-			double vz = Vec.dot(T, cameraUp);
+			double vz = MathUtil.dot(T, cameraUp);
 			double vy = Math.sqrt(1 - vz * vz);
 
 			Matrix.identity(camtmp);
 
 			double crossUT[] = new double[3];
-			double dotTU = Vec.dot(T, cameraUp);
+			double dotTU = MathUtil.dot(T, cameraUp);
 
-			Vec.cross(cameraUp, T, crossUT);
+			MathUtil.cross(cameraUp, T, crossUT);
 
 			for (int i = 0; i < 3; i++) {
 				camtmp.set(2, i, T[i]);
@@ -1091,7 +1091,7 @@ public class Renderer {
 		double nn[] = normal;
 
 		normat.rotate(v[3], v[4], v[5], nn);
-		Vec.normalize(nn);
+		MathUtil.normalize(nn);
 		for (int j = 0; j < 3; j++)
 			ti[j + 3] = nn[j];
 
@@ -1113,7 +1113,7 @@ public class Renderer {
 		double nn[] = normal;
 
 		normat.rotate(v[3], v[4], v[5], nn);
-		Vec.normalize(nn);
+		MathUtil.normalize(nn);
 		for (int j = 0; j < 3; j++)
 			ti[j + 3] = nn[j];
 
@@ -1481,8 +1481,8 @@ public class Renderer {
 		if (m.anisotropic) {
 			double a2[] = { x, y, z };
 			double a3[] = { 0, 0, 0 };
-			Vec.cross(a1, a2, a3);
-			Vec.normalize(a3);
+			MathUtil.cross(a1, a2, a3);
+			MathUtil.normalize(a3);
 			x = a3[0];
 			y = a3[1];
 			z = a3[2];
@@ -1543,9 +1543,9 @@ public class Renderer {
 			if (isSpecular) {
 				if (m.anisotropic) {
 					double a1[] = { L[0], L[1], L[2] + 2 };
-					Vec.normalize(a1);
+					MathUtil.normalize(a1);
 					double a2[] = { x, y, z };
-					t = Vec.dot(a1, a2);
+					t = MathUtil.dot(a1, a2);
 					t = Math.sqrt(1 - t * t);
 					double dp = L[0] * v[3] + L[1] * v[4] + L[2] * v[5];
 					t = Math.max(0, dp * t);

@@ -434,35 +434,35 @@ public class Variables implements ChangeListener {
 		pStrainPlusIdentity[2][2] = pStrainVoigt[2] + 1;
 
 		// calculate strained parent basis vectors in cartesian Angstrom coords
-		Vec.matdotmat(pStrainPlusIdentity, pBasisCart0, pBasisCart);
+		MathUtil.matdotmat(pStrainPlusIdentity, pBasisCart0, pBasisCart);
 
 		// calculate strained supercell basis vectors in cartesian Angstrom coords
-		Vec.matdotmat(pBasisCart, TmatInverseTranspose, sBasisCart);
+		MathUtil.matdotmat(pBasisCart, TmatInverseTranspose, sBasisCart);
 
 		// calculate some other useful matrices
-		Vec.mattranspose(pBasisCart, pBasisCartTranspose);
-		Vec.mattranspose(sBasisCart, sBasisCartTranspose);
-		Vec.matinverse(sBasisCart, sBasisCartInverse);
+		MathUtil.mattranspose(pBasisCart, pBasisCartTranspose);
+		MathUtil.mattranspose(sBasisCart, sBasisCartTranspose);
+		MathUtil.matinverse(sBasisCart, sBasisCartInverse);
 
 		// calculate the strained parent and supercell lattice parameters
-		pLatt[0] = Math.sqrt(Vec.dot(pBasisCartTranspose[0], pBasisCartTranspose[0])); // a
-		pLatt[1] = Math.sqrt(Vec.dot(pBasisCartTranspose[1], pBasisCartTranspose[1])); // b
-		pLatt[2] = Math.sqrt(Vec.dot(pBasisCartTranspose[2], pBasisCartTranspose[2])); // c
+		pLatt[0] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[0], pBasisCartTranspose[0])); // a
+		pLatt[1] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[1], pBasisCartTranspose[1])); // b
+		pLatt[2] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[2], pBasisCartTranspose[2])); // c
 		pLatt[3] = Math
-				.acos(Vec.dot(pBasisCartTranspose[1], pBasisCartTranspose[2]) / Math.max(pLatt[1] * pLatt[2], 0.001)); // alpha
+				.acos(MathUtil.dot(pBasisCartTranspose[1], pBasisCartTranspose[2]) / Math.max(pLatt[1] * pLatt[2], 0.001)); // alpha
 		pLatt[4] = Math
-				.acos(Vec.dot(pBasisCartTranspose[0], pBasisCartTranspose[2]) / Math.max(pLatt[0] * pLatt[2], 0.001)); // beta
+				.acos(MathUtil.dot(pBasisCartTranspose[0], pBasisCartTranspose[2]) / Math.max(pLatt[0] * pLatt[2], 0.001)); // beta
 		pLatt[5] = Math
-				.acos(Vec.dot(pBasisCartTranspose[0], pBasisCartTranspose[1]) / Math.max(pLatt[0] * pLatt[1], 0.001)); // gamma
-		sLatt[0] = Math.sqrt(Vec.dot(sBasisCartTranspose[0], sBasisCartTranspose[0])); // a
-		sLatt[1] = Math.sqrt(Vec.dot(sBasisCartTranspose[1], sBasisCartTranspose[1])); // b
-		sLatt[2] = Math.sqrt(Vec.dot(sBasisCartTranspose[2], sBasisCartTranspose[2])); // c
+				.acos(MathUtil.dot(pBasisCartTranspose[0], pBasisCartTranspose[1]) / Math.max(pLatt[0] * pLatt[1], 0.001)); // gamma
+		sLatt[0] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[0], sBasisCartTranspose[0])); // a
+		sLatt[1] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[1], sBasisCartTranspose[1])); // b
+		sLatt[2] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[2], sBasisCartTranspose[2])); // c
 		sLatt[3] = Math
-				.acos(Vec.dot(sBasisCartTranspose[1], sBasisCartTranspose[2]) / Math.max(sLatt[1] * sLatt[2], 0.001)); // alpha
+				.acos(MathUtil.dot(sBasisCartTranspose[1], sBasisCartTranspose[2]) / Math.max(sLatt[1] * sLatt[2], 0.001)); // alpha
 		sLatt[4] = Math
-				.acos(Vec.dot(sBasisCartTranspose[0], sBasisCartTranspose[2]) / Math.max(sLatt[0] * sLatt[2], 0.001)); // beta
+				.acos(MathUtil.dot(sBasisCartTranspose[0], sBasisCartTranspose[2]) / Math.max(sLatt[0] * sLatt[2], 0.001)); // beta
 		sLatt[5] = Math
-				.acos(Vec.dot(sBasisCartTranspose[0], sBasisCartTranspose[1]) / Math.max(sLatt[0] * sLatt[1], 0.001)); // gamma
+				.acos(MathUtil.dot(sBasisCartTranspose[0], sBasisCartTranspose[1]) / Math.max(sLatt[0] * sLatt[1], 0.001)); // gamma
 
 		boolean testing = false;
 
@@ -488,7 +488,7 @@ public class Variables implements ChangeListener {
 		}
 
 		// calculate the parent cell origin in strained cartesian Angtstrom coords
-		Vec.matdotvect(sBasisCart, pOriginUnitless, pOriginCart);
+		MathUtil.matdotvect(sBasisCart, pOriginUnitless, pOriginCart);
 
 		// calculate the 8 cell vertices in strained cartesian Angstrom coordinates
 		for (int ix = 0; ix < 2; ix++)
@@ -519,7 +519,7 @@ public class Variables implements ChangeListener {
 		for (int t = 0; t < numTypes; t++)
 			for (int s = 0; s < numSubTypes[t]; s++)
 				for (int a = 0; a < numSubAtoms[t][s]; a++) {
-					Vec.matdotvect(sBasisCart, atomInitCoord[t][s][a], tempvec);
+					MathUtil.matdotvect(sBasisCart, atomInitCoord[t][s][a], tempvec);
 					for (int i = 0; i < 3; i++) {
 						if (tempvec[i] < minloc[i])
 							minloc[i] = tempvec[i];
@@ -630,29 +630,29 @@ public class Variables implements ChangeListener {
 					}
 
 //					Determine the "size" of the displacement.
-					Vec.matdotvect(sBasisCart, deltaCoord, tempvec); // displacement in cartesian coords
-					d = Vec.norm(tempvec); // displacement magnitude in Angstroms
+					MathUtil.matdotvect(sBasisCart, deltaCoord, tempvec); // displacement in cartesian coords
+					d = MathUtil.norm(tempvec); // displacement magnitude in Angstroms
 					if (d > maxdisp)
 						maxdisp = d;
 
 //					Determine the "size" of the magnetic moment.
-					Vec.matdotvect(sBasisCart, atomFinalMag[t][s][a], tempvec); // magnetic moment in cartesian coords
-					d = Vec.norm(tempvec); // moment magnitude in Angstroms
+					MathUtil.matdotvect(sBasisCart, atomFinalMag[t][s][a], tempvec); // magnetic moment in cartesian coords
+					d = MathUtil.norm(tempvec); // moment magnitude in Angstroms
 					if (d > maxmag)
 						maxmag = d;
 
 //					Determine the "size" of the rotation angle.
-					Vec.matdotvect(sBasisCart, atomFinalRot[t][s][a], tempvec); // rotation in cartesian coords
-					d = Vec.norm(tempvec); // rotation in Angstroms
+					MathUtil.matdotvect(sBasisCart, atomFinalRot[t][s][a], tempvec); // rotation in cartesian coords
+					d = MathUtil.norm(tempvec); // rotation in Angstroms
 					if (d > maxrot)
 						maxrot = d;
 
 					avgocc += atomFinalOcc[t][s][a] / numSubAtoms[t][s];
 
 //					Determine the "size" of the ellipsoid.
-					Vec.voigt2matrix(atomFinalEllip[t][s][a], tempmat);
-					Vec.matdotmat(sBasisCart, tempmat, tempmat);
-					Vec.matdotmat(tempmat, sBasisCartInverse, tempmat);// ellipsoid in cartesian coords
+					MathUtil.voigt2matrix(atomFinalEllip[t][s][a], tempmat);
+					MathUtil.matdotmat(sBasisCart, tempmat, tempmat);
+					MathUtil.matdotmat(tempmat, sBasisCartInverse, tempmat);// ellipsoid in cartesian coords
 					d = 0;
 					for (int i = 0; i < 3; i++)
 						for (int j = 0; j < 3; j++)
@@ -808,8 +808,8 @@ public class Variables implements ChangeListener {
 					for (int j = 0; j < 3; j++)
 						for (int i = 0; i < 3; i++) {
 							Tmat[j][i] = Double.parseDouble((String) currentData.get(3 * j + i));
-							Vec.mattranspose(Tmat, TmatTranspose);
-							Vec.matinverse(TmatTranspose, TmatInverseTranspose);
+							MathUtil.mattranspose(Tmat, TmatTranspose);
+							MathUtil.matinverse(TmatTranspose, TmatInverseTranspose);
 						}
 				}
 			} else // Crash if the parent origin information is missing
@@ -1825,7 +1825,7 @@ public class Variables implements ChangeListener {
 			}
 
 			// calculate the unstrained parent basis in cartesian Angstrom coords
-			Vec.matdotmat(pBasisCart0, TmatInverseTranspose, sBasisCart0);
+			MathUtil.matdotmat(pBasisCart0, TmatInverseTranspose, sBasisCart0);
 		}
 
 		private Map<String, ArrayList<String>> getDataMap(String dataString) {

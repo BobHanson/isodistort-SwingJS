@@ -57,7 +57,7 @@ import javax.swing.JToggleButton;
 import org.byu.isodistort.local.Elements;
 import org.byu.isodistort.local.IsoApp;
 import org.byu.isodistort.local.Variables;
-import org.byu.isodistort.local.Vec;
+import org.byu.isodistort.local.MathUtil;
 
 public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionListener {
 
@@ -482,7 +482,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			double[] hkls = new double[3];
 			for (int n = 0; n < 3; n++)
 				hkls[n] = crystalPeakHKL[currentpeak][n];
-			Vec.matdotvect(variables.Tmat, hkls, hklp);
+			MathUtil.matdotvect(variables.Tmat, hkls, hklp);
 
 			mouseovertext = "Parent HKL = (" + Variables.varToString(hklp[0], 2, -2) + ", "
 					+ Variables.varToString(hklp[1], 2, -2) + ", " + Variables.varToString(hklp[2], 2, -2)
@@ -515,14 +515,14 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 												// hemi-plane
 
 		// Determine the unstrained metric tensor
-		Vec.matinverse(variables.sBasisCart0, tempmat);
-		Vec.mattranspose(tempmat, slatt2cart);// B* = Transpose(Inverse(B))
-		Vec.matdotmat(tempmat, slatt2cart, metric0); // G* = Transpose(B*).(B*)
+		MathUtil.matinverse(variables.sBasisCart0, tempmat);
+		MathUtil.mattranspose(tempmat, slatt2cart);// B* = Transpose(Inverse(B))
+		MathUtil.matdotmat(tempmat, slatt2cart, metric0); // G* = Transpose(B*).(B*)
 
 		// Determine the new metric tensor
-		Vec.matinverse(variables.sBasisCart, tempmat);
-		Vec.mattranspose(tempmat, slatt2cart);// B* = Transpose(Inverse(B))
-		Vec.matdotmat(tempmat, slatt2cart, metric); // G* = Transpose(B*).(B*)
+		MathUtil.matinverse(variables.sBasisCart, tempmat);
+		MathUtil.mattranspose(tempmat, slatt2cart);// B* = Transpose(Inverse(B))
+		MathUtil.matdotmat(tempmat, slatt2cart, metric); // G* = Transpose(B*).(B*)
 
 		// Create an orthonormal rotation matrix that moves axis 1 to the +x direction,
 		// while keeping axis 2 in the +y quadrant. First transform both axes into
@@ -530,21 +530,21 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		// coords. Then take 1.cross.2 to get axis 3, and 3.cross.1 to get the new axis
 		// 2.
 		// Normalize all three and place them in the rows of the transformation matrix.
-		Vec.matdotvect(slatt2cart, crystalHkldirections[0], tempmat[0]);
-		Vec.matdotvect(slatt2cart, crystalHkldirections[1], tempmat[1]);
-		Vec.mycross(tempmat[0], tempmat[1], tempmat[2]);
-		Vec.mycross(tempmat[2], tempmat[0], tempmat[1]);
-		Vec.normalize(tempmat[0]);
-		Vec.normalize(tempmat[1]);
-		Vec.normalize(tempmat[2]);
-		Vec.matcopy(tempmat, rotmat);
+		MathUtil.matdotvect(slatt2cart, crystalHkldirections[0], tempmat[0]);
+		MathUtil.matdotvect(slatt2cart, crystalHkldirections[1], tempmat[1]);
+		MathUtil.mycross(tempmat[0], tempmat[1], tempmat[2]);
+		MathUtil.mycross(tempmat[2], tempmat[0], tempmat[1]);
+		MathUtil.normalize(tempmat[0]);
+		MathUtil.normalize(tempmat[1]);
+		MathUtil.normalize(tempmat[2]);
+		MathUtil.matcopy(tempmat, rotmat);
 
 		// Combine the rotation and the cartesian conversion to get the overall superHKL
 		// to cartesian transformation.
-		Vec.matdotmat(rotmat, slatt2cart, slatt2rotcart);
+		MathUtil.matdotmat(rotmat, slatt2cart, slatt2rotcart);
 
 		// Invert to get the overall cartesian to superHKL tranformation.
-		Vec.matinverse(slatt2rotcart, rotcart2slatt);
+		MathUtil.matinverse(slatt2rotcart, rotcart2slatt);
 
 	}
 
@@ -568,8 +568,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				zzzM[i] = 0;
 				pppM[i] = 0;
 			}
-			Vec.matdotvect(variables.sBasisCart, crystalPeakHKL[p], qhat);
-			Vec.normalize(qhat);
+			MathUtil.matdotvect(variables.sBasisCart, crystalPeakHKL[p], qhat);
+			MathUtil.normalize(qhat);
 			double d = 2 * Math.PI * peakDInv[p];
 			thermal = Math.exp(-0.5 * uiso * d * d);
 
@@ -583,7 +583,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 								&& supxyz[2] < 1) {
 							// just [atomicNumber, 0] for xray
 							atomScatFac = Elements.getScatteringFactor(variables.atomTypeSymbol[t], isXray);
-							phase = 2 * (Math.PI) * Vec.dot(crystalPeakHKL[p], supxyz);
+							phase = 2 * (Math.PI) * MathUtil.dot(crystalPeakHKL[p], supxyz);
 							scatNR = variables.atomFinalOcc[t][s][a] * atomScatFac[0];
 							scatNI = variables.atomFinalOcc[t][s][a] * atomScatFac[1];
 							zzzNR += variables.atomInitOcc[t][s][a] * atomScatFac[0];
@@ -593,7 +593,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 //	        				System.out.format("t:%d,s:%d,a:%d, pos:(%.2f,%.2f,%.2f), scatNR/NI:%.3f/%.3f, phase:%.3f%n", t, s, a, supxyz[0], supxyz[1], supxyz[2], scatNR, scatNI, phase);
 							// remember that magnetic mode vectors (magnetons/Angstrom) were predefined to
 							// transform this way.
-							Vec.matdotvect(variables.sBasisCart, variables.atomFinalMag[t][s][a], mucart);
+							MathUtil.matdotvect(variables.sBasisCart, variables.atomFinalMag[t][s][a], mucart);
 							if (isXray) {
 								scatM = 0.0;
 								for (int i = 0; i < 3; i++)
@@ -604,11 +604,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 									zzzM[i] += variables.atomInitOcc[t][s][a] * (5.4) * mucart[i];
 							}
 							for (int i = 0; i < 3; i++)
-								pppM[i] += scatM * (mucart[i] - Vec.dot(mucart, qhat) * qhat[i]) * Math.cos(phase);
+								pppM[i] += scatM * (mucart[i] - MathUtil.dot(mucart, qhat) * qhat[i]) * Math.cos(phase);
 						}
 					}
-			Intensity000 = zzzNR * zzzNR + zzzNI * zzzNI + Vec.lenSq3(zzzM);
-			peakIntensity[p] = thermal * (pppNR * pppNR + pppNI * pppNI + Vec.lenSq3(pppM)) 
+			Intensity000 = zzzNR * zzzNR + zzzNI * zzzNI + MathUtil.lenSq3(zzzM);
+			peakIntensity[p] = thermal * (pppNR * pppNR + pppNI * pppNI + MathUtil.lenSq3(pppM)) 
 					/ Intensity000;
 		}
 	}
@@ -627,8 +627,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		// update the peak cartesian coordinates
 		for (int p = 0; p < peakCount; p++) {
-			Vec.vecadd(crystalPeakHKL[p], 1.0, crystalHklCenter, -1.0, tempvec0);
-			Vec.matdotvect(slatt2rotcart, tempvec0, tempvec);
+			MathUtil.vecadd(crystalPeakHKL[p], 1.0, crystalHklCenter, -1.0, tempvec0);
+			MathUtil.matdotvect(slatt2rotcart, tempvec0, tempvec);
 			double x = tempvec[0] * (drawHalfWidth / crystalDInvRange) + drawHalfWidth;
 			double y = -tempvec[1] * (drawHalfHeight / crystalDInvRange) + drawHalfHeight; // minus sign turns the picture
 																					// upside right.
@@ -639,15 +639,15 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		// Update the dinverse list
 		for (int p = 0; p < peakCount; p++) {
-			Vec.matdotvect(metric, crystalPeakHKL[p], tempvec);
-			peakDInv[p] = Math.sqrt(Vec.dot(crystalPeakHKL[p], tempvec));
+			MathUtil.matdotvect(metric, crystalPeakHKL[p], tempvec);
+			peakDInv[p] = Math.sqrt(MathUtil.dot(crystalPeakHKL[p], tempvec));
 		}
 
 		// Update the axis and tickmark plot parameters
 		for (int n = 0; n < 2; n++) // cycle over the two axes
 		{
-			Vec.matdotvect(slatt2rotcart, crystalHkldirections[n], tempvec);
-			Vec.normalize(tempvec);
+			MathUtil.matdotvect(slatt2rotcart, crystalHkldirections[n], tempvec);
+			MathUtil.normalize(tempvec);
 			double dirX = tempvec[0];
 			double dirY = tempvec[1];
 			double slope = -1;
@@ -668,7 +668,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			crystalAxesXYDirXYLen[n][4] = axisLength;
 
 			for (int m = 0; m < crystalTickCount[n]; m++) {
-				Vec.matdotvect(slatt2rotcart, crystalTickHKL[n][m], tempvec);
+				MathUtil.matdotvect(slatt2rotcart, crystalTickHKL[n][m], tempvec);
 				double x = tempvec[0] * (drawHalfWidth / crystalDInvRange) + drawHalfWidth;
 				double y = -tempvec[1] * (drawHalfHeight / crystalDInvRange) + drawHalfHeight; // minus sign turns the picture
 																						// upside right.
@@ -714,8 +714,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		int[][] hklrange = new int[3][2];
 		int tempint, count;
 
-		Vec.matcopy(variables.Tmat, slatt2platt);
-		Vec.matinverse(slatt2platt, platt2slatt);
+		MathUtil.matcopy(variables.Tmat, slatt2platt);
+		MathUtil.matinverse(slatt2platt, platt2slatt);
 
 		hklO[0] = Double.parseDouble(hOTxt.getText());
 		hklO[1] = Double.parseDouble(kOTxt.getText());
@@ -733,54 +733,54 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		// Either way, the input directions are passed as superHKL vectors.
 		// Note that the platt2slatt matrix is slider-bar independent.
 		if (hklType == 2) {
-			Vec.copy(hklH, crystalHkldirections[0]);
-			Vec.copy(hklV, crystalHkldirections[1]);
-			Vec.copy(hklO, crystalHklCenter);
+			MathUtil.copy(hklH, crystalHkldirections[0]);
+			MathUtil.copy(hklV, crystalHkldirections[1]);
+			MathUtil.copy(hklO, crystalHklCenter);
 		} else if (hklType == 1) {
-			Vec.matdotvect(platt2slatt, hklH, crystalHkldirections[0]);
-			Vec.matdotvect(platt2slatt, hklV, crystalHkldirections[1]);
-			Vec.matdotvect(platt2slatt, hklO, crystalHklCenter);
+			MathUtil.matdotvect(platt2slatt, hklH, crystalHkldirections[0]);
+			MathUtil.matdotvect(platt2slatt, hklV, crystalHkldirections[1]);
+			MathUtil.matdotvect(platt2slatt, hklO, crystalHklCenter);
 		}
 
 		// Identify the direct-space direction perpendicular to display plane.
-		Vec.mycross(crystalHkldirections[0], crystalHkldirections[1], uvw);
+		MathUtil.mycross(crystalHkldirections[0], crystalHkldirections[1], uvw);
 
 		variables.readSliders(); // Get the latest strain information
 		variables.recalcDistortion(); // Update the distortion
 		recalcStrainstuff(); // Get updated slatt2rotcart transformation
 
 		// Find out the superHKL range covered within the Qrange specified.
-		Vec.set(tempvec0, crystalDInvRange, 0, 0);
-		Vec.matdotvect(rotcart2slatt, tempvec0, tempvec);
-		Vec.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[0]);
+		MathUtil.set(tempvec0, crystalDInvRange, 0, 0);
+		MathUtil.matdotvect(rotcart2slatt, tempvec0, tempvec);
+		MathUtil.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[0]);
 
-		Vec.set(tempvec0, -crystalDInvRange, 0, 0);
-		Vec.matdotvect(rotcart2slatt, tempvec0, tempvec);
-		Vec.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[1]);
+		MathUtil.set(tempvec0, -crystalDInvRange, 0, 0);
+		MathUtil.matdotvect(rotcart2slatt, tempvec0, tempvec);
+		MathUtil.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[1]);
 
-		Vec.set(tempvec0, 0, crystalDInvRange, 0);
-		Vec.matdotvect(rotcart2slatt, tempvec0, tempvec);
-		Vec.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[2]);
+		MathUtil.set(tempvec0, 0, crystalDInvRange, 0);
+		MathUtil.matdotvect(rotcart2slatt, tempvec0, tempvec);
+		MathUtil.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[2]);
 
-		Vec.set(tempvec0, 0, -crystalDInvRange, 0);
-		Vec.matdotvect(rotcart2slatt, tempvec0, tempvec);
-		Vec.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[3]);
+		MathUtil.set(tempvec0, 0, -crystalDInvRange, 0);
+		MathUtil.matdotvect(rotcart2slatt, tempvec0, tempvec);
+		MathUtil.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[3]);
 
-		Vec.set(tempvec0, crystalDInvRange, crystalDInvRange, 0);
-		Vec.matdotvect(rotcart2slatt, tempvec0, tempvec);
-		Vec.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[4]);
+		MathUtil.set(tempvec0, crystalDInvRange, crystalDInvRange, 0);
+		MathUtil.matdotvect(rotcart2slatt, tempvec0, tempvec);
+		MathUtil.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[4]);
 
-		Vec.set(tempvec0, -crystalDInvRange, crystalDInvRange, 0);
-		Vec.matdotvect(rotcart2slatt, tempvec0, tempvec);
-		Vec.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[5]);
+		MathUtil.set(tempvec0, -crystalDInvRange, crystalDInvRange, 0);
+		MathUtil.matdotvect(rotcart2slatt, tempvec0, tempvec);
+		MathUtil.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[5]);
 
-		Vec.set(tempvec0, crystalDInvRange, -crystalDInvRange, 0);
-		Vec.matdotvect(rotcart2slatt, tempvec0, tempvec);
-		Vec.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[6]);
+		MathUtil.set(tempvec0, crystalDInvRange, -crystalDInvRange, 0);
+		MathUtil.matdotvect(rotcart2slatt, tempvec0, tempvec);
+		MathUtil.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[6]);
 
-		Vec.set(tempvec0, -crystalDInvRange, -crystalDInvRange, 0);
-		Vec.matdotvect(rotcart2slatt, tempvec0, tempvec);
-		Vec.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[7]);
+		MathUtil.set(tempvec0, -crystalDInvRange, -crystalDInvRange, 0);
+		MathUtil.matdotvect(rotcart2slatt, tempvec0, tempvec);
+		MathUtil.vecadd(tempvec, 1.0, crystalHklCenter, 1.0, limits[7]);
 
 		for (int ii = 0; ii < 3; ii++) {
 			tempmin = 1000;
@@ -808,11 +808,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				for (int L = hklrange[2][0]; L <= hklrange[2][1]; L++) {
 					planeQ = false;
 					rangeQ = false;
-					Vec.set(superhkl, H, K, L);
-					Vec.vecadd(superhkl, 1.0, crystalHklCenter, -1.0, tempvec0);
-					Vec.matdotvect(slatt2rotcart, tempvec0, superhklcart);
+					MathUtil.set(superhkl, H, K, L);
+					MathUtil.vecadd(superhkl, 1.0, crystalHklCenter, -1.0, tempvec0);
+					MathUtil.matdotvect(slatt2rotcart, tempvec0, superhklcart);
 
-					inplanetest = Math.abs(Vec.dot(tempvec0, uvw));
+					inplanetest = Math.abs(MathUtil.dot(tempvec0, uvw));
 					if (inplanetest < ztolerance)
 						planeQ = true; // HKL point lies in the display plane
 					if ((Math.abs(superhklcart[0]) < crystalDInvRange)
@@ -820,7 +820,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 						rangeQ = true; // HKL point lies in q range of display
 					if (planeQ && rangeQ) {
 						// Save the XY coords of a good peak.
-						Vec.copy(superhkl, crystalPeakHKL[peakCount]);
+						MathUtil.copy(superhkl, crystalPeakHKL[peakCount]);
 						peakMultiplicities[peakCount] = 1;
 
 						tempscalar = (superhklcart[0] * superhklcart[0]
@@ -840,8 +840,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		// Identify the tickmark locations along axis0.
 		for (int n = 0; n < 2; n++) // cycle over the two axes
 		{
-			Vec.matdotvect(slatt2rotcart, crystalHkldirections[n], tempvec);
-			mag = Vec.len3(tempvec);
+			MathUtil.matdotvect(slatt2rotcart, crystalHkldirections[n], tempvec);
+			mag = MathUtil.len3(tempvec);
 			tempint = (int) Math.floor(crystalDInvRange / mag);
 			crystalTickCount[n] = 2 * tempint + 1;
 			count = 0;
@@ -877,8 +877,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	private void recalcPowderPeakPositionsAndValues() {
 		double[] tempvec = new double[3];
 		for (int p = 0; p < peakCount; p++) {
-			Vec.matdotvect(metric, crystalPeakHKL[p], tempvec);
-			double dinv = Math.sqrt(Vec.dot(crystalPeakHKL[p], tempvec));
+			MathUtil.matdotvect(metric, crystalPeakHKL[p], tempvec);
+			double dinv = Math.sqrt(MathUtil.dot(crystalPeakHKL[p], tempvec));
 			peakDInv[p] = dinv;
 			double dval = (dinv > 0 ? 1 / dinv : 0);
 			double v = 0;
@@ -968,14 +968,14 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			variables.strainmodeSliderVal[m] = (2 * rval.nextFloat() - 1);// *rd.strainmodeMaxAmp[m];
 		variables.recalcDistortion();// Update the distortion parameters
 		recalcStrainstuff(); // Build the randomized dinvmetric tensor
-		Vec.matcopy(metric, randommetric1);
+		MathUtil.matcopy(metric, randommetric1);
 
 		// randomize the strains again to be extra careful
 		for (int m = 0; m < variables.strainmodeNum; m++)
 			variables.strainmodeSliderVal[m] = (2 * rval.nextFloat() - 1);// *rd.strainmodeMaxAmp[m];
 		variables.recalcDistortion();// Update the distortion parameters
 		recalcStrainstuff(); // Build the randomized dinvmetric tensor
-		Vec.matcopy(metric, randommetric2);
+		MathUtil.matcopy(metric, randommetric2);
 
 		// restore the strains to their original values
 		variables.masterSliderVal = masterTemp;
@@ -993,8 +993,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		// end loop
 		// if we made it to the end of the loop, add peak to the end of the list
 
-		Vec.cross(metric0[0], metric0[1], tempvec);
-		metricdet = Vec.dot(tempvec, metric0[2]); // Calculate the metric determinant
+		MathUtil.cross(metric0[0], metric0[1], tempvec);
+		metricdet = MathUtil.dot(tempvec, metric0[2]); // Calculate the metric determinant
 		limH = (int) Math.ceil(powderDinvmax
 				* Math.sqrt(Math.abs((metric0[1][1] * metric0[2][2] - metric0[1][2] * metric0[1][2]) / metricdet)));
 		limK = (int) Math.ceil(powderDinvmax
@@ -1008,7 +1008,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		for (int h = -limH; h <= limH; h++)
 			for (int k = -limK; k <= limK; k++)
 				for (int l = -limL; l <= limL; l++) {
-					Vec.set(superhkl, h, k, l);
+					MathUtil.set(superhkl, h, k, l);
 
 //					// Diagnostic code
 //					Vec.matdotvect(slatt2platt, superhkl, parenthkl);
@@ -1036,12 +1036,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 					// parenthkl[2], ttt[0], ttt[1], ttt[2]);
 
 					// Generate the standard metric and two randomized metrics.
-					Vec.matdotvect(metric0, superhkl, tempvec);
-					dinv0 = Math.sqrt(Vec.dot(superhkl, tempvec));
-					Vec.matdotvect(randommetric1, superhkl, tempvec);
-					dinv1 = Math.sqrt(Vec.dot(superhkl, tempvec));
-					Vec.matdotvect(randommetric2, superhkl, tempvec);
-					dinv2 = Math.sqrt(Vec.dot(superhkl, tempvec));
+					MathUtil.matdotvect(metric0, superhkl, tempvec);
+					dinv0 = Math.sqrt(MathUtil.dot(superhkl, tempvec));
+					MathUtil.matdotvect(randommetric1, superhkl, tempvec);
+					dinv1 = Math.sqrt(MathUtil.dot(superhkl, tempvec));
+					MathUtil.matdotvect(randommetric2, superhkl, tempvec);
+					dinv2 = Math.sqrt(MathUtil.dot(superhkl, tempvec));
 
 					boolean isinrange = (powderDinvmin <= dinv0) && (dinv0 <= powderDinvmax);
 					if (isinrange) {
@@ -1062,7 +1062,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 									//
 									boolean isnicer = comparePowderHKL(superhkl, crystalPeakHKL[p]);
 									if (isnicer) {
-										Vec.copy(superhkl, crystalPeakHKL[p]);
+										MathUtil.copy(superhkl, crystalPeakHKL[p]);
 									}
 									peakMultiplicities[p] += 1;
 									createNewPeak = false;
@@ -1389,8 +1389,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		double[] pb = new double[3];
 		double tol = 0.0001;
 
-		Vec.matdotvect(tmat, suphkla, parhkla);
-		Vec.matdotvect(tmat, suphklb, parhklb);
+		MathUtil.matdotvect(tmat, suphkla, parhkla);
+		MathUtil.matdotvect(tmat, suphklb, parhklb);
 		for (int i = 0; i < 3; i++) {
 			sa[i] = (int) Math.abs(suphkla[i]);
 			sb[i] = (int) Math.abs(suphklb[i]);
@@ -1491,7 +1491,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		for (int p = 0; p < peakCount; p++) {
 			for (int j = 0; j < 3; j++)
 				superhkl[j] = crystalPeakHKL[p][j];
-			Vec.matdotvect(variables.Tmat, superhkl, parenthkl); // transform super hkl into parent hkl
+			MathUtil.matdotvect(variables.Tmat, superhkl, parenthkl); // transform super hkl into parent hkl
 			peakColor[p] = 3;
 			tempscalar = 0;
 			for (int j = 0; j < 3; j++)

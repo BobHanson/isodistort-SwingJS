@@ -7,9 +7,14 @@ package org.byu.isodistort.local;
  * Provides functionality to manipulate vectors.
  */
 
-public class Vec {
-//----- SIMPLE CLASS TO HANDLE BASIC VECTOR OPERATIONS -----
+public class MathUtil {
 
+	/**
+	 * static access only
+	 */
+	
+	private MathUtil() {}
+	
 	/**
 	 * Normalizes vector v to unit-length.
 	 * 

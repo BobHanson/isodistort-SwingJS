@@ -35,7 +35,7 @@ import javax.swing.Timer;
 
 import org.byu.isodistort.local.IsoApp;
 import org.byu.isodistort.local.Variables;
-import org.byu.isodistort.local.Vec;
+import org.byu.isodistort.local.MathUtil;
 import org.byu.isodistort.render.Geometry;
 import org.byu.isodistort.render.Material;
 // import org.byu.isodistort.render.Matrix;
@@ -554,7 +554,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		if (showCells) {
 			for (int pt = 0, c = 0; c < 24; c++) {
 				double[][] vertices = (c < 12 ? variables.parentCellVertices : variables.superCellVertices);
-				Vec.pairtobond(vertices[buildCell[(pt++) % 24]], vertices[buildCell[(pt++) % 24]], cellInfo[c]);
+				MathUtil.pairtobond(vertices[buildCell[(pt++) % 24]], vertices[buildCell[(pt++) % 24]], cellInfo[c]);
 			}
 		}
 
@@ -564,33 +564,33 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				for (int s = 0; s < variables.numSubTypes[t]; s++)
 					for (int a = 0; a < variables.numSubAtoms[t][s]; a++, q++) {
 						atomRadiusInfo[q] = variables.atomFinalOcc[t][s][a];
-						Vec.set3(newcoord, variables.atomFinalCoord[t][s][a]);
-						Vec.matdotvect(variables.sBasisCart, newcoord, tempvec); // typeless atom in cartesian coords
+						MathUtil.set3(newcoord, variables.atomFinalCoord[t][s][a]);
+						MathUtil.matdotvect(variables.sBasisCart, newcoord, tempvec); // typeless atom in cartesian coords
 
 						for (int i = 0; i < 3; i++) // recenter in Applet coordinates
 							atomCoordInfo[q][i] = tempvec[i] - variables.sCenterCart[i];
 
-						Vec.set3(newmag, variables.atomFinalMag[t][s][a]);
-						Vec.matdotvect(variables.sBasisCart, newmag, tempvec);
-						Vec.calculatearrow(tempvec, atomMagneticMomentInfo[q]);
+						MathUtil.set3(newmag, variables.atomFinalMag[t][s][a]);
+						MathUtil.matdotvect(variables.sBasisCart, newmag, tempvec);
+						MathUtil.calculatearrow(tempvec, atomMagneticMomentInfo[q]);
 
-						Vec.set3(newrot, variables.atomFinalRot[t][s][a]);
-						Vec.matdotvect(variables.sBasisCart, newrot, tempvec);
-						Vec.calculatearrow(tempvec, atomRotatonInfo[q]);
+						MathUtil.set3(newrot, variables.atomFinalRot[t][s][a]);
+						MathUtil.matdotvect(variables.sBasisCart, newrot, tempvec);
+						MathUtil.calculatearrow(tempvec, atomRotatonInfo[q]);
 
 //					Ellipsoid work
-						Vec.copy(variables.atomFinalEllip[t][s][a], newellip);
-						Vec.voigt2matrix(newellip, tempmat);
-						Vec.matdotmat(variables.sBasisCart, tempmat, tempmat2);
-						Vec.matcopy(tempmat2, tempmat);
-						Vec.matdotmat(tempmat, variables.sBasisCartInverse, tempmat2);// ellipsoid in cartesian coords
+						MathUtil.copy(variables.atomFinalEllip[t][s][a], newellip);
+						MathUtil.voigt2matrix(newellip, tempmat);
+						MathUtil.matdotmat(variables.sBasisCart, tempmat, tempmat2);
+						MathUtil.matcopy(tempmat2, tempmat);
+						MathUtil.matdotmat(tempmat, variables.sBasisCartInverse, tempmat2);// ellipsoid in cartesian coords
 																						// --
 																						// not safe
 						// to use tempmat in 1st and 3rd arguments
 						// simultaneously.
-						Vec.matcopy(tempmat2, tempmat);
+						MathUtil.matcopy(tempmat2, tempmat);
 //			        System.out.println ("ellipmat3: "+t+", "+s+", "+a+", "+tempmat[0][0]+", "+tempmat[0][1]+", "+tempmat[0][2]+", "+tempmat[1][0]+", "+tempmat[1][1]+", "+tempmat[1][2]+", "+tempmat[2][0]+", "+tempmat[2][1]+", "+tempmat[2][2]);
-						Vec.calculateellipstuff(tempmat, atomEllipseInfo[q]); // ellipsoidInfo array filled
+						MathUtil.calculateellipstuff(tempmat, atomEllipseInfo[q]); // ellipsoidInfo array filled
 					}
 		}
 
@@ -603,7 +603,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				int a0 = bond[0];
 				int a1 = bond[1];
 				double[] info = bondInfo[b];
-				Vec.pairtobond(atomCoordInfo[a0], atomCoordInfo[a1], info);
+				MathUtil.pairtobond(atomCoordInfo[a0], atomCoordInfo[a1], info);
 				if (info[5] >= variables.maxBondLength || atomRadiusInfo[a0] <= variables.minBondOcc
 						|| atomRadiusInfo[a1] <= variables.minBondOcc) {
 					info[6] = 0.0;
@@ -618,52 +618,52 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		for (int axis = 0; axis < 3; axis++) {
 			for (int i = 0; i < 3; i++)
 				tempvec[i] = variables.pBasisCart[i][axis];
-			Vec.normalize(tempvec);
+			MathUtil.normalize(tempvec);
 			for (int i = 0; i < 3; i++) {
 				extent[i] = variables.pOriginCart[i] - variables.sCenterCart[i] + variables.pBasisCart[i][axis];
 				paxesbegs[axis][i] = extent[i] + 2.0 * variables.atomMaxRadius * tempvec[i];
 				paxesends[axis][i] = extent[i] + 3.5 * variables.atomMaxRadius * tempvec[i];
 			}
-			Vec.pairtobond(paxesbegs[axis], paxesends[axis], axesInfo[axis]);
+			MathUtil.pairtobond(paxesbegs[axis], paxesends[axis], axesInfo[axis]);
 
 			for (int i = 0; i < 3; i++)
 				tempvec[i] = variables.sBasisCart[i][axis];
-			Vec.normalize(tempvec);
+			MathUtil.normalize(tempvec);
 			for (int i = 0; i < 3; i++) {
 				extent[i] = -variables.sCenterCart[i] + variables.sBasisCart[i][axis];
 				saxesbegs[axis][i] = extent[i] + 1.5 * variables.atomMaxRadius * tempvec[i];
 				saxesends[axis][i] = extent[i] + 4.0 * variables.atomMaxRadius * tempvec[i];
 			}
-			Vec.pairtobond(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3]);
+			MathUtil.pairtobond(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3]);
 		}
 
 		// Calculate the maximum distance from applet center (used to determine FOV).
 		double d2 = 0;
 		for (int j = 0; j < 8; j++) {
-			Vec.set3(tempvec, variables.superCellVertices[j]);
-			double d = Vec.lenSq3(tempvec);
+			MathUtil.set3(tempvec, variables.superCellVertices[j]);
+			double d = MathUtil.lenSq3(tempvec);
 			if (d > d2)
 				d2 = d;
-			Vec.set3(tempvec, variables.parentCellVertices[j]);
-			d = Vec.lenSq3(tempvec);
+			MathUtil.set3(tempvec, variables.parentCellVertices[j]);
+			d = MathUtil.lenSq3(tempvec);
 			if (d > d2)
 				d2 = d;
 		}
 		for (int i = 0; i < variables.numAtoms; i++) {
-			Vec.set3(tempvec, atomCoordInfo[i]);
-			double d = Vec.lenSq3(tempvec);
+			MathUtil.set3(tempvec, atomCoordInfo[i]);
+			double d = MathUtil.lenSq3(tempvec);
 			if (d > d2)
 				d2 = d;
 		}
 		for (int axis = 0; axis < 3; axis++) {
-			Vec.set3(tempvec, paxesends[axis]);
-			double d = Vec.lenSq3(tempvec);
+			MathUtil.set3(tempvec, paxesends[axis]);
+			double d = MathUtil.lenSq3(tempvec);
 			if (d > d2)
 				d2 = d;
 		}
 		for (int axis = 0; axis < 3; axis++) {
-			Vec.set3(tempvec, saxesends[axis]);
-			double d = Vec.lenSq3(tempvec);
+			MathUtil.set3(tempvec, saxesends[axis]);
+			double d = MathUtil.lenSq3(tempvec);
 			if (d > d2)
 				d2 = d;
 		}
@@ -774,29 +774,29 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		viewIndices[1] = Double.parseDouble(vView.getText());
 		viewIndices[2] = Double.parseDouble(wView.getText());
 
-		Vec.matinverse(variables.sBasisCart, tempmat);
-		Vec.mattranspose(tempmat, recipsuperCell);
-		Vec.matinverse(variables.pBasisCart, tempmat);
-		Vec.mattranspose(tempmat, recipparentCell);
+		MathUtil.matinverse(variables.sBasisCart, tempmat);
+		MathUtil.mattranspose(tempmat, recipsuperCell);
+		MathUtil.matinverse(variables.pBasisCart, tempmat);
+		MathUtil.mattranspose(tempmat, recipparentCell);
 
 		switch (viewType) {
 		case VIEW_TYPE_SUPER_HKL:
-			Vec.mattranspose(recipsuperCell, tempmat);
+			MathUtil.mattranspose(recipsuperCell, tempmat);
 			break;
 		case VIEW_TYPE_SUPER_UVW:
-			Vec.mattranspose(variables.sBasisCart, tempmat);
+			MathUtil.mattranspose(variables.sBasisCart, tempmat);
 			break;
 		case VIEW_TYPE_PARENT_HKL:
-			Vec.mattranspose(recipparentCell, tempmat);
+			MathUtil.mattranspose(recipparentCell, tempmat);
 			break;
 		case VIEW_TYPE_PARENT_UVW:
-			Vec.mattranspose(variables.pBasisCart, tempmat);
+			MathUtil.mattranspose(variables.pBasisCart, tempmat);
 			break;
 		}
-		Vec.matdotvect(tempmat, viewIndices, viewDir);
+		MathUtil.matdotvect(tempmat, viewIndices, viewDir);
 
-		if (Vec.lenSq3(viewDir) > 0.000000000001) {
-			Vec.normalize(viewDir);
+		if (MathUtil.lenSq3(viewDir) > 0.000000000001) {
+			MathUtil.normalize(viewDir);
 			xV = viewDir[0];
 			yV = viewDir[1];
 			zV = viewDir[2];

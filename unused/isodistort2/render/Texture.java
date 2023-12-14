@@ -12,7 +12,7 @@ public final class Texture {
 
    private int[] texels;
    private int height, width;
-   private String name;
+//   private String name;
    private ImagePyramid pyramid = null;
    public static boolean useMIP = true;
    private boolean mip;

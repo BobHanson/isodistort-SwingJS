@@ -205,6 +205,7 @@ public class IsoDiffractApplet extends ISOApplet implements Runnable, KeyListene
 	 * 222222222222222222222222222222222222222222222222222222222222222222222222222222
 	 */
 
+	@Override
 	public void init() {
 		/** Import the variables from paramReader. Method is below. */
 		addKeyListener(this);
@@ -216,10 +217,12 @@ public class IsoDiffractApplet extends ISOApplet implements Runnable, KeyListene
 		resetCrystalPeaks();
 	}
 
+	@Override
 	protected void runImpl() {
 		updateDisplay();
 	}
 	
+	@Override
 	public void updateDisplay() {
 		if (isReset) {
 			rd.readSliders();
@@ -254,6 +257,7 @@ public class IsoDiffractApplet extends ISOApplet implements Runnable, KeyListene
 	 */
 
 	/** Updates the components that appear in the applet. */
+	@Override
 	public void update(Graphics gr) {
 		im = createImage(rd.renderingWidth, rd.renderingHeight);
 		Graphics temp = im.getGraphics();
@@ -269,6 +273,7 @@ public class IsoDiffractApplet extends ISOApplet implements Runnable, KeyListene
 		gr.drawImage(im, 0, 0, this);
 	}
 
+	@Override
 	public void paint(Graphics gr) {
 		update(gr);
 		rd.scrollPane.repaint();
@@ -1349,6 +1354,7 @@ public class IsoDiffractApplet extends ISOApplet implements Runnable, KeyListene
 	 * specify the viewing angles.
 	 */
 	private class buttonListener implements ItemListener {
+		@Override
 		public void itemStateChanged(ItemEvent event) {
 			if (event.getSource() == tButton) {
 				patternType = 1;
@@ -1416,6 +1422,7 @@ public class IsoDiffractApplet extends ISOApplet implements Runnable, KeyListene
 	 * subtype.
 	 */
 	private class checkboxListener implements ItemListener {
+		@Override
 		public void itemStateChanged(ItemEvent event) {
 			isSimpleColor = colorBox.isSelected();
 			rd.setColors(isSimpleColor);
@@ -1426,12 +1433,15 @@ public class IsoDiffractApplet extends ISOApplet implements Runnable, KeyListene
 	/**
 	 * keyinputListener responds to keyboard commands.
 	 */
+	@Override
 	public void keyPressed(KeyEvent e) {
 	}
 
+	@Override
 	public void keyReleased(KeyEvent e) {
 	}
 
+	@Override
 	public void keyTyped(KeyEvent e) {
 		char key = e.getKeyChar();
 //	            System.out.println("key character = '" + key + "'");
@@ -1473,9 +1483,11 @@ public class IsoDiffractApplet extends ISOApplet implements Runnable, KeyListene
 	/**
 	 * mouseoverListener responds to mouseover-peak events.
 	 */
+	@Override
 	public void mouseDragged(MouseEvent e) {
 	}
 
+	@Override
 	public void mouseMoved(MouseEvent e) {
 		double x = e.getX();
 		double y = e.getY();
@@ -1492,6 +1504,7 @@ public class IsoDiffractApplet extends ISOApplet implements Runnable, KeyListene
 	 * specify the viewing angles.
 	 */
 	private class viewListener implements ActionListener {
+		@Override
 		public void actionPerformed(ActionEvent event) {
 			if (event.getSource() == applyView)
 				isReset = true;

@@ -68,6 +68,7 @@ public abstract class ISOApplet extends Applet implements Runnable {
 		}
 	}
 
+	@Override
 	public String getParameter(String key) {
 		switch (key) {
 		case "isoData":
@@ -97,6 +98,7 @@ public abstract class ISOApplet extends Applet implements Runnable {
 		}
 	}
 
+	@Override
 	public void start() {
 		this.setVisible(true);
 		this.requestFocus();
@@ -107,6 +109,7 @@ public abstract class ISOApplet extends Applet implements Runnable {
 		timer.start();
 	}
 
+	@Override
 	public void run() {
 		if (!isRunning)
 			return;
@@ -115,6 +118,7 @@ public abstract class ISOApplet extends Applet implements Runnable {
 	/**
 	 * Stops the renderer thread.
 	 */
+	@Override
 	public void stop() {
 		if (timer != null) {
 			isRunning = false;

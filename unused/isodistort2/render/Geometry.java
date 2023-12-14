@@ -986,13 +986,13 @@ public Geometry extrusion(double O[][], double P[][]) {
    return this;
 }
 
-private void transformVertexCompletely(double src[], Matrix m, double dst[]) {
-   for (int i = 0; i < 3; i++) {
-      dst[i] = src[0] * m.get(i, 0) + src[1] * m.get(i, 1) + src[2] * m.get(i, 2) + m.get(i, 3);
-      dst[i + 3] = src[3] * m.get(i, 0) + src[4] * m.get(i, 1) + src[5] * m.get(i, 2) + m.get(i, 3);
-   }
-}
-
+//private void transformVertexCompletely(double src[], Matrix m, double dst[]) {
+//   for (int i = 0; i < 3; i++) {
+//      dst[i] = src[0] * m.get(i, 0) + src[1] * m.get(i, 1) + src[2] * m.get(i, 2) + m.get(i, 3);
+//      dst[i + 3] = src[3] * m.get(i, 0) + src[4] * m.get(i, 1) + src[5] * m.get(i, 2) + m.get(i, 3);
+//   }
+//}
+//
 /**
    Normalizes W and U, computes their cross product into V, normalizes V,
    computes the cross product of V and W into U, and normalizes U.
@@ -1714,14 +1714,14 @@ private double offset[] = { 0, 0, 0 };
 
 private static final int D = 1000;
 private static double dropoff[] = new double[D];
-private static boolean initDropoff = computeDropoff();
-private static boolean computeDropoff() {
-   for (int i = 0; i < D; i++) {
-      double f = (double) i / D;
-      dropoff[i] = .5 + .5 * Math.cos(Math.PI * Math.sqrt(f));
-   }
-   return true;
-}
+//private static boolean initDropoff = computeDropoff();
+//private static boolean computeDropoff() {
+//   for (int i = 0; i < D; i++) {
+//      double f = (double) i / D;
+//      dropoff[i] = .5 + .5 * Math.cos(Math.PI * Math.sqrt(f));
+//   }
+//   return true;
+//}
 private double lump(double t, double a, double b, double c) {
    if (a == c)
       return 0;

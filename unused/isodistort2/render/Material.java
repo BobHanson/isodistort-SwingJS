@@ -510,6 +510,7 @@ public class Material implements Runnable {
 	 * no mouse dragging for example) and computes the normal map table of values
 	 * for quick look up later.
 	 */
+	@Override
 	public void run() {
 		stopped = false;
 		int chunk = 0;

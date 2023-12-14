@@ -282,6 +282,7 @@ public abstract class RenderApplet extends ISOApplet
 	 * 
 	 * @see #initialize()
 	 */
+	@Override
 	public void init() {
 		addMouseListener(this);
 		addMouseMotionListener(this);
@@ -333,6 +334,7 @@ public abstract class RenderApplet extends ISOApplet
 	 * 
 	 * @param g Specifies the output device.
 	 */
+	@Override
 	public synchronized void update(Graphics g) {
 		int currentWidth = renderAreaX;// originally "=bounds().width;" -David Tanner
 		int currentHeight = renderAreaY;// originally "=bounds().height;" -David Tanner
@@ -410,15 +412,19 @@ public abstract class RenderApplet extends ISOApplet
 	 */
 	public boolean spin = false; // Branton Campbell
 
+	@Override
 	public void mouseClicked(MouseEvent e) {
 	}
 
+	@Override
 	public void mouseEntered(MouseEvent e) {
 	}
 
+	@Override
 	public void mouseExited(MouseEvent e) {
 	}
 
+	@Override
 	public void mousePressed(MouseEvent e) {
 		// necessary for SwingJS if mouse has cliked on the page outside of applet
 		requestFocus();
@@ -429,13 +435,16 @@ public abstract class RenderApplet extends ISOApplet
 		my = y;
 	}
 
+	@Override
 	public void mouseReleased(MouseEvent e) {
 		renderer.setDragging(false);
 	}
 
+	@Override
 	public void mouseMoved(MouseEvent e) {
 	}
 
+	@Override
 	public void mouseDragged(MouseEvent e) {
 		int x = e.getX();
 		int y = e.getY();
@@ -582,6 +591,7 @@ public abstract class RenderApplet extends ISOApplet
 	private int top = 0; // MATRIX STACK POINTER
 
 	
+	@Override
 	public void repaint() {
 		super.repaint();
 	}

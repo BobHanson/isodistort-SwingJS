@@ -706,7 +706,7 @@ public class Variables implements ChangeListener {
 	public void setApp(IsoApp app) {
 		this.app = app;
 		if (gui != null) {
-			gui.setCheckboxListeners(app.appType == IsoApp.APP_ISODISTORT ? app.checkboxListener : null);
+			gui.setCheckboxListeners(app.appType == IsoApp.APP_ISODISTORT ? app.buttonListener : null);
 		}
 	}
 
@@ -2358,7 +2358,7 @@ public class Variables implements ChangeListener {
 
 				// typeDataPanel
 				typeDataPanel[t] = new JPanel(new GridLayout(numSubRows[t], subTypesPerRow[t], 0, 0));
-				typeDataPanel[t].setPreferredSize(new Dimension(sliderPanelWidth, numSubRows[t] * barheight + 10));
+				typeDataPanel[t].setPreferredSize(new Dimension(sliderPanelWidth, numSubRows[t] * barheight));
 				typeDataPanel[t].setBackground(c);
 				for (int s = 0; s < numSubTypes[t]; s++) {
 					subTypeBox[t][s] = new JCheckBox("");
@@ -2368,7 +2368,7 @@ public class Variables implements ChangeListener {
 					subTypeBox[t][s].setForeground(Color.WHITE);
 					subTypeBox[t][s].setHorizontalAlignment(JCheckBox.LEFT);
 //					subTypeBox[t][s].setVerticalAlignment(JCheckBox.CENTER);
-					subTypeBox[t][s].addItemListener(app.checkboxListener);
+					subTypeBox[t][s].addItemListener(app.buttonListener);
 					subTypeBox[t][s].setEnabled(!isDiffraction);
 					subTypeLabel[t][s] = new JLabel();
 					subTypeLabel[t][s].setPreferredSize(new Dimension(subTypeWidth - subTypeBoxWidth, barheight));
@@ -2382,6 +2382,11 @@ public class Variables implements ChangeListener {
 					p.add(subTypeBox[t][s]);
 					p.add(subTypeLabel[t][s]);
 					typeDataPanel[t].add(p);
+					
+//					
+//					typeDataPanel[t].add(subTypeBox[t][s]);
+//					typeDataPanel[t].add(subTypeLabel[t][s]);
+
 				}
 				for (int s = numSubTypes[t]; s < numSubRows[t] * subTypesPerRow[t]; s++)
 					typeDataPanel[t].add(new JLabel("")); // Makes sure that each subtype row is full for allignment

@@ -256,7 +256,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			if (variables == null) {
 				variables = new Variables(this, dataString, true);
 				variables.initPanels(sliderPanel, controlPanel);
-				sliderPanel.setBackground(Color.BLACK);
+//				sliderPanel.setBackground(Color.BLACK);
 			}
 			variables.updateForApp();
 			buildControls();
@@ -1717,7 +1717,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		dButton.setHorizontalAlignment(JRadioButton.LEFT);
 		dButton.setVerticalAlignment(JRadioButton.CENTER);
 		dButton.setFocusable(false);
-		dButton.addItemListener(radioListener);
+		dButton.addItemListener(buttonListener);
 		dButton.setBackground(Color.WHITE);
 		dButton.setForeground(Color.BLACK);
 		dButton.setBorderPainted(false);
@@ -1725,7 +1725,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		qButton.setHorizontalAlignment(JRadioButton.LEFT);
 		qButton.setVerticalAlignment(JRadioButton.CENTER);
 		qButton.setFocusable(false);
-		qButton.addItemListener(radioListener);
+		qButton.addItemListener(buttonListener);
 		qButton.setBackground(Color.WHITE);
 		qButton.setForeground(Color.BLACK);
 		qButton.setBorderPainted(false);
@@ -1733,7 +1733,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		tButton.setHorizontalAlignment(JRadioButton.LEFT);
 		tButton.setVerticalAlignment(JRadioButton.CENTER);
 		tButton.setFocusable(false);
-		tButton.addItemListener(radioListener);
+		tButton.addItemListener(buttonListener);
 		tButton.setBackground(Color.WHITE);
 		tButton.setForeground(Color.BLACK);
 		tButton.setBorderPainted(false);
@@ -1746,7 +1746,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		parentButton.setHorizontalAlignment(JRadioButton.LEFT);
 		parentButton.setVerticalAlignment(JRadioButton.CENTER);
 		parentButton.setFocusable(false);
-		parentButton.addItemListener(radioListener);
+		parentButton.addItemListener(buttonListener);
 		parentButton.setBackground(Color.WHITE);
 		parentButton.setForeground(Color.BLACK);
 		parentButton.setBorderPainted(false);
@@ -1754,7 +1754,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		superButton.setHorizontalAlignment(JRadioButton.LEFT);
 		superButton.setVerticalAlignment(JRadioButton.CENTER);
 		superButton.setFocusable(false);
-		superButton.addItemListener(radioListener);
+		superButton.addItemListener(buttonListener);
 		superButton.setBackground(Color.WHITE);
 		superButton.setForeground(Color.BLACK);
 		superButton.setBorderPainted(false);
@@ -1766,7 +1766,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		crystalButton.setHorizontalAlignment(JRadioButton.LEFT);
 		crystalButton.setVerticalAlignment(JRadioButton.CENTER);
 		crystalButton.setFocusable(false);
-		crystalButton.addItemListener(radioListener);
+		crystalButton.addItemListener(buttonListener);
 		crystalButton.setBackground(Color.WHITE);
 		crystalButton.setForeground(Color.BLACK);
 		crystalButton.setBorderPainted(false);
@@ -1774,7 +1774,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		powderButton.setHorizontalAlignment(JRadioButton.LEFT);
 		powderButton.setVerticalAlignment(JRadioButton.CENTER);
 		powderButton.setFocusable(false);
-		powderButton.addItemListener(radioListener);
+		powderButton.addItemListener(buttonListener);
 		powderButton.setBackground(Color.WHITE);
 		powderButton.setForeground(Color.BLACK);
 		powderButton.setBorderPainted(false);
@@ -1782,7 +1782,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		bothButton.setHorizontalAlignment(JRadioButton.LEFT);
 		bothButton.setVerticalAlignment(JRadioButton.CENTER);
 		bothButton.setFocusable(false);
-		bothButton.addItemListener(radioListener);
+		bothButton.addItemListener(buttonListener);
 		bothButton.setBackground(Color.WHITE);
 		bothButton.setForeground(Color.BLACK);
 		bothButton.setBorderPainted(false);
@@ -1797,7 +1797,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		xrayButton.setHorizontalAlignment(JRadioButton.LEFT);
 		xrayButton.setVerticalAlignment(JRadioButton.CENTER);
 		xrayButton.setFocusable(false);
-		xrayButton.addItemListener(radioListener);
+		xrayButton.addItemListener(buttonListener);
 		xrayButton.setBackground(Color.WHITE);
 		xrayButton.setForeground(Color.BLACK);
 		xrayButton.setBorderPainted(false);
@@ -1805,7 +1805,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		neutronButton.setHorizontalAlignment(JRadioButton.LEFT);
 		neutronButton.setVerticalAlignment(JRadioButton.CENTER);
 		neutronButton.setFocusable(false);
-		neutronButton.addItemListener(radioListener);
+		neutronButton.addItemListener(buttonListener);
 		neutronButton.setBackground(Color.WHITE);
 		neutronButton.setForeground(Color.BLACK);
 		neutronButton.setBorderPainted(false);
@@ -1819,7 +1819,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		colorBox.setFocusable(false);
 		colorBox.setBackground(Color.WHITE);
 		colorBox.setForeground(Color.BLACK);
-		colorBox.addItemListener(checkboxListener);
+		colorBox.addItemListener(buttonListener);
 
 		hOTxt = newTextField("0", -10);
 		kOTxt = newTextField("0", -10);

@@ -1093,7 +1093,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		b.setForeground(Color.BLACK);
 		b.setVisible(true);
 		b.setBorderPainted(false);
-		b.addItemListener(radioListener);
+		b.addItemListener(buttonListener);
 		g.add(b);
 		return b;
 	}
@@ -1108,7 +1108,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		cb.setVisible(true);
 		cb.setBackground(Color.WHITE);
 		cb.setForeground(Color.BLACK);
-		cb.addItemListener(checkboxListener);
+		cb.addItemListener(buttonListener);
 		return cb;
 	}
 

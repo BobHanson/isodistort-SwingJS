@@ -23,15 +23,19 @@ import java.io.FileReader;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
@@ -83,23 +87,22 @@ public abstract class IsoApp {
 	
 	abstract protected void stopSpin();
 	
+	private List<JComponent> listenerList = new ArrayList<>();
 	
 	/** listens for the check boxes that highlight a given atomic subtype. */
-	protected ItemListener checkboxListener = new ItemListener() {
+	protected ItemListener buttonListener = new ItemListener() {
 		@Override
 		public void itemStateChanged(ItemEvent event) {
-			handleCheckBoxEvent(event.getSource());
+			JComponent src = (JComponent) event.getSource();
+			listenerList.add(src);
+			if (src instanceof JCheckBox) {
+				handleCheckBoxEvent(event.getSource());
+			} else if (src instanceof JRadioButton) {
+				handleRadioButtonEvent(event.getSource());			
+			}
 		}
 	};
 	
-
-	/** listens for the applet buttons, which specify the viewing angles. */
-	protected ItemListener radioListener = new ItemListener() {
-		@Override
-		public void itemStateChanged(ItemEvent event) {
-			handleRadioButtonEvent(event.getSource());
-		}
-	};
 
 	/**
 	 * The panel displaying this application
@@ -413,6 +416,8 @@ public abstract class IsoApp {
 	
 	protected void dispose() {
 		isEnabled = false;
+		while (listenerList.size() > 0)
+			listenerList.remove(listenerList.size() - 1);
 		frame.removeComponentListener(componentListener);
 		frame.removeWindowListener(windowListener);
 		frame.getContentPane().removeAll();

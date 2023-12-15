@@ -738,6 +738,7 @@ public class Variables {
 				parseCrystalSettings(myMap);
 				parseAtoms(myMap);
 				parseBonds(myMap);
+				System.out.println("Variables: " + numAtoms + " atoms and " + numBonds + " bonds were read");
 				parseIrreps(myMap);
 				int modeTracker[] = new int[numTypes];
 				parseDisplaciveModes(myMap, modeTracker);
@@ -749,9 +750,59 @@ public class Variables {
 
 			} catch (Throwable t) {
 				t.printStackTrace();
-				parseError(currentTag, 2);
+				parseError("Java error", 2);
 			}
 
+		}
+
+		private void parseError(int size, int n) {
+			parseError("found " + size + "; expected " + n, 1);
+		}
+
+		/**
+		 * A method that centralizes error reporting
+		 * 
+		 * @param error The string that caused the error
+		 * @param type  An int corresponding to the type of error:<br>
+		 *              <li>0 = Duplicate tag<br>
+		 *              <li>1 = Incorrect number of arguments for the tag<br>
+		 *              <li>2 = Invalid input<br>
+		 *              <li>3 = Missing required tag
+		 */
+		private void parseError(String currentTagOrMessage, int type) {
+			switch (type) {
+			case 1:
+				throw new RuntimeException("Variables: Invalid number of arguments for tag " + currentTag
+						+ ": " + currentTagOrMessage);
+			case 2:
+				throw new RuntimeException("Variables: " + currentTagOrMessage + " processing " + currentTag);
+			case 3:
+				throw new RuntimeException("Variables: Required tag missing: " + currentTag);
+			}
+		}
+
+		private double[] one = new double[1];
+
+		/**
+		 * Just check for one value.
+		 * 
+		 * @return
+		 */
+		private double getOne() {
+			get(one, 1);
+			return one[0];
+		}
+
+		/**
+		 * Get n values. 
+		 * 
+		 * @param a
+		 * @param n
+		 */
+		private void get(double[] a, int n) {
+			checkSize(n);
+			for (int i = 0; i < n; i++)
+				a[i] = Double.parseDouble((String) currentData.get(i));
 		}
 
 		private void parseAppletSettings(Map<String, ArrayList<String>> myMap) {
@@ -779,61 +830,35 @@ public class Variables {
 		private void parseCrystalSettings(Map<String, ArrayList<String>> myMap) {
 			// find parentcell parameters
 			currentTag = "parentcell";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != 6) {
-					parseError(currentTag, 1);
-				} else {
-					for (int n = 0; n < 6; n++)
-						pLatt0[n] = Double.parseDouble((String) currentData.get(n));
-				}
-			} else // Crash if parentcell and supercell info are both absent
-			{
+			if (!myMap.containsKey(currentTag)) {
 				parseError(currentTag, 3);
 			}
+			get(pLatt0, 6);
 
 			// find parentCell origin within the superCell basis.
 			currentTag = "parentorigin";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != 3) {
-					parseError(currentTag, 1);
-				} else {
-					for (int n = 0; n < 3; n++)
-						pOriginUnitless[n] = Double.parseDouble((String) currentData.get(n));
-				}
-			} else // Crash if the parent origin information is missing
-			{
+			if (!myMap.containsKey(currentTag)) {
 				parseError(currentTag, 3);
 			}
+			get(pOriginUnitless, 3);
 
 			// find parentCell parameters within superCell basis.
 			currentTag = "parentbasis";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != 9) {
-					parseError(currentTag, 1);
-				} else {
-					for (int j = 0; j < 3; j++)
-						for (int i = 0; i < 3; i++) {
-							Tmat[j][i] = Double.parseDouble((String) currentData.get(3 * j + i));
-							MathUtil.mattranspose(Tmat, TmatTranspose);
-							MathUtil.matinverse(TmatTranspose, TmatInverseTranspose);
-						}
-				}
-			} else // Crash if the parent origin information is missing
-			{
+			if (!myMap.containsKey(currentTag)) {
 				parseError(currentTag, 3);
 			}
+			checkSize(9);
+			for (int j = 0; j < 3; j++)
+				for (int i = 0; i < 3; i++) {
+					Tmat[j][i] = Double.parseDouble((String) currentData.get(3 * j + i));
+					MathUtil.mattranspose(Tmat, TmatTranspose);
+					MathUtil.matinverse(TmatTranspose, TmatInverseTranspose);
+				}
 
 			currentTag = "rhombparentsetting";
 			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != 1) {
-					parseError(currentTag, 1);
-				} else {
-					isRhombParentSetting = Boolean.parseBoolean((String) currentData.get(0));
-				}
+				checkSize(1);
+				isRhombParentSetting = Boolean.parseBoolean((String) currentData.get(0));
 			} else // Default assumption
 			{
 				isRhombParentSetting = false;
@@ -842,12 +867,7 @@ public class Variables {
 			// find angstromspermagneton
 			currentTag = "angstromspermagneton";
 			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != 1) {
-					parseError(currentTag, 1);
-				} else {
-					angstromsPerMagneton = Double.parseDouble((String) currentData.get(0));
-				}
+				angstromsPerMagneton = getOne();
 			} else // Set atom max radius to default value
 			{
 				angstromsPerMagneton = 0.5;
@@ -856,12 +876,7 @@ public class Variables {
 			// find angstromsperradian
 			currentTag = "angstromsperradian";
 			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != 1) {
-					parseError(currentTag, 1);
-				} else {
-					angstromsPerRadian = Double.parseDouble((String) currentData.get(0));
-				}
+				angstromsPerRadian = getOne();
 			} else // Set atom max radius to default value
 			{
 				angstromsPerRadian = 0.5;
@@ -869,60 +884,115 @@ public class Variables {
 
 		}
 
+
+		private void checkSize(int n) {
+			currentData = myMap.get(currentTag);
+			if (currentData.size() != n)
+				parseError(currentData.size(), 1);
+		}
+
+		/**
+		 * Ensure the data are the right size for dataPerRow.
+		 * 
+		 * @param dataPerRow
+		 * @return number of rows
+		 */
+		
+		private int checkSizeN(int dataPerRow) {
+			currentData = myMap.get(currentTag);
+			int numRows = currentData.size() / dataPerRow;
+			checkSize(numRows * dataPerRow);
+			return numRows;
+		}
+
+		/** 
+		 * Load a Type/SubType, SubAtom [t][s][a] single value or a default
+		 * 
+		 * @param atomProp
+		 * @param def         default value or NaN to read and parse, or
+		 *                    Double.MIN_VALUE for already present and checked
+		 */
+		private void getDataTSA(double[][][] atomProp, double def) {
+			boolean isDefault = !Double.isNaN(def);
+			if (!isDefault && def != Double.MIN_VALUE) {
+				checkSize(numAtoms);
+			}
+			for (int q = 0, t = 0; t < numTypes; t++) {
+				for (int s = 0; s < numSubTypes[t]; s++) {
+					for (int a = 0; a < numSubAtoms[t][s]; a++) {
+						atomProp[t][s][a] = (isDefault ? def : Double.parseDouble((String) currentData.get(q++)));
+					}
+				}
+			}
+		}
+		
+		/**
+		 * Load a Type/SubType, SubAtom [t][s][a] list with dataPerRow or a default
+		 * 
+		 * @param atomProp
+		 * @param dataPerRow
+		 * @param def        a nonnegative default value or NaN to read and parse, or -n for already
+		 *                   present and checked and skipping -def columns; so 6, -3 means six columns, skip the first three
+		 *                   (as for reading atom coordinates)
+		 */
+		private void getAtomTSAn(double[][][][] atomProp, int dataPerRow, double def) {
+			boolean isDefault = def >= 0 && !Double.isNaN(def);
+			int i0 = 0;
+			if (def < 0) {
+				i0 = -(int) def;
+			} else if (!isDefault) {
+				checkSize(numAtoms * dataPerRow);
+			}
+			for (int q = 0, t = 0; t < numTypes; t++) {
+				for (int s = 0; s < numSubTypes[t]; s++) {
+					for (int a = 0; a < numSubAtoms[t][s]; a++, q += dataPerRow) {
+						for (int i = i0; i < dataPerRow; i++) {
+							atomProp[t][s][a][i - i0] = (isDefault ? def
+									: Double.parseDouble((String) currentData.get(q + i)));
+						}
+					}
+				}
+			}
+		}
+
 		private void parseAtoms(Map<String, ArrayList<String>> myMap) {
+
+			// find maximum radius of atoms
+			currentTag = "atommaxradius";
+			if (myMap.containsKey(currentTag)) {
+				atomMaxRadius = getOne();
+			} else // Set atom max radius to default value
+			{
+				atomMaxRadius = 0.4;
+			}
 
 			// find defaultuiso
 			currentTag = "defaultuiso";
 			if (myMap.containsKey(currentTag)) {
 				currentData = myMap.get(currentTag);
-				if (currentData.size() != 1) {
-					parseError(currentTag, 1);
-				} else {
-					defaultUiso = Double.parseDouble((String) currentData.get(0));
-				}
+				defaultUiso = getOne();
 			} else // Set atom max radius to default value
 			{
 				double d = atomMaxRadius / 2.0;
 				defaultUiso = d * d;
 			}
 
-			// find maximum radius of atoms
-			currentTag = "atommaxradius";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != 1) {
-					parseError(currentTag, 1);
-				} else {
-					atomMaxRadius = Double.parseDouble((String) currentData.get(0));
-				}
-			} else // Set atom max radius to default value
-			{
-				atomMaxRadius = 0.4;
-			}
-
 			// find atom types
 			currentTag = "atomtypelist";
 			if (myMap.containsKey(currentTag)) {
-				int dataPerRow = 3;
-				currentData = myMap.get(currentTag);
-				numTypes = currentData.size() / dataPerRow;
-				if (currentData.size() != numTypes * dataPerRow) // Make sure it divided evenly
-				{
-					parseError(currentTag, 1);
-				} else {
-					atomTypeName = new String[numTypes];
-					atomTypeSymbol = new String[numTypes];
-					for (int i = 0; i < numTypes; i++) {
-						if (Integer.parseInt((String) currentData.get(dataPerRow * i)) != i + 1)
-							parseError(currentTag, 2);
-						atomTypeName[i] = (String) currentData.get(dataPerRow * i + 1);
-						atomTypeSymbol[i] = (String) currentData.get(dataPerRow * i + 2);
-					}
+				numTypes = checkSizeN(3);
+				atomTypeName = new String[numTypes];
+				atomTypeSymbol = new String[numTypes];
+				for (int i = 0; i < numTypes; i++) {
+					if (Integer.parseInt((String) currentData.get(3 * i)) != i + 1)
+						parseError(currentTag, 2);
+					atomTypeName[i] = (String) currentData.get(3 * i + 1);
+					atomTypeSymbol[i] = (String) currentData.get(3 * i + 2);
 				}
 			} else {
 				parseError(currentTag, 3);
 			}
-			
+
 			numSubTypes = new int[numTypes];
 			numSubAtoms = new int[numTypes][];
 			atomInitCoord = new double[numTypes][][][];
@@ -939,42 +1009,34 @@ public class Variables {
 			// find atom subtypes
 			currentTag = "atomsubtypelist";
 			if (myMap.containsKey(currentTag)) {
-				int dataPerRow = 3;
-				currentData = myMap.get(currentTag);
-				int numSubTypeEntries = currentData.size() / dataPerRow;
-				if (currentData.size() != numSubTypeEntries * dataPerRow) // Make sure it divided evenly
-				{
-					parseError(currentTag, 1);
-				} else {
-					// Find number of subtypes for each type
-					int curType = 0;
-					int curSubType = 0;
-					numSubTypes[0] = 0;
-					for (int i = 0; i < numSubTypeEntries; i++) {
-						if (Integer.parseInt((String) currentData.get(dataPerRow * i)) != curType) {
-							curType = curType + 1;
-							curSubType = 0;
-							if (Integer.parseInt((String) currentData.get(dataPerRow * i)) != curType)
-								parseError("The atom types in the atom subtype list are out of order", 2);
-						}
-						if (Integer.parseInt((String) currentData.get(dataPerRow * i + 1)) != curSubType) {
-							numSubTypes[curType - 1] = numSubTypes[curType - 1] + 1;
-							curSubType += 1;
-							if (Integer.parseInt((String) currentData.get(dataPerRow * i + 1)) != curSubType)
-								parseError("The subtypes in the atom subtype list are out of order", 2);
-						}
+				int numSubTypeEntries = checkSizeN(3); // Find number of subtypes for each type
+				int curType = 0;
+				int curSubType = 0;
+				numSubTypes[0] = 0;
+				for (int i = 0; i < numSubTypeEntries; i++) {
+					if (Integer.parseInt((String) currentData.get(3 * i)) != curType) {
+						curType = curType + 1;
+						curSubType = 0;
+						if (Integer.parseInt((String) currentData.get(3 * i)) != curType)
+							parseError("The atom types in the atom subtype list are out of order", 2);
 					}
+					if (Integer.parseInt((String) currentData.get(3 * i + 1)) != curSubType) {
+						numSubTypes[curType - 1] = numSubTypes[curType - 1] + 1;
+						curSubType += 1;
+						if (Integer.parseInt((String) currentData.get(3 * i + 1)) != curSubType)
+							parseError("The subtypes in the atom subtype list are out of order", 2);
+					}
+				}
 
-					// Assign the subtype names
-					int curEntry = 0;
-					subTypeName = new String[numTypes][];
-					for (int t = 0; t < numTypes; t++) {
-						subTypeName[t] = new String[numSubTypes[t]];
-						for (int s = 0; s < numSubTypes[t]; s++) {
+				// Assign the subtype names
+				int curEntry = 0;
+				subTypeName = new String[numTypes][];
+				for (int t = 0; t < numTypes; t++) {
+					subTypeName[t] = new String[numSubTypes[t]];
+					for (int s = 0; s < numSubTypes[t]; s++) {
 //						subTypeName[t][s]=atomTypeName[t]+"_"+(s+1);
-							subTypeName[t][s] = (String) currentData.get(dataPerRow * curEntry + 2);
-							curEntry = curEntry + 1;
-						}
+						subTypeName[t][s] = (String) currentData.get(3 * curEntry + 2);
+						curEntry = curEntry + 1;
 					}
 				}
 			} else {
@@ -991,201 +1053,92 @@ public class Variables {
 
 			// find atomic coordinates of parent
 			currentTag = "atomcoordlist";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				int dataPerRow = 6;
-				int ndata = currentData.size();
-				numAtoms = ndata / dataPerRow;
-				int dataPerRowOld = 10;
-				int numAtomsOld = ndata / dataPerRowOld;
-				if (numAtomsOld * dataPerRowOld == ndata)
-					try {
-						// If this item isn't an integer, the old data format is used.
-						Integer.parseInt((String) currentData.get(dataPerRow));
-					} catch (NumberFormatException e) {
-						numAtoms = numAtomsOld; // backwards compatibility
-						dataPerRow = dataPerRowOld; // backwards compatibility
-//				System.out.println("old atom coords");
-					}
-				if (ndata != numAtoms * dataPerRow) // Make sure it divided evenly
-				{
-					parseError(currentTag, 1);
-				} else {
-					// Find number of subatoms for each subtype
-					for (int t = 0; t < numTypes; t++) {
-						numSubAtoms[t] = new int[numSubTypes[t]];
-						for (int s = 0; s < numSubTypes[t]; s++) // Zero out the array
-							numSubAtoms[t][s] = 0;
-					}
-
-					int curType = 0;
-					int curSubType = 0;
-					for (int i = 0; i < numAtoms; i++) {
-						if (Integer.parseInt((String) currentData.get(dataPerRow * i)) != curType) {
-							curType += 1;
-							curSubType = 1;
-						}
-						if (Integer.parseInt((String) currentData.get(dataPerRow * i + 1)) != curSubType) {
-							curSubType += 1;
-						}
-						numSubAtoms[curType - 1][curSubType - 1] = numSubAtoms[curType - 1][curSubType - 1] + 1;
-					}
-
-					for (int t = 0; t < numTypes; t++)// iterate over all the types
-					{
-						atomInitCoord[t] = new double[numSubTypes[t]][][];
-						atomFinalCoord[t] = new double[numSubTypes[t]][][];
-						atomInitOcc[t] = new double[numSubTypes[t]][];
-						atomFinalOcc[t] = new double[numSubTypes[t]][];
-						atomInitMag[t] = new double[numSubTypes[t]][][];
-						atomFinalMag[t] = new double[numSubTypes[t]][][];
-						atomInitRot[t] = new double[numSubTypes[t]][][];
-						atomFinalRot[t] = new double[numSubTypes[t]][][];
-						atomInitEllip[t] = new double[numSubTypes[t]][][];
-						atomFinalEllip[t] = new double[numSubTypes[t]][][];
-						for (int s = 0; s < numSubTypes[t]; s++) {
-							atomInitCoord[t][s] = new double[numSubAtoms[t][s]][3];
-							atomFinalCoord[t][s] = new double[numSubAtoms[t][s]][3];
-							atomInitOcc[t][s] = new double[numSubAtoms[t][s]];
-							atomFinalOcc[t][s] = new double[numSubAtoms[t][s]];
-							atomInitMag[t][s] = new double[numSubAtoms[t][s]][3];
-							atomFinalMag[t][s] = new double[numSubAtoms[t][s]][3];
-							atomInitRot[t][s] = new double[numSubAtoms[t][s]][3];
-							atomFinalRot[t][s] = new double[numSubAtoms[t][s]][3];
-							atomInitEllip[t][s] = new double[numSubAtoms[t][s]][6];
-							atomFinalEllip[t][s] = new double[numSubAtoms[t][s]][6];
-						}
-					}
-
-					// input the unitless atomic coords [type][subtype][atom
-					// number][x,y,z][occ][mx,my,mz]
-					int q = 0;
-					for (int t = 0; t < numTypes; t++)// iterate over all the types
-						for (int s = 0; s < numSubTypes[t]; s++)
-							for (int a = 0; a < numSubAtoms[t][s]; a++) {
-								for (int i = 0; i < 3; i++)
-									atomInitCoord[t][s][a][i] = Double
-											.parseDouble((String) currentData.get(q * dataPerRow + 3 + i));
-								q++;
-							}
-				}
-			} else {
+			if (!myMap.containsKey(currentTag)) {
 				parseError(currentTag, 3);
 			}
+			currentData = myMap.get(currentTag);
+			int dataPerRow = 6;
+			int ndata = currentData.size();
+			numAtoms = ndata / dataPerRow;
+			int dataPerRowOld = 10;
+			int numAtomsOld = ndata / dataPerRowOld;
+			if (numAtomsOld * dataPerRowOld == ndata)
+				try {
+					// If this item is an integer, the old data format is used.
+					Integer.parseInt((String) currentData.get(dataPerRow));
+					// all good
+				} catch (NumberFormatException e) {
+					numAtoms = numAtomsOld; // backwards compatibility
+					dataPerRow = dataPerRowOld; // backwards compatibility
+				}
+			if (ndata != numAtoms * dataPerRow) // Make sure it divided evenly
+			{
+				parseError(currentTag, 1);
+			}
+
+			// Find number of subatoms for each subtype
+			for (int t = 0; t < numTypes; t++) {
+				numSubAtoms[t] = new int[numSubTypes[t]];
+				for (int s = 0; s < numSubTypes[t]; s++) // Zero out the array
+					numSubAtoms[t][s] = 0;
+			}
+
+			int curType = 0;
+			int curSubType = 0;
+			for (int i = 0; i < numAtoms; i++) {
+				if (Integer.parseInt((String) currentData.get(dataPerRow * i)) != curType) {
+					curType += 1;
+					curSubType = 1;
+				}
+				if (Integer.parseInt((String) currentData.get(dataPerRow * i + 1)) != curSubType) {
+					curSubType += 1;
+				}
+				numSubAtoms[curType - 1][curSubType - 1] = numSubAtoms[curType - 1][curSubType - 1] + 1;
+			}
+
+			for (int t = 0; t < numTypes; t++)// iterate over all the types
+			{
+				atomInitCoord[t] = new double[numSubTypes[t]][][];
+				atomFinalCoord[t] = new double[numSubTypes[t]][][];
+				atomInitOcc[t] = new double[numSubTypes[t]][];
+				atomFinalOcc[t] = new double[numSubTypes[t]][];
+				atomInitMag[t] = new double[numSubTypes[t]][][];
+				atomFinalMag[t] = new double[numSubTypes[t]][][];
+				atomInitRot[t] = new double[numSubTypes[t]][][];
+				atomFinalRot[t] = new double[numSubTypes[t]][][];
+				atomInitEllip[t] = new double[numSubTypes[t]][][];
+				atomFinalEllip[t] = new double[numSubTypes[t]][][];
+				for (int s = 0; s < numSubTypes[t]; s++) {
+					atomInitCoord[t][s] = new double[numSubAtoms[t][s]][3];
+					atomFinalCoord[t][s] = new double[numSubAtoms[t][s]][3];
+					atomInitOcc[t][s] = new double[numSubAtoms[t][s]];
+					atomFinalOcc[t][s] = new double[numSubAtoms[t][s]];
+					atomInitMag[t][s] = new double[numSubAtoms[t][s]][3];
+					atomFinalMag[t][s] = new double[numSubAtoms[t][s]][3];
+					atomInitRot[t][s] = new double[numSubAtoms[t][s]][3];
+					atomFinalRot[t][s] = new double[numSubAtoms[t][s]][3];
+					atomInitEllip[t][s] = new double[numSubAtoms[t][s]][6];
+					atomFinalEllip[t][s] = new double[numSubAtoms[t][s]][6];
+				}
+			}
+			getAtomTSAn(atomInitCoord, 6, -3);
 
 			// find atomic occupancies of parent
 			currentTag = "atomocclist";
-			if (myMap.containsKey(currentTag)) {
-				int dataPerRow = 1;
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != numAtoms * dataPerRow) // Make sure it's divided evenly and that numAtoms
-																	// hasn't
-																	// changed.
-				{
-					parseError(currentTag, 1);
-				} else {
-					// input the occupancy parameters
-					int q = 0;
-					for (int t = 0; t < numTypes; t++)// iterate over all the types
-						for (int s = 0; s < numSubTypes[t]; s++)
-							for (int a = 0; a < numSubAtoms[t][s]; a++) {
-								atomInitOcc[t][s][a] = Double.parseDouble((String) currentData.get(q * dataPerRow));
-								q++;
-							}
-
-				}
-			} else {
-				// Set default occupancies to 1.0.
-				for (int t = 0; t < numTypes; t++)// iterate over all the types
-					for (int s = 0; s < numSubTypes[t]; s++)
-						for (int a = 0; a < numSubAtoms[t][s]; a++)
-							atomInitOcc[t][s][a] = 1.0;
-			}
+			getDataTSA(atomInitOcc, (myMap.containsKey(currentTag) ? Double.NaN : 1));
 
 			// find atomic magnetic moments of parent
 			currentTag = "atommaglist";
-			if (myMap.containsKey(currentTag)) {
-				int dataPerRow = 3;
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != numAtoms * dataPerRow) // Make sure it's divided evenly and that numAtoms
-																	// hasn't
-																	// changed.
-				{
-					parseError(currentTag, 1);
-				} else {
-					// input the magnetic-moment parameters
-					int q = 0;
-					for (int t = 0; t < numTypes; t++)// iterate over all the types
-						for (int s = 0; s < numSubTypes[t]; s++)
-							for (int a = 0; a < numSubAtoms[t][s]; a++) {
-								for (int i = 0; i < 3; i++)
-									atomInitMag[t][s][a][i] = Double
-											.parseDouble((String) currentData.get(q * dataPerRow + i));
-								q++;
-							}
-				}
-			} else {
-				// Set default magnetic moments to zero.
-				for (int t = 0; t < numTypes; t++)// iterate over all the types
-					for (int s = 0; s < numSubTypes[t]; s++)
-						for (int a = 0; a < numSubAtoms[t][s]; a++)
-							for (int i = 0; i < 3; i++)
-								atomInitMag[t][s][a][i] = 0.0;
-			}
+			getAtomTSAn(atomInitMag, 3, (myMap.containsKey(currentTag) ? Double.NaN : 0));
 
 			// find atomic rotations of parent
 			currentTag = "atomrotlist";
-			if (myMap.containsKey(currentTag)) {
-				int dataPerRow = 3;
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != numAtoms * dataPerRow) // Make sure it's divided evenly and that numAtoms
-																	// hasn't
-																	// changed.
-				{
-					parseError(currentTag, 1);
-				} else {
-					// input the rotation-angle parameters
-					int q = 0;
-					for (int t = 0; t < numTypes; t++)// iterate over all the types
-						for (int s = 0; s < numSubTypes[t]; s++)
-							for (int a = 0; a < numSubAtoms[t][s]; a++) {
-								for (int i = 0; i < 3; i++)
-									atomInitRot[t][s][a][i] = Double
-											.parseDouble((String) currentData.get(q * dataPerRow + i));
-								q++;
-							}
-				}
-			} else {
-				// Set default rotation angles to zero.
-				for (int t = 0; t < numTypes; t++)// iterate over all the types
-					for (int s = 0; s < numSubTypes[t]; s++)
-						for (int a = 0; a < numSubAtoms[t][s]; a++)
-							for (int i = 0; i < 3; i++)
-								atomInitRot[t][s][a][i] = 0.0;
-			}
+			getAtomTSAn(atomInitMag, 3, (myMap.containsKey(currentTag) ? Double.NaN : 0));
 
 			// find atomic adp ellipsoids of parent
 			currentTag = "atomelplist";
 			if (myMap.containsKey(currentTag)) {
-				int dataPerRow = 6;
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != numAtoms * dataPerRow) // Make sure it's divided evenly and that numAtoms
-																	// hasn't
-																	// changed.
-				{
-					parseError(currentTag, 1);
-				} else {
-					// input the adp parameters [type][subtype][atom number][xx,yy,zz,yz,xz,xy]
-					int q = 0;
-					for (int t = 0; t < numTypes; t++)// iterate over all the types
-						for (int s = 0; s < numSubTypes[t]; s++)
-							for (int a = 0; a < numSubAtoms[t][s]; a++) {
-								for (int i = 0; i < 6; i++)
-									atomInitEllip[t][s][a][i] = Double
-											.parseDouble((String) currentData.get(q * dataPerRow + i));
-								q++;
-							}
-				}
+				getAtomTSAn(atomInitEllip, 6, Double.NaN);
 			} else {
 				// Set default ellipsoids to simple spheres.
 				for (int t = 0; t < numTypes; t++)// iterate over all the types
@@ -1203,12 +1156,7 @@ public class Variables {
 			// find maximum length of bonds that can be displayed
 			currentTag = "maxbondlength";
 			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != 1) {
-					parseError(currentTag, 1);
-				} else {
-					maxBondLength = Double.parseDouble((String) currentData.get(0));
-				}
+				maxBondLength = getOne();
 			} else // Set bond max radius to default value
 			{
 				maxBondLength = 2.5;
@@ -1217,60 +1165,51 @@ public class Variables {
 			// find minimum atomic occupancy for which bonds should be displayed
 			currentTag = "minbondocc";
 			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != 1) {
-					parseError(currentTag, 1);
-				} else {
-					minBondOcc = Double.parseDouble((String) currentData.get(0));
-				}
+				minBondOcc = getOne();
 			} else // Set min bond occupancy to default value
 			{
 				minBondOcc = 0.5;
 			}
-			
+
 			// find bonds
 			currentTag = "bondlist";
+			numBonds = 0;
 			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				numBonds = currentData.size() / 6;
-				if (currentData.size() != numBonds * 6) // Make sure it divided evenly
-				{
-					parseError(currentTag, 1);
-				}
+				numBonds = checkSizeN(6);
+				if (numBonds > 0) {
+					whichAtomsBond = new int[numBonds][2];
+					int[][][] detailedWhichAtomsBond = new int[numBonds][2][3];
+					for (int i = 0; i < numBonds; i++) // Read in the bond information
+					{
+						detailedWhichAtomsBond[i][0][0] = Integer.parseInt((String) currentData.get(6 * i));
+						detailedWhichAtomsBond[i][0][1] = Integer.parseInt((String) currentData.get(6 * i + 1));
+						detailedWhichAtomsBond[i][0][2] = Integer.parseInt((String) currentData.get(6 * i + 2));
+						detailedWhichAtomsBond[i][1][0] = Integer.parseInt((String) currentData.get(6 * i + 3));
+						detailedWhichAtomsBond[i][1][1] = Integer.parseInt((String) currentData.get(6 * i + 4));
+						detailedWhichAtomsBond[i][1][2] = Integer.parseInt((String) currentData.get(6 * i + 5));
+					}
 
-				whichAtomsBond = new int[numBonds][2];
-				int[][][] detailedWhichAtomsBond = new int[numBonds][2][3];
-				for (int i = 0; i < numBonds; i++) // Read in the bond information
-				{
-					detailedWhichAtomsBond[i][0][0] = Integer.parseInt((String) currentData.get(6 * i));
-					detailedWhichAtomsBond[i][0][1] = Integer.parseInt((String) currentData.get(6 * i + 1));
-					detailedWhichAtomsBond[i][0][2] = Integer.parseInt((String) currentData.get(6 * i + 2));
-					detailedWhichAtomsBond[i][1][0] = Integer.parseInt((String) currentData.get(6 * i + 3));
-					detailedWhichAtomsBond[i][1][1] = Integer.parseInt((String) currentData.get(6 * i + 4));
-					detailedWhichAtomsBond[i][1][2] = Integer.parseInt((String) currentData.get(6 * i + 5));
+					// Calculate the overall atom numbers (atom1, atom2) associated with each bond.
+					for (int b = 0; b < numBonds; b++)// iterate over all the types
+					{
+						int atomNum = 0;
+						for (int t = 0; t < numTypes; t++)// iterate over all the types
+							for (int s = 0; s < numSubTypes[t]; s++)
+								for (int a = 0; a < numSubAtoms[t][s]; a++) {
+									for (int p = 0; p < 2; p++)
+										if ((detailedWhichAtomsBond[b][p][0] == t + 1)
+												&& (detailedWhichAtomsBond[b][p][1] == s + 1)
+												&& (detailedWhichAtomsBond[b][p][2] == a + 1))
+											whichAtomsBond[b][p] = atomNum;
+									atomNum += 1;
+								}
+					}
 				}
-
-				// Calculate the overall atom numbers (atom1, atom2) associated with each bond.
-				for (int b = 0; b < numBonds; b++)// iterate over all the types
-				{
-					int atomNum = 0;
-					for (int t = 0; t < numTypes; t++)// iterate over all the types
-						for (int s = 0; s < numSubTypes[t]; s++)
-							for (int a = 0; a < numSubAtoms[t][s]; a++) {
-								for (int p = 0; p < 2; p++)
-									if ((detailedWhichAtomsBond[b][p][0] == t + 1)
-											&& (detailedWhichAtomsBond[b][p][1] == s + 1)
-											&& (detailedWhichAtomsBond[b][p][2] == a + 1))
-										whichAtomsBond[b][p] = atomNum;
-								atomNum += 1;
-							}
-				}
-			} else {
+			}
+			if (numBonds == 0) {
 				// There are no bonds. Initialize the array to length zero
 				whichAtomsBond = new int[0][];
-				numBonds = 0;
 			}
-
 
 		}
 
@@ -1315,7 +1254,6 @@ public class Variables {
 			currentTag = "displacivemodelist";
 			if (myMap.containsKey(currentTag)) {
 				currentData = myMap.get(currentTag);
-
 				int counter = 0;
 
 				// Run through the data once and determine the number of displacive modes
@@ -1840,7 +1778,7 @@ public class Variables {
 		private Map<String, ArrayList<String>> getDataMap(String dataString) {
 			Map<String, ArrayList<String>> myMap = new TreeMap<String, ArrayList<String>>();
 			StringTokenizer getData = new StringTokenizer(dataString);
-			currentData = null;
+			currentData = new ArrayList<String>();
 			String currentTag = "";
 			while (getData.hasMoreTokens()) {
 				String next = getData.nextToken();
@@ -1851,45 +1789,20 @@ public class Variables {
 					// We found a new tag, so put the old one in the map
 					if (currentTag != "") {
 						if (myMap.containsKey(currentTag)) // Duplicate tag
-							parseError(currentTag, 0);
+							parseError("Duplicate tag ", 0);
 						myMap.put(currentTag, currentData); // Put the tag and its associated data in the map
-						currentData = null;
+						currentData = new ArrayList<String>();
 					}
 					currentTag = next.substring(1); // Remove the ! from the tag
 					currentTag = currentTag.toLowerCase(Locale.ENGLISH); // Makes the tag lowercase
-				} else // Put the string into the arraylist
-				{
-					if (currentTag != "") {
-						if (currentData == null)
-							currentData = new ArrayList<String>();
-						currentData.add(next);
-					}
+				} else if (currentTag != "") {
+					// Put the string into the arraylist
+					currentData.add(next);
+
 				}
 			}
 			myMap.put(currentTag, currentData); // Put the last tag into the map
 			return myMap;
-		}
-
-		/**
-		 * A method that centralizes error reporting
-		 * 
-		 * @param error The string that caused the error
-		 * @param type  An int corresponding to the type of error:<br>
-		 *              <li>0 = Duplicate tag<br>
-		 *              <li>1 = Incorrect number of arguments for the tag<br>
-		 *              <li>2 = Invalid input<br>
-		 *              <li>3 = Missing required tag
-		 */
-		private void parseError(String currentTagOrMessage, int type) {
-			switch (type) {
-			case 1:
-				throw new RuntimeException("Variables: Invalid number of arguments for tag " + currentTagOrMessage
-						+ ": " + currentTagOrMessage);
-			case 2:
-				throw new RuntimeException("Variables: " + currentTagOrMessage + " processing " + this.currentTag);
-			case 3:
-				throw new RuntimeException("Variables: Required tag missing: " + currentTagOrMessage);
-			}
 		}
 
 	}

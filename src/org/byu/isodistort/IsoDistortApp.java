@@ -247,11 +247,12 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 */
 	private void initAtoms() {
 		showAtoms = showAtoms0;
-		atomCoordInfo = new double[variables.numAtoms][3];
-		atomRadiusInfo = new double[variables.numAtoms];
-		atomMagneticMomentInfo = new double[variables.numAtoms][3];
-		atomRotatonInfo = new double[variables.numAtoms][3];
-		atomEllipseInfo = new double[variables.numAtoms][7];
+		int n = variables.numAtoms;
+		atomCoordInfo = new double[n][3];
+		atomRadiusInfo = new double[n];
+		atomMagneticMomentInfo = new double[n][3];
+		atomRotatonInfo = new double[n][3];
+		atomEllipseInfo = new double[n][7];
 		atomObjects.clear(0);
 		for (int q = 0, t = 0; t < variables.numTypes; t++)
 			for (int s = 0; s < variables.numSubTypes[t]; s++)

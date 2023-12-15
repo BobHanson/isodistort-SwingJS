@@ -459,7 +459,7 @@ public abstract class IsoApp {
 			args[0] = data;
 			JFrame frame = me.frame;
 			dispose();
-			app.start(frame, args, variables);
+			app.start(frame, args, variables, isDrop);
 			if (isDrop) {
 				clearSettings();
 			} else {
@@ -533,7 +533,7 @@ public abstract class IsoApp {
 		
 	};
 	
-	private void start(JFrame frame, String[] args, Variables oldVariables) {
+	private void start(JFrame frame, String[] args, Variables oldVariables, boolean isDrop) {
 		isFramed = true;
 		this.frame = frame;
 		this.args = args;
@@ -990,7 +990,7 @@ public abstract class IsoApp {
 		case "IsoDiffract":
 			app = new IsoDiffractApp();
 		}
-		app.start(new JFrame(type), args, null);
+		app.start(new JFrame(type), args, null, false);
 	}
 
 	public void updateViewOptions() {

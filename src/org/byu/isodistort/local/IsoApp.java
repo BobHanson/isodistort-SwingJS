@@ -56,7 +56,7 @@ import org.byu.isodistort.IsoDistortApp;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".6";
+	final static String minorVersion = ".6"; 
 	
 	/**
 	 * The variables are all read. Time to do any app-specific 

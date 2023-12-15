@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -27,7 +28,10 @@ public class Variables {
 
 	private boolean isDiffraction;
 
+	public BitSet bsPrimitive;
 
+	public int numPrimitive;
+	
 	/** True initially or when a slider bar moves, false otherwise */
 	public boolean isChanged = true;
 
@@ -738,7 +742,11 @@ public class Variables {
 				parseCrystalSettings(myMap);
 				parseAtoms(myMap);
 				parseBonds(myMap);
+				
 				System.out.println("Variables: " + numAtoms + " atoms and " + numBonds + " bonds were read");
+				if (bsPrimitive != null)
+				System.out.println("Variables: primitive: " + bsPrimitive);
+
 				parseIrreps(myMap);
 				int modeTracker[] = new int[numTypes];
 				parseDisplaciveModes(myMap, modeTracker);
@@ -1148,6 +1156,17 @@ public class Variables {
 								atomInitEllip[t][s][a][i] = defaultUiso;
 								atomInitEllip[t][s][a][3 + i] = 0;
 							}
+			}
+			
+			currentTag = "!atomsinunitcell";
+			if (myMap.containsKey(currentTag)) {
+				checkSize(numAtoms);
+				bsPrimitive = new BitSet();
+				for (int i = 0; i < numAtoms; i++) {
+					if ("1".equals(currentData.get(i))) {
+						bsPrimitive.set(i);
+					}
+				}
 			}
 
 		}

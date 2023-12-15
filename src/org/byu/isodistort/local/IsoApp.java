@@ -34,6 +34,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenuBar;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -221,8 +222,6 @@ public abstract class IsoApp {
 	protected boolean readMode = false;
 	/** The datafile to use when readMode is false */
 	protected String whichdatafile = "data/test28.txt";//"data/test28.txt";
-
-	protected boolean isFramed = false;
 
 	protected JFrame frame;
 
@@ -534,7 +533,8 @@ public abstract class IsoApp {
 	};
 	
 	private void start(JFrame frame, String[] args, Variables oldVariables, boolean isDrop) {
-		isFramed = true;
+		if (oldVariables == null && !isDrop)
+			frame.setJMenuBar((JMenuBar) new MenuActions(this).createMenuBar());			
 		this.frame = frame;
 		this.args = args;
 		frameContentPane = (JPanel) frame.getContentPane();
@@ -596,15 +596,7 @@ public abstract class IsoApp {
 				return;
 			}
 			if (source == saveISOVIZ) {
-				getData(new Consumer<String>() {
-
-					@Override
-					public void accept(String data) {
-						FileUtil.saveDataFile(frame, data, "isoviz", false);
-						
-					}
-					
-				});
+				saveOriginal();
 				return;
 			}
 			if (source == openOther) {
@@ -994,6 +986,66 @@ public abstract class IsoApp {
 	}
 
 	public void updateViewOptions() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void saveCurrent() {
+	}
+
+	public void saveOriginal() {
+		getData(new Consumer<String>() {
+
+			@Override
+			public void accept(String data) {
+				FileUtil.saveDataFile(frame, data, "isoviz", false);
+				
+			}
+			
+		});
+	}
+
+	public void saveDistortion() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void saveCIF() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void viewPrimaryOrderParameters() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void viewModeDetails() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void viewCompleteModeDetails() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void saveTOPASstr() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void saveFULLPROFcpr() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void saveIRMatrices() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void viewSubgroupTree() {
 		// TODO Auto-generated method stub
 		
 	}

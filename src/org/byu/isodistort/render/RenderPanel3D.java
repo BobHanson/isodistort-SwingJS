@@ -389,8 +389,13 @@ public class RenderPanel3D extends JPanel
 		}
 	}
 
+	long ttime = 0;
+
 	@Override
 	public synchronized void paint(Graphics g) {
+		long t1 = System.currentTimeMillis();
+		System.out.println("RP timer " + (t1 - ttime));
+		ttime = t1;
 		super.paint(g);
 		if (!isInSync()) {
 			// don't paint if we are not ready.

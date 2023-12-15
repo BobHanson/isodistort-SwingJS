@@ -209,15 +209,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 //		if (isFocused) // if in focus
 //		{
 		rp.updateForDisplay(false);
-		if (isAnimate) {
-			animPhase += 2 * Math.PI / (5 * rp.getFrameRate());
-			animPhase = animPhase % (2 * Math.PI);
-			double d = Math.sin(animPhase);
-			animAmp = d * d;
-			variables.setAnimationAmplitude(animAmp);
-			needsRecalc = true;
-		}
-
 		if (isRecalcMat) {
 			recalcMaterials();
 		}
@@ -1058,16 +1049,31 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	public void start() {
 		setTimer();
 		isRunning = true;
+		ttime = System.currentTimeMillis();
 		timer.start();
 	}
 
+	long ttime = 0;
+	
 	@Override
 	public void run() {
+		long t1 = System.currentTimeMillis();
+		long dt = t1 - ttime;
+		ttime = t1;
+		//System.out.println("IDA timer " + (t1 - ttime));
 		if (!isRunning)
 			return;
 		boolean animating = (isAnimate || rp.isSpinning());
 		if (!animating && --initializing < 0)
 			return;
+		if (isAnimate) {
+			animPhase += 2 * Math.PI / (5000 / dt);
+			animPhase = animPhase % (2 * Math.PI);
+			double d = Math.sin(animPhase);
+			animAmp = d * d;
+			variables.setAnimationAmplitude(animAmp);
+			needsRecalc = true;
+		}
 		updateDisplay();
 		if (initializing == 0 && !animating)
 			stop();

@@ -483,6 +483,7 @@ public abstract class IsoApp {
 
 	protected void dispose() {
 		isEnabled = false;
+		prepareToSwapOut();
 		while (listenerList.size() > 0) {
 			JToggleButton c = listenerList.remove(listenerList.size() - 1);
 			c.removeItemListener(buttonListener);
@@ -512,9 +513,7 @@ public abstract class IsoApp {
 
 		@Override
 		public void windowClosed(WindowEvent e) {
-			
-			// TODO Auto-generated method stub
-			
+			shutDown();
 		}
 
 		@Override
@@ -585,6 +584,16 @@ public abstract class IsoApp {
 			e.printStackTrace();
 		}
 
+	}
+
+	protected void shutDown() {
+		dispose();
+		/**
+		 * @j2sNative
+		 */
+		{
+			System.exit(0);
+		}
 	}
 
 	protected void updateDimensions() {

@@ -372,7 +372,6 @@ public abstract class IsoApp {
 	}
 
 	private String readFileData(String path) {
-		String dataString = null;
 		try {
 			BufferedReader br = null;
 			try {
@@ -382,23 +381,35 @@ public abstract class IsoApp {
 				br = new BufferedReader(new InputStreamReader((FilterInputStream) data));
 
 			}
-			dataString = readLineSkipComments(br);
-			while (br.ready()) {
-				dataString += readLineSkipComments(br);
+			long t = System.currentTimeMillis();
+			StringBuffer dataString = new StringBuffer();
+			dataString.append(readLineSkipComments(br));
+			if (dataString.indexOf("!isoversion") != 0) {
+				br.close();
+				return null;
+			}
+			dataString.append('\n');
+			String s;
+			while ((s = readLineSkipComments(br)) != null) {
+				dataString.append(s).append('\n');
 			}
 			br.close();
-			System.out.println(dataString);
-			return dataString;
+			System.out.println("Bytes read: " + dataString.length() + " in "+(System.currentTimeMillis() - t)+" ms");
+			return dataString.toString();
 		} catch (IOException exception) {
 			exception.printStackTrace();
 			System.out.println("Oops. File not found.");
+			return null;
 		}
-		return (dataString.startsWith("!isoversion") ? dataString : null);
 	}
 
 	private String readLineSkipComments(BufferedReader br) throws IOException {
-		String s = br.readLine().trim();
-		return (s.length() == 0 || s.charAt(0) == '#' ? "" : s + "\n");
+		String s = null;
+		while ((s = br.readLine()) != null) {
+			if (s.trim().length() != 0 && s.charAt(0) != '#')
+				break;
+			}
+		return (s == null ? null : s);
 	}
 
 	/**
@@ -540,6 +551,8 @@ public abstract class IsoApp {
 		frameContentPane = (JPanel) frame.getContentPane();
 		frameContentPane.setLayout(new BorderLayout());
 		try {
+			long t = System.currentTimeMillis();
+
 			initializePanels();
 			variables = new Variables(this, readFile(), appType == APP_ISODIFFRACT);
 			if (oldVariables == null) {
@@ -566,6 +579,7 @@ public abstract class IsoApp {
 				frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion);
 			frame.addComponentListener(componentListener);
 			frame.addWindowListener(windowListener);
+			System.out.println("Time to load: "+(System.currentTimeMillis() - t)+" ms");			
 		} catch (Throwable e) {
 			JOptionPane.showMessageDialog(frame, "Error reading input data " + e.getMessage());
 			e.printStackTrace();

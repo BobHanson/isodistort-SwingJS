@@ -466,6 +466,8 @@ public class MenuActions {
 	private JComponent createMenu(JMenuBar menuBar) {
 		JMenu menu = (menuBar == null ? new JMenu() : null);
 
+		if (true)return menuBar;
+		
 		Map<String, IsoAction> actionMap = getActions();
 		for (String menuID : actionMap.keySet()) {
 			IsoAction action = actionMap.get(menuID);

@@ -1801,9 +1801,6 @@ public class Variables {
 			String currentTag = "";
 			while (getData.hasMoreTokens()) {
 				String next = getData.nextToken();
-//				System.out.println("Next token: "+next);
-				if (next.charAt(0) == '#')
-					continue;
 				if (next.charAt(0) == '!') {
 					// We found a new tag, so put the old one in the map
 					if (currentTag != "") {

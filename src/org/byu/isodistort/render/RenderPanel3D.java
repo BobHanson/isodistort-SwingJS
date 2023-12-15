@@ -389,13 +389,13 @@ public class RenderPanel3D extends JPanel
 		}
 	}
 
-	long ttime = 0;
+//	long ttime = 0;
 
 	@Override
 	public synchronized void paint(Graphics g) {
-		long t1 = System.currentTimeMillis();
-		System.out.println("RP timer " + (t1 - ttime));
-		ttime = t1;
+		//long t1 = System.currentTimeMillis();
+		//System.out.println("RP timer " + (t1 - ttime));
+		//ttime = t1;
 		super.paint(g);
 		if (!isInSync()) {
 			// don't paint if we are not ready.
@@ -406,7 +406,7 @@ public class RenderPanel3D extends JPanel
 		// debugging, testing ....
 
 		double dt = (getCurrentTime() - currentTime);
-		elapsed += dt;
+ 		elapsed += dt;
 		currentTime = getCurrentTime();
 		if (elapsed > 0.00001)
 			frameRate = 0.9 * frameRate + 0.1 / elapsed;

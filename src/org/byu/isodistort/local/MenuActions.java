@@ -94,6 +94,7 @@ public class MenuActions {
 		
 
 		actions.put("File.", null);
+		actions.put("View.", null);
 
 		// this list is in the order of how the menu will be created.
 		actions.put("File.saveOriginal",
@@ -325,7 +326,7 @@ public class MenuActions {
 				});
 				
 
-		actions.put("View.",
+		actions.put("View.viewCompleteMode",
 				new IsoAction("viewComplete", "View Complete Mode Details","View the complete listing of symmetry mode details.") {
 					@Override
 					public void actionPerformed(ActionEvent e) {
@@ -337,7 +338,7 @@ public class MenuActions {
 				
 
 		actions.put("File.TopasStr",
-				new IsoAction("saveTOPAS", "Save TOPAS str", "") {
+				new IsoAction("saveTOPAS", "Save TOPAS str", "Save distortion as a TOPAS str file") {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						
@@ -363,7 +364,7 @@ public class MenuActions {
 
 
 		actions.put("File.saveFULLPROF",
-				new IsoAction("saveFULLPROF", "Save FULLPROF CPR file", "Save ") {
+				new IsoAction("saveFULLPROF", "Save FULLPROF CPR Input", "Save ") {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						
@@ -413,7 +414,7 @@ public class MenuActions {
 
 		
 		actions.put("View.subgroupTree",
-				new IsoAction("viewSubgroupTree", "View the subgroup tree listing for this distortion", "View.") {
+				new IsoAction("viewSubgroupTree", "View Subgroup Tree", "View the subgroup tree listing for this distortion.") {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						
@@ -440,15 +441,15 @@ public class MenuActions {
 				});
 
 		
-		actions.put("",
-				new IsoAction("viewPrimary", "View Primary Order Parameters", "View.") {
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						
-//						app.viewPrimaryOrderParameters();
-
-					}
-				});
+//		actions.put("",
+//				new IsoAction("viewPrimary", "View Primary Order Parameters", "View.") {
+//					@Override
+//					public void actionPerformed(ActionEvent e) {
+//						
+////						app.viewPrimaryOrderParameters();
+//
+//					}
+//				});
 
 
 		return actions;
@@ -466,7 +467,7 @@ public class MenuActions {
 	private JComponent createMenu(JMenuBar menuBar) {
 		JMenu menu = (menuBar == null ? new JMenu() : null);
 
-		if (true)return menuBar;
+//		if (true)return menuBar;
 		
 		Map<String, IsoAction> actionMap = getActions();
 		for (String menuID : actionMap.keySet()) {
@@ -482,8 +483,6 @@ public class MenuActions {
 			int pt = menuID.lastIndexOf(".");
 			String parentName = menuID.substring(0, pt + 1);
 			JMenu parentMenu = (JMenu) menuMap.get(parentName);
-			if (parentMenu == null)
-				throw new NullPointerException("menu is out of order");
 			JMenuItem thisItem = new JMenuItem(action.label);
 			add(menuID, thisItem, null, parentMenu, action);
 		}

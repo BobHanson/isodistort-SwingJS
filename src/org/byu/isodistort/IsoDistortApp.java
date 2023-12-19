@@ -1006,8 +1006,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		controlPanel.add(topControlPanel);
 		controlPanel.add(botControlPanel);
 
-		// Add listeners to a the subtype checkboxes -- don't know where else to put it.
-		variables.setApp(this);
 	}
 
 	@Override

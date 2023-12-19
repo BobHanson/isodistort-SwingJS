@@ -29,16 +29,47 @@ public class Variables {
 	private Atom[] atoms;
 	
 	public class Atom {
-		public int t;
-		public int s;
-		int a;
-		int index;
+		
 		/**
-		 * initial 
+		 * The index of this atom in the filtered array.
+		 */
+		
+		int index;
+		
+		/**
+		 * atomType, subAtomType, and atomNumber in the subtype;
+		 * zero based, so one less than what we see in atom and bond lists. 
+		 * 
+		 */
+		public int t, s, a;
+		
+		/**
+		 * the initial parameter vector, by mode type
 		 */
 		double[][] vector0 = new double[MODE_COUNT][];
+		
+		/**
+		 * the final paramater vector, by mode type
+		 */
 		double[][] vector1 = new double[MODE_COUNT][];
+
+		/**
+		 * the IR component symmetry mode IR coefficients, originally by atomType and
+		 * subtype, but because now we have this atom object, we don't need to run
+		 * through those lists. We can just target an atom directly.
+		 * 
+		 */
 		public double[][][] modes = new double[MODE_COUNT][][];
+
+
+		/**
+		 * A class to collect all atom-related content. 
+		 * 
+		 * @param index
+		 * @param t
+		 * @param s
+		 * @param a
+		 */
 		Atom(int index, int t, int s, int a) {
 			this.index = index;
 			this.t = t;
@@ -98,12 +129,17 @@ public class Variables {
 		 * [atomtype][mode]
 		 */
 		int[] modesPerType;
-		JPanel[] panels;
+		
+		/**
+		 * GUI panels for each type, holding sliders for the type's relevant modes.
+		 */
+		JPanel[] typePanels;
 
 		/**
+		 * This 
 		 * [atomtype][mode][subtype][subatom][value]
 		 */
-		double[][][][][] modeCoeffsTMSA; // was xxxmodeVect
+		double[][][][][] fileModeCoeffsTMSA; // was xxxmodeVect
 
 		/**
 		 * [atomtype][modefortype]
@@ -198,20 +234,20 @@ public class Variables {
 			maxAmpTM = new double[typeCount][];
 			irrepTM = new int[typeCount][];
 			nameTM = new String[typeCount][];
-			modeCoeffsTMSA = new double[typeCount][][][][];
+			fileModeCoeffsTMSA = new double[typeCount][][][][];
 			for (int t = 0; t < typeCount; t++) {
 				int nmodes = modesPerType[t];
 				irrepTM[t] = new int[nmodes];
 				initAmpTM[t] = new double[nmodes];
 				maxAmpTM[t] = new double[nmodes];
 				nameTM[t] = new String[nmodes];
-				modeCoeffsTMSA[t] = new double[nmodes][][][];
+				fileModeCoeffsTMSA[t] = new double[nmodes][][][];
 				int nsub = subTypeCounts[t];
 				int[] natom = subAtomCounts[t];
 				for (int m = 0; m < nmodes; m++) {
-					modeCoeffsTMSA[t][m] = new double[nsub][][];
+					fileModeCoeffsTMSA[t][m] = new double[nsub][][];
 					for (int s = 0; s < nsub; s++)
-						modeCoeffsTMSA[t][m][s] = new double[natom[s]][columnCount];
+						fileModeCoeffsTMSA[t][m][s] = new double[natom[s]][columnCount];
 				}
 			}
 		}
@@ -238,7 +274,7 @@ public class Variables {
 				for (int s = 0; s < numSubTypes[thisType]; s++) {
 					for (int a = 0; a < numSubAtomsRead[thisType][s]; a++) {
 						for (int i = 0; i < columnCount; i++) {
-							modeCoeffsTMSA[thisType][mode][s][a][i] = parser.getDouble(pt++);
+							fileModeCoeffsTMSA[thisType][mode][s][a][i] = parser.getDouble(pt++);
 						}
 					}
 				}
@@ -275,7 +311,8 @@ public class Variables {
 					if (a.modes[type] == null) {
 						a.modes[type] = new double[modesPerType[t]][];
 						for (int m = 0; m < modesPerType[t]; m++) {
-							a.modes[type][m] = modeCoeffsTMSA[t][m][s][a.a];
+							a.modes[type][m] = fileModeCoeffsTMSA[t][m][s][a.a];
+							//fileModeCoeffsTMSA[t][m][s][a.a] = null; // no longe
 						}
 					}
 					// accumulate distortion deltas
@@ -385,12 +422,12 @@ public class Variables {
 		 * Set the color of this mode's panels to their designated colors
 		 */
 		void colorPanels() {
-			if (panels == null || !isActive)
+			if (typePanels == null || !isActive)
 				return;
 			int typeCount = numTypes;
 			for (int t = 0; t < typeCount; t++) {
 				Color c = colorT[t];
-				panels[t].setBackground(c);
+				typePanels[t].setBackground(c);
 				for (int m = 0; m < modesPerType[t]; m++) {
 					sliderLabelsTM[t][m].setBackground(c);
 					sliderTM[t][m].setBackground(c);
@@ -703,6 +740,14 @@ public class Variables {
 	 */
 	private boolean isSwitch;
 
+	public Variables(IsoApp app, String dataString, boolean isDiffraction, boolean isSwitch) {
+		this.app = app;
+		this.isSwitch = isSwitch;
+		this.isDiffraction = isDiffraction;
+		new VariableParser().parse(dataString);
+		gui = new VariableGUI();
+	}
+
 	/**
 	 * instantiates and initializes the scroll and control panels.
 	 * 
@@ -712,14 +757,6 @@ public class Variables {
 		this.sliderPanel = sliderPanel;
 		gui.initPanels();
 		sliderPanel = null;
-	}
-
-	public Variables(IsoApp app, String dataString, boolean isDiffraction, boolean isSwitch) {
-		this.app = app;
-		this.isSwitch = isSwitch;
-		this.isDiffraction = isDiffraction;
-		new VariableParser().parse(dataString);
-		gui = new VariableGUI();
 	}
 
 	/** calculates the parent atom colors */
@@ -967,10 +1004,6 @@ public class Variables {
 		return s;
 	}
 
-	public void setApp(IsoApp app) {
-		this.app = app;
-	}
-
 	/**
 	 * An ordered list
 	 * 
@@ -1115,7 +1148,7 @@ public class Variables {
 
 		String getItem(int pt) {
 			String item = currentData.get(pt);
-			System.out.println(pt + " " + item);
+//			System.out.println(pt + " " + item);
 			return item;
 		}
 
@@ -1229,7 +1262,7 @@ public class Variables {
 			if (!isDefault) {
 				checkSize(numAtomsRead * ncol);
 			}
-			for (int q = 0, ia = 0, iread = 0, n = numAtomsRead; iread < n; iread++, q += 3) {
+			for (int q = 0, ia = 0, iread = 0, n = numAtomsRead; iread < n; iread++, q += ncol) {
 				if (numPrimitive > 0 && !bsPrimitive.get(iread))
 					continue;
 				double[] data = atoms[ia++].vector0[mode] = new double[ncol];
@@ -2030,7 +2063,7 @@ public class Variables {
 			if (!mode.isActive)
 				return;
 			if (t == 0) {
-				mode.panels = new JPanel[numTypes];
+				mode.typePanels = new JPanel[numTypes];
 				mode.sliderTM = new JSlider[numTypes][];
 				mode.sliderLabelsTM = new JLabel[numTypes][];
 				mode.sliderValsTM = new double[numTypes][];
@@ -2040,18 +2073,18 @@ public class Variables {
 			mode.sliderTM[t] = new JSlider[nModes];
 			mode.sliderLabelsTM[t] = new JLabel[nModes];
 			mode.sliderValsTM[t] = new double[nModes];
-			mode.panels[t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
-			mode.panels[t].setPreferredSize(new Dimension(sliderPanelWidth, mode.modesPerType[t] * barheight));
-			mode.panels[t].setBackground(c);
+			mode.typePanels[t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
+			mode.typePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, mode.modesPerType[t] * barheight));
+			mode.typePanels[t].setBackground(c);
 			for (int m = 0; m < nModes; m++) {
 				mode.sliderLabelsTM[t][m] = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
 				mode.sliderTM[t][m] = newSlider("mode[" + mode.type + "]" + t + "_" + m, -(int) sliderMax,
 						(int) sliderMax, (int) ((mode.initAmpTM[t][m] / mode.maxAmpTM[t][m]) * sliderMax), c);
-				mode.panels[t].add(mode.sliderTM[t][m]);
-				mode.panels[t].add(mode.sliderLabelsTM[t][m]);
+				mode.typePanels[t].add(mode.sliderTM[t][m]);
+				mode.typePanels[t].add(mode.sliderLabelsTM[t][m]);
 			}
 			if (sliderPanel != null)
-				sliderPanel.add(mode.panels[t]);
+				sliderPanel.add(mode.typePanels[t]);
 
 		}
 
@@ -2064,9 +2097,9 @@ public class Variables {
 		private void initNonAtomGUI(Mode mode, Color c) {
 			initModeGUI(mode, 0, null);
 			int min = (mode.type == STRAIN ? -(int) sliderMax : 0);
-			mode.panels[0] = new JPanel(new GridLayout(mode.count, 2, 0, 0));
-			mode.panels[0].setPreferredSize(new Dimension(sliderPanelWidth, mode.count * barheight));
-			mode.panels[0].setBackground(c);
+			mode.typePanels[0] = new JPanel(new GridLayout(mode.count, 2, 0, 0));
+			mode.typePanels[0].setPreferredSize(new Dimension(sliderPanelWidth, mode.count * barheight));
+			mode.typePanels[0].setBackground(c);
 			mode.sliderTM = new JSlider[1][mode.count];
 			mode.sliderLabelsTM[0] = new JLabel[mode.count];
 			mode.sliderValsTM[0] = new double[mode.count];
@@ -2074,9 +2107,9 @@ public class Variables {
 				mode.sliderLabelsTM[0][m] = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
 				mode.sliderTM[0][m] = newSlider("mode[" + mode.type + "]" + m, min, (int) sliderMax,
 						(int) ((mode.initAmpTM[0][m] / mode.maxAmpTM[0][m]) * sliderMax), c);
-				mode.panels[0].add(mode.sliderTM[0][m]);
-				mode.panels[0].add(mode.sliderLabelsTM[0][m]);
-				sliderPanel.add(mode.panels[0]);
+				mode.typePanels[0].add(mode.sliderTM[0][m]);
+				mode.typePanels[0].add(mode.sliderLabelsTM[0][m]);
+				sliderPanel.add(mode.typePanels[0]);
 			}
 		}
 

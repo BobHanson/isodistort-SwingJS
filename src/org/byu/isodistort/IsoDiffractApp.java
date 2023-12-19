@@ -91,7 +91,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		public void paint(Graphics gr) {
 			super.paint(gr);
 			Dimension d = getSize();
-			if (im == null)
+			if (app.drawWidth != d.width || app.drawHeight != d.height) {
+				app.updateDimensions();
+			}
+			//System.out.println("paint isodif " + getSize() + " " + getParent().getSize());
+			if (im == null || im.getWidth() != d.width || im.getHeight() != d.height)
 				im = (BufferedImage) createImage(d.width, d.height);
 			Graphics g = im.getGraphics();
 			app.render(g);
@@ -263,11 +267,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	@Override
 	protected void frameResized() {
+		updateDimensions();
+		needsRecalc = true;
 		if (rp == null)
 			return;
 		rp.im = null;
-		drawPanel.setBackground(Color.red);
-		needsRecalc = true;
 		updateDisplay();
 	}
 
@@ -311,6 +315,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 */
 	void render(Graphics g) {
 		g.setColor(Color.BLACK);
+		//System.out.println("IDpaint " + drawWidth + " " + drawHeight + " " + shortPowderHeight);
 		if (isBoth || !isPowder) {
 			g.fillRect(0, 0, drawWidth, drawHeight);
 			drawCrystPeaks(g);
@@ -381,6 +386,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		double yrange = (drawHeight - scaleAreaHeight);
 		int ymin = (isBoth ? drawHeight - shortPowderHeight : 0);
 		double toXPix = 1.0 * drawWidth / powderXRange;
+		//System.out.println("drawpp pz " + powderZoom + " psf " + powderScaleFactor + " fy " + fy);
 		x0 = 0;
 		y0 = (int) Math.max(ymin, yrange * (1 - powderY[0] * fy));
 		for (int i = 1; i < powderXRange; i++) {
@@ -1590,6 +1596,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		needsRecalc = true;
 		isAdjusting = false;
+		rp.im = null;
 		updateDisplay();
 	}
 
@@ -1739,8 +1746,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		controlPanel.add(topControlPanel);
 		controlPanel.add(botControlPanel);
 
-		// clear checkbox listeners
-		variables.setApp(this);
 	}
 
 	/** loads the control components into the control panel */

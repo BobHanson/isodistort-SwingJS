@@ -642,13 +642,13 @@ public class Renderer {
 
 			MathUtil.normalize(T);
 
-			double vz = MathUtil.dot(T, cameraUp);
+			double vz = MathUtil.matmul(T, cameraUp);
 			double vy = Math.sqrt(1 - vz * vz);
 
 			Matrix.identity(camtmp);
 
 			double crossUT[] = new double[3];
-			double dotTU = MathUtil.dot(T, cameraUp);
+			double dotTU = MathUtil.matmul(T, cameraUp);
 
 			MathUtil.cross(cameraUp, T, crossUT);
 
@@ -1543,7 +1543,7 @@ public class Renderer {
 					double a1[] = { L[0], L[1], L[2] + 2 };
 					MathUtil.normalize(a1);
 					double a2[] = { x, y, z };
-					t = MathUtil.dot(a1, a2);
+					t = MathUtil.matmul(a1, a2);
 					t = Math.sqrt(1 - t * t);
 					double dp = L[0] * v[3] + L[1] * v[4] + L[2] * v[5];
 					t = Math.max(0, dp * t);

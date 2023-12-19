@@ -43,7 +43,7 @@ public class MathUtil {
 	 * @return the magnitude of vector v
 	 */
 	public static double norm(double[] v) {
-		return Math.sqrt(dot(v, v));
+		return Math.sqrt(matmul(v, v));
 	}
 
 	/**
@@ -54,7 +54,7 @@ public class MathUtil {
 	 * @param b source vector
 	 * @return the result of a dot b
 	 */
-	public static double dot(double[] a, double[] b) {
+	public static double matmul(double[] a, double[] b) {
 		double sum = 0;
 		for (int i = b.length; --i >= 0;)
 			sum += a[i] * b[i];
@@ -183,7 +183,7 @@ public class MathUtil {
 	 */
 	public static void mul(double mat[][], double vect[], double dst[]) {
 		for (int i = mat.length; --i >= 0;)
-			dst[i] = dot(mat[i], vect);
+			dst[i] = matmul(mat[i], vect);
 	}
 
 	/**
@@ -199,7 +199,7 @@ public class MathUtil {
 		double[][] tempmat = new double[3][3];
 
 		cross(mat[0], mat[1], tempvec);
-		determinant = dot(tempvec, mat[2]);
+		determinant = matmul(tempvec, mat[2]);
 
 		for (int i = 0; i < 3; i++)
 			cross(mat[i], mat[(i + 1) % 3], tempmat[(i + 2) % 3]);
@@ -221,7 +221,7 @@ public class MathUtil {
 		double determinant;
 
 		cross(mat[0], mat[1], tempvec);
-		determinant = -dot(tempvec, mat[2]);
+		determinant = -matmul(tempvec, mat[2]);
 		return determinant;
 	}
 
@@ -251,7 +251,7 @@ public class MathUtil {
 		mattranspose(mat2, tmat2);
 		for (int j = mlen; --j >= 0;)
 			for (int i = mlen; --i >= 0;)
-				dst[i][j] = dot(mat1[i], tmat2[j]);
+				dst[i][j] = matmul(mat1[i], tmat2[j]);
 	}
 
 	/**
@@ -449,5 +449,24 @@ public class MathUtil {
 				minmax[1][i] = vec[i];
 		}
 	}
+
+	private final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
+
+	static void recalculateLattice(double[] lattice, double[][] pBasisCart) {
+		double[][] pBasisCartTranspose = new double[3][3];
+		MathUtil.mattranspose(pBasisCart, pBasisCartTranspose);
+		lattice[A] = Math.sqrt(MathUtil.matmul(pBasisCartTranspose[A], pBasisCartTranspose[A]));
+		lattice[B] = Math.sqrt(MathUtil.matmul(pBasisCartTranspose[B], pBasisCartTranspose[B]));
+		lattice[C] = Math.sqrt(MathUtil.matmul(pBasisCartTranspose[C], pBasisCartTranspose[C]));
+		lattice[ALPHA] = Math.acos(
+				MathUtil.matmul(pBasisCartTranspose[B], pBasisCartTranspose[C]) / Math.max(lattice[B] * lattice[C], 0.001));
+		lattice[BETA] = Math.acos(
+				MathUtil.matmul(pBasisCartTranspose[A], pBasisCartTranspose[C]) / Math.max(lattice[A] * lattice[C], 0.001));
+		lattice[GAMMA] = Math.acos(
+				MathUtil.matmul(pBasisCartTranspose[A], pBasisCartTranspose[B]) / Math.max(lattice[A] * lattice[B], 0.001));
+		
+
+	}
+
 
 }

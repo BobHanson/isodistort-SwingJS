@@ -588,7 +588,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 								&& supxyz[2] < 1) {
 							// just [atomicNumber, 0] for xray
 							atomScatFac = Elements.getScatteringFactor(variables.getAtomTypeSymbol(ia), isXray);
-							phase = 2 * (Math.PI) * MathUtil.dot(crystalPeakHKL[p], supxyz);
+							phase = 2 * (Math.PI) * MathUtil.matmul(crystalPeakHKL[p], supxyz);
 							double occ = variables.getOccupancy(ia);
 							scatNR = occ * atomScatFac[0];
 							scatNI = occ * atomScatFac[1];
@@ -611,7 +611,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 									zzzM[i] += scatM * mucart[i];
 							}
 							for (int i = 0; i < 3; i++)
-								pppM[i] += scatM * (mucart[i] - MathUtil.dot(mucart, qhat) * qhat[i]) * Math.cos(phase);
+								pppM[i] += scatM * (mucart[i] - MathUtil.matmul(mucart, qhat) * qhat[i]) * Math.cos(phase);
 						}
 					}
 		
@@ -648,7 +648,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		// Update the dinverse list
 		for (int p = 0; p < peakCount; p++) {
 			MathUtil.mul(metric, crystalPeakHKL[p], tempvec);
-			peakDInv[p] = Math.sqrt(MathUtil.dot(crystalPeakHKL[p], tempvec));
+			peakDInv[p] = Math.sqrt(MathUtil.matmul(crystalPeakHKL[p], tempvec));
 		}
 
 		// Update the axis and tickmark plot parameters
@@ -816,7 +816,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 					MathUtil.vecadd(superhkl, crystalHklCenter, -1.0, tempvec0);
 					MathUtil.mul(slatt2rotcart, tempvec0, superhklcart);
 
-					inplanetest = Math.abs(MathUtil.dot(tempvec0, uvw));
+					inplanetest = Math.abs(MathUtil.matmul(tempvec0, uvw));
 					if (inplanetest < ztolerance)
 						planeQ = true; // HKL point lies in the display plane
 					if ((Math.abs(superhklcart[0]) < crystalDInvRange)
@@ -880,7 +880,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		double[] tempvec = new double[3];
 		for (int p = 0; p < peakCount; p++) {
 			MathUtil.mul(metric, crystalPeakHKL[p], tempvec);
-			double dinv = Math.sqrt(MathUtil.dot(crystalPeakHKL[p], tempvec));
+			double dinv = Math.sqrt(MathUtil.matmul(crystalPeakHKL[p], tempvec));
 			peakDInv[p] = dinv;
 			double dval = (dinv > 0 ? 1 / dinv : 0);
 			double v = 0;
@@ -988,7 +988,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		double[] tempvec = new double[3];
 		MathUtil.cross(metric0[0], metric0[1], tempvec);
-		double metricdet = MathUtil.dot(tempvec, metric0[2]); // Calculate the metric determinant
+		double metricdet = MathUtil.matmul(tempvec, metric0[2]); // Calculate the metric determinant
 		int limH = (int) Math.ceil(powderDinvmax
 				* Math.sqrt(Math.abs((metric0[1][1] * metric0[2][2] - metric0[1][2] * metric0[1][2]) / metricdet)));
 		int limK = (int) Math.ceil(powderDinvmax
@@ -1036,11 +1036,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 					// Generate the standard metric and two randomized metrics.
 					MathUtil.mul(metric0, superhkl, tempvec);
-					double dinv0 = Math.sqrt(MathUtil.dot(superhkl, tempvec));
+					double dinv0 = Math.sqrt(MathUtil.matmul(superhkl, tempvec));
 					MathUtil.mul(randommetric1, superhkl, tempvec);
-					double dinv1 = Math.sqrt(MathUtil.dot(superhkl, tempvec));
+					double dinv1 = Math.sqrt(MathUtil.matmul(superhkl, tempvec));
 					MathUtil.mul(randommetric2, superhkl, tempvec);
-					double dinv2 = Math.sqrt(MathUtil.dot(superhkl, tempvec));
+					double dinv2 = Math.sqrt(MathUtil.matmul(superhkl, tempvec));
 
 					boolean isinrange = (powderDinvmin <= dinv0) && (dinv0 <= powderDinvmax);
 					if (isinrange) {

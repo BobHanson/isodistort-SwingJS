@@ -24,10 +24,517 @@ import javax.swing.event.ChangeListener;
 
 public class Variables {
 
-	private final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
+	public final static int DIS = 0; // displacive
+	public final static int OCC = 1; // occupancy (aka "scalar")
+	public final static int MAG = 2; // magnetic
+	public final static int ROT = 3; // rotational
+	public final static int ELL = 4; // ellipsoidal
+	private final static int MODE_ATOMIC_COUNT = 5;
+
+	public final static int STRAIN = 5;
+	public final static int IRREP = 6; // irreducible representations
+	private final static int MODE_COUNT = 7;
+
+	private IsoApp app;
+
+	private VariableGUI gui;
 
 	private Atom[] atoms;
+
+	Map<String, Atom> atomMap = new HashMap<>();
+
+	static String getKeyTSA(int t, int s, int a) {
+		String key = "" + t + "_" + s + "_" + a;
+		// System.out.println(key);
+		return key;
+	}
 	
+	Mode[] modes = new Mode[MODE_COUNT];
+	
+	
+	public String isoversion;
+
+	/**
+	 * only used to hide the checkboxes
+	 */
+	private boolean isDiffraction;
+
+	/** True initially or when a slider bar moves, false otherwise */
+	public boolean isChanged = true;
+
+	/** Applet width and height in pixels */
+	public int appletWidth = 1024, appletHeight;
+	/** Total number of atoms after filtering for primitive. */
+	public int numAtoms;
+	/** Number of different atom types */
+	public int numTypes;
+	/** Number of subtypes for each atom type. */
+	public int[] numSubTypes;
+
+	/**
+	 * the final public number of atoms for specific type and subtype; either
+	 * numSubAtomsRead or numPrimitiveSubAtoms
+	 */
+	public int[][] numSubAtoms;
+
+	/**
+	 * the actual sub atom numbers in the file data; only used for parsing
+	 */
+	private int[][] numSubAtomsRead;
+
+	/** Names for each atom type; [type] */
+	public String[] atomTypeName, atomTypeSymbol;
+	/** Names for each atom type; [type] */
+	public String[][] subTypeName;
+	/** Radius of atoms */
+	public double atomMaxRadius;
+	/** Angstrom per Bohr Magneton for moment visualization */
+	public double angstromsPerMagneton;
+	/** Angstrom per radian for rotation visualization */
+	public double angstromsPerRadian;
+	/** Angstrom per Angstrom for ellipsoid visualization */
+	public double defaultUiso;
+	/** Maximum bond length in Angstroms beyond which bonds are not drawn */
+	public double maxBondLength;
+	/** Minimum atomic occupancy below which bonds are not drawn */
+	public double minBondOcc;
+	/** Total number of bonds */
+	public int numBonds;
+	/**
+	 * Specifies which atoms bond together; [bond #][atom1, atom2] Indicies
+	 * reference atomInfo (below)
+	 */
+	public int[][] bonds;
+
+	/** Total number of unique parent atom types. */
+	public int numUniques;
+	/**
+	 * Integer index that identifies each parent atom type as one of several unique
+	 * parent atom types.
+	 */
+	public int[] atomTypeUnique;
+	/**
+	 * If true (when at least two parents have the same element type) show the
+	 * simple-color checkbox.
+	 */
+	public boolean needSimpleColor;
+
+	/** Original unstrained supercell lattice parameters */
+	public double[] sLatt0 = new double[6];
+	/** Strained supercell parameters */
+	public double[] sLatt1 = new double[6];
+	/** Original unstrained parent cell parameters */
+	public double[] pLatt0 = new double[6];
+	/** Strained parent cell parameters */
+	public double[] pLatt1 = new double[6];
+	/**
+	 * Parent cell origin relative to supercell origin on the unitless superlattice
+	 * basis. [x, y, z]
+	 */
+	public double[] pOriginUnitless = new double[3];
+	/**
+	 * Row matrix of parent basis vectors on the unitless superlattice basis [basis
+	 * vector][x,y,z]
+	 */
+	public double[][] Tmat = new double[3][3];
+	/** Transpose of Tmat: sBasisCart.Tmat^t = pBasisCart */
+	public double[][] TmatTranspose = new double[3][3];
+	/** InverseTranspose of Tmat: pBasisCart.Tmat^t*i = sBasisCart */
+	public double[][] TmatInverseTranspose = new double[3][3];
+	/**
+	 * Strained parent cell origin relative to strained supercell origin in
+	 * cartesian Angstrom coords. [x, y, z]
+	 */
+	public double[] pOriginCart = new double[3];
+	/** Center of supercell in strained cartesian Angstrom coords. [x, y, z] */
+	public double[] sCenterCart = new double[3];
+	/**
+	 * Matrix of unstrained super basis vectors in cartesian Angstrom coords [basis
+	 * vector][x,y,z] Transforms unitless unstrained direct-lattice supercell coords
+	 * into cartesian Angstrom coords [basis vector][x,y,z]
+	 */
+	public double[][] sBasisCart0 = new double[3][3];
+	/**
+	 * Matrix of strained super basis vectors in cartesian Angstrom coords [basis
+	 * vector][x,y,z] Transforms unitless strained direct-lattice supercell coords
+	 * into cartesian Angstrom coords [basis vector][x,y,z]
+	 */
+	public double[][] sBasisCart = new double[3][3];
+	/** Inverse of sBasisCart in Inverse-Angstrom units [basis vector][x,y,z] */
+	public double[][] sBasisCartInverse = new double[3][3];
+	/**
+	 * Matrix of unstrained parent basis vectors in cartesian Angstrom coords [basis
+	 * vector][x,y,z] Transforms unitless unstrained direct-lattice parentcell
+	 * coords into cartesian Angstrom coords [basis vector][x,y,z]
+	 */
+	public double[][] pBasisCart0 = new double[3][3];
+	/**
+	 * Matrix of strained parent basis vectors in cartesian Angstrom coords [basis
+	 * vector][x,y,z] Transforms unitless strained direct-lattice parentcell coords
+	 * into cartesian Angstrom coords [basis vector][x,y,z]
+	 */
+	public double[][] pBasisCart = new double[3][3];
+	/**
+	 * Matrix of strained super-cell crystal-axis basis vectors in unitless coords
+	 * [basis vector][x,y,z] Transforms unitless strained direct-lattice supercell
+	 * crystalaxis coords into cartesian coords [basis vector][x,y,z]
+	 */
+	public double[][] sCrystalAxisBasisCart = new double[3][3];
+	/**
+	 * Array of vertices of strained window-centered parent cell. [edge number][x,
+	 * y, z]
+	 */
+	public double[][] parentCellVertices = new double[8][3];
+	/**
+	 * Array of vertices of strained window-centered super cell. [edge number][x, y,
+	 * z]
+	 */
+	public double[][] superCellVertices = new double[8][3];
+	/** Is the parent expressed in a rhombohedral setting? */
+	public boolean isRhombParentSetting;
+
+	/**
+	 * 
+	 * /** Number of irreps
+	 */
+	public int numIrreps;
+	/**
+	 * Boolean variable that tracks whether irrep sliders were last set to sliderMax
+	 * or to zero.
+	 */
+	public boolean irrepSlidersOn = true;
+
+	/** The master slider bar value. */
+	double superSliderVal;
+
+	/** Number of rows needed for checkboxes; [type] */
+	private int[] numSubRows;
+	/** Actual number of check boxes per row */
+	private int[] subTypesPerRow;
+
+	private boolean isAdjusting;
+
+	Map<String, ArrayList<String>> myMap;
+
+	private transient JPanel sliderPanel;
+
+	/**
+	 * just switching apps; fewer println calls
+	 */
+	private boolean isSwitch;
+
+	public Variables(IsoApp app, String dataString, boolean isDiffraction, boolean isSwitch) {
+		this.app = app;
+		this.isSwitch = isSwitch;
+		this.isDiffraction = isDiffraction;
+		new VariableParser().parse(dataString);
+		gui = new VariableGUI();
+	}
+
+	/**
+	 * instantiates and initializes the scroll and control panels.
+	 * 
+	 * @param sliderPanel
+	 */
+	public void initSliderPanel(JPanel sliderPanel) {
+		this.sliderPanel = sliderPanel;
+		gui.initPanels();
+		sliderPanel = null;
+	}
+
+	public void setAnimationAmplitude(double animAmp) {
+		gui.superSlider.setValue((int) Math.round(animAmp * gui.sliderMaxVal));
+	}
+
+	public boolean isSubTypeSelected(int t, int s) {
+		return gui.subTypeBoxes[t][s].isSelected();
+	}
+
+	public void setSubtypeSelected(int t, int s, boolean b) {
+		gui.subTypeBoxes[t][s].setSelected(b);
+	}
+
+	public Atom getAtom(int ia) {
+		return atoms[ia];
+	}
+
+	public void selectAllSubtypes(boolean b) {
+		for (int t = 0; t < numTypes; t++)
+			for (int s = 0; s < numSubTypes[t]; s++)
+				setSubtypeSelected(t, s, b);
+	}
+
+	public double getSetSuperSliderValue(double newVal) {
+		double d = superSliderVal;
+		superSliderVal = newVal;
+		return d;
+	}
+
+	public int getStrainModesCount() {
+		return modes[STRAIN].count;
+	}
+
+	public double[] getStrainmodeSliderValues() {
+		return modes[STRAIN].sliderValsTM[0];
+	}
+
+	public double[] get(int mode, int i) {
+		return atoms[i].vector1[mode];
+	}
+
+	public double getInitialOccupancy(int i) {
+		return atoms[i].vector0[OCC][0];
+	}
+
+	public double getOccupancy(int i) {
+		return atoms[i].vector1[OCC][0];
+	}
+
+	public String getAtomTypeSymbol(int i) {
+		return atomTypeSymbol[atoms[i].t];
+	}
+
+	public void getColors(int t, double[] rgb) {
+		rgb[0] = modes[DIS].colorT[t].getRed() / 255.0;
+		rgb[1] = modes[DIS].colorT[t].getGreen() / 255.0;
+		rgb[2] = modes[DIS].colorT[t].getBlue() / 255.0;
+	}
+
+	/** calculates the parent atom colors */
+	public void setColors(boolean simpleColor) {
+		gui.setColors(simpleColor);
+	}
+
+	public void recolorPanels() {
+		gui.recolorPanels();
+	}
+
+	/** readSliders reads in the current values of each of the sliders. */
+	public void readSliders() {
+		gui.readSliders();
+	}
+
+	public void setValuesFrom(Variables v) {
+		isAdjusting = true;
+		gui.setComponentValuesFrom(v);
+		gui.readSliders();
+		isChanged = true;
+		isAdjusting = false;
+		app.updateDisplay();
+	}
+
+	public void resetSliders() {
+		gui.resetSliders();
+	}
+
+	public void zeroSliders() {
+		gui.zeroSliders();
+	}
+
+	public void toggleIrrepSliders() {
+		gui.toggleIrrepSliders();
+	}
+
+	/**
+	 * recalcDistortion recalculates the positions and occupancies based on current
+	 * slider values.
+	 */
+	public void recalcDistortion() {
+		calculateStrain();
+		calculateDistortions();		
+	}
+
+	public void saveModeValues() {
+		modes[DIS].saveMode();
+		modes[OCC].saveMode();
+		modes[MAG].saveMode();
+	}
+
+	public void randomizeGM1Values(Random rval) {
+		modes[DIS].randomizeModes(rval, true);
+		modes[OCC].randomizeModes(rval, true);
+		modes[MAG].randomizeModes(rval, true);
+	}
+
+	public void randomizeNonGM1Values(Random rval) {
+		modes[DIS].randomizeModes(rval, false);
+		modes[OCC].randomizeModes(rval, false);
+		modes[MAG].randomizeModes(rval, false);
+	}
+
+	public void restoreModeValues() {
+		modes[DIS].restoreMode();
+		modes[OCC].restoreMode();
+		modes[MAG].restoreMode();
+	}
+
+	public static final String ZEROES = "000000000000";
+	public static final String BLANKS = "            ";
+
+	public static String varToString(double val, int n, int w) {
+		// rounding
+		double incr = 0.5;
+		for (int j = n; j > 0; j--)
+			incr /= 10;
+
+		if (Math.abs(val) > 0.00001)
+			val += incr * (val / Math.abs(val));
+		else
+			val = 0;
+		String s = Double.toString(val);
+		int n1 = s.indexOf('.');
+		int n2 = s.length() - n1 - 1;
+
+		if (n > n2)
+			s = s + ZEROES.substring(0, n - n2);
+		else if (n2 > n)
+			s = s.substring(0, n1 + n + 1);
+
+		if (w > 0 & w > s.length())
+			s = BLANKS.substring(0, w - s.length()) + s;
+		else if (w < 0 & (-w) > s.length()) {
+			w = -w;
+			s = s + BLANKS.substring(0, w - s.length());
+		}
+		return s;
+	}
+
+
+	/**
+	 * Naively calculate strained parent-cell basis vectors in cartesian Angstrom
+	 * coords.
+	 * 
+	 */
+	private void calculateStrain() {
+
+		calculateParentBasisAndLattice();
+		calculateChildBasisAndLattice();
+		
+		// calculate the parent cell origin in strained cartesian Angtstrom coords
+		MathUtil.mul(sBasisCart, pOriginUnitless, pOriginCart);
+
+		// calculate the 8 cell vertices in strained cartesian Angstrom coordinates
+		for (int ix = 0; ix < 2; ix++) {
+			for (int iy = 0; iy < 2; iy++) {
+				for (int iz = 0; iz < 2; iz++) {
+					for (int i = 0; i < 3; i++) {
+						parentCellVertices[ix + 2 * iy + 4 * iz][i] 
+								= ix * pBasisCart[i][0] + iy * pBasisCart[i][1]
+								+ iz * pBasisCart[i][2] + pOriginCart[i];
+						superCellVertices[ix + 2 * iy + 4 * iz][i] 
+								= ix * sBasisCart[i][0] + iy * sBasisCart[i][1]
+								+ iz * sBasisCart[i][2];
+					}
+				}
+			}
+		}
+		recenterLattice();
+		gui.setLattLabels(pLatt1, sLatt1);
+	}
+
+	private void calculateDistortions() {
+		double[][] tempmat = new double[3][3];
+		double[] tempvec = new double[3];
+
+		// pass an array to the modes that tracks the 
+		// max values that will be used in the labels
+		// just easier to use a single oversize array
+		
+		int numSubMax = 0;
+		for (int t = 0; t < numTypes; t++) {
+			int n = numSubTypes[t];
+			if (n > numSubMax)
+				numSubMax = n;
+		}
+		double[][][] max = new double[numTypes][numSubMax][MODE_ATOMIC_COUNT];
+
+		modes[DIS].calcDistortion(max, tempvec, null);
+		modes[OCC].calcDistortion(max, null, null);
+		modes[ROT].calcDistortion(max, tempvec, null);
+		modes[MAG].calcDistortion(max, tempvec, null);
+		modes[ELL].calcDistortion(max, tempvec, tempmat);
+
+		for (int t = 0; t < numTypes; t++) {
+			for (int s = 0; s < numSubTypes[t]; s++) {
+				gui.setSubTypeText(t, s, max[t][s]);
+			}
+		}
+	}
+
+	private void recenterLattice() {
+//      Calculate the center of the supercell in strained cartesian Angstrom coords (sOriginCart).
+		double[][] minmax = new double[2][3];
+		MathUtil.set(minmax[0], 1E6, 1e6, 1e6);
+		MathUtil.set(minmax[1], -1E6, -1e6, -1e6);
+		for (int i = 8; --i >= 0;) {
+			MathUtil.rangeCheck(superCellVertices[i], minmax);
+		}
+		double[] tempvec = new double[3];
+		for (int i = numAtoms; --i >= 0;) {
+			Atom a = atoms[i];
+			MathUtil.mul(sBasisCart, a.vector0[DIS], tempvec);
+			MathUtil.rangeCheck(tempvec, minmax);
+		}
+		for (int i = 0; i < 3; i++)
+			sCenterCart[i] = (minmax[0][i] + minmax[1][i]) / 2;
+
+		// Place the center of the supercell at the origin
+		for (int j = 0; j < 8; j++) {
+			for (int i = 0; i < 3; i++) {
+				parentCellVertices[j][i] -= sCenterCart[i];
+				superCellVertices[j][i] -= sCenterCart[i];
+			}
+		}
+	}
+
+	private void calculateChildBasisAndLattice() {
+		// calculate the strained parent and supercell lattice parameters [a, b, c,
+		// alpha, beta, gamma]
+		
+		MathUtil.recalculateLattice(sLatt1, sBasisCart);
+		MathUtil.matinverse(sBasisCart, sBasisCartInverse);
+	}
+
+	private void calculateParentBasisAndLattice() {
+
+
+		double[][] pStrainPlusIdentity = modes[STRAIN].getVoigtStrainTensor();
+		// calculate strained parent basis vectors in cartesian Angstrom coords
+		MathUtil.mul(pStrainPlusIdentity, pBasisCart0, pBasisCart);
+
+		// calculate strained supercell basis vectors in cartesian Angstrom coords
+		MathUtil.mul(pBasisCart, TmatInverseTranspose, sBasisCart);
+
+		MathUtil.recalculateLattice(pLatt1, pBasisCart);
+	}
+
+	/**
+	 * An ordered list
+	 * 
+	 */
+	final static String[] knownTags = new String[] { //
+			"isoversion", //
+			"atommaxradius", //
+			"angstromspermagneton", //
+			"angstromsperradian", //
+			"defaultuiso", //
+			"maxbondlength", //
+			"appletwidth", //
+			"parentcell", //
+			"parentorigin", //
+			"parentbasis", //
+			"atomtypelist", //
+			"atomsubtypelist", //
+			"atomcoordlist", //
+			"atomocclist", //
+			"atommaglist", //
+			"atomrotlist", //
+			"bondlist", //
+			"irreplist", //
+			"modes[STRAIN].list", //
+			"displacivemodelist"//
+	};
+
 	public class Atom {
 		
 		/**
@@ -59,7 +566,7 @@ public class Variables {
 		 * through those lists. We can just target an atom directly.
 		 * 
 		 */
-		public double[][][] modes = new double[MODE_COUNT][][];
+		 double[][][] modes = new double[MODE_COUNT][][];
 
 
 		/**
@@ -70,7 +577,7 @@ public class Variables {
 		 * @param s
 		 * @param a
 		 */
-		Atom(int index, int t, int s, int a) {
+		private Atom(int index, int t, int s, int a) {
 			this.index = index;
 			this.t = t;
 			this.s = s;
@@ -84,18 +591,6 @@ public class Variables {
 		}
 	}
 	
-	public final static int DIS = 0; // displacive
-	public final static int OCC = 1; // occupancy (aka "scalar")
-	public final static int MAG = 2; // magnetic
-	public final static int ROT = 3; // rotational
-	public final static int ELL = 4; // ellipsoidal
-	private final static int MODE_ATOMIC_COUNT = 5;
-
-	public final static int STRAIN = 5;
-	public final static int IRREP = 6; // irreducible representations
-	private final static int MODE_COUNT = 7;
-
-	private Mode[] modes = new Mode[MODE_COUNT];
 
 	/**
 	 * A class to hold the arrays relating to individual types of symmetry modes,
@@ -564,479 +1059,42 @@ public class Variables {
 			return "[Mode "+ type +" count=" + count + "]";
 		}
 
-	}
-
-	private IsoApp app;
-
-	private VariableGUI gui;
-
-	public String isoversion;
-
-	/**
-	 * only used to hide the checkboxes
-	 */
-	private boolean isDiffraction;
-
-	/** True initially or when a slider bar moves, false otherwise */
-	public boolean isChanged = true;
-
-	/** Applet width and height in pixels */
-	public int appletWidth = 1024, appletHeight;
-	/** Total number of atoms after filtering for primitive. */
-	public int numAtoms;
-	/** Number of different atom types */
-	public int numTypes;
-	/** Number of subtypes for each atom type. */
-	public int[] numSubTypes;
-
-	/**
-	 * the final public number of atoms for specific type and subtype; either
-	 * numSubAtomsRead or numPrimitiveSubAtoms
-	 */
-	public int[][] numSubAtoms;
-
-	/**
-	 * the actual sub atom numbers in the file data; only used for parsing
-	 */
-	private int[][] numSubAtomsRead;
-
-	/** Names for each atom type; [type] */
-	public String[] atomTypeName, atomTypeSymbol;
-	/** Names for each atom type; [type] */
-	public String[][] subTypeName;
-	/** Radius of atoms */
-	public double atomMaxRadius;
-	/** Angstrom per Bohr Magneton for moment visualization */
-	public double angstromsPerMagneton;
-	/** Angstrom per radian for rotation visualization */
-	public double angstromsPerRadian;
-	/** Angstrom per Angstrom for ellipsoid visualization */
-	public double defaultUiso;
-	/** Maximum bond length in Angstroms beyond which bonds are not drawn */
-	public double maxBondLength;
-	/** Minimum atomic occupancy below which bonds are not drawn */
-	public double minBondOcc;
-	/** Total number of bonds */
-	public int numBonds;
-	/**
-	 * Specifies which atoms bond together; [bond #][atom1, atom2] Indicies
-	 * reference atomInfo (below)
-	 */
-	public int[][] bonds;
-	/** Total number of unique parent atom types. */
-	public int numUniques;
-	/**
-	 * Integer index that identifies each parent atom type as one of several unique
-	 * parent atom types.
-	 */
-	public int[] atomTypeUnique;
-	/**
-	 * If true (when at least two parents have the same element type) show the
-	 * simple-color checkbox.
-	 */
-	public boolean needSimpleColor;
-
-	/** Original unstrained supercell lattice parameters */
-	public double[] sLatt0 = new double[6];
-	/** Strained supercell parameters */
-	public double[] sLatt1 = new double[6];
-	/** Original unstrained parent cell parameters */
-	public double[] pLatt0 = new double[6];
-	/** Strained parent cell parameters */
-	public double[] pLatt1 = new double[6];
-	/**
-	 * Parent cell origin relative to supercell origin on the unitless superlattice
-	 * basis. [x, y, z]
-	 */
-	public double[] pOriginUnitless = new double[3];
-	/**
-	 * Row matrix of parent basis vectors on the unitless superlattice basis [basis
-	 * vector][x,y,z]
-	 */
-	public double[][] Tmat = new double[3][3];
-	/** Transpose of Tmat: sBasisCart.Tmat^t = pBasisCart */
-	public double[][] TmatTranspose = new double[3][3];
-	/** InverseTranspose of Tmat: pBasisCart.Tmat^t*i = sBasisCart */
-	public double[][] TmatInverseTranspose = new double[3][3];
-	/**
-	 * Strained parent cell origin relative to strained supercell origin in
-	 * cartesian Angstrom coords. [x, y, z]
-	 */
-	public double[] pOriginCart = new double[3];
-	/** Center of supercell in strained cartesian Angstrom coords. [x, y, z] */
-	public double[] sCenterCart = new double[3];
-	/**
-	 * Matrix of unstrained super basis vectors in cartesian Angstrom coords [basis
-	 * vector][x,y,z] Transforms unitless unstrained direct-lattice supercell coords
-	 * into cartesian Angstrom coords [basis vector][x,y,z]
-	 */
-	public double[][] sBasisCart0 = new double[3][3];
-	/**
-	 * Matrix of strained super basis vectors in cartesian Angstrom coords [basis
-	 * vector][x,y,z] Transforms unitless strained direct-lattice supercell coords
-	 * into cartesian Angstrom coords [basis vector][x,y,z]
-	 */
-	public double[][] sBasisCart = new double[3][3];
-	/** Inverse of sBasisCart in Inverse-Angstrom units [basis vector][x,y,z] */
-	public double[][] sBasisCartInverse = new double[3][3];
-	/**
-	 * Matrix of unstrained parent basis vectors in cartesian Angstrom coords [basis
-	 * vector][x,y,z] Transforms unitless unstrained direct-lattice parentcell
-	 * coords into cartesian Angstrom coords [basis vector][x,y,z]
-	 */
-	public double[][] pBasisCart0 = new double[3][3];
-	/**
-	 * Matrix of strained parent basis vectors in cartesian Angstrom coords [basis
-	 * vector][x,y,z] Transforms unitless strained direct-lattice parentcell coords
-	 * into cartesian Angstrom coords [basis vector][x,y,z]
-	 */
-	public double[][] pBasisCart = new double[3][3];
-	/**
-	 * Matrix of strained super-cell crystal-axis basis vectors in unitless coords
-	 * [basis vector][x,y,z] Transforms unitless strained direct-lattice supercell
-	 * crystalaxis coords into cartesian coords [basis vector][x,y,z]
-	 */
-	public double[][] sCrystalAxisBasisCart = new double[3][3];
-	/**
-	 * Array of vertices of strained window-centered parent cell. [edge number][x,
-	 * y, z]
-	 */
-	public double[][] parentCellVertices = new double[8][3];
-	/**
-	 * Array of vertices of strained window-centered super cell. [edge number][x, y,
-	 * z]
-	 */
-	public double[][] superCellVertices = new double[8][3];
-	/** Is the parent expressed in a rhombohedral setting? */
-	public boolean isRhombParentSetting;
-
-	/**
-	 * 
-	 * /** Number of irreps
-	 */
-	public int numIrreps;
-	/**
-	 * Boolean variable that tracks whether irrep sliders were last set to sliderMax
-	 * or to zero.
-	 */
-	public boolean irrepSlidersOn = true;
-
-	/** The master slider bar value. */
-	double superSliderVal;
-
-	/** Number of rows needed for checkboxes; [type] */
-	private int[] numSubRows;
-	/** Actual number of check boxes per row */
-	private int[] subTypesPerRow;
-
-	private boolean isAdjusting;
-
-	Map<String, ArrayList<String>> myMap;
-
-	private transient JPanel sliderPanel;
-
-	/**
-	 * just switching apps; fewer println calls
-	 */
-	private boolean isSwitch;
-
-	public Variables(IsoApp app, String dataString, boolean isDiffraction, boolean isSwitch) {
-		this.app = app;
-		this.isSwitch = isSwitch;
-		this.isDiffraction = isDiffraction;
-		new VariableParser().parse(dataString);
-		gui = new VariableGUI();
-	}
-
-	/**
-	 * instantiates and initializes the scroll and control panels.
-	 * 
-	 * @param sliderPanel
-	 */
-	public void initSliderPanel(JPanel sliderPanel) {
-		this.sliderPanel = sliderPanel;
-		gui.initPanels();
-		sliderPanel = null;
-	}
-
-	/** calculates the parent atom colors */
-	public void setColors(boolean simpleColor) {
-		gui.setColors(simpleColor);
-	}
-
-	public void recolorPanels() {
-		gui.recolorPanels();
-	}
-
-	/** readSliders reads in the current values of each of the sliders. */
-	public void readSliders() {
-		gui.readSliders();
-	}
-
-	public void setValuesFrom(Variables v) {
-		isAdjusting = true;
-		gui.setComponentValuesFrom(v);
-		gui.readSliders();
-		isChanged = true;
-		isAdjusting = false;
-		app.updateDisplay();
-	}
-
-	public void resetSliders() {
-		gui.resetSliders();
-	}
-
-	public void zeroSliders() {
-		gui.zeroSliders();
-	}
-
-	public void toggleIrrepSliders() {
-		gui.toggleIrrepSliders();
-	}
-
-	/**
-	 * recalcDistortion recalculates the positions and occupancies based on current
-	 * slider values.
-	 */
-	public void recalcDistortion() {
-		double[] tempvec = new double[3];
-		double tempval;
-		double[][] pBasisCartTranspose = new double[3][3];
-		double[][] sBasisCartTranspose = new double[3][3];
-		double[] pStrainVoigt = new double[6];
-		double[][] pStrainPlusIdentity = new double[3][3];
-
-		// naively calculate strained parent-cell basis vectors in cartesian Angstrom
-		// coords
-		Mode mode = modes[STRAIN];
-		for (int n = 0; n < 6; n++) {
-			for (int m = 0; m < mode.count; m++) {
-				tempval = mode.sliderValsTM[0][m] * modes[IRREP].sliderValsTM[0][mode.irrepTM[0][m]] * superSliderVal;
-				pStrainVoigt[n] += mode.vector[m][n] * tempval;
-			}
-		}
-		// calculate (strain tensor)+(identity matrix) from voigt strain components
-		pStrainPlusIdentity[0][0] = pStrainVoigt[0] + 1;
-		pStrainPlusIdentity[1][0] = pStrainVoigt[5] / 2;
-		pStrainPlusIdentity[2][0] = pStrainVoigt[4] / 2;
-		pStrainPlusIdentity[0][1] = pStrainVoigt[5] / 2;
-		pStrainPlusIdentity[1][1] = pStrainVoigt[1] + 1;
-		pStrainPlusIdentity[2][1] = pStrainVoigt[3] / 2;
-		pStrainPlusIdentity[0][2] = pStrainVoigt[4] / 2;
-		pStrainPlusIdentity[1][2] = pStrainVoigt[3] / 2;
-		pStrainPlusIdentity[2][2] = pStrainVoigt[2] + 1;
-
-		// calculate strained parent basis vectors in cartesian Angstrom coords
-		MathUtil.mul(pStrainPlusIdentity, pBasisCart0, pBasisCart);
-
-		// calculate strained supercell basis vectors in cartesian Angstrom coords
-		MathUtil.mul(pBasisCart, TmatInverseTranspose, sBasisCart);
-
-		// calculate some other useful matrices
-		MathUtil.mattranspose(pBasisCart, pBasisCartTranspose);
-		MathUtil.mattranspose(sBasisCart, sBasisCartTranspose);
-		MathUtil.matinverse(sBasisCart, sBasisCartInverse);
-
-		// calculate the strained parent and supercell lattice parameters [a, b, c,
-		// alpha, beta, gamma]
-		pLatt1[A] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[A], pBasisCartTranspose[A]));
-		pLatt1[B] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[B], pBasisCartTranspose[B]));
-		pLatt1[C] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[C], pBasisCartTranspose[C]));
-		pLatt1[ALPHA] = Math.acos(
-				MathUtil.dot(pBasisCartTranspose[B], pBasisCartTranspose[C]) / Math.max(pLatt1[B] * pLatt1[C], 0.001));
-		pLatt1[BETA] = Math.acos(
-				MathUtil.dot(pBasisCartTranspose[A], pBasisCartTranspose[C]) / Math.max(pLatt1[A] * pLatt1[C], 0.001));
-		pLatt1[GAMMA] = Math.acos(
-				MathUtil.dot(pBasisCartTranspose[A], pBasisCartTranspose[B]) / Math.max(pLatt1[A] * pLatt1[B], 0.001));
-		sLatt1[A] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[0], sBasisCartTranspose[0]));
-		sLatt1[B] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[1], sBasisCartTranspose[1]));
-		sLatt1[C] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[2], sBasisCartTranspose[2]));
-		sLatt1[ALPHA] = Math.acos(
-				MathUtil.dot(sBasisCartTranspose[B], sBasisCartTranspose[C]) / Math.max(sLatt1[B] * sLatt1[C], 0.001));
-		sLatt1[BETA] = Math.acos(
-				MathUtil.dot(sBasisCartTranspose[A], sBasisCartTranspose[C]) / Math.max(sLatt1[A] * sLatt1[C], 0.001));
-		sLatt1[GAMMA] = Math.acos(
-				MathUtil.dot(sBasisCartTranspose[A], sBasisCartTranspose[B]) / Math.max(sLatt1[A] * sLatt1[B], 0.001));
-
-		boolean testing = false;
-		if (testing) {
-			double r2d = 180.0 / Math.PI;
-			// Diagnostic code
-			System.out.print("pBasisCart0: ");
-			for (int i = 0; i < 3; i++) {
-				for (int j = 0; j < 3; j++) {
-					System.out.printf("%7.4f ", pBasisCart0[j][i]);
+		/**
+		 * See https://en.wikipedia.org/wiki/Voigt_notation
+		 * 
+		 * Accumulate the mode components, as adjusted by sliders.
+		 * 
+		 * @return the Voigt strain tensor plus Identity
+		 */
+		public double[][] getVoigtStrainTensor() {
+			double[] v = new double[6];
+			for (int n = 0; n < 6; n++) {
+				for (int m = 0; m < count; m++) {
+					v[n] +=  vector[m][n] 
+							* modes[IRREP].sliderValsTM[0][irrepTM[0][m]] 
+							* sliderValsTM[0][m] 
+							* superSliderVal;
 				}
 			}
-			System.out.println("");
-			System.out.println("pCell0: " + pLatt0[A] + ", " + pLatt0[B] + ", " + pLatt0[C] + ", " + pLatt0[ALPHA] * r2d
-					+ ", " + pLatt0[BETA] * r2d + ", " + pLatt0[GAMMA] * r2d + ", ");
-			System.out.print("pBasisCart: ");
-			for (int i = 0; i < 3; i++) {
-				for (int j = 0; j < 3; j++) {
-					System.out.printf("%7.4f ", pBasisCart[j][i]);
-				}
-			}
-			System.out.println("");
-			System.out.println("pCell1: " + pLatt1[A] + ", " + pLatt1[B] + ", " + pLatt1[C] + ", " + pLatt1[ALPHA] * r2d
-					+ ", " + pLatt1[BETA] * r2d + ", " + pLatt1[GAMMA] * r2d + ", ");
-			System.out.println("");
+			
+			//   [    v0 + 1     v5 / 2    v4 / 2  
+			//
+			//        v5 / 2     v1 + 1    v3 / 2
+			//
+			//        v4 / 2     v3 / 2    v2 + 1   ]
+			//
+			double[][] pStrainPlusIdentity = new double[3][3];
+			pStrainPlusIdentity[0][0] = v[0] + 1;
+			pStrainPlusIdentity[1][0] = v[5] / 2;
+			pStrainPlusIdentity[2][0] = v[4] / 2;
+			pStrainPlusIdentity[0][1] = v[5] / 2;
+			pStrainPlusIdentity[1][1] = v[1] + 1;
+			pStrainPlusIdentity[2][1] = v[3] / 2;
+			pStrainPlusIdentity[0][2] = v[4] / 2;
+			pStrainPlusIdentity[1][2] = v[3] / 2;
+			pStrainPlusIdentity[2][2] = v[2] + 1;
+			return pStrainPlusIdentity;
 		}
-
-		// calculate the parent cell origin in strained cartesian Angtstrom coords
-		MathUtil.mul(sBasisCart, pOriginUnitless, pOriginCart);
-
-		// calculate the 8 cell vertices in strained cartesian Angstrom coordinates
-		for (int ix = 0; ix < 2; ix++) {
-			for (int iy = 0; iy < 2; iy++) {
-				for (int iz = 0; iz < 2; iz++) {
-					for (int i = 0; i < 3; i++) {
-						parentCellVertices[ix + 2 * iy + 4 * iz][i] = ix * pBasisCart[i][0] + iy * pBasisCart[i][1]
-								+ iz * pBasisCart[i][2] + pOriginCart[i];
-						superCellVertices[ix + 2 * iy + 4 * iz][i] = ix * sBasisCart[i][0] + iy * sBasisCart[i][1]
-								+ iz * sBasisCart[i][2];
-					}
-				}
-			}
-		}
-
-//      Calculate the center of the supercell in strained cartesian Angstrom coords (sOriginCart).
-		double[][] minmax = new double[2][3];
-		MathUtil.set(minmax[0], 1E6, 1e6, 1e6);
-		MathUtil.set(minmax[1], -1E6, -1e6, -1e6);
-		for (int i = 8; --i >= 0;) {
-			MathUtil.rangeCheck(superCellVertices[i], minmax);
-		}
-		for (int i = numAtoms; --i >= 0;) {
-			Atom a = atoms[i];
-			MathUtil.mul(sBasisCart, a.vector0[DIS], tempvec);
-			MathUtil.rangeCheck(tempvec, minmax);
-		}
-		for (int i = 0; i < 3; i++)
-			sCenterCart[i] = (minmax[0][i] + minmax[1][i]) / 2;
-
-		// Place the center of the supercell at the origin
-		for (int j = 0; j < 8; j++) {
-			for (int i = 0; i < 3; i++) {
-				parentCellVertices[j][i] -= sCenterCart[i];
-				superCellVertices[j][i] -= sCenterCart[i];
-			}
-		}
-
-		gui.setLattLabels(pLatt1, sLatt1);
-
-		int numSubMax = 0;
-		for (int t = 0; t < numTypes; t++) {
-			int n = numSubTypes[t];
-			if (n > numSubMax)
-				numSubMax = n;
-		}
-		double[][][] max = new double[numTypes][numSubMax][MODE_ATOMIC_COUNT];
-
-		double[][] tempmat = new double[3][3];
-
-		modes[DIS].calcDistortion(max, tempvec, null);
-		modes[OCC].calcDistortion(max, null, null);
-		modes[ROT].calcDistortion(max, tempvec, null);
-		modes[MAG].calcDistortion(max, tempvec, null);
-		modes[ELL].calcDistortion(max, tempvec, tempmat);
-
-		for (int t = 0; t < numTypes; t++) {
-			for (int s = 0; s < numSubTypes[t]; s++) {
-				gui.setSubTypeText(t, s, max[t][s]);
-			}
-		}
-
-	}
-
-	public void saveModeValues() {
-		modes[DIS].saveMode();
-		modes[OCC].saveMode();
-		modes[MAG].saveMode();
-	}
-
-	public void randomizeGM1Values(Random rval) {
-		modes[DIS].randomizeModes(rval, true);
-		modes[OCC].randomizeModes(rval, true);
-		modes[MAG].randomizeModes(rval, true);
-	}
-
-	public void randomizeNonGM1Values(Random rval) {
-		modes[DIS].randomizeModes(rval, false);
-		modes[OCC].randomizeModes(rval, false);
-		modes[MAG].randomizeModes(rval, false);
-	}
-
-	public void restoreModeValues() {
-		modes[DIS].restoreMode();
-		modes[OCC].restoreMode();
-		modes[MAG].restoreMode();
-	}
-
-	public static final String ZEROES = "000000000000";
-	public static final String BLANKS = "            ";
-
-	public static String varToString(double val, int n, int w) {
-		// rounding
-		double incr = 0.5;
-		for (int j = n; j > 0; j--)
-			incr /= 10;
-
-		if (Math.abs(val) > 0.00001)
-			val += incr * (val / Math.abs(val));
-		else
-			val = 0;
-		String s = Double.toString(val);
-		int n1 = s.indexOf('.');
-		int n2 = s.length() - n1 - 1;
-
-		if (n > n2)
-			s = s + ZEROES.substring(0, n - n2);
-		else if (n2 > n)
-			s = s.substring(0, n1 + n + 1);
-
-		if (w > 0 & w > s.length())
-			s = BLANKS.substring(0, w - s.length()) + s;
-		else if (w < 0 & (-w) > s.length()) {
-			w = -w;
-			s = s + BLANKS.substring(0, w - s.length());
-		}
-		return s;
-	}
-
-	/**
-	 * An ordered list
-	 * 
-	 */
-	final static String[] knownTags = new String[] { //
-			"isoversion", //
-			"atommaxradius", //
-			"angstromspermagneton", //
-			"angstromsperradian", //
-			"defaultuiso", //
-			"maxbondlength", //
-			"appletwidth", //
-			"parentcell", //
-			"parentorigin", //
-			"parentbasis", //
-			"atomtypelist", //
-			"atomsubtypelist", //
-			"atomcoordlist", //
-			"atomocclist", //
-			"atommaglist", //
-			"atomrotlist", //
-			"bondlist", //
-			"irreplist", //
-			"modes[STRAIN].list", //
-			"displacivemodelist"//
-	};
-
-	Map<String, Atom> atomMap = new HashMap<>();
-
-	String getKeyTSA(int t, int s, int a) {
-		String key = "" + t + "_" + s + "_" + a;
-		// System.out.println(key);
-		return key;
 	}
 
 	private class VariableParser {
@@ -2148,68 +2206,6 @@ public class Variables {
 							+ ", " + varToString(max[MAG], 2, -4) + ", " + varToString(max[ROT], 2, -4) + "]");
 		}
 
-		public void getColors(int t, double[] rgb) {
-			rgb[0] = modes[DIS].colorT[t].getRed() / 255.0;
-			rgb[1] = modes[DIS].colorT[t].getGreen() / 255.0;
-			rgb[2] = modes[DIS].colorT[t].getBlue() / 255.0;
-		}
-
-	}
-
-	public void setAnimationAmplitude(double animAmp) {
-		gui.superSlider.setValue((int) Math.round(animAmp * gui.sliderMaxVal));
-	}
-
-	public boolean isSubTypeSelected(int t, int s) {
-		return gui.subTypeBoxes[t][s].isSelected();
-	}
-
-	public void setSubtypeSelected(int t, int s, boolean b) {
-		gui.subTypeBoxes[t][s].setSelected(b);
-	}
-
-	public void selectAllSubtypes(boolean b) {
-		for (int t = 0; t < numTypes; t++)
-			for (int s = 0; s < numSubTypes[t]; s++)
-				setSubtypeSelected(t, s, b);
-	}
-
-	public void getColors(int t, double[] rgb) {
-		gui.getColors(t, rgb);
-	}
-
-	public double getSetSuperSliderValue(double newVal) {
-		double d = superSliderVal;
-		superSliderVal = newVal;
-		return d;
-	}
-
-	public int getStrainModesCount() {
-		return modes[STRAIN].count;
-	}
-
-	public double[] getStrainmodeSliderValues() {
-		return modes[STRAIN].sliderValsTM[0];
-	}
-
-	public double[] get(int mode, int i) {
-		return atoms[i].vector1[mode];
-	}
-
-	public double getInitialOccupancy(int i) {
-		return atoms[i].vector0[OCC][0];
-	}
-
-	public double getOccupancy(int i) {
-		return atoms[i].vector1[OCC][0];
-	}
-
-	public String getAtomTypeSymbol(int i) {
-		return atomTypeSymbol[atoms[i].t];
-	}
-
-	public Atom getAtom(int ia) {
-		return atoms[ia];
 	}
 
 	public void updateFormData(Object mapFormData) {

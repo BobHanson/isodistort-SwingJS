@@ -47,6 +47,7 @@ import javax.swing.SwingUtilities;
 
 import org.byu.isodistort.IsoDiffractApp;
 import org.byu.isodistort.IsoDistortApp;
+import org.byu.isodistort.server.ServerUtil;
 
 /**
  * 
@@ -57,7 +58,7 @@ import org.byu.isodistort.IsoDistortApp;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".6"; 
+	final static String minorVersion = ".7"; 
 	
 	/**
 	 * The variables are all read. Time to do any app-specific 
@@ -394,7 +395,7 @@ public abstract class IsoApp {
 				dataString.append(s).append('\n');
 			}
 			br.close();
-			System.out.println("Bytes read: " + dataString.length() + " in "+(System.currentTimeMillis() - t)+" ms");
+			System.out.println("File " + path + "\nBytes read: " + dataString.length() + " in "+(System.currentTimeMillis() - t)+" ms");
 			return dataString.toString();
 		} catch (IOException exception) {
 			exception.printStackTrace();
@@ -507,37 +508,27 @@ public abstract class IsoApp {
 
 		@Override
 		public void windowClosing(WindowEvent e) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void windowClosed(WindowEvent e) {
 			shutDown();
 		}
 
 		@Override
+		public void windowClosed(WindowEvent e) {
+		}
+
+		@Override
 		public void windowIconified(WindowEvent e) {
-			// TODO Auto-generated method stub
-			
 		}
 
 		@Override
 		public void windowDeiconified(WindowEvent e) {
-			// TODO Auto-generated method stub
-			
 		}
 
 		@Override
 		public void windowActivated(WindowEvent e) {
-			// TODO Auto-generated method stub
-			
 		}
 
 		@Override
 		public void windowDeactivated(WindowEvent e) {
-			// TODO Auto-generated method stub
-			
 		}
 		
 	};
@@ -553,7 +544,7 @@ public abstract class IsoApp {
 			long t = System.currentTimeMillis();
 
 			initializePanels();
-			variables = new Variables(this, readFile(), appType == APP_ISODIFFRACT);
+			variables = new Variables(this, readFile(), appType == APP_ISODIFFRACT, oldVariables != null);
 			if (oldVariables == null) {
 				frameContentPane.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
 			} else {
@@ -1014,6 +1005,20 @@ public abstract class IsoApp {
 	}
 
 	public void saveCurrent() {
+		if (formData == null)
+			formData = ServerUtil.testFormData;
+		Object mapFormData = ServerUtil.json2Map(formData);
+		variables.updateFormData(mapFormData);
+		
+		getData(new Consumer<String>() {
+
+			@Override
+			public void accept(String data) {
+				FileUtil.saveDataFile(frame, data, "isoviz", false);
+				
+			}
+			
+		});
 	}
 
 	public void saveOriginal() {

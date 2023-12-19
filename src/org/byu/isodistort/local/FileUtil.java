@@ -4,8 +4,12 @@ import java.awt.Component;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -158,6 +162,40 @@ public class FileUtil {
 			}
 		}
 
+	}
+
+	public static String toString(BufferedInputStream bis) throws IOException {
+		
+		return new String(getLimitedStreamBytes(bis,0));
+	}
+
+	public static byte[] getLimitedStreamBytes(InputStream is, long n) throws IOException {
+
+		// Note: You cannot use InputStream.available() to reliably read
+		// zip data from the web.
+
+		int buflen = (n > 0 && n < 1024 ? (int) n : 1024);
+		byte[] buf = new byte[buflen];
+		byte[] bytes = new byte[n < 0 ? 4096 : (int) n];
+		int len = 0;
+		int totalLen = 0;
+		if (n < 0)
+			n = Integer.MAX_VALUE;
+		while (totalLen < n && (len = is.read(buf, 0, buflen)) > 0) {
+			totalLen += len;
+			if (totalLen > bytes.length) {
+				bytes = Arrays.copyOf(bytes, totalLen * 2);
+			}
+			System.arraycopy(buf, 0, bytes, totalLen - len, len);
+			if (n != Integer.MAX_VALUE && totalLen + buflen > bytes.length)
+				buflen = bytes.length - totalLen;
+
+		}
+		if (totalLen == bytes.length)
+			return bytes;
+		buf = new byte[totalLen];
+		System.arraycopy(bytes, 0, buf, 0, totalLen);
+		return buf;
 	}
 
 }

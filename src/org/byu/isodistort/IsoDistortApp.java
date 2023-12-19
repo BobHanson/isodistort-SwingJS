@@ -34,6 +34,8 @@ import javax.swing.Timer;
 
 import org.byu.isodistort.local.IsoApp;
 import org.byu.isodistort.local.MathUtil;
+import org.byu.isodistort.local.Variables;
+import org.byu.isodistort.local.Variables.Atom;
 import org.byu.isodistort.render.Geometry;
 import org.byu.isodistort.render.Material;
 // import org.byu.isodistort.render.Matrix;
@@ -94,7 +96,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * Array (not by type) of pivot-atom rotations in radians. [Atom
 	 * number][magnitude, X-angle, Y-angle]
 	 */
-	double[][] atomRotatonInfo;
+	double[][] atomRotationInfo;
 	/**
 	 * Final information needed to render bonds [atom number][xwidth, ywidth,
 	 * zwidth, rotaxis-x, rotaxis-y, rotaxis-z, theta]
@@ -242,17 +244,17 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		atomCoordInfo = new double[n][3];
 		atomRadiusInfo = new double[n];
 		atomMagneticMomentInfo = new double[n][3];
-		atomRotatonInfo = new double[n][3];
+		atomRotationInfo = new double[n][3];
 		atomEllipseInfo = new double[n][7];
 		atomObjects.clear(0);
-		for (int q = 0, t = 0; t < variables.numTypes; t++)
-			for (int s = 0; s < variables.numSubTypes[t]; s++)
-				for (int a = 0; a < variables.numSubAtoms[t][s]; a++, q++) {
-					atomObjects.add();
-					atomObjects.child(q).add().ball(ballRes).setMaterial(subMaterial[t][s]);
-					atomObjects.child(q).add().arrow(numArrowSides).setMaterial(subMaterial[t][s]);
-					atomObjects.child(q).add().arrow(numArrowSides).setMaterial(subMaterial[t][s]);
-				}
+		for (int ia = 0; ia < n; ia++) {
+			atomObjects.add();
+			Atom a = variables.getAtom(ia);
+			Material m = subMaterial[a.t][a.s];
+			atomObjects.child(ia).add().ball(ballRes).setMaterial(m);
+			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m);
+			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m);
+		}
 	}
 
 	/**
@@ -318,8 +320,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		subMaterial = new Material[variables.numTypes][];
 
 		// Create the subMaterial array;
-		for (int t = 0, nt = variables.numTypes; t < nt; t++)// iterate over types of atoms
-		{
+		for (int t = 0, nt = variables.numTypes; t < nt; t++) {
 			subMaterial[t] = new Material[variables.numSubTypes[t]];
 			for (int s = 0, nst = variables.numSubTypes[t]; s < nst; s++)// iterate over number-of-subtypes
 				subMaterial[t][s] = rp.newMaterial();
@@ -357,21 +358,16 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * which will be rendered as our crystal.
 	 */
 	private void renderAtoms() {
-		for (int t = 0, q = 0; t < variables.numTypes; t++) {
-			for (int s = 0; s < variables.numSubTypes[t]; s++) {
-				for (int a = 0; a < variables.numSubAtoms[t][s]; a++) {
-					renderAtom(t, s, a, q++);
-				}
-			}
-		}
+		for (int i = 0, n = variables.numAtoms; i < n; i++)
+			renderAtom(i);
 	}
 
-	private void renderAtom(int t, int s, int a, int q) {
+	private void renderAtom(int q) {
 		renderScaledAtom(atomObjects.child(q), atomCoordInfo[q], atomRadiusInfo[q] * variables.atomMaxRadius);
 		renderEllipsoid(atomObjects.child(q).child(0), atomEllipseInfo[q], 1 / Math.sqrt(variables.defaultUiso));
 		renderAtomChild(atomObjects.child(q).child(1), atomMagneticMomentInfo[q], momentMultiplier,
 				variables.angstromsPerMagneton);
-		renderAtomChild(atomObjects.child(q).child(2), atomRotatonInfo[q], rotationMultiplier,
+		renderAtomChild(atomObjects.child(q).child(2), atomRotationInfo[q], rotationMultiplier,
 				variables.angstromsPerRadian);
 	}
 
@@ -517,43 +513,39 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		if (showCells) {
 			for (int pt = 0, c = 0; c < 24; c++) {
 				double[][] vertices = (c < 12 ? variables.parentCellVertices : variables.superCellVertices);
-				MathUtil.pairtobond(vertices[buildCell[(pt++) % 24]], vertices[buildCell[(pt++) % 24]], cellInfo[c]);
+				MathUtil.getBondInfo(vertices[buildCell[(pt++) % 24]], vertices[buildCell[(pt++) % 24]], cellInfo[c]);
 			}
 		}
 
 		if (showAtoms) {
 
-			for (int q = 0, t = 0; t < variables.numTypes; t++)
-				for (int s = 0; s < variables.numSubTypes[t]; s++)
-					for (int a = 0; a < variables.numSubAtoms[t][s]; a++, q++) {
-						atomRadiusInfo[q] = variables.atomFinalOcc[t][s][a];
-						MathUtil.set3(newcoord, variables.atomFinalCoord[t][s][a]);
-						MathUtil.matdotvect(variables.sBasisCart, newcoord, tempvec); // typeless atom in cartesian coords
+			for (int ia = 0, n = variables.numAtoms; ia < n; ia++) {
+						atomRadiusInfo[ia] = variables.getOccupancy(ia);
+						MathUtil.set3(newcoord, variables.get(Variables.DIS, ia));
+						MathUtil.mul(variables.sBasisCart, newcoord, tempvec); // typeless atom in cartesian coords
 
 						for (int i = 0; i < 3; i++) // recenter in Applet coordinates
-							atomCoordInfo[q][i] = tempvec[i] - variables.sCenterCart[i];
+							atomCoordInfo[ia][i] = tempvec[i] - variables.sCenterCart[i];
 
-						MathUtil.set3(newmag, variables.atomFinalMag[t][s][a]);
-						MathUtil.matdotvect(variables.sBasisCart, newmag, tempvec);
-						MathUtil.calculatearrow(tempvec, atomMagneticMomentInfo[q]);
+						MathUtil.set3(newmag, variables.get(Variables.MAG, ia));
+						MathUtil.mul(variables.sBasisCart, newmag, tempvec);
+						MathUtil.calculateArrow(tempvec, atomMagneticMomentInfo[ia]);
 
-						MathUtil.set3(newrot, variables.atomFinalRot[t][s][a]);
-						MathUtil.matdotvect(variables.sBasisCart, newrot, tempvec);
-						MathUtil.calculatearrow(tempvec, atomRotatonInfo[q]);
+						MathUtil.set3(newrot, variables.get(Variables.ROT, ia));
+						MathUtil.mul(variables.sBasisCart, newrot, tempvec);
+						MathUtil.calculateArrow(tempvec, atomRotationInfo[ia]);
 
-//					Ellipsoid work
-						MathUtil.copy(variables.atomFinalEllip[t][s][a], newellip);
+						MathUtil.copy(variables.get(Variables.ELL,ia), newellip);
 						MathUtil.voigt2matrix(newellip, tempmat);
-						MathUtil.matdotmat(variables.sBasisCart, tempmat, tempmat2);
+						MathUtil.mul(variables.sBasisCart, tempmat, tempmat2);
 						MathUtil.matcopy(tempmat2, tempmat);
-						MathUtil.matdotmat(tempmat, variables.sBasisCartInverse, tempmat2);// ellipsoid in cartesian coords
+						MathUtil.mul(tempmat, variables.sBasisCartInverse, tempmat2);// ellipsoid in cartesian coords
 																						// --
 																						// not safe
 						// to use tempmat in 1st and 3rd arguments
 						// simultaneously.
 						MathUtil.matcopy(tempmat2, tempmat);
-//			        System.out.println ("ellipmat3: "+t+", "+s+", "+a+", "+tempmat[0][0]+", "+tempmat[0][1]+", "+tempmat[0][2]+", "+tempmat[1][0]+", "+tempmat[1][1]+", "+tempmat[1][2]+", "+tempmat[2][0]+", "+tempmat[2][1]+", "+tempmat[2][2]);
-						MathUtil.calculateellipstuff(tempmat, atomEllipseInfo[q]); // ellipsoidInfo array filled
+						MathUtil.calculateEllipsoid(tempmat, atomEllipseInfo[ia]); // ellipsoidInfo array filled
 					}
 		}
 
@@ -562,11 +554,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			for (int b = 0; b < variables.numBonds; b++) {
 				// calculate bondInfo(x-cen, y-cen, z-cen, thetaX, thetaY,
 				// length)
-				int[] bond = variables.whichAtomsBond[b];
+				int[] bond = variables.bonds[b];
 				int a0 = bond[0];
 				int a1 = bond[1];
 				double[] info = bondInfo[b];
-				MathUtil.pairtobond(atomCoordInfo[a0], atomCoordInfo[a1], info);
+				MathUtil.getBondInfo(atomCoordInfo[a0], atomCoordInfo[a1], info);
 				if (info[5] >= variables.maxBondLength || atomRadiusInfo[a0] <= variables.minBondOcc
 						|| atomRadiusInfo[a1] <= variables.minBondOcc) {
 					info[6] = 0.0;
@@ -587,7 +579,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				paxesbegs[axis][i] = extent[i] + 2.0 * variables.atomMaxRadius * tempvec[i];
 				paxesends[axis][i] = extent[i] + 3.5 * variables.atomMaxRadius * tempvec[i];
 			}
-			MathUtil.pairtobond(paxesbegs[axis], paxesends[axis], axesInfo[axis]);
+			MathUtil.getBondInfo(paxesbegs[axis], paxesends[axis], axesInfo[axis]);
 
 			for (int i = 0; i < 3; i++)
 				tempvec[i] = variables.sBasisCart[i][axis];
@@ -597,7 +589,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				saxesbegs[axis][i] = extent[i] + 1.5 * variables.atomMaxRadius * tempvec[i];
 				saxesends[axis][i] = extent[i] + 4.0 * variables.atomMaxRadius * tempvec[i];
 			}
-			MathUtil.pairtobond(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3]);
+			MathUtil.getBondInfo(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3]);
 		}
 
 		// Calculate the maximum distance from applet center (used to determine FOV).
@@ -756,7 +748,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			MathUtil.mattranspose(variables.pBasisCart, tempmat);
 			break;
 		}
-		MathUtil.matdotvect(tempmat, viewIndices, viewDir);
+		MathUtil.mul(tempmat, viewIndices, viewDir);
 
 		if (MathUtil.lenSq3(viewDir) > 0.000000000001) {
 			MathUtil.normalize(viewDir);
@@ -839,7 +831,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			superHKL.setSelected(true);
 
 			rp.resetView();
-			variables.setSubtypesSelected(false);
+			variables.selectAllSubtypes(false);
 			centerImage();
 			break;
 		case 'z':

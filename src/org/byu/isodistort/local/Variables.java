@@ -6,45 +6,563 @@ import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Locale;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 public class Variables {
+
+	private final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
+
+	private Atom[] atoms;
 	
+	public class Atom {
+		public int t;
+		public int s;
+		int a;
+		int index;
+		/**
+		 * initial 
+		 */
+		double[][] vector0 = new double[MODE_COUNT][];
+		double[][] vector1 = new double[MODE_COUNT][];
+		public double[][][] modes = new double[MODE_COUNT][][];
+		Atom(int index, int t, int s, int a) {
+			this.index = index;
+			this.t = t;
+			this.s = s;
+			this.a = a;
+			atomMap.put(getKeyTSA(t + 1, s + 1, a + 1), this);
+		}
+		
+		@Override
+		public String toString() {
+			return "[Atom " + index + " " + t + "," + s + "," + a + "]";
+		}
+	}
+	
+	public final static int DIS = 0; // displacive
+	public final static int OCC = 1; // occupancy (aka "scalar")
+	public final static int MAG = 2; // magnetic
+	public final static int ROT = 3; // rotational
+	public final static int ELL = 4; // ellipsoidal
+	private final static int MODE_ATOMIC_COUNT = 5;
+
+	public final static int STRAIN = 5;
+	public final static int IRREP = 6; // irreducible representations
+	private final static int MODE_COUNT = 7;
+
+	private Mode[] modes = new Mode[MODE_COUNT];
+
+	/**
+	 * A class to hold the arrays relating to individual types of symmetry modes,
+	 * specificall: displacement, magnetic, rotational, anisotroic ("ellipsoidal"),
+	 * strain, and irreducible representations.
+	 * 
+	 * STRAIN and IRREP are special in that they are not atom-specific. Thus,
+	 * sometimes
+	 * 
+	 * @author hanso
+	 *
+	 */
+	private class Mode {
+		@SuppressWarnings("unused")
+		/**
+		 * DISP, IRREP, ....
+		 */
+		int type;
+
+		/**
+		 * the number of total number of entries for this mode in the isoviz file.
+		 */
+		int count;
+
+		/**
+		 * number of columns of data for this type of symmetry mode
+		 */
+		int columnCount;
+
+		/**
+		 * [atomtype][mode]
+		 */
+		int[] modesPerType;
+		JPanel[] panels;
+
+		/**
+		 * [atomtype][mode][subtype][subatom][value]
+		 */
+		double[][][][][] modeCoeffsTMSA; // was xxxmodeVect
+
+		/**
+		 * [atomtype][modefortype]
+		 */
+		double[][] initAmpTM;
+		double[][] maxAmpTM;
+		int[][] irrepTM;
+		String[][] nameTM;
+		JSlider[][] sliderTM;
+		JLabel[][] sliderLabelsTM;
+		double[][] sliderValsTM;
+
+		private double[][] savedSliderValues;
+
+		/**
+		 * strain and irrep only [mode][value]
+		 */
+		double[][] vector;
+
+		Color[] colorT;
+		
+		public boolean isActive;
+
+		final private double[] delta; 
+		
+
+		Mode(int type) {
+			this.type = type;
+			switch (type) {
+			case DIS:
+			case MAG:
+			case ROT:
+				columnCount = 3;
+				break;
+			case OCC:
+			case IRREP:
+				columnCount = 1;
+				break;
+			case ELL:
+			case STRAIN:
+				columnCount = 6;
+				break;
+			}
+			delta = new double[columnCount];
+		}
+
+		void initAtoms() {
+			// nothing to do -- now saved in Atom.vector0, Atom.vector1, and Atom.mode
+		}
+
+		/**
+		 * Prepare the STRAIN and IRREP array data, which do not involve specific atoms.
+		 * 
+		 * @param num
+		 */
+		void initArraysNonAtom(int num) {
+			isActive = true;
+			count = num;
+			nameTM = new String[1][num];
+			modesPerType = new int[] { num };
+			initAmpTM = new double[1][num];
+			maxAmpTM = new double[1][num];
+
+			switch (type) {
+			case STRAIN:
+				columnCount = 6;
+				irrepTM = new int[1][num];
+				vector = new double[num][6];
+				break;
+			case IRREP:
+				for (int m = 0; m < count; m++) {
+					initAmpTM[0][m] = maxAmpTM[0][m] = 1;
+				}
+				break;
+			}
+		}
+
+		/**
+		 * Prepare the arrays for holding parsed data.
+		 * 
+		 * @param perType
+		 * @param count
+		 */
+		void initArraysMode(int[] perType, int count) {
+			isActive = true;
+			this.count = count;
+			int typeCount = numTypes;
+			int[] subTypeCounts = numSubTypes;
+			int[][] subAtomCounts = numSubAtoms;
+			this.modesPerType = perType;
+			initAmpTM = new double[typeCount][];
+			maxAmpTM = new double[typeCount][];
+			irrepTM = new int[typeCount][];
+			nameTM = new String[typeCount][];
+			modeCoeffsTMSA = new double[typeCount][][][][];
+			for (int t = 0; t < typeCount; t++) {
+				int nmodes = modesPerType[t];
+				irrepTM[t] = new int[nmodes];
+				initAmpTM[t] = new double[nmodes];
+				maxAmpTM[t] = new double[nmodes];
+				nameTM[t] = new String[nmodes];
+				modeCoeffsTMSA[t] = new double[nmodes][][][];
+				int nsub = subTypeCounts[t];
+				int[] natom = subAtomCounts[t];
+				for (int m = 0; m < nmodes; m++) {
+					modeCoeffsTMSA[t][m] = new double[nsub][][];
+					for (int s = 0; s < nsub; s++)
+						modeCoeffsTMSA[t][m][s] = new double[natom[s]][columnCount];
+				}
+			}
+		}
+
+		/**
+		 * Parse and save all mode-related data. 
+		 * 
+		 * 
+		 * @param parser
+		 */
+		void getModeData(VariableParser parser) {
+			// input mode array [atom type][mode number of that type][atom
+			// number of that type][column data]
+			int[] modeTracker = new int[numTypes];
+			for (int pt = 0, m = 0; m < count; m++) {
+				int thisType = parser.getInt(pt++) - 1;
+				int mode = modeTracker[thisType]++;
+				if (mode + 1 != parser.getInt(pt++))
+					parser.parseError("The modes are not given in ascending order", 2);
+				initAmpTM[thisType][mode] = parser.getDouble(pt++);
+				maxAmpTM[thisType][mode] = parser.getDouble(pt++);
+				irrepTM[thisType][mode] = parser.getInt(pt++) - 1;
+				nameTM[thisType][mode] = parser.getItem(pt++);
+				for (int s = 0; s < numSubTypes[thisType]; s++) {
+					for (int a = 0; a < numSubAtomsRead[thisType][s]; a++) {
+						for (int i = 0; i < columnCount; i++) {
+							modeCoeffsTMSA[thisType][mode][s][a][i] = parser.getDouble(pt++);
+						}
+					}
+				}
+			}
+		}
+
+		/**
+		 * The heart of the entire operation. 
+		 * 
+		 * First ensure that all atoms have the proper list of 
+		 * mode irrep parameters from the this mode's list, which are initially
+		 * cataloged only by atom type only. 
+		 * 
+		 * Then attenuate the irrep[t][m] by the slider values 
+		 * 
+		 *     distortion = sum{modeCoefs[m] * irrep[t][m] * sliderValue * superSliderVal}
+		 * 
+		 * Finally, apply that distortion to the atom's parameter vector (coord, occupation, 
+		 * magnetic moment, rotational displacement, etc.)
+		 * 
+		 * @param max
+		 * @param tempvec
+		 * @param tempmat 
+		 */
+		public void calcDistortion(double[][][] max, double[] tempvec, double[][] tempmat) {
+			double[] irreps = modes[IRREP].sliderValsTM[0];			
+			for (int ia = 0; ia < numAtoms; ia++) {
+				Atom a = atoms[ia];
+				MathUtil.vecfill(delta, 0);
+				int t = a.t;
+				int s = a.s;
+				if (isActive) {
+					// prepare atom modes
+					if (a.modes[type] == null) {
+						a.modes[type] = new double[modesPerType[t]][];
+						for (int m = 0; m < modesPerType[t]; m++) {
+							a.modes[type][m] = modeCoeffsTMSA[t][m][s][a.a];
+						}
+					}
+					// accumulate distortion deltas
+					for (int m = 0; m < modesPerType[t]; m++) {
+						double d = irreps[irrepTM[t][m]] * sliderValsTM[t][m] * superSliderVal;
+						MathUtil.vecadd(delta, a.modes[type][m], d, delta);
+					}
+				}
+
+				// apply the distortion to the atom's vector data
+				double[] v1 = a.vector1[type];
+				if (v1 == null) {
+					v1 = a.vector1[type] = new double[columnCount];
+				}
+				MathUtil.vecadd(a.vector0[type], delta, 1, v1);
+
+				// next is just for the labels
+				switch (columnCount) {
+				case 1: // OCC
+					max[t][s][type] += v1[0] / numSubAtoms[t][s];
+					break;
+				case 3: // DIS, MAG, ROT
+					MathUtil.mul(sBasisCart, v1, tempvec);
+					double d = MathUtil.len3(tempvec);
+					if (d > max[t][s][type])
+						max[t][s][type] = d;
+					break;
+				case 6: // ELL
+					MathUtil.voigt2matrix(v1, tempmat);
+					MathUtil.mul(sBasisCart, tempmat, tempmat);
+					MathUtil.mul(tempmat, sBasisCartInverse, tempmat);
+					// ellipsoid in cartesian coords
+					d = 0;
+					for (int i = 0; i < 3; i++) {
+						for (int j = 0; j < 3; j++) {
+							d += tempmat[i][j] * tempmat[i][j];
+						}
+					}
+					if (d > max[t][s][ELL])
+						max[t][s][ELL] = d;
+					
+				}
+				
+			}
+		}
+		
+		/**
+		 * Save mode data in preparation for going random.
+		 * 
+		 */
+		void saveMode() {
+			if (!isActive)
+				return;
+			int typeCount = numTypes;
+			if (savedSliderValues == null) {
+				savedSliderValues = new double[typeCount][];
+				for (int t = 0; t < typeCount; t++) {
+					savedSliderValues[t] = new double[modesPerType[t]];
+				}
+			}
+			for (int t = 0; t < typeCount; t++) {
+				for (int m = 0; m < modesPerType[t]; m++) {
+					savedSliderValues[t][m] = sliderValsTM[t][m];
+				}
+			}
+		}
+
+		/**
+		 * Randomize values, taking care not to futz with GM1.
+		 * 
+		 * @param rval
+		 * @param isGM
+		 */
+		void randomizeModes(Random rval, boolean isGM) {
+			if (!isActive)
+				return;
+			int typeCount = numTypes;
+			for (int t = 0; t < typeCount; t++) {
+				for (int m = 0; m < modesPerType[t]; m++) {
+					String name = nameTM[t][m];
+					boolean isGM1 = (name.startsWith("GM1") && !name.startsWith("GM1-"));
+					if (isGM1 == isGM) {
+						sliderValsTM[t][m] = (2 * rval.nextFloat() - 1) * maxAmpTM[t][m];
+					} else if (isGM) {
+						sliderValsTM[t][m] = 0;
+					}
+				}
+			}
+		}
+
+		/**
+		 * Return mode to pre-randomized settings.
+		 * 
+		 */
+		void restoreMode() {
+			if (!isActive)
+				return;
+			int typeCount = numTypes;
+			for (int t = 0; t < typeCount; t++) {
+				for (int m = 0; m < modesPerType[t]; m++) {
+					sliderValsTM[t][m] = savedSliderValues[t][m];
+				}
+			}
+		}
+
+		/**
+		 * Set the color of this mode's panels to their designated colors
+		 */
+		void colorPanels() {
+			if (panels == null || !isActive)
+				return;
+			int typeCount = numTypes;
+			for (int t = 0; t < typeCount; t++) {
+				Color c = colorT[t];
+				panels[t].setBackground(c);
+				for (int m = 0; m < modesPerType[t]; m++) {
+					sliderLabelsTM[t][m].setBackground(c);
+					sliderTM[t][m].setBackground(c);
+				}
+			}
+		}
+
+		/**
+		 * Set sliders to the given value -- used for Toggle IRREP and zeroing all
+		 * values.
+		 * 
+		 * @param n
+		 */
+		void setSliders(int n) {
+			if (!isActive)
+				return;
+			switch (type) {
+			case STRAIN:
+			case IRREP:
+				for (int m = 0; m < count; m++)
+					sliderTM[0][m].setValue(n);
+				break;
+		    default:
+				int typeCount = numTypes;
+				for (int t = 0; t < typeCount; t++) {
+					for (int m = 0; m < modesPerType[t]; m++)
+						sliderTM[t][m].setValue(n);
+				}
+				break;
+			}
+		}
+
+		/**
+		 * Reset all sliders to their maximum values.
+		 * 
+		 * @param sliderMax
+		 */
+		void resetSliders(int sliderMax) {
+			if (!isActive)
+				return;
+			int typeCount = numTypes;
+			switch (type) {
+			case STRAIN:
+				typeCount = count;
+				break;
+			case IRREP:
+				for (int m = 0; m < count; m++)
+					sliderTM[0][m].setValue(sliderMax);
+				break;
+		    default:
+				for (int t = 0; t < typeCount; t++) {
+					for (int m = 0; m < modesPerType[t]; m++)
+						sliderTM[t][m].setValue((int) (initAmpTM[t][m] / maxAmpTM[t][m] * sliderMax));
+				}
+				break;
+			}
+		}
+
+		/**
+		 * Iterate over types and modes, setting sliderValsTM and sliderLabelsTM.
+		 * 
+		 * @param sliderMaxVal
+		 */
+		public void readSlider(double sliderMaxVal) {
+			boolean isAtomic = (type < MODE_ATOMIC_COUNT);
+			boolean isIrrep = (type == IRREP);
+			int prec = (isAtomic ? 2 : 3);
+			int typeCount = (isAtomic ? numTypes : 1);
+			for (int t = 0; t < typeCount; t++) {
+				for (int m = 0; m < modesPerType[t]; m++) {
+					sliderValsTM[t][m] = maxAmpTM[t][m] * (sliderTM[t][m].getValue() / sliderMaxVal);
+					double d = sliderValsTM[t][m] * (isIrrep ? 1 : modes[IRREP].sliderValsTM[0][irrepTM[t][m]])
+							* superSliderVal;
+					sliderLabelsTM[t][m].setText(varToString(d, prec, -8) + "  " + nameTM[t][m]);
+				}
+			}			
+		}
+
+		/**
+		 * Set slider values when switching modes. 
+		 * 
+		 * @param otherMode
+		 */
+		public void setValues(Mode otherMode) {
+			int typeCount = (type >= MODE_ATOMIC_COUNT ? 1 : numTypes);
+			for (int t = 0; t < typeCount; t++)
+				for (int m = 0; m < otherMode.modesPerType[t]; m++)
+					sliderTM[t][m].setValue((int) otherMode.sliderTM[t][m].getValue());
+		}
+		
+		/**
+		 * Set colors for the different mode types.
+		 * 
+		 * @param simpleColor
+		 */
+		public void setColors(boolean simpleColor) {
+			int typeCount = numTypes;
+			float brightness;
+			switch (type) {
+			default:
+			case DIS:
+				brightness = 0.95f;
+				break;
+			case OCC:
+				brightness = 0.80f;
+				break;
+			case MAG:
+				brightness = 0.65f;
+				break;
+			case ROT:
+				brightness = 0.55f;
+				break;
+			case ELL:
+				brightness = 0.40f;
+				break;
+			case STRAIN:
+				colorT[0] = Color.DARK_GRAY;
+				return;
+			case IRREP:
+				colorT[0] = Color.LIGHT_GRAY;
+				return;
+			}
+			if (colorT == null) {
+				colorT = new Color[numTypes];
+			}
+			for (int t = 0; t < typeCount; t++) {
+				float k = (simpleColor ? 1f * atomTypeUnique[t] / numUniques : 1f * t / numTypes);
+				colorT[t] = new Color(Color.HSBtoRGB(k, 1, brightness));
+			}
+		}
+
+		@Override
+		public String toString() {
+			return "[Mode "+ type +" count=" + count + "]";
+		}
+
+	}
+
 	private IsoApp app;
 
 	private VariableGUI gui;
 
 	public String isoversion;
 
+	/**
+	 * only used to hide the checkboxes
+	 */
 	private boolean isDiffraction;
 
-	public BitSet bsPrimitive;
-
-	public int numPrimitive;
-	
 	/** True initially or when a slider bar moves, false otherwise */
 	public boolean isChanged = true;
 
 	/** Applet width and height in pixels */
 	public int appletWidth = 1024, appletHeight;
-	/** Total number of atoms. */
+	/** Total number of atoms after filtering for primitive. */
 	public int numAtoms;
 	/** Number of different atom types */
 	public int numTypes;
 	/** Number of subtypes for each atom type. */
 	public int[] numSubTypes;
-	/** Number of atoms for specific type and subtype. */
+
+	/**
+	 * the final public number of atoms for specific type and subtype; either
+	 * numSubAtomsRead or numPrimitiveSubAtoms
+	 */
 	public int[][] numSubAtoms;
+
+	/**
+	 * the actual sub atom numbers in the file data; only used for parsing
+	 */
+	private int[][] numSubAtomsRead;
+
 	/** Names for each atom type; [type] */
 	public String[] atomTypeName, atomTypeSymbol;
 	/** Names for each atom type; [type] */
@@ -67,7 +585,7 @@ public class Variables {
 	 * Specifies which atoms bond together; [bond #][atom1, atom2] Indicies
 	 * reference atomInfo (below)
 	 */
-	public int[][] whichAtomsBond;
+	public int[][] bonds;
 	/** Total number of unique parent atom types. */
 	public int numUniques;
 	/**
@@ -84,11 +602,11 @@ public class Variables {
 	/** Original unstrained supercell lattice parameters */
 	public double[] sLatt0 = new double[6];
 	/** Strained supercell parameters */
-	public double[] sLatt = new double[6];
+	public double[] sLatt1 = new double[6];
 	/** Original unstrained parent cell parameters */
 	public double[] pLatt0 = new double[6];
 	/** Strained parent cell parameters */
-	public double[] pLatt = new double[6];
+	public double[] pLatt1 = new double[6];
 	/**
 	 * Parent cell origin relative to supercell origin on the unitless superlattice
 	 * basis. [x, y, z]
@@ -156,157 +674,18 @@ public class Variables {
 	public boolean isRhombParentSetting;
 
 	/**
-	 * Array of atom positions in unitless lattice units. [type][subtype][atom of
-	 * subtype][x, y, z]
+	 * 
+	 * /** Number of irreps
 	 */
-	public double[][][][] atomInitCoord, atomFinalCoord;
-	/** Array of initial atom occupancies. [type][subtype][atom of subtype] */
-	public double[][][] atomInitOcc, atomFinalOcc;
-	/**
-	 * Array of atom magnetic moment vectors in reciprocal lattice units (muB/Ang).
-	 * [type][subtype][atom of subtype][mx, my, mz]
-	 */
-	public double[][][][] atomInitMag, atomFinalMag;
-	/**
-	 * Array of atom magnetic moment vectors in reciprocal lattice units (muB/Ang).
-	 * [type][subtype][atom of subtype][mx, my, mz]
-	 */
-	public double[][][][] atomInitRot, atomFinalRot;
-	/**
-	 * Array of atom ellipsoid params in Angstrom-squared units.
-	 * [type][subtype][atom of subtype][xx, yy, zz, yz, xz, xy]
-	 */
-	public double[][][][] atomInitEllip, atomFinalEllip;
-
-	/** Number of irreps */
 	public int numIrreps;
-	/** Names of the irreps */
-	public String[] irrepName;
 	/**
 	 * Boolean variable that tracks whether irrep sliders were last set to sliderMax
 	 * or to zero.
 	 */
 	public boolean irrepSlidersOn = true;
 
-	/** Total number of displacement modes */
-	public int dispmodeNum;
-	/** Number of displacement modes for each type [type] */
-	public int[] dispmodePerType;
-	/** Array of initial mode amplitudes. [type][mode of type] */
-	public double[][] dispmodeInitAmp;
-	/** Maximum amplitude of displacement modes/slider bars; [type][mode of type] */
-	public double[][] dispmodeMaxAmp;
-	/**
-	 * Array of displacement mode vectors. [type][mode of type][subtype][atom of
-	 * subtype][x, y, z]
-	 */
-	public double[][][][][] dispmodeVect;
-	/** Array of displacement mode names; [type][mode] */
-	public String[][] dispmodeName;
-	/** Tells which irrep the displacive mode corresponds to */
-	public int[][] dispmodeIrrep;
-
-	/** Total number of scalar modes */
-	public int scalarmodeNum;
-	/** Number of scalar modes for each type [type] */
-	public int[] scalarmodePerType;
-	/** Array of initial scalar mode amplitudes. [type][mode of type] */
-	public double[][] scalarmodeInitAmp;
-	/** Maximum amplitude of scalar modes/slider bars; [type][mode of type] */
-	public double[][] scalarmodeMaxAmp;
-	/**
-	 * Array of scalar mode magnitudes. [type][mode of type][subtype][atom of
-	 * subtype]
-	 */
-	public double[][][][] scalarmodeVect;
-	/** Array of scalar mode names; [type][mode] */
-	public String[][] scalarmodeName;
-	/** Tells which irrep the scalar mode corresponds to */
-	public int[][] scalarmodeIrrep;
-
-	/** Total number of magnetic modes */
-	public int magmodeNum;
-	/** Number of magnetic modes for each type [type] */
-	public int[] magmodePerType;
-	/** Array of initial magnetic mode amplitudes. [type][mode of type] */
-	public double[][] magmodeInitAmp;
-	/** Maximum amplitude of magnetic modes/slider bars; [type][mode of type] */
-	public double[][] magmodeMaxAmp;
-	/**
-	 * Array of magnetic mode vectors. [type][mode of type][subtype][atom of
-	 * subtype][x, y, z]
-	 */
-	public double[][][][][] magmodeVect;
-	/** Array of magnetic mode names; [type][mode] */
-	public String[][] magmodeName;
-	/** Tells which irrep the magnetic mode corresponds to */
-	public int[][] magmodeIrrep;
-
-	/** Total number of rotational modes */
-	public int rotmodeNum;
-	/** Number of rotational modes for each type [type] */
-	public int[] rotmodePerType;
-	/** Array of initial rotational mode amplitudes. [type][mode of type] */
-	public double[][] rotmodeInitAmp;
-	/** Maximum amplitude of rotational modes/slider bars; [type][mode of type] */
-	public double[][] rotmodeMaxAmp;
-	/**
-	 * Array of rotational mode vectors. [type][mode of type][subtype][atom of
-	 * subtype][x, y, z]
-	 */
-	public double[][][][][] rotmodeVect;
-	/** Array of rotational mode names; [type][mode] */
-	public String[][] rotmodeName;
-	/** Tells which irrep the rotational mode corresponds to */
-	public int[][] rotmodeIrrep;
-
-	/** Total number of ellipsoidal modes */
-	public int ellipmodeNum;
-	/** Number of ellipsoidal modes for each type [type] */
-	public int[] ellipmodePerType;
-	/** Array of initial ellipsoidal mode amplitudes. [type][mode of type] */
-	public double[][] ellipmodeInitAmp;
-	/** Maximum amplitude of ellipsoidal modes/slider bars; [type][mode of type] */
-	public double[][] ellipmodeMaxAmp;
-	/**
-	 * Array of ellipsoidal mode vectors. [type][mode of type][subtype][atom of
-	 * subtype][xx, yy, zz, yz, xz, xy]
-	 */
-	public double[][][][][] ellipmodeVect;
-	/** Array of ellipsoidal mode names; [type][mode] */
-	public String[][] ellipmodeName;
-	/** Tells which irrep the ellipsoidal mode corresponds to */
-	public int[][] ellipmodeIrrep;
-
-	/** number of strain modes */
-	public int strainmodeNum;
-	/** Array of strain mode amplitudes */
-	public double[] strainmodeInitAmp;
-	/** Array of strain mode max amplitudes */
-	public double[] strainmodeMaxAmp;
-	/** Array of strain mode vectors */
-	public double[][] strainmodeVect;
-	/** Array of strain mode names */
-	public String[] strainmodeName;
-	/** Tells which irrep the strain mode corresponds to */
-	public int[] strainmodeIrrep;
-
 	/** The master slider bar value. */
-	public double superSliderVal;
-	/** Array of displacement mode slider bar values. */
-	public double[][] dispmodeSliderVals;
-	/** Array of scalar mode slider bar values. */
-	public double[][] scalarmodeSliderVals;
-	/** Array of magnetic mode slider bar values. */
-	public double[][] magmodeSliderVals;
-	/** Array of rotational mode slider bar values. */
-	public double[][] rotmodeSliderVals;
-	/** Array of ellipsoidal mode slider bar values. */
-	public double[][] ellipmodeSliderVals;
-	/** Array of strain slider bar values. */
-	public double[] strainmodeSliderVal;
-	/** Array of irrep slider bar values. */
-	public double[] irrepmodeSliderVal;
+	double superSliderVal;
 
 	/** Number of rows needed for checkboxes; [type] */
 	private int[] numSubRows;
@@ -315,7 +694,14 @@ public class Variables {
 
 	private boolean isAdjusting;
 
-	public Map<String, ArrayList<String>> myMap;
+	Map<String, ArrayList<String>> myMap;
+
+	private transient JPanel sliderPanel;
+
+	/**
+	 * just switching apps; fewer println calls
+	 */
+	private boolean isSwitch;
 
 	/**
 	 * instantiates and initializes the scroll and control panels.
@@ -323,17 +709,17 @@ public class Variables {
 	 * @param sliderPanel
 	 */
 	public void initSliderPanel(JPanel sliderPanel) {
-		gui.initPanels(sliderPanel);
+		this.sliderPanel = sliderPanel;
+		gui.initPanels();
+		sliderPanel = null;
 	}
 
-	public Variables(IsoApp app, String dataString, boolean isDiffraction) {
+	public Variables(IsoApp app, String dataString, boolean isDiffraction, boolean isSwitch) {
 		this.app = app;
+		this.isSwitch = isSwitch;
 		this.isDiffraction = isDiffraction;
-		this.gui = new VariableGUI();
-		
 		new VariableParser().parse(dataString);
-		identifyUniqueAtoms();
-		setColors(false);
+		gui = new VariableGUI();
 	}
 
 	/** calculates the parent atom colors */
@@ -343,30 +729,6 @@ public class Variables {
 
 	public void recolorPanels() {
 		gui.recolorPanels();
-	}
-
-	/** Determines the unique atom type of each non-unique atom type. */
-	private void identifyUniqueAtoms() {
-		// Determine the unique atoms types.
-		boolean unique;
-		String uniquetypes[] = new String[numTypes];
-		atomTypeUnique = new int[numTypes];
-		numUniques = 0;
-		for (int t = 0; t < numTypes; t++) {
-			unique = true;
-			for (int u = 0; u < numUniques; u++)
-				if (uniquetypes[u].compareTo(atomTypeSymbol[t]) == 0) // if(same)
-				{
-					unique = false;
-					atomTypeUnique[t] = u;
-				}
-			if (unique) {
-				uniquetypes[numUniques] = atomTypeSymbol[t];
-				atomTypeUnique[t] = numUniques;
-				numUniques += 1;
-			}
-		}
-		needSimpleColor = (numUniques < numTypes); // if any type has multiple subtypes, we'll enable the "color" button
 	}
 
 	/** readSliders reads in the current values of each of the sliders. */
@@ -382,6 +744,7 @@ public class Variables {
 		isAdjusting = false;
 		app.updateDisplay();
 	}
+
 	public void resetSliders() {
 		gui.resetSliders();
 	}
@@ -408,11 +771,13 @@ public class Variables {
 
 		// naively calculate strained parent-cell basis vectors in cartesian Angstrom
 		// coords
-		for (int n = 0; n < 6; n++)
-			for (int m = 0; m < strainmodeNum; m++) {
-				tempval = strainmodeSliderVal[m] * irrepmodeSliderVal[strainmodeIrrep[m]] * superSliderVal;
-				pStrainVoigt[n] += strainmodeVect[m][n] * tempval;
+		Mode mode = modes[STRAIN];
+		for (int n = 0; n < 6; n++) {
+			for (int m = 0; m < mode.count; m++) {
+				tempval = mode.sliderValsTM[0][m] * modes[IRREP].sliderValsTM[0][mode.irrepTM[0][m]] * superSliderVal;
+				pStrainVoigt[n] += mode.vector[m][n] * tempval;
 			}
+		}
 		// calculate (strain tensor)+(identity matrix) from voigt strain components
 		pStrainPlusIdentity[0][0] = pStrainVoigt[0] + 1;
 		pStrainPlusIdentity[1][0] = pStrainVoigt[5] / 2;
@@ -425,237 +790,150 @@ public class Variables {
 		pStrainPlusIdentity[2][2] = pStrainVoigt[2] + 1;
 
 		// calculate strained parent basis vectors in cartesian Angstrom coords
-		MathUtil.matdotmat(pStrainPlusIdentity, pBasisCart0, pBasisCart);
+		MathUtil.mul(pStrainPlusIdentity, pBasisCart0, pBasisCart);
 
 		// calculate strained supercell basis vectors in cartesian Angstrom coords
-		MathUtil.matdotmat(pBasisCart, TmatInverseTranspose, sBasisCart);
+		MathUtil.mul(pBasisCart, TmatInverseTranspose, sBasisCart);
 
 		// calculate some other useful matrices
 		MathUtil.mattranspose(pBasisCart, pBasisCartTranspose);
 		MathUtil.mattranspose(sBasisCart, sBasisCartTranspose);
 		MathUtil.matinverse(sBasisCart, sBasisCartInverse);
 
-		// calculate the strained parent and supercell lattice parameters
-		pLatt[0] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[0], pBasisCartTranspose[0])); // a
-		pLatt[1] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[1], pBasisCartTranspose[1])); // b
-		pLatt[2] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[2], pBasisCartTranspose[2])); // c
-		pLatt[3] = Math
-				.acos(MathUtil.dot(pBasisCartTranspose[1], pBasisCartTranspose[2]) / Math.max(pLatt[1] * pLatt[2], 0.001)); // alpha
-		pLatt[4] = Math
-				.acos(MathUtil.dot(pBasisCartTranspose[0], pBasisCartTranspose[2]) / Math.max(pLatt[0] * pLatt[2], 0.001)); // beta
-		pLatt[5] = Math
-				.acos(MathUtil.dot(pBasisCartTranspose[0], pBasisCartTranspose[1]) / Math.max(pLatt[0] * pLatt[1], 0.001)); // gamma
-		sLatt[0] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[0], sBasisCartTranspose[0])); // a
-		sLatt[1] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[1], sBasisCartTranspose[1])); // b
-		sLatt[2] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[2], sBasisCartTranspose[2])); // c
-		sLatt[3] = Math
-				.acos(MathUtil.dot(sBasisCartTranspose[1], sBasisCartTranspose[2]) / Math.max(sLatt[1] * sLatt[2], 0.001)); // alpha
-		sLatt[4] = Math
-				.acos(MathUtil.dot(sBasisCartTranspose[0], sBasisCartTranspose[2]) / Math.max(sLatt[0] * sLatt[2], 0.001)); // beta
-		sLatt[5] = Math
-				.acos(MathUtil.dot(sBasisCartTranspose[0], sBasisCartTranspose[1]) / Math.max(sLatt[0] * sLatt[1], 0.001)); // gamma
+		// calculate the strained parent and supercell lattice parameters [a, b, c,
+		// alpha, beta, gamma]
+		pLatt1[A] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[A], pBasisCartTranspose[A]));
+		pLatt1[B] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[B], pBasisCartTranspose[B]));
+		pLatt1[C] = Math.sqrt(MathUtil.dot(pBasisCartTranspose[C], pBasisCartTranspose[C]));
+		pLatt1[ALPHA] = Math.acos(
+				MathUtil.dot(pBasisCartTranspose[B], pBasisCartTranspose[C]) / Math.max(pLatt1[B] * pLatt1[C], 0.001));
+		pLatt1[BETA] = Math.acos(
+				MathUtil.dot(pBasisCartTranspose[A], pBasisCartTranspose[C]) / Math.max(pLatt1[A] * pLatt1[C], 0.001));
+		pLatt1[GAMMA] = Math.acos(
+				MathUtil.dot(pBasisCartTranspose[A], pBasisCartTranspose[B]) / Math.max(pLatt1[A] * pLatt1[B], 0.001));
+		sLatt1[A] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[0], sBasisCartTranspose[0]));
+		sLatt1[B] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[1], sBasisCartTranspose[1]));
+		sLatt1[C] = Math.sqrt(MathUtil.dot(sBasisCartTranspose[2], sBasisCartTranspose[2]));
+		sLatt1[ALPHA] = Math.acos(
+				MathUtil.dot(sBasisCartTranspose[B], sBasisCartTranspose[C]) / Math.max(sLatt1[B] * sLatt1[C], 0.001));
+		sLatt1[BETA] = Math.acos(
+				MathUtil.dot(sBasisCartTranspose[A], sBasisCartTranspose[C]) / Math.max(sLatt1[A] * sLatt1[C], 0.001));
+		sLatt1[GAMMA] = Math.acos(
+				MathUtil.dot(sBasisCartTranspose[A], sBasisCartTranspose[B]) / Math.max(sLatt1[A] * sLatt1[B], 0.001));
 
 		boolean testing = false;
-
 		if (testing) {
 			double r2d = 180.0 / Math.PI;
 			// Diagnostic code
 			System.out.print("pBasisCart0: ");
-			for (int i = 0; i < 3; i++)
-				for (int j = 0; j < 3; j++)
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
 					System.out.printf("%7.4f ", pBasisCart0[j][i]);
+				}
+			}
 			System.out.println("");
-			System.out.println("pCell0: " + pLatt0[0] + ", " + pLatt0[1] + ", " + pLatt0[2] + ", " + pLatt0[3] * r2d
-					+ ", " + pLatt0[4] * r2d + ", " + pLatt0[5] * r2d + ", ");
+			System.out.println("pCell0: " + pLatt0[A] + ", " + pLatt0[B] + ", " + pLatt0[C] + ", " + pLatt0[ALPHA] * r2d
+					+ ", " + pLatt0[BETA] * r2d + ", " + pLatt0[GAMMA] * r2d + ", ");
 			System.out.print("pBasisCart: ");
-			for (int i = 0; i < 3; i++)
-				for (int j = 0; j < 3; j++)
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
 					System.out.printf("%7.4f ", pBasisCart[j][i]);
+				}
+			}
 			System.out.println("");
-			System.out.println("pCell: " + pLatt[0] + ", " + pLatt[1] + ", " + pLatt[2] + ", " + pLatt[3] * r2d + ", "
-					+ pLatt[4] * r2d + ", " + pLatt[5] * r2d + ", ");
+			System.out.println("pCell1: " + pLatt1[A] + ", " + pLatt1[B] + ", " + pLatt1[C] + ", " + pLatt1[ALPHA] * r2d
+					+ ", " + pLatt1[BETA] * r2d + ", " + pLatt1[GAMMA] * r2d + ", ");
 			System.out.println("");
-//      System.out.println ("sCell: "+sLatt[0]+", "+sLatt[1]+", "+sLatt[2]+", "+sLatt[3]+", "+sLatt[4]+", "+sLatt[5]+", ");
 		}
 
 		// calculate the parent cell origin in strained cartesian Angtstrom coords
-		MathUtil.matdotvect(sBasisCart, pOriginUnitless, pOriginCart);
+		MathUtil.mul(sBasisCart, pOriginUnitless, pOriginCart);
 
 		// calculate the 8 cell vertices in strained cartesian Angstrom coordinates
-		for (int ix = 0; ix < 2; ix++)
-			for (int iy = 0; iy < 2; iy++)
-				for (int iz = 0; iz < 2; iz++)
+		for (int ix = 0; ix < 2; ix++) {
+			for (int iy = 0; iy < 2; iy++) {
+				for (int iz = 0; iz < 2; iz++) {
 					for (int i = 0; i < 3; i++) {
 						parentCellVertices[ix + 2 * iy + 4 * iz][i] = ix * pBasisCart[i][0] + iy * pBasisCart[i][1]
 								+ iz * pBasisCart[i][2] + pOriginCart[i];
 						superCellVertices[ix + 2 * iy + 4 * iz][i] = ix * sBasisCart[i][0] + iy * sBasisCart[i][1]
 								+ iz * sBasisCart[i][2];
 					}
+				}
+			}
+		}
 
 //      Calculate the center of the supercell in strained cartesian Angstrom coords (sOriginCart).
-		double[] minloc = new double[3];
-		double[] maxloc = new double[3];
-		for (int i = 0; i < 3; i++) {
-			minloc[i] = 1000000;
-			maxloc[i] = -1000000;
+		double[][] minmax = new double[2][3];
+		MathUtil.set(minmax[0], 1E6, 1e6, 1e6);
+		MathUtil.set(minmax[1], -1E6, -1e6, -1e6);
+		for (int i = 8; --i >= 0;) {
+			MathUtil.rangeCheck(superCellVertices[i], minmax);
 		}
-		for (int j = 0; j < 8; j++)
-			for (int i = 0; i < 3; i++) {
-				tempvec[i] = superCellVertices[j][i];
-				if (tempvec[i] < minloc[i])
-					minloc[i] = tempvec[i];
-				if (tempvec[i] > maxloc[i])
-					maxloc[i] = tempvec[i];
-			}
-		for (int t = 0; t < numTypes; t++)
-			for (int s = 0; s < numSubTypes[t]; s++)
-				for (int a = 0; a < numSubAtoms[t][s]; a++) {
-					MathUtil.matdotvect(sBasisCart, atomInitCoord[t][s][a], tempvec);
-					for (int i = 0; i < 3; i++) {
-						if (tempvec[i] < minloc[i])
-							minloc[i] = tempvec[i];
-						if (tempvec[i] > maxloc[i])
-							maxloc[i] = tempvec[i];
-					}
-				}
+		for (int i = numAtoms; --i >= 0;) {
+			Atom a = atoms[i];
+			MathUtil.mul(sBasisCart, a.vector0[DIS], tempvec);
+			MathUtil.rangeCheck(tempvec, minmax);
+		}
 		for (int i = 0; i < 3; i++)
-			sCenterCart[i] = (maxloc[i] + minloc[i]) / 2;
+			sCenterCart[i] = (minmax[0][i] + minmax[1][i]) / 2;
 
 		// Place the center of the supercell at the origin
-		for (int j = 0; j < 8; j++)
+		for (int j = 0; j < 8; j++) {
 			for (int i = 0; i < 3; i++) {
 				parentCellVertices[j][i] -= sCenterCart[i];
 				superCellVertices[j][i] -= sCenterCart[i];
 			}
+		}
 
-		gui.setLattLabels(pLatt, sLatt);
-		
-		setAtoms(tempvec);
-	}
+		gui.setLattLabels(pLatt1, sLatt1);
 
-	private void setAtoms(double[] tempvec) {
-		double d;
+		int numSubMax = 0;
+		for (int t = 0; t < numTypes; t++) {
+			int n = numSubTypes[t];
+			if (n > numSubMax)
+				numSubMax = n;
+		}
+		double[][][] max = new double[numTypes][numSubMax][MODE_ATOMIC_COUNT];
+
 		double[][] tempmat = new double[3][3];
-		double[] deltaCoord = new double[3];
-		double[] deltaMag = new double[3];
-		double[] deltaRot = new double[3];
-		double[] deltaEllip = new double[6];
-		double deltaOcc;
 
-		// calculate the new atomic positions and radii
+		modes[DIS].calcDistortion(max, tempvec, null);
+		modes[OCC].calcDistortion(max, null, null);
+		modes[ROT].calcDistortion(max, tempvec, null);
+		modes[MAG].calcDistortion(max, tempvec, null);
+		modes[ELL].calcDistortion(max, tempvec, tempmat);
+
 		for (int t = 0; t < numTypes; t++) {
 			for (int s = 0; s < numSubTypes[t]; s++) {
-				double maxdisp = 0;
-				double maxmag = 0;
-				double maxrot = 0;
-				double maxellip = 0;
-				double avgocc = 0;
-				for (int a = 0; a < numSubAtoms[t][s]; a++) {
-					deltaOcc = 0;
-					for (int m = 0; m < scalarmodePerType[t]; m++)// sum up the scalar vectors for all the modes for
-																	// each atom of given type
-					{
-						d = scalarmodeSliderVals[t][m] * irrepmodeSliderVal[scalarmodeIrrep[t][m]]
-								* superSliderVal;
-						deltaOcc += scalarmodeVect[t][m][s][a] * d;
-					}
-					atomFinalOcc[t][s][a] = atomInitOcc[t][s][a] + deltaOcc;
-//					System.out.println("tsa:"+t+s+a+", deltaOcc:"+deltaOcc);
-					for (int i = 0; i < 3; i++) {
-						deltaCoord[i] = 0;
-						for (int m = 0; m < dispmodePerType[t]; m++)// sum up the displacement vectors for all the modes
-																	// for each atom of given type
-						{
-							d = dispmodeSliderVals[t][m] * irrepmodeSliderVal[dispmodeIrrep[t][m]]
-									* superSliderVal;
-							deltaCoord[i] += dispmodeVect[t][m][s][a][i] * d; // change in unitless position
-						}
-						atomFinalCoord[t][s][a][i] = atomInitCoord[t][s][a][i] + deltaCoord[i]; // total position in
-																								// lattice coords
-																								// (undistorted position
-																								// + aggregate
-																								// displacement).
-//						System.out.println("tsai:"+t+s+a+i+", deltaCoord:"+deltaCoord[i]);
-					}
-
-					for (int i = 0; i < 3; i++) {
-						deltaMag[i] = 0;
-						for (int m = 0; m < magmodePerType[t]; m++)// sum up the magnetic moment vectors for all the
-																	// modes for each atom of given type
-						{
-							d = magmodeSliderVals[t][m] * irrepmodeSliderVal[magmodeIrrep[t][m]] * superSliderVal;
-							deltaMag[i] += magmodeVect[t][m][s][a][i] * d; // change in magnetic moment
-						}
-						atomFinalMag[t][s][a][i] = atomInitMag[t][s][a][i] + deltaMag[i]; // total magnetic moment
-																							// (undistorted + aggregate
-																							// change).
-//						System.out.println("tsai:"+t+s+a+i+", deltaMag:"+deltaMag[i]);
-					}
-
-					for (int i = 0; i < 3; i++) {
-						deltaRot[i] = 0;
-						for (int m = 0; m < rotmodePerType[t]; m++)// sum up the rotational vectors for all the modes
-																	// for each atom of given type
-						{
-							d = rotmodeSliderVals[t][m] * irrepmodeSliderVal[rotmodeIrrep[t][m]] * superSliderVal;
-							deltaRot[i] += rotmodeVect[t][m][s][a][i] * d; // change in rotation angle
-						}
-						atomFinalRot[t][s][a][i] = atomInitRot[t][s][a][i] + deltaRot[i]; // total rotation angle
-																							// (undistorted + aggregate
-																							// change).
-					}
-
-					for (int i = 0; i < 6; i++) {
-						deltaEllip[i] = 0;
-						for (int m = 0; m < ellipmodePerType[t]; m++)// sum up the ellipsoid vectors for all the modes
-																		// for each atom of given type
-						{
-							d = ellipmodeSliderVals[t][m] * irrepmodeSliderVal[ellipmodeIrrep[t][m]]
-									* superSliderVal;
-							deltaEllip[i] += ellipmodeVect[t][m][s][a][i] * d; // change in ellipsoid
-//							System.out.println("ellipcheck: "+t+", "+s+", "+a+", "+i+", "+deltaEllip[i]);
-						}
-						atomFinalEllip[t][s][a][i] = atomInitEllip[t][s][a][i] + deltaEllip[i]; // total ellipsoid
-																								// params (undistorted +
-																								// aggregate change).
-					}
-
-//					Determine the "size" of the displacement.
-					MathUtil.matdotvect(sBasisCart, deltaCoord, tempvec); // displacement in cartesian coords
-					d = MathUtil.norm(tempvec); // displacement magnitude in Angstroms
-					if (d > maxdisp)
-						maxdisp = d;
-
-//					Determine the "size" of the magnetic moment.
-					MathUtil.matdotvect(sBasisCart, atomFinalMag[t][s][a], tempvec); // magnetic moment in cartesian coords
-					d = MathUtil.norm(tempvec); // moment magnitude in Angstroms
-					if (d > maxmag)
-						maxmag = d;
-
-//					Determine the "size" of the rotation angle.
-					MathUtil.matdotvect(sBasisCart, atomFinalRot[t][s][a], tempvec); // rotation in cartesian coords
-					d = MathUtil.norm(tempvec); // rotation in Angstroms
-					if (d > maxrot)
-						maxrot = d;
-
-					avgocc += atomFinalOcc[t][s][a] / numSubAtoms[t][s];
-
-//					Determine the "size" of the ellipsoid.
-					MathUtil.voigt2matrix(atomFinalEllip[t][s][a], tempmat);
-					MathUtil.matdotmat(sBasisCart, tempmat, tempmat);
-					MathUtil.matdotmat(tempmat, sBasisCartInverse, tempmat);// ellipsoid in cartesian coords
-					d = 0;
-					for (int i = 0; i < 3; i++)
-						for (int j = 0; j < 3; j++)
-							d += tempmat[i][j] * tempmat[i][j];
-					if (d > maxellip)
-						maxellip = d;
-
-				}
-				
-				gui.setSubTypeText(t, s, maxdisp, avgocc, maxmag, maxrot, maxellip);
+				gui.setSubTypeText(t, s, max[t][s]);
 			}
 		}
+
+	}
+
+	public void saveModeValues() {
+		modes[DIS].saveMode();
+		modes[OCC].saveMode();
+		modes[MAG].saveMode();
+	}
+
+	public void randomizeGM1Values(Random rval) {
+		modes[DIS].randomizeModes(rval, true);
+		modes[OCC].randomizeModes(rval, true);
+		modes[MAG].randomizeModes(rval, true);
+	}
+
+	public void randomizeNonGM1Values(Random rval) {
+		modes[DIS].randomizeModes(rval, false);
+		modes[OCC].randomizeModes(rval, false);
+		modes[MAG].randomizeModes(rval, false);
+	}
+
+	public void restoreModeValues() {
+		modes[DIS].restoreMode();
+		modes[OCC].restoreMode();
+		modes[MAG].restoreMode();
 	}
 
 	public static final String ZEROES = "000000000000";
@@ -691,41 +969,86 @@ public class Variables {
 
 	public void setApp(IsoApp app) {
 		this.app = app;
-//		if (gui != null) {
-//			gui.setCheckboxListeners(app.appType == IsoApp.APP_ISODISTORT ? app.buttonListener : null);
-//		}
 	}
 
-	/** An ordered list
+	/**
+	 * An ordered list
 	 * 
 	 */
-    final static String[] knownTags = new String[] {//
-    	"isoversion",//
-    	"atommaxradius",//
-    	"angstromspermagneton",//
-    	"angstromsperradian",//
-    	"defaultuiso",//
-    	"maxbondlength",//
-    	"appletwidth",//
-    	"parentcell",//
-    	"parentorigin",//
-    	"parentbasis",//
-    	"atomtypelist",//
-    	"atomsubtypelist",//
-    	"atomcoordlist",//
-    	"atomocclist",//
-    	"atommaglist",//
-    	"atomrotlist",//
-    	"bondlist",//
-    	"irreplist",//
-    	"strainmodelist",//
-    	"displacivemodelist"//
-    };
-    	
-    
+	final static String[] knownTags = new String[] { //
+			"isoversion", //
+			"atommaxradius", //
+			"angstromspermagneton", //
+			"angstromsperradian", //
+			"defaultuiso", //
+			"maxbondlength", //
+			"appletwidth", //
+			"parentcell", //
+			"parentorigin", //
+			"parentbasis", //
+			"atomtypelist", //
+			"atomsubtypelist", //
+			"atomcoordlist", //
+			"atomocclist", //
+			"atommaglist", //
+			"atomrotlist", //
+			"bondlist", //
+			"irreplist", //
+			"modes[STRAIN].list", //
+			"displacivemodelist"//
+	};
+
+	Map<String, Atom> atomMap = new HashMap<>();
+
+	String getKeyTSA(int t, int s, int a) {
+		String key = "" + t + "_" + s + "_" + a;
+		// System.out.println(key);
+		return key;
+	}
+
 	private class VariableParser {
-		public String currentTag;
+
+		private String currentTag;
 		private ArrayList<String> currentData;
+		private int currentDataSize;
+
+		/**
+		 * number of atoms in the file, before filtering for primitives
+		 */
+		private int numAtomsRead;
+		
+		/**
+		 * this bitset is read first and then used to filter atoms and atom properties
+		 */
+		private BitSet bsPrimitive;
+		/**
+		 * the number of primitive atoms, which is the cardinality of bsPrimitive (or 0
+		 * if this is not for IsoDiffrac); this number will replace numAtoms when we are
+		 * done here.
+		 */
+		private int numPrimitive;
+		/**
+		 * the number of primitive atoms, if this is for IsoDifrract; in the end, we
+		 * will replace numSubAtoms with numSubPrimitiveAtoms
+		 */
+		private int[][] numPrimitiveSubAtoms;
+		
+		/**
+		 * number of atoms of a given type
+		 */
+		private int[] numAtomsTypeRead;
+
+		private boolean getCurrentData() {
+			currentData = null;
+			currentDataSize = 0;
+			if (!myMap.containsKey(currentTag))
+				return false;
+			currentData = myMap.get(currentTag);
+			currentDataSize = currentData.size();
+			if (!isSwitch)
+				System.out.println(currentTag + " " + currentDataSize);
+			return currentDataSize > 0;
+		}
 
 		/**
 		 * Parses the data string that is a tag-based format
@@ -738,23 +1061,24 @@ public class Variables {
 			try {
 				myMap = getDataMap(dataString);
 				isoversion = myMap.get("isoversion").get(0);
-				parseAppletSettings(myMap);
-				parseCrystalSettings(myMap);
-				parseAtoms(myMap);
-				parseBonds(myMap);
-				
-				System.out.println("Variables: " + numAtoms + " atoms and " + numBonds + " bonds were read");
-				if (bsPrimitive != null)
-				System.out.println("Variables: primitive: " + bsPrimitive);
+				parseAppletSettings();
+				parseCrystalSettings();
 
-				parseIrreps(myMap);
-				int modeTracker[] = new int[numTypes];
-				parseDisplaciveModes(myMap, modeTracker);
-				parseScalarModes(myMap, modeTracker);
-				parseMagneticModes(myMap, modeTracker);
-				parseRotationalModes(myMap, modeTracker);
-				parseEllipsoidalModes(myMap, modeTracker);
-				parseStrainModes(myMap);
+				parseAtoms();
+				parseBonds();
+
+				System.out.println("Variables: " + numAtomsRead + " atoms and " + numBonds + " bonds were read");
+				if (bsPrimitive != null)
+					System.out.println("Variables: primitive: " + bsPrimitive);
+
+				// now get all the symmetry-related arrays
+				parseAtomicMode(DIS, "displacivemodelist", 3);
+				parseAtomicMode(OCC, "scalarmodelist", 1);
+				parseAtomicMode(MAG, "magneticmodelist", 3);
+				parseAtomicMode(ROT, "magneticmodelist", 3);
+				parseAtomicMode(ELL, "ellipmodelist", 3);
+				parseStrainModes();
+				parseIrreps();
 
 			} catch (Throwable t) {
 				t.printStackTrace();
@@ -780,29 +1104,52 @@ public class Variables {
 		private void parseError(String currentTagOrMessage, int type) {
 			switch (type) {
 			case 1:
-				throw new RuntimeException("Variables: Invalid number of arguments for tag " + currentTag
-						+ ": " + currentTagOrMessage);
+				throw new RuntimeException(
+						"Variables: Invalid number of arguments for tag " + currentTag + ": " + currentTagOrMessage);
 			case 2:
 				throw new RuntimeException("Variables: " + currentTagOrMessage + " processing " + currentTag);
-			case 3:
+			default:
 				throw new RuntimeException("Variables: Required tag missing: " + currentTag);
 			}
 		}
 
-		private double[] one = new double[1];
+		String getItem(int pt) {
+			String item = currentData.get(pt);
+			System.out.println(pt + " " + item);
+			return item;
+		}
+
+		int getInt(int pt) {
+			return Integer.parseInt(getItem(pt));
+		}
+
+		double getDouble(int pt) {
+			return Double.parseDouble(getItem(pt));
+		}
 
 		/**
 		 * Just check for one value.
 		 * 
-		 * @return
+		 * @param def the default value, or Double.NaN if required
+		 * @return the value read or default value
+		 * @throws RuntineException if required and not found
 		 */
-		private double getOne() {
-			get(one, 1);
-			return one[0];
+		private double getOne(double def) {
+			ArrayList<String> data = myMap.get(currentTag);
+			switch (data == null ? 0 : data.size()) {
+			case 1:
+				return Double.parseDouble(data.get(0));
+			case 0:
+				if (!Double.isNaN(def))
+					return def;
+			default:
+				parseError(data.size(), 1);
+				return Double.NaN;
+			}
 		}
 
 		/**
-		 * Get n values. 
+		 * Get n values.
 		 * 
 		 * @param a
 		 * @param n
@@ -810,241 +1157,305 @@ public class Variables {
 		private void get(double[] a, int n) {
 			checkSize(n);
 			for (int i = 0; i < n; i++)
-				a[i] = Double.parseDouble((String) currentData.get(i));
+				a[i] = getDouble(i);
 		}
 
-		private void parseAppletSettings(Map<String, ArrayList<String>> myMap) {
-			// find applet width
-			int n = 0;
-			currentTag = "appletwidth";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() != 1) {
-					// ignore
-				} else {
-					try {
-						n = Integer.parseInt((String) currentData.get(0));
-					} catch (Exception e) {
-						// ignore
-					}
-				}
+		private boolean checkSize(int n) {
+			getCurrentData();
+			if (currentDataSize == 0)
+				parseError(null, 3);
+			if (currentDataSize != n)
+				parseError(currentDataSize, n);
+			return true;
+		}
+
+		/**
+		 * Ensure the data are the right size for dataPerRow.
+		 * 
+		 * @param nCol number of columns
+		 * @return number of rows
+		 */
+
+		private int checkSizeN(int nCol, boolean isRequired) {
+			if (!getCurrentData() && !isRequired)
+				return 0;
+			int numRows = currentDataSize / nCol;
+			int n = numRows * nCol;
+			if (currentDataSize != n)
+				parseError(currentDataSize, n);
+			return numRows;
+		}
+
+//		/**
+//		 * Load a Type/SubType, SubAtom [t][s][a] single value or a default
+//		 * 
+//		 * @param atomProp
+//		 * @param def      default value or NaN to read and parse, or Double.MIN_VALUE
+//		 *                 for already present and checked
+//		 */
+//		private void getDataTSA(double[][][] atomProp, double def) {
+//			boolean isDefault = !Double.isNaN(def);
+//			if (!isDefault && def != Double.MIN_VALUE) {
+//				checkSize(numAtoms);
+//			}
+//			for (int iaRead = 0, q = 0, t = 0; t < numTypes; t++) {
+//				for (int s = 0; s < numSubTypes[t]; s++) {
+//					for (int pa = -1, a = 0; a < numSubAtomsRead[t][s]; a++, q++, iaRead++) {
+//						if (numPrimitive > 0) {
+//							if (!bsPrimitive.get(iaRead))
+//								continue;
+//							pa++;
+//						} else {
+//							pa = a;
+//						}
+//						atomProp[t][s][pa] = (isDefault ? def : getDouble(q));
+//					}
+//				}
+//			}
+//		}
+//
+		/**
+		 * Load a Type/SubType, SubAtom [t][s][a] list with dataPerRow or a default
+		 * 
+		 * @param atomProp
+		 * @param ncol
+		 * @param def      a nonnegative default value or NaN to read and parse, or -n
+		 *                 for already present and checked and skipping -def columns; so
+		 *                 6, -3 means six columns, skip the first three (as for reading
+		 *                 atom coordinates)
+		 */
+		private void getAtomTSAn(int mode, int ncol, double def) {
+			boolean isDefault = !Double.isNaN(def);
+			if (!isDefault) {
+				checkSize(numAtomsRead * ncol);
 			}
+			for (int q = 0, ia = 0, iread = 0, n = numAtomsRead; iread < n; iread++, q += 3) {
+				if (numPrimitive > 0 && !bsPrimitive.get(iread))
+					continue;
+				double[] data = atoms[ia++].vector0[mode] = new double[ncol];
+				for (int i = 0; i < ncol; i++)
+					data[i] = (isDefault ? def : getDouble(q + i));
+			}
+		}
+
+		private void parseAppletSettings() {
+			// find applet width
+			currentTag = "appletwidth";
+			int n = (int) getOne(0);
 			if (n >= 500 && n <= 5000)
 				appletWidth = n;
 			appletHeight = (int) Math.round((double) appletWidth / 1.6);
 
 		}
 
-		private void parseCrystalSettings(Map<String, ArrayList<String>> myMap) {
+		private void parseCrystalSettings() {
 			// find parentcell parameters
 			currentTag = "parentcell";
-			if (!myMap.containsKey(currentTag)) {
-				parseError(currentTag, 3);
-			}
 			get(pLatt0, 6);
-
 			// find parentCell origin within the superCell basis.
 			currentTag = "parentorigin";
-			if (!myMap.containsKey(currentTag)) {
-				parseError(currentTag, 3);
-			}
 			get(pOriginUnitless, 3);
 
 			// find parentCell parameters within superCell basis.
 			currentTag = "parentbasis";
-			if (!myMap.containsKey(currentTag)) {
-				parseError(currentTag, 3);
-			}
 			checkSize(9);
-			for (int j = 0; j < 3; j++)
+			for (int j = 0; j < 3; j++) {
 				for (int i = 0; i < 3; i++) {
-					Tmat[j][i] = Double.parseDouble((String) currentData.get(3 * j + i));
+					Tmat[j][i] = getDouble(3 * j + i);
 					MathUtil.mattranspose(Tmat, TmatTranspose);
 					MathUtil.matinverse(TmatTranspose, TmatInverseTranspose);
 				}
-
+			}
 			currentTag = "rhombparentsetting";
+			isRhombParentSetting = false;
 			if (myMap.containsKey(currentTag)) {
 				checkSize(1);
-				isRhombParentSetting = Boolean.parseBoolean((String) currentData.get(0));
-			} else // Default assumption
-			{
-				isRhombParentSetting = false;
+				isRhombParentSetting = Boolean.parseBoolean(getItem(0));
 			}
 
-			// find angstromspermagneton
 			currentTag = "angstromspermagneton";
-			if (myMap.containsKey(currentTag)) {
-				angstromsPerMagneton = getOne();
-			} else // Set atom max radius to default value
-			{
-				angstromsPerMagneton = 0.5;
-			}
+			angstromsPerMagneton = getOne(0.5);
 
-			// find angstromsperradian
 			currentTag = "angstromsperradian";
-			if (myMap.containsKey(currentTag)) {
-				angstromsPerRadian = getOne();
-			} else // Set atom max radius to default value
-			{
-				angstromsPerRadian = 0.5;
-			}
+			angstromsPerRadian = getOne(0.5);
 
 		}
 
+		private void parseAtoms() {
 
-		private void checkSize(int n) {
-			currentData = myMap.get(currentTag);
-			if (currentData.size() != n)
-				parseError(currentData.size(), 1);
-		}
-
-		/**
-		 * Ensure the data are the right size for dataPerRow.
-		 * 
-		 * @param dataPerRow
-		 * @return number of rows
-		 */
-		
-		private int checkSizeN(int dataPerRow) {
-			currentData = myMap.get(currentTag);
-			int numRows = currentData.size() / dataPerRow;
-			checkSize(numRows * dataPerRow);
-			return numRows;
-		}
-
-		/** 
-		 * Load a Type/SubType, SubAtom [t][s][a] single value or a default
-		 * 
-		 * @param atomProp
-		 * @param def         default value or NaN to read and parse, or
-		 *                    Double.MIN_VALUE for already present and checked
-		 */
-		private void getDataTSA(double[][][] atomProp, double def) {
-			boolean isDefault = !Double.isNaN(def);
-			if (!isDefault && def != Double.MIN_VALUE) {
-				checkSize(numAtoms);
-			}
-			for (int q = 0, t = 0; t < numTypes; t++) {
-				for (int s = 0; s < numSubTypes[t]; s++) {
-					for (int a = 0; a < numSubAtoms[t][s]; a++) {
-						atomProp[t][s][a] = (isDefault ? def : Double.parseDouble((String) currentData.get(q++)));
-					}
-				}
-			}
-		}
-		
-		/**
-		 * Load a Type/SubType, SubAtom [t][s][a] list with dataPerRow or a default
-		 * 
-		 * @param atomProp
-		 * @param dataPerRow
-		 * @param def        a nonnegative default value or NaN to read and parse, or -n for already
-		 *                   present and checked and skipping -def columns; so 6, -3 means six columns, skip the first three
-		 *                   (as for reading atom coordinates)
-		 */
-		private void getAtomTSAn(double[][][][] atomProp, int dataPerRow, double def) {
-			boolean isDefault = def >= 0 && !Double.isNaN(def);
-			int i0 = 0;
-			if (def < 0) {
-				i0 = -(int) def;
-			} else if (!isDefault) {
-				checkSize(numAtoms * dataPerRow);
-			}
-			for (int q = 0, t = 0; t < numTypes; t++) {
-				for (int s = 0; s < numSubTypes[t]; s++) {
-					for (int a = 0; a < numSubAtoms[t][s]; a++, q += dataPerRow) {
-						for (int i = i0; i < dataPerRow; i++) {
-							atomProp[t][s][a][i - i0] = (isDefault ? def
-									: Double.parseDouble((String) currentData.get(q + i)));
-						}
-					}
-				}
-			}
-		}
-
-		private void parseAtoms(Map<String, ArrayList<String>> myMap) {
-
-			// find maximum radius of atoms
 			currentTag = "atommaxradius";
-			if (myMap.containsKey(currentTag)) {
-				atomMaxRadius = getOne();
-			} else // Set atom max radius to default value
-			{
-				atomMaxRadius = 0.4;
-			}
+			atomMaxRadius = getOne(0.4);
 
-			// find defaultuiso
 			currentTag = "defaultuiso";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				defaultUiso = getOne();
-			} else // Set atom max radius to default value
-			{
+			defaultUiso = getOne(0);
+			if (defaultUiso <= 0) {
 				double d = atomMaxRadius / 2.0;
 				defaultUiso = d * d;
 			}
 
+			if (isDiffraction) {
+				// flag all atoms in the primitive cell.
+				currentTag = "!atomsinunitcell";
+				getCurrentData();
+				int n = currentDataSize; 
+				int nPrim = 0;
+				if (n > 0) {
+					bsPrimitive = new BitSet();
+					for (int i = 0; i < n; i++) {
+						if ("1".equals(getItem(i))) {
+							bsPrimitive.set(i);
+							nPrim++;
+						}
+					}
+					numPrimitive = nPrim;
+					numAtoms = n;
+				}
+			}
+			
+			// create an atom map from t_s_a to ia (actual, not read)
+			parseAtomTypes();
+			// find atomic coordinates of parent
+			currentTag = "atomcoordlist";
+			if (!getCurrentData()) {
+				parseError(currentTag, 3);
+			}
+			int dataPerRow = 6;
+			int ndata = currentDataSize;
+			numAtomsRead = ndata / dataPerRow;
+			int dataPerRowOld = 10;
+			int numAtomsOld = ndata / dataPerRowOld;
+			if (numAtomsOld * dataPerRowOld == ndata) {
+				// could be 60n atoms (as in test28)
+				// get the first number on the second line (if new format)
+				// if that is a float, then we must have the old format.
+				String s = getItem(dataPerRow);
+				if (s.indexOf('.') >= 0) {
+					dataPerRow = dataPerRowOld;
+					numAtomsRead = numAtomsOld;
+				}
+			}
+			if (ndata != numAtomsRead * dataPerRow) {
+				// Make sure it divided evenly
+				parseError(currentTag, 1);
+			}
+			if (numAtoms == 0)
+				numAtoms = numAtomsRead;
+			atoms = new Atom[numAtoms];
+
+			// Find number of subatoms for each subtype
+			// Set up numSubAtom and numPrimitiveSubAtoms if this is for IsoDiffract
+			
+			int nType = 0, lastt = 0;
+			for (int i = 0, ia = 0; i < numAtomsRead; i++) {
+				int pt = dataPerRow * i;
+				int t = getInt(pt++) - 1;
+				if (t != lastt) {
+					numAtomsTypeRead[lastt] = nType;
+					nType = 0;
+					lastt = t;
+				}
+				int s = getInt(pt++) - 1;
+				boolean isOK = (numPrimitive == 0 || bsPrimitive.get(i));
+				if (isOK) {
+					int a = getInt(pt++) - 1;
+					double[] coord = new double[] { getDouble(pt++), getDouble(pt++), getDouble(pt++) };
+					if (numPrimitive > 0) {
+						numPrimitiveSubAtoms[t][s]++;
+					}
+					atoms[ia] = new Atom(ia, t, s, a);
+					atoms[ia].vector0[DIS] = coord;
+					ia++;
+				}
+				nType++;
+				numSubAtomsRead[t][s]++;
+			}
+			numAtomsTypeRead[lastt] = nType;
+			numSubAtoms = (numPrimitive == 0 ? numSubAtomsRead : numPrimitiveSubAtoms);
+			for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
+				// (STRAIN and IRRED are handled later)
+				(modes[i] = new Mode(i)).initAtoms();
+			}
+			modes[DIS].isActive = true;
+
+			// find atomic occupancies of parent
+			currentTag = "atomocclist";
+			getAtomTSAn(OCC, 1, (myMap.containsKey(currentTag) ? Double.NaN : 1));
+
+			// find atomic magnetic moments of parent
+			currentTag = "atommaglist";
+			getAtomTSAn(MAG, 3, (myMap.containsKey(currentTag) ? Double.NaN : 0));
+
+			// find atomic rotations of parent
+			currentTag = "atomrotlist";
+			getAtomTSAn(ROT, 3, (myMap.containsKey(currentTag) ? Double.NaN : 0));
+
+			// find atomic adp ellipsoids of parent
+			currentTag = "atomelplist";
+			if (myMap.containsKey(currentTag)) {
+				getAtomTSAn(ELL, 6, Double.NaN);
+			} else {
+				// default to [0.04 0.04 0.04 0 0 0]
+				double[] def = new double[] { defaultUiso, defaultUiso, defaultUiso, 0, 0, 0 };
+				for (int ia = 0; ia < atoms.length; ia++)
+					atoms[ia].vector0[ELL] = def;
+			}
+		}
+
+		private void parseAtomTypes() {
 			// find atom types
 			currentTag = "atomtypelist";
-			if (myMap.containsKey(currentTag)) {
-				numTypes = checkSizeN(3);
-				atomTypeName = new String[numTypes];
-				atomTypeSymbol = new String[numTypes];
-				for (int i = 0; i < numTypes; i++) {
-					if (Integer.parseInt((String) currentData.get(3 * i)) != i + 1)
-						parseError(currentTag, 2);
-					atomTypeName[i] = (String) currentData.get(3 * i + 1);
-					atomTypeSymbol[i] = (String) currentData.get(3 * i + 2);
-				}
-			} else {
-				parseError(currentTag, 3);
+			numTypes = checkSizeN(3, true);
+			atomTypeName = new String[numTypes];
+			atomTypeSymbol = new String[numTypes];
+			numAtomsTypeRead = new int[numTypes];
+
+			for (int i = 0; i < numTypes; i++) {
+				if (getInt(3 * i) != i + 1)
+					parseError(currentTag, 2);
+				atomTypeName[i] = getItem(3 * i + 1);
+				atomTypeSymbol[i] = getItem(3 * i + 2);
 			}
 
 			numSubTypes = new int[numTypes];
-			numSubAtoms = new int[numTypes][];
-			atomInitCoord = new double[numTypes][][][];
-			atomFinalCoord = new double[numTypes][][][];
-			atomInitOcc = new double[numTypes][][];
-			atomFinalOcc = new double[numTypes][][];
-			atomInitMag = new double[numTypes][][][];
-			atomFinalMag = new double[numTypes][][][];
-			atomInitRot = new double[numTypes][][][];
-			atomFinalRot = new double[numTypes][][][];
-			atomInitEllip = new double[numTypes][][][];
-			atomFinalEllip = new double[numTypes][][][];
+			numSubAtomsRead = new int[numTypes][];
+
+			if (numPrimitive > 0) {
+				numPrimitiveSubAtoms = new int[numTypes][];
+			}
 
 			// find atom subtypes
 			currentTag = "atomsubtypelist";
-			if (myMap.containsKey(currentTag)) {
-				int numSubTypeEntries = checkSizeN(3); // Find number of subtypes for each type
-				int curType = 0;
-				int curSubType = 0;
-				numSubTypes[0] = 0;
+			int numSubTypeEntries = checkSizeN(3, false);
+			if (numSubTypeEntries > 0) {
+				int curType = 0, curSubType = 0, nType = 0;
 				for (int i = 0; i < numSubTypeEntries; i++) {
-					if (Integer.parseInt((String) currentData.get(3 * i)) != curType) {
-						curType = curType + 1;
+					int itype = getInt(3 * i);
+					if (itype != curType) {
+						if (curSubType != 0) {
+							numSubAtomsRead[curType - 1] = new int[curSubType];
+							numAtomsTypeRead[curType -1] = nType;
+						}
+						curType++;
 						curSubType = 0;
-						if (Integer.parseInt((String) currentData.get(3 * i)) != curType)
+						if (itype != curType)
 							parseError("The atom types in the atom subtype list are out of order", 2);
 					}
-					if (Integer.parseInt((String) currentData.get(3 * i + 1)) != curSubType) {
-						numSubTypes[curType - 1] = numSubTypes[curType - 1] + 1;
-						curSubType += 1;
-						if (Integer.parseInt((String) currentData.get(3 * i + 1)) != curSubType)
+					int subtype = getInt(3 * i + 1);
+					if (subtype != curSubType) {
+						numSubTypes[curType - 1]++;
+						curSubType++;
+						if (subtype != curSubType)
 							parseError("The subtypes in the atom subtype list are out of order", 2);
 					}
 				}
+				numSubAtomsRead[curType - 1] = new int[curSubType];
 
 				// Assign the subtype names
-				int curEntry = 0;
 				subTypeName = new String[numTypes][];
-				for (int t = 0; t < numTypes; t++) {
+				for (int pt = 0, t = 0; t < numTypes; t++) {
 					subTypeName[t] = new String[numSubTypes[t]];
 					for (int s = 0; s < numSubTypes[t]; s++) {
-//						subTypeName[t][s]=atomTypeName[t]+"_"+(s+1);
-						subTypeName[t][s] = (String) currentData.get(3 * curEntry + 2);
-						curEntry = curEntry + 1;
+						subTypeName[t][s] = getItem(3 * pt++ + 2);
 					}
 				}
 			} else {
@@ -1058,705 +1469,178 @@ public class Variables {
 					}
 				}
 			}
-
-			// find atomic coordinates of parent
-			currentTag = "atomcoordlist";
-			if (!myMap.containsKey(currentTag)) {
-				parseError(currentTag, 3);
-			}
-			currentData = myMap.get(currentTag);
-			int dataPerRow = 6;
-			int ndata = currentData.size();
-			numAtoms = ndata / dataPerRow;
-			int dataPerRowOld = 10;
-			int numAtomsOld = ndata / dataPerRowOld;
-			if (numAtomsOld * dataPerRowOld == ndata)
-				try {
-					// If this item is an integer, the old data format is used.
-					Integer.parseInt((String) currentData.get(dataPerRow));
-					// all good
-				} catch (NumberFormatException e) {
-					numAtoms = numAtomsOld; // backwards compatibility
-					dataPerRow = dataPerRowOld; // backwards compatibility
-				}
-			if (ndata != numAtoms * dataPerRow) // Make sure it divided evenly
-			{
-				parseError(currentTag, 1);
-			}
-
-			// Find number of subatoms for each subtype
-			for (int t = 0; t < numTypes; t++) {
-				numSubAtoms[t] = new int[numSubTypes[t]];
-				for (int s = 0; s < numSubTypes[t]; s++) // Zero out the array
-					numSubAtoms[t][s] = 0;
-			}
-
-			int curType = 0;
-			int curSubType = 0;
-			for (int i = 0; i < numAtoms; i++) {
-				if (Integer.parseInt((String) currentData.get(dataPerRow * i)) != curType) {
-					curType += 1;
-					curSubType = 1;
-				}
-				if (Integer.parseInt((String) currentData.get(dataPerRow * i + 1)) != curSubType) {
-					curSubType += 1;
-				}
-				numSubAtoms[curType - 1][curSubType - 1] = numSubAtoms[curType - 1][curSubType - 1] + 1;
-			}
-
-			for (int t = 0; t < numTypes; t++)// iterate over all the types
-			{
-				atomInitCoord[t] = new double[numSubTypes[t]][][];
-				atomFinalCoord[t] = new double[numSubTypes[t]][][];
-				atomInitOcc[t] = new double[numSubTypes[t]][];
-				atomFinalOcc[t] = new double[numSubTypes[t]][];
-				atomInitMag[t] = new double[numSubTypes[t]][][];
-				atomFinalMag[t] = new double[numSubTypes[t]][][];
-				atomInitRot[t] = new double[numSubTypes[t]][][];
-				atomFinalRot[t] = new double[numSubTypes[t]][][];
-				atomInitEllip[t] = new double[numSubTypes[t]][][];
-				atomFinalEllip[t] = new double[numSubTypes[t]][][];
-				for (int s = 0; s < numSubTypes[t]; s++) {
-					atomInitCoord[t][s] = new double[numSubAtoms[t][s]][3];
-					atomFinalCoord[t][s] = new double[numSubAtoms[t][s]][3];
-					atomInitOcc[t][s] = new double[numSubAtoms[t][s]];
-					atomFinalOcc[t][s] = new double[numSubAtoms[t][s]];
-					atomInitMag[t][s] = new double[numSubAtoms[t][s]][3];
-					atomFinalMag[t][s] = new double[numSubAtoms[t][s]][3];
-					atomInitRot[t][s] = new double[numSubAtoms[t][s]][3];
-					atomFinalRot[t][s] = new double[numSubAtoms[t][s]][3];
-					atomInitEllip[t][s] = new double[numSubAtoms[t][s]][6];
-					atomFinalEllip[t][s] = new double[numSubAtoms[t][s]][6];
-				}
-			}
-			getAtomTSAn(atomInitCoord, 6, -3);
-
-			// find atomic occupancies of parent
-			currentTag = "atomocclist";
-			getDataTSA(atomInitOcc, (myMap.containsKey(currentTag) ? Double.NaN : 1));
-
-			// find atomic magnetic moments of parent
-			currentTag = "atommaglist";
-			getAtomTSAn(atomInitMag, 3, (myMap.containsKey(currentTag) ? Double.NaN : 0));
-
-			// find atomic rotations of parent
-			currentTag = "atomrotlist";
-			getAtomTSAn(atomInitMag, 3, (myMap.containsKey(currentTag) ? Double.NaN : 0));
-
-			// find atomic adp ellipsoids of parent
-			currentTag = "atomelplist";
-			if (myMap.containsKey(currentTag)) {
-				getAtomTSAn(atomInitEllip, 6, Double.NaN);
-			} else {
-				// Set default ellipsoids to simple spheres.
-				for (int t = 0; t < numTypes; t++)// iterate over all the types
-					for (int s = 0; s < numSubTypes[t]; s++)
-						for (int a = 0; a < numSubAtoms[t][s]; a++)
-							for (int i = 0; i < 3; i++) {
-								atomInitEllip[t][s][a][i] = defaultUiso;
-								atomInitEllip[t][s][a][3 + i] = 0;
-							}
-			}
 			
-			currentTag = "!atomsinunitcell";
-			if (myMap.containsKey(currentTag)) {
-				checkSize(numAtoms);
-				bsPrimitive = new BitSet();
-				for (int i = 0; i < numAtoms; i++) {
-					if ("1".equals(currentData.get(i))) {
-						bsPrimitive.set(i);
-					}
-				}
-			}
-
+			needSimpleColor = identifyUniqueAtoms(atomTypeSymbol);
 		}
 
-		private void parseBonds(Map<String, ArrayList<String>> myMap) {
-			// find maximum length of bonds that can be displayed
-			currentTag = "maxbondlength";
-			if (myMap.containsKey(currentTag)) {
-				maxBondLength = getOne();
-			} else // Set bond max radius to default value
-			{
-				maxBondLength = 2.5;
+		/**
+		 * Determines the unique atom type of each non-unique atom type.
+		 * 
+		 * If any type has multiple subtypes, we'll enable the "color" button
+		 * 
+		 * @return true if we need to enable the "color" button to allow "simple" colors
+		 */
+		private boolean identifyUniqueAtoms(String[] symT) {
+			// Determine the unique atoms types.
+			boolean unique;
+			String uniquetypes[] = new String[numTypes];
+			int[] uniqueT = new int[numTypes];
+			int n = 0;
+			for (int t = 0; t < numTypes; t++) {
+				unique = true;
+				for (int u = 0; u < n; u++) {
+					if (uniquetypes[u].equals(symT[t])) {
+						unique = false;
+						uniqueT[t] = u;
+					}
+				}
+				if (unique) {
+					uniquetypes[n] = symT[t];
+					uniqueT[t] = n;
+					n++;
+				}
 			}
+			if (n == numTypes)
+				return false;
+			atomTypeUnique = uniqueT;
+			numUniques = n;
+			return (n < numTypes);
+		}
 
+
+		private void parseBonds() {
+			currentTag = "maxbondlength";
+			maxBondLength = getOne(2.5);
 			// find minimum atomic occupancy for which bonds should be displayed
 			currentTag = "minbondocc";
-			if (myMap.containsKey(currentTag)) {
-				minBondOcc = getOne();
-			} else // Set min bond occupancy to default value
-			{
-				minBondOcc = 0.5;
-			}
-
-			// find bonds
+			minBondOcc = getOne(0.5);
 			currentTag = "bondlist";
-			numBonds = 0;
-			if (myMap.containsKey(currentTag)) {
-				numBonds = checkSizeN(6);
-				if (numBonds > 0) {
-					whichAtomsBond = new int[numBonds][2];
-					int[][][] detailedWhichAtomsBond = new int[numBonds][2][3];
-					for (int i = 0; i < numBonds; i++) // Read in the bond information
-					{
-						detailedWhichAtomsBond[i][0][0] = Integer.parseInt((String) currentData.get(6 * i));
-						detailedWhichAtomsBond[i][0][1] = Integer.parseInt((String) currentData.get(6 * i + 1));
-						detailedWhichAtomsBond[i][0][2] = Integer.parseInt((String) currentData.get(6 * i + 2));
-						detailedWhichAtomsBond[i][1][0] = Integer.parseInt((String) currentData.get(6 * i + 3));
-						detailedWhichAtomsBond[i][1][1] = Integer.parseInt((String) currentData.get(6 * i + 4));
-						detailedWhichAtomsBond[i][1][2] = Integer.parseInt((String) currentData.get(6 * i + 5));
+			int numBondsRead = checkSizeN(6, false);
+			int[][] bondsTemp = null;
+			if (numBondsRead > 0) {
+				// find maximum length of bonds that can be displayed
+				bondsTemp = new int[numBondsRead][2];
+				for (int b = 0, pt = 0; b < numBondsRead; b++) {
+					String tsaA = parseTSA(pt);
+					pt += 3;
+					String tsaB = parseTSA(pt);
+					pt += 3;
+					int ia = getAtomTSA(tsaA);
+					if (ia >= 0) {
+						int ib = getAtomTSA(tsaB);
+						if (ib >= 0) {
+							bondsTemp[b][0] = ia;
+							bondsTemp[b][0] = ib;
+							numBonds++;
+						}
 					}
 
-					// Calculate the overall atom numbers (atom1, atom2) associated with each bond.
-					for (int b = 0; b < numBonds; b++)// iterate over all the types
-					{
-						int atomNum = 0;
-						for (int t = 0; t < numTypes; t++)// iterate over all the types
-							for (int s = 0; s < numSubTypes[t]; s++)
-								for (int a = 0; a < numSubAtoms[t][s]; a++) {
-									for (int p = 0; p < 2; p++)
-										if ((detailedWhichAtomsBond[b][p][0] == t + 1)
-												&& (detailedWhichAtomsBond[b][p][1] == s + 1)
-												&& (detailedWhichAtomsBond[b][p][2] == a + 1))
-											whichAtomsBond[b][p] = atomNum;
-									atomNum += 1;
-								}
-					}
 				}
 			}
 			if (numBonds == 0) {
 				// There are no bonds. Initialize the array to length zero
-				whichAtomsBond = new int[0][];
+				bonds = new int[0][];
+			} else if (numBonds == numBondsRead) {
+				bonds = bondsTemp;
+			} else {
+				bonds = new int[numBonds][2];
+				for (int i = 0; i < numBonds; i++)
+					bonds[i] = bondsTemp[i];
 			}
-
 		}
 
-		private void parseIrreps(Map<String, ArrayList<String>> myMap) {
+		private int getAtomTSA(String tsa) {
+			Atom a = atomMap.get(tsa);
+			return (a == null ? -1 : a.index);
+		}
 
+		/**
+		 * Create an atom map key int the form "t_s_a"
+		 * @param pt
+		 * @return
+		 */
+		private String parseTSA(int pt) {
+			String key = "";
+			for (int tsa = 0; tsa < 3; tsa++) {
+				key += (tsa == 0 ? "" : "_") + getItem(pt++);
+			}
+			return key;
+		}
+
+		/**
+		 * Parse "irreplist" for 
+		 */
+		private void parseIrreps() { 
 			// find irreps
 			currentTag = "irreplist";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				if (currentData.size() % 2 != 0) {
-					parseError(currentTag, 1);
-				} else {
-					numIrreps = currentData.size() / 2;
-					irrepName = new String[numIrreps];
-					for (int i = 0; i < numIrreps; i++) {
-						if (Integer.parseInt((String) currentData.get(2 * i)) != (i + 1))
-							parseError("Error: irreps are not passed in ascending order.", 2);
-						irrepName[i] = (String) currentData.get(2 * i + 1);
-					}
-				}
-			} else // no irreps
-			{
-				numIrreps = 0;
-			}
-
-		}
-
-		private void parseDisplaciveModes(Map<String, ArrayList<String>> myMap, int[] modeTracker) {
-			// initialize displacive mode arrays
-			dispmodeNum = 0;
-			dispmodePerType = new int[numTypes];
-			dispmodeInitAmp = new double[numTypes][];
-			dispmodeMaxAmp = new double[numTypes][];
-			dispmodeName = new String[numTypes][];
-			dispmodeIrrep = new int[numTypes][];
-			dispmodeVect = new double[numTypes][][][][];
-			for (int i = 0; i < numTypes; i++) {
-				dispmodePerType[i] = 0;
-			}
-
-			// find displacive modes
-			currentTag = "displacivemodelist";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-				int counter = 0;
-
-				// Run through the data once and determine the number of displacive modes
-				while (counter < currentData.size()) {
-					int atomType = Integer.parseInt((String) currentData.get(counter)) - 1;
-					// Counter should be pointing at atom type number
-					dispmodePerType[atomType]++;
-					dispmodeNum++;
-					// Point counter to next atom type number
-					counter += 6;
-					int atoms = 0;
-					for (int i = 0; i < numSubTypes[atomType]; i++)
-						atoms += numSubAtoms[atomType][i];
-					counter = counter + 3 * atoms;
-				}
-
-				// Initialize needed arrays
-				for (int t = 0; t < numTypes; t++) {
-					dispmodeInitAmp[t] = new double[dispmodePerType[t]];
-					dispmodeMaxAmp[t] = new double[dispmodePerType[t]];
-					dispmodeName[t] = new String[dispmodePerType[t]];
-					dispmodeIrrep[t] = new int[dispmodePerType[t]];
-					dispmodeVect[t] = new double[dispmodePerType[t]][][][];
-					for (int m = 0; m < dispmodePerType[t]; m++) {
-						dispmodeVect[t][m] = new double[numSubTypes[t]][][];
-						for (int s = 0; s < numSubTypes[t]; s++)
-							dispmodeVect[t][m][s] = new double[numSubAtoms[t][s]][3];
-					}
-					modeTracker[t] = 0;
-				}
-
-				// input displacement mode array [atom type][mode number of that type][atom
-				// number of that type][x,y,z]
-				counter = 0;
-				for (int m = 0; m < dispmodeNum; m++)// iterate over modes
-				{
-					int thisType = Integer.parseInt((String) currentData.get(counter)) - 1;// first number is the
-																							// type
-																							// number
-					counter++;
-					if (modeTracker[thisType] + 1 != Integer.parseInt((String) currentData.get(counter)))
-						parseError("The displacive modes are not given in ascending order", 2);
-					counter++;
-					dispmodeInitAmp[thisType][modeTracker[thisType]] = Double
-							.parseDouble((String) currentData.get(counter));// amplitude of mode
-					counter++;
-					dispmodeMaxAmp[thisType][modeTracker[thisType]] = Double
-							.parseDouble((String) currentData.get(counter));// maximum
-																			// amplitude
-																			// of
-																			// mode
-					counter++;
-					dispmodeIrrep[thisType][modeTracker[thisType]] = Integer
-							.parseInt((String) currentData.get(counter)) - 1;// irrep of mode
-					counter++;
-					dispmodeName[thisType][modeTracker[thisType]] = (String) currentData.get(counter);// name of
-																										// first
-																										// mode
-																										// is made
-																										// of four
-																										// chunks
-					counter++;
-					for (int s = 0; s < numSubTypes[thisType]; s++)
-						for (int a = 0; a < numSubAtoms[thisType][s]; a++)// iterate through the atoms
-							for (int i = 0; i < 3; i++) {
-								dispmodeVect[thisType][modeTracker[thisType]][s][a][i] = Double
-										.parseDouble((String) currentData.get(counter));
-								counter++;
-							}
-					modeTracker[thisType] += 1;
-				}
-			} else {
-				// No displacive modes.
+			if (!getCurrentData())
+				return;
+			if (currentDataSize % 2 != 0)
+				parseError(currentTag, 1);
+			int numIrreps = currentDataSize / 2;
+			modes[IRREP] = new Mode(IRREP);
+			modes[IRREP].initArraysNonAtom(numIrreps);
+			modes[IRREP].nameTM[0] = new String[numIrreps];
+			for (int i = 0; i < numIrreps; i++) {
+				if (getInt(2 * i) != i + 1)
+					parseError("Error: irreps are not passed in ascending order.", 2);
+				modes[IRREP].nameTM[0][i] = getItem(2 * i + 1);
 			}
 		}
 
-		private void parseScalarModes(Map<String, ArrayList<String>> myMap, int[] modeTracker) {
-
-			scalarmodeNum = 0;
-			scalarmodePerType = new int[numTypes];
-			scalarmodeInitAmp = new double[numTypes][];
-			scalarmodeMaxAmp = new double[numTypes][];
-			scalarmodeName = new String[numTypes][];
-			scalarmodeIrrep = new int[numTypes][];
-			scalarmodeVect = new double[numTypes][][][];
-
-			for (int i = 0; i < numTypes; i++) {
-				scalarmodePerType[i] = 0;
-			}
-
-			// find scalar modes
-			currentTag = "scalarmodelist";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-
-				int counter = 0;
-
-				// Run through the data once and determine the number of displacive modes
-				while (counter < currentData.size()) {
-					int atomType = Integer.parseInt((String) currentData.get(counter)) - 1;
-					// Counter should be pointing at atom type number
-					scalarmodePerType[atomType]++;
-					scalarmodeNum++;
-					// Point counter to next atom type number
-					counter += 6;
-					int atoms = 0;
-					for (int i = 0; i < numSubTypes[atomType]; i++)
-						atoms += numSubAtoms[atomType][i];
-					counter = counter + atoms;
-				}
-
-				// Initialize needed arrays
-				for (int t = 0; t < numTypes; t++) {
-					scalarmodeInitAmp[t] = new double[scalarmodePerType[t]];
-					scalarmodeMaxAmp[t] = new double[scalarmodePerType[t]];
-					scalarmodeIrrep[t] = new int[scalarmodePerType[t]];
-					scalarmodeName[t] = new String[scalarmodePerType[t]];
-					scalarmodeVect[t] = new double[scalarmodePerType[t]][][];
-					for (int m = 0; m < scalarmodePerType[t]; m++) {
-						scalarmodeVect[t][m] = new double[numSubTypes[t]][];
-						for (int s = 0; s < numSubTypes[t]; s++)
-							scalarmodeVect[t][m][s] = new double[numSubAtoms[t][s]];
-					}
-					modeTracker[t] = 0;
-				}
-
-				// input displacement mode array [atom type][mode number of that type][atom
-				// number of that type][x,y,z]
-				counter = 0;
-				for (int m = 0; m < scalarmodeNum; m++)// iterate over modes
-				{
-					int thisType = Integer.parseInt((String) currentData.get(counter)) - 1;// first number is the
-																							// type
-																							// number
-					counter++;
-					if (modeTracker[thisType] + 1 != Integer.parseInt((String) currentData.get(counter)))
-						parseError("The scalar modes are not given in order", 2);
-					counter++;
-					scalarmodeInitAmp[thisType][modeTracker[thisType]] = Double
-							.parseDouble((String) currentData.get(counter));// amplitude of mode
-					counter++;
-					scalarmodeMaxAmp[thisType][modeTracker[thisType]] = Double
-							.parseDouble((String) currentData.get(counter));// maximum amplitude of mode
-					counter++;
-					scalarmodeIrrep[thisType][modeTracker[thisType]] = Integer
-							.parseInt((String) currentData.get(counter)) - 1;// irrep of mode
-					counter++;
-					scalarmodeName[thisType][modeTracker[thisType]] = (String) currentData.get(counter);// name of
-																										// first
-																										// mode is
-																										// made of
-																										// four
-																										// chunks
-					counter++;
-					for (int s = 0; s < numSubTypes[thisType]; s++)
-						for (int a = 0; a < numSubAtoms[thisType][s]; a++)// iterate through the atoms
-						{
-							scalarmodeVect[thisType][modeTracker[thisType]][s][a] = Double
-									.parseDouble((String) currentData.get(counter));
-							counter++;
-						}
-					modeTracker[thisType] += 1;
-				}
-			} else {
-				// No scalar modes.
-			}
+		private void parseAtomicMode(int mode, String tag, int columnCount) {
+			currentTag = tag;
+			int[] perType = new int[numTypes];
+			int n = getModeNumbers(perType, 3);
+			if (n == 0)
+				return;
+			modes[mode].initArraysMode(perType, n);
+			modes[mode].getModeData(this);
 		}
 
-		private void parseMagneticModes(Map<String, ArrayList<String>> myMap, int[] modeTracker) {
-
-			magmodeNum = 0;
-			magmodePerType = new int[numTypes];
-			magmodeInitAmp = new double[numTypes][];
-			magmodeMaxAmp = new double[numTypes][];
-			magmodeIrrep = new int[numTypes][];
-			magmodeName = new String[numTypes][];
-			magmodeVect = new double[numTypes][][][][];
-			for (int i = 0; i < numTypes; i++) {
-				magmodePerType[i] = 0;
+		/**
+		 * read the mode numbers for any of the five mode types.
+		 * 
+		 * @param perType
+		 * @param ncol
+		 * @return
+		 */
+		private int getModeNumbers(int[] perType, int ncol) {
+			getCurrentData();
+			// Run through the data once and determine the number of modes
+			int n = 0;
+			for (int pt = 0; pt < currentDataSize;) {
+				int atomType = getInt(pt) - 1;
+				perType[atomType]++;
+				n++;
+				// advance pt to next atom type number
+				pt += 6 + numAtomsTypeRead[atomType] * ncol;
 			}
-
-			// find magnetic modes
-			currentTag = "magneticmodelist";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-
-				int counter = 0;
-
-				// Run through the data once and determine the number of magnetic modes
-				while (counter < currentData.size()) {
-					int atomType = Integer.parseInt((String) currentData.get(counter)) - 1;
-					// Counter should be pointing at atom type number
-					magmodePerType[atomType]++;
-					magmodeNum++;
-					// Point counter to next atom type number
-					counter += 6;
-					int atoms = 0;
-					for (int i = 0; i < numSubTypes[atomType]; i++)
-						atoms += numSubAtoms[atomType][i];
-					counter = counter + 3 * atoms;
-				}
-
-				// Initialize needed arrays
-				for (int t = 0; t < numTypes; t++) {
-					magmodeIrrep[t] = new int[magmodePerType[t]];
-					magmodeInitAmp[t] = new double[magmodePerType[t]];
-					magmodeMaxAmp[t] = new double[magmodePerType[t]];
-					magmodeName[t] = new String[magmodePerType[t]];
-					magmodeVect[t] = new double[magmodePerType[t]][][][];
-					for (int m = 0; m < magmodePerType[t]; m++) {
-						magmodeVect[t][m] = new double[numSubTypes[t]][][];
-						for (int s = 0; s < numSubTypes[t]; s++)
-							magmodeVect[t][m][s] = new double[numSubAtoms[t][s]][3];
-					}
-					modeTracker[t] = 0;
-				}
-
-				// input magnetic mode array [atom type][mode number of that type][atom number
-				// of that type][mx,my,mz]
-				counter = 0;
-				for (int m = 0; m < magmodeNum; m++)// iterate over modes
-				{
-					int thisType = Integer.parseInt((String) currentData.get(counter)) - 1;// first number is the
-																							// type
-																							// number
-					counter++;
-					if (modeTracker[thisType] + 1 != Integer.parseInt((String) currentData.get(counter)))
-						parseError("The magnetic modes are not given in ascending order", 2);
-					counter++;
-					magmodeInitAmp[thisType][modeTracker[thisType]] = Double
-							.parseDouble((String) currentData.get(counter));// amplitude
-																			// of
-																			// mode
-					counter++;
-					magmodeMaxAmp[thisType][modeTracker[thisType]] = Double
-							.parseDouble((String) currentData.get(counter));// maximum
-																			// amplitude
-																			// of
-																			// mode
-					counter++;
-					magmodeIrrep[thisType][modeTracker[thisType]] = Integer
-							.parseInt((String) currentData.get(counter)) - 1;// irrep
-																				// of
-																				// mode
-					counter++;
-					magmodeName[thisType][modeTracker[thisType]] = (String) currentData.get(counter);// name of
-																										// first
-																										// mode
-																										// is made
-																										// of four
-																										// chunks
-					counter++;
-					for (int s = 0; s < numSubTypes[thisType]; s++)
-						for (int a = 0; a < numSubAtoms[thisType][s]; a++)// iterate through the atoms
-							for (int i = 0; i < 3; i++) {
-								magmodeVect[thisType][modeTracker[thisType]][s][a][i] = Double
-										.parseDouble((String) currentData.get(counter));
-								counter++;
-							}
-					modeTracker[thisType] += 1;
-				}
-			} else {
-				// No magnetic modes.
-			}
-
+			return n;
 		}
 
-		private void parseRotationalModes(Map<String, ArrayList<String>> myMap, int[] modeTracker) {
-			rotmodeNum = 0;
-			rotmodePerType = new int[numTypes];
-			rotmodeInitAmp = new double[numTypes][];
-			rotmodeMaxAmp = new double[numTypes][];
-			rotmodeIrrep = new int[numTypes][];
-			rotmodeName = new String[numTypes][];
-			rotmodeVect = new double[numTypes][][][][];
-			for (int i = 0; i < numTypes; i++) {
-				rotmodePerType[i] = 0;
-			}
-
-			// find rotational modes
-			currentTag = "rotationalmodelist";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-
-				int counter = 0;
-
-				// Run through the data once and determine the number of rotational modes
-				while (counter < currentData.size()) {
-					int atomType = Integer.parseInt((String) currentData.get(counter)) - 1;
-					// Counter should be pointing at atom type number
-					rotmodePerType[atomType]++;
-					rotmodeNum++;
-					// Point counter to next atom type number
-					counter += 6;
-					int atoms = 0;
-					for (int i = 0; i < numSubTypes[atomType]; i++)
-						atoms += numSubAtoms[atomType][i];
-					counter = counter + 3 * atoms;
-				}
-
-				// Initialize needed arrays
-				for (int t = 0; t < numTypes; t++) {
-					rotmodeIrrep[t] = new int[rotmodePerType[t]];
-					rotmodeInitAmp[t] = new double[rotmodePerType[t]];
-					rotmodeMaxAmp[t] = new double[rotmodePerType[t]];
-					rotmodeName[t] = new String[rotmodePerType[t]];
-					rotmodeVect[t] = new double[rotmodePerType[t]][][][];
-					for (int m = 0; m < rotmodePerType[t]; m++) {
-						rotmodeVect[t][m] = new double[numSubTypes[t]][][];
-						for (int s = 0; s < numSubTypes[t]; s++)
-							rotmodeVect[t][m][s] = new double[numSubAtoms[t][s]][3];
-					}
-					modeTracker[t] = 0;
-				}
-
-				// input rotational mode array [atom type][mode number of that type][atom number
-				// of that type][mx,my,mz]
-				counter = 0;
-				for (int m = 0; m < rotmodeNum; m++)// iterate over modes
-				{
-					int thisType = Integer.parseInt((String) currentData.get(counter)) - 1;// first number is the
-																							// type
-																							// number
-					counter++;
-					if (modeTracker[thisType] + 1 != Integer.parseInt((String) currentData.get(counter)))
-						parseError("The rotational modes are not given in ascending order", 2);
-					counter++;
-					rotmodeInitAmp[thisType][modeTracker[thisType]] = Double
-							.parseDouble((String) currentData.get(counter));// amplitude
-																			// of
-																			// mode
-					counter++;
-					rotmodeMaxAmp[thisType][modeTracker[thisType]] = Double
-							.parseDouble((String) currentData.get(counter));// maximum
-																			// amplitude
-																			// of
-																			// mode
-					counter++;
-					rotmodeIrrep[thisType][modeTracker[thisType]] = Integer
-							.parseInt((String) currentData.get(counter)) - 1;// irrep
-																				// of
-																				// mode
-					counter++;
-					rotmodeName[thisType][modeTracker[thisType]] = (String) currentData.get(counter);// name of
-																										// first
-																										// mode
-																										// is made
-																										// of four
-																										// chunks
-					counter++;
-					for (int s = 0; s < numSubTypes[thisType]; s++)
-						for (int a = 0; a < numSubAtoms[thisType][s]; a++)// iterate through the atoms
-							for (int i = 0; i < 3; i++) {
-								rotmodeVect[thisType][modeTracker[thisType]][s][a][i] = Double
-										.parseDouble((String) currentData.get(counter));
-								counter++;
-							}
-					modeTracker[thisType] += 1;
-				}
-			} else {
-				// No rotational modes.
-			}
-
-		}
-
-		private void parseEllipsoidalModes(Map<String, ArrayList<String>> myMap, int[] modeTracker) {
-			// find ellipsoidal modes
-			ellipmodeNum = 0;
-			ellipmodePerType = new int[numTypes];
-			ellipmodeInitAmp = new double[numTypes][];
-			ellipmodeMaxAmp = new double[numTypes][];
-			ellipmodeIrrep = new int[numTypes][];
-			ellipmodeName = new String[numTypes][];
-			ellipmodeVect = new double[numTypes][][][][];
-			for (int i = 0; i < numTypes; i++) {
-				ellipmodePerType[i] = 0;
-			}
-
-			currentTag = "ellipsoidmodelist";
-			if (myMap.containsKey(currentTag)) {
-				currentData = myMap.get(currentTag);
-
-				int counter = 0;
-
-				// Run through the data once and determine the number of ellptical modes
-				while (counter < currentData.size()) {
-					int atomType = Integer.parseInt((String) currentData.get(counter)) - 1;
-					// Counter should be pointing at atom type number
-					ellipmodePerType[atomType]++;
-					ellipmodeNum++;
-					// Point counter to next atom type number
-					counter += 6;
-					int atoms = 0;
-					for (int i = 0; i < numSubTypes[atomType]; i++)
-						atoms += numSubAtoms[atomType][i];
-					counter = counter + 6 * atoms;
-				}
-
-				// Initialize needed arrays
-				for (int t = 0; t < numTypes; t++) {
-					ellipmodeIrrep[t] = new int[ellipmodePerType[t]];
-					ellipmodeInitAmp[t] = new double[ellipmodePerType[t]];
-					ellipmodeMaxAmp[t] = new double[ellipmodePerType[t]];
-					ellipmodeName[t] = new String[ellipmodePerType[t]];
-					ellipmodeVect[t] = new double[ellipmodePerType[t]][][][];
-					for (int m = 0; m < ellipmodePerType[t]; m++) {
-						ellipmodeVect[t][m] = new double[numSubTypes[t]][][];
-						for (int s = 0; s < numSubTypes[t]; s++)
-							ellipmodeVect[t][m][s] = new double[numSubAtoms[t][s]][6];
-					}
-					modeTracker[t] = 0;
-				}
-
-				// input ellptical mode array [atom type][mode number of that type][atom number
-				// of that type][xx,yy,zz,xy,xz,xy]
-				counter = 0;
-				for (int m = 0; m < ellipmodeNum; m++)// iterate over modes
-				{
-					int thisType = Integer.parseInt((String) currentData.get(counter)) - 1;// first number is the
-																							// type
-																							// number
-					counter++;
-					if (modeTracker[thisType] + 1 != Integer.parseInt((String) currentData.get(counter)))
-						parseError("The ellipsoidal modes are not given in ascending order", 2);
-					counter++;
-					ellipmodeInitAmp[thisType][modeTracker[thisType]] = Double
-							.parseDouble((String) currentData.get(counter));// amplitude of mode
-					counter++;
-					ellipmodeMaxAmp[thisType][modeTracker[thisType]] = Double
-							.parseDouble((String) currentData.get(counter));// maximum amplitude of mode
-					counter++;
-					ellipmodeIrrep[thisType][modeTracker[thisType]] = Integer
-							.parseInt((String) currentData.get(counter)) - 1;// irrep of mode
-					counter++;
-					ellipmodeName[thisType][modeTracker[thisType]] = (String) currentData.get(counter);// name of
-																										// first
-																										// mode
-																										// is made
-																										// of four
-																										// chunks
-					counter++;
-					for (int s = 0; s < numSubTypes[thisType]; s++)
-						for (int a = 0; a < numSubAtoms[thisType][s]; a++)// iterate through the atoms
-							for (int i = 0; i < 6; i++) {
-								ellipmodeVect[thisType][modeTracker[thisType]][s][a][i] = Double
-										.parseDouble((String) currentData.get(counter));
-								counter++;
-							}
-					modeTracker[thisType] += 1;
-				}
-			} else {
-				// No ellipsoidal modes.
-			}
-		}
-
-		private void parseStrainModes(Map<String, ArrayList<String>> myMap) {
+		private void parseStrainModes() {
 			// Handle strain modes
-			strainmodeNum = 0;
+			int n = 0;
 			currentTag = "strainmodelist";
-			if (myMap.containsKey(currentTag)) {
+			if (getCurrentData()) {
 				int dataPerRow = 11;
-				currentData = myMap.get(currentTag);
-				strainmodeNum = currentData.size() / dataPerRow;
-				if (currentData.size() != strainmodeNum * dataPerRow) // Make sure it divided evenly
+				n = currentDataSize / dataPerRow;
+				if (currentDataSize != n * dataPerRow) // Make sure it divided evenly
 				{
 					parseError(currentTag, 1);
 				}
-
-				strainmodeInitAmp = new double[strainmodeNum];
-				strainmodeMaxAmp = new double[strainmodeNum];
-				strainmodeIrrep = new int[strainmodeNum];
-				strainmodeName = new String[strainmodeNum];
-				strainmodeVect = new double[strainmodeNum][6];
-				for (int i = 0; i < strainmodeNum; i++) {
-					strainmodeInitAmp[i] = Double.parseDouble((String) currentData.get(dataPerRow * i + 1));
-					strainmodeMaxAmp[i] = Double.parseDouble((String) currentData.get(dataPerRow * i + 2));
-					strainmodeIrrep[i] = Integer.parseInt((String) currentData.get(dataPerRow * i + 3)) - 1;
-					strainmodeName[i] = (String) currentData.get(dataPerRow * i + 4);
-					for (int j = 0; j < 6; j++) {
-						strainmodeVect[i][j] = Double.parseDouble((String) currentData.get(dataPerRow * i + j + 5));
+				modes[STRAIN] = new Mode(STRAIN);
+				modes[STRAIN].initArraysNonAtom(n);
+				for (int m = 0; m < n; m++) {
+					modes[STRAIN].initAmpTM[0][m] = getDouble(dataPerRow * m + 1);
+					modes[STRAIN].maxAmpTM[0][m] = getDouble(dataPerRow * m + 2);
+					modes[STRAIN].irrepTM[0][m] = getInt(dataPerRow * m + 3) - 1;
+					modes[STRAIN].nameTM[0][m] = getItem(dataPerRow * m + 4);
+					for (int i = 0; i < 6; i++) {
+						modes[STRAIN].vector[m][i] = getDouble(dataPerRow * m + i + 5);
 					}
 				}
-			} else {
-				// No strain modes.
 			}
 
 			// Calculate pBasisCart0
@@ -1791,7 +1675,7 @@ public class Variables {
 			}
 
 			// calculate the unstrained parent basis in cartesian Angstrom coords
-			MathUtil.matdotmat(pBasisCart0, TmatInverseTranspose, sBasisCart0);
+			MathUtil.mul(pBasisCart0, TmatInverseTranspose, sBasisCart0);
 		}
 
 		private Map<String, ArrayList<String>> getDataMap(String dataString) {
@@ -1806,18 +1690,15 @@ public class Variables {
 					if (currentTag != "") {
 						if (myMap.containsKey(currentTag)) // Duplicate tag
 							parseError("Duplicate tag ", 0);
-						myMap.put(currentTag, currentData); // Put the tag and its associated data in the map
+						myMap.put(currentTag, currentData);
 						currentData = new ArrayList<String>();
 					}
-					currentTag = next.substring(1); // Remove the ! from the tag
-					currentTag = currentTag.toLowerCase(Locale.ENGLISH); // Makes the tag lowercase
+					currentTag = next.substring(1).toLowerCase();
 				} else if (currentTag != "") {
-					// Put the string into the arraylist
 					currentData.add(next);
-
 				}
 			}
-			myMap.put(currentTag, currentData); // Put the last tag into the map
+			myMap.put(currentTag, currentData);
 			return myMap;
 		}
 
@@ -1827,93 +1708,16 @@ public class Variables {
 
 		private final static int subTypeWidth = 170;
 		private final static int barheight = 20;
-		private final static int subTypeBoxWidth = 15, sliderLabelWidth = 36, lattWidth = 60;
+		private final static int subTypeBoxWidth = 15, superSliderLabelWidth = 66, sliderLabelWidth = 36, lattWidth = 60;
 
-		
-		
-		/**
-		 * Array of colors for slider bars, they correspond to which atoms they move.
-		 */
-		private Color[] color;
-		/**
-		 * Array of colors for scalar slider bars, they correspond to which atoms they
-		 * move.
-		 */
-		private Color[] scalarcolor;
-		/**
-		 * Array of colors for magnetic slider bars, they correspond to which moments
-		 * they adjust.
-		 */
-		private Color[] magcolor;
-		/**
-		 * Array of colors for rotational slider bars, they correspond to which angles
-		 * they adjust.
-		 */
-		private Color[] rotcolor;
-		/**
-		 * Array of colors for ellipsoidal slider bars, they correspond to which moments
-		 * they adjust.
-		 */
-		private Color[] ellipcolor;
-
-// Global variables that are part of the Panel.
 		/**
 		 * Master (top most) slider bar controls all slider bars for superpositioning of
 		 * modes.
 		 */
 		private JSlider superSlider;
-		/** Array of displacement mode slider bars for animating displacement modes. */
-		private JSlider[][] dispmodeSliders;
-		/** Array of scalar mode slider bars for animating displacement modes. */
-		private JSlider[][] scalarmodeSliders;
-		/** Array of magnetic mode slider bars for animating magnetic modes. */
-		private JSlider[][] magmodeSliders;
-		/** Array of rotational mode slider bars for animating magnetic modes. */
-		private JSlider[][] rotmodeSliders;
-		/** Array of magnetic mode slider bars for animating ellipsoidal modes. */
-		private JSlider[][] ellipsemodeSliders;
 		/** Array of strain mode slider bars. */
-		private JSlider[] strainmodeSlider;
-		/** Array of irrep mode slider bars. */
-		private JSlider[] irrepmodeSlider;
-
-		/** Label for master slider bar. */
 		private JLabel superSliderLabel;
-		/**
-		 * Array of labels for displacement mode slider bars. Label specifies name of
-		 * mode and mode bar displacement.
-		 */
-		private JLabel[][] dispmodeSliderLabels;
-		/**
-		 * Array of labels for scalar mode slider bars. Label specifies name of mode and
-		 * mode bar displacement.
-		 */
-		private JLabel[][] scalarmodeSliderLabels;
-		/**
-		 * Array of labels for magnetic mode slider bars. Label specifies name of mode
-		 * and mode bar displacement.
-		 */
-		private JLabel[][] magmodeSliderLabels;
-		/**
-		 * Array of labels for rotational mode slider bars. Label specifies name of mode
-		 * and mode bar displacement.
-		 */
-		private JLabel[][] rotmodeSliderLabels;
-		/**
-		 * Array of labels for ellipsoidal mode slider bars. Label specifies name of
-		 * mode and mode bar displacement.
-		 */
-		private JLabel[][] ellipmodeSliderLabels;
-		/**
-		 * Array of labels for strain mode slider bars. Label specifies name of mode and
-		 * mode bar displacement.
-		 */
-		private JLabel[] strainmodeSliderLabel;
-		/**
-		 * Array of labels for irrep mode slider bars. Label specifies name of mode and
-		 * mode bar displacement.
-		 */
-		private JLabel[] irrepmodeSliderLabel;
+
 		/** Array of labels for supercell lattice parameters */
 		private JLabel[] sLattLabel = new JLabel[6];
 		/** Array of labels for parent lattice parameters */
@@ -1936,10 +1740,6 @@ public class Variables {
 		 * with a type
 		 */
 		private JPanel typeDataPanels[];
-		/**
-		 * Temporary Panel which holds a slider bar and it's label; added to scrollPanel
-		 */
-		private JPanel dispPanels[], scalarPanels[], magPanels[], rotPanels[], ellipsePanels[], strainPanel, irrepPanel;
 
 		/**
 		 * Maximum slider bar value. The slider bar only takes integer values. So the
@@ -1951,243 +1751,106 @@ public class Variables {
 		/** double version of sliderMax */
 		private double sliderMaxVal = sliderMax;
 
+		private int sliderWidth;
+		private int sliderPanelWidth;
+
 		/** resets the background colors of the panel components */
 		void recolorPanels() {
-			for (int t = 0; t < numTypes; t++) // Reset the SliderBarPanel colors.
-			{
-				typeLabel[t].setBackground(color[t]);// color labels
-				typeNamePanels[t].setBackground(color[t]);
-				typeDataPanels[t].setBackground(color[t]);
+			for (int t = 0; t < numTypes; t++) {
+				// Reset the SliderBarPanel colors.
+				Color c = modes[DIS].colorT[t];
+				typeLabel[t].setBackground(c);
+				typeNamePanels[t].setBackground(c);
+				typeDataPanels[t].setBackground(c);
 				for (int s = 0; s < numSubTypes[t]; s++) {
-					subTypeBoxes[t][s].setBackground(color[t]);
-					subTypeLabels[t][s].setBackground(color[t]);
+					subTypeBoxes[t][s].setBackground(c);
+					subTypeLabels[t][s].setBackground(c);
 				}
-
-				dispPanels[t].setBackground(color[t]);
-				for (int m = 0; m < dispmodePerType[t]; m++)// iterate through array of slider bars
-				{
-					dispmodeSliderLabels[t][m].setBackground(color[t]);// color labels
-					dispmodeSliders[t][m].setBackground(color[t]);// set the slider bar's color
-				}
-
-				scalarPanels[t].setBackground(scalarcolor[t]);
-				for (int m = 0; m < scalarmodePerType[t]; m++)// iterate through array of slider bars
-				{
-					scalarmodeSliderLabels[t][m].setBackground(scalarcolor[t]);// color labels
-					scalarmodeSliders[t][m].setBackground(scalarcolor[t]);// set the slider bar's color
-				}
-
-				magPanels[t].setBackground(magcolor[t]);
-				for (int m = 0; m < magmodePerType[t]; m++)// iterate through array of slider bars
-				{
-					magmodeSliderLabels[t][m].setBackground(magcolor[t]);// color labels
-					magmodeSliders[t][m].setBackground(magcolor[t]);// set the slider bar's color
-				}
-
-				rotPanels[t].setBackground(rotcolor[t]);
-				for (int m = 0; m < rotmodePerType[t]; m++)// iterate through array of slider bars
-				{
-					rotmodeSliderLabels[t][m].setBackground(rotcolor[t]);// color labels
-					rotmodeSliders[t][m].setBackground(rotcolor[t]);// set the slider bar's color
-				}
-
-				ellipsePanels[t].setBackground(ellipcolor[t]);
-				for (int m = 0; m < ellipmodePerType[t]; m++)// iterate through array of slider bars
-				{
-					ellipmodeSliderLabels[t][m].setBackground(ellipcolor[t]);// color labels
-					ellipsemodeSliders[t][m].setBackground(ellipcolor[t]);// set the slider bar's color
-				}
+				for (int i = 0; i < MODE_ATOMIC_COUNT; i++)
+					modes[i].colorPanels();
 			}
 
 		}
 
 		void setColors(boolean simpleColor) {
-			if (color == null) {
-				color = new Color[numTypes];// array of colors for slider bars
-				scalarcolor = new Color[numTypes];// array of colors for scalar slider bars
-				magcolor = new Color[numTypes]; // array of colors for magnetic slider bars
-				rotcolor = new Color[numTypes]; // array of colors for magnetic slider bars
-				ellipcolor = new Color[numTypes]; // array of colors for ellipsoidal slider bars
-			}
-			double k;
-			for (int t = 0; t < numTypes; t++)// iterate over types of atoms
-			{
-				if (simpleColor)
-					k = 1.0 * atomTypeUnique[t] / numUniques;
-				else
-					k = 1.0 * t / numTypes;
-				color[t] = new Color(Color.HSBtoRGB((float) k, (float) 1.0, (float) 0.95));
-				// makes a rainbow of equally spaced colors according to number of atoms
-				scalarcolor[t] = new Color(Color.HSBtoRGB((float) k, (float) 1.0, (float) 0.80));
-				// makes a rainbow of equally spaced colors according to number of atoms
-				magcolor[t] = new Color(Color.HSBtoRGB((float) k, (float) 1.0, (float) 0.65));
-				// makes a rainbow of equally spaced colors according to number of atoms
-				rotcolor[t] = new Color(Color.HSBtoRGB((float) k, (float) 1.0, (float) 0.55));
-				// makes a rainbow of equally spaced colors according to number of atoms
-				ellipcolor[t] = new Color(Color.HSBtoRGB((float) k, (float) 1.0, (float) 0.40));
-				// makes a rainbow of equally spaced colors according to number of atoms
+			for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
+				if (modes[i].isActive) {
+					modes[i].setColors(simpleColor);
+				}
 			}
 		}
 
 		void toggleIrrepSliders() {
-			if (irrepSlidersOn)
-				for (int m = 0; m < numIrreps; m++)
-					irrepmodeSlider[m].setValue(0);
-			else
-				for (int m = 0; m < numIrreps; m++)
-					irrepmodeSlider[m].setValue(sliderMax);
 			irrepSlidersOn = !irrepSlidersOn;
+			int val = (irrepSlidersOn ? sliderMax : 0);
+			modes[IRREP].setSliders(val);
 		}
 
 		void zeroSliders() {
 			superSlider.setValue(sliderMax);
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < dispmodePerType[t]; m++)
-					dispmodeSliders[t][m].setValue(0);
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < scalarmodePerType[t]; m++)
-					scalarmodeSliders[t][m].setValue(0);
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < magmodePerType[t]; m++)
-					magmodeSliders[t][m].setValue(0);
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < rotmodePerType[t]; m++)
-					rotmodeSliders[t][m].setValue(0);
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < ellipmodePerType[t]; m++)
-					ellipsemodeSliders[t][m].setValue(0);
-			for (int m = 0; m < strainmodeNum; m++)
-				strainmodeSlider[m].setValue(0);
-			for (int m = 0; m < numIrreps; m++)
-				irrepmodeSlider[m].setValue(sliderMax);
+			for (int i = 0; i < MODE_COUNT; i++) {
+				modes[i].setSliders(0);
+			}
 		}
 
 		void resetSliders() {
 			superSlider.setValue(sliderMax);
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < dispmodePerType[t]; m++)
-					dispmodeSliders[t][m].setValue((int) ((dispmodeInitAmp[t][m] / dispmodeMaxAmp[t][m]) * sliderMax));
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < scalarmodePerType[t]; m++)
-					scalarmodeSliders[t][m].setValue((int) ((scalarmodeInitAmp[t][m] / scalarmodeMaxAmp[t][m]) * sliderMax));
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < magmodePerType[t]; m++)
-					magmodeSliders[t][m].setValue((int) ((magmodeInitAmp[t][m] / magmodeMaxAmp[t][m]) * sliderMax));
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < rotmodePerType[t]; m++)
-					rotmodeSliders[t][m].setValue((int) ((rotmodeInitAmp[t][m] / rotmodeMaxAmp[t][m]) * sliderMax));
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < ellipmodePerType[t]; m++)
-					ellipsemodeSliders[t][m].setValue((int) ((ellipmodeInitAmp[t][m] / ellipmodeMaxAmp[t][m]) * sliderMax));
-			for (int m = 0; m < strainmodeNum; m++)
-				strainmodeSlider[m].setValue((int) ((strainmodeInitAmp[m] / strainmodeMaxAmp[m]) * sliderMax));
-			for (int m = 0; m < numIrreps; m++)
-				irrepmodeSlider[m].setValue(sliderMax);
+			for (int i = 0; i < MODE_COUNT; i++) {
+				modes[i].resetSliders(sliderMax);
+			}
 		}
 
 		void setComponentValuesFrom(Variables v) {
-	
+
 			for (int t = subTypeBoxes.length; --t >= 0;) {
 				JCheckBox[] boxes = subTypeBoxes[t];
 				for (int s = boxes.length; --s >= 0;) {
 					boxes[s].setSelected(v.gui.subTypeBoxes[t][s].isSelected());
 				}
 			}
-			
-			superSlider.setValue(v.gui.sliderMax);
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < dispmodePerType[t]; m++)
-					dispmodeSliders[t][m].setValue((int) v.gui.dispmodeSliders[t][m].getValue());
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < scalarmodePerType[t]; m++)
-					scalarmodeSliders[t][m].setValue((int) v.gui.scalarmodeSliders[t][m].getValue());
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < magmodePerType[t]; m++)
-					magmodeSliders[t][m].setValue((int) v.gui.magmodeSliders[t][m].getValue());
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < rotmodePerType[t]; m++)
-					rotmodeSliders[t][m].setValue((int) v.gui.rotmodeSliders[t][m].getValue());
-			for (int t = 0; t < numTypes; t++)
-				for (int m = 0; m < ellipmodePerType[t]; m++)
-					ellipsemodeSliders[t][m].setValue((int) v.gui.ellipsemodeSliders[t][m].getValue());
-			for (int m = 0; m < strainmodeNum; m++)
-				strainmodeSlider[m].setValue((int) v.gui.strainmodeSlider[m].getValue());
-			for (int m = 0; m < numIrreps; m++)
-				irrepmodeSlider[m].setValue(v.gui.irrepmodeSlider[m].getValue());
-		}
 
-		void readSliders() {
-			double d;
-
-			superSliderVal = superSlider.getValue() / sliderMaxVal;
-			superSliderLabel.setText(varToString(superSliderVal, 2, -8) + "                    super");
-			// change the master label to
-			// display the new amplitude
-			// value
-
-			for (int t = 0; t < numTypes; t++)// iterate through types
-			{
-				for (int m = 0; m < dispmodePerType[t]; m++)// iterate through types of modes
-				{
-					dispmodeSliderVals[t][m] = dispmodeMaxAmp[t][m] * (dispmodeSliders[t][m].getValue() / sliderMaxVal);
-					d = dispmodeSliderVals[t][m] * irrepmodeSliderVal[dispmodeIrrep[t][m]] * superSliderVal;
-					dispmodeSliderLabels[t][m].setText(varToString(d, 2, -8) + "  " + dispmodeName[t][m]);
-				}
-				for (int m = 0; m < scalarmodePerType[t]; m++)// iterate through types of modes
-				{
-					scalarmodeSliderVals[t][m] = scalarmodeMaxAmp[t][m] * (scalarmodeSliders[t][m].getValue() / sliderMaxVal);
-					d = scalarmodeSliderVals[t][m] * irrepmodeSliderVal[scalarmodeIrrep[t][m]] * superSliderVal;
-					scalarmodeSliderLabels[t][m].setText(varToString(d, 2, -8) + "  " + scalarmodeName[t][m]);
-				}
-				for (int m = 0; m < magmodePerType[t]; m++)// iterate through types of modes
-				{
-					magmodeSliderVals[t][m] = magmodeMaxAmp[t][m] * (magmodeSliders[t][m].getValue() / sliderMaxVal);
-					d = magmodeSliderVals[t][m] * irrepmodeSliderVal[magmodeIrrep[t][m]] * superSliderVal;
-					magmodeSliderLabels[t][m].setText(varToString(d, 2, -8) + "  " + magmodeName[t][m]);
-				}
-				for (int m = 0; m < rotmodePerType[t]; m++)// iterate through types of modes
-				{
-					rotmodeSliderVals[t][m] = rotmodeMaxAmp[t][m] * (rotmodeSliders[t][m].getValue() / sliderMaxVal);
-					d = rotmodeSliderVals[t][m] * irrepmodeSliderVal[rotmodeIrrep[t][m]] * superSliderVal;
-					rotmodeSliderLabels[t][m].setText(varToString(d, 2, -8) + "  " + rotmodeName[t][m]);
-				}
-				for (int m = 0; m < ellipmodePerType[t]; m++)// iterate through types of modes
-				{
-					ellipmodeSliderVals[t][m] = ellipmodeMaxAmp[t][m] * (ellipsemodeSliders[t][m].getValue() / sliderMaxVal);
-					d = ellipmodeSliderVals[t][m] * irrepmodeSliderVal[ellipmodeIrrep[t][m]] * superSliderVal;
-					ellipmodeSliderLabels[t][m].setText(varToString(d, 2, -8) + "  " + ellipmodeName[t][m]);
-				}
-			}
-			for (int m = 0; m < strainmodeNum; m++)// iterate through strain modes
-			{
-				strainmodeSliderVal[m] = strainmodeMaxAmp[m] * (strainmodeSlider[m].getValue() / sliderMaxVal);
-				d = strainmodeSliderVal[m] * irrepmodeSliderVal[strainmodeIrrep[m]] * superSliderVal;
-				strainmodeSliderLabel[m].setText(varToString(d, 3, -8) + "  " + strainmodeName[m]);
-			}
-			for (int m = 0; m < numIrreps; m++)// iterate through strain modes
-			{
-				irrepmodeSliderVal[m] = (irrepmodeSlider[m].getValue() / sliderMaxVal);
-				d = irrepmodeSliderVal[m];
-				irrepmodeSliderLabel[m].setText(varToString(d, 3, -8) + "  " + irrepName[m]);
+			superSlider.setValue(v.gui.superSlider.getValue());
+			for (int i = 0; i < MODE_COUNT; i++) {
+				if (modes[i].isActive)
+					modes[i].setValues(v.modes[i]);
 			}
 		}
 
 		/**
-		 * Set the sizes of panels based on 
+		 * Copy slider settings to fields and set the slider values text.
+		 * 
+		 */
+		void readSliders() {
+			superSliderVal = superSlider.getValue() / sliderMaxVal;
+			superSliderLabel.setText(varToString(superSliderVal, 2, -6) + " child");
+			for (int i = 0; i < MODE_COUNT; i++) {
+				if (modes[i].isActive)
+					modes[i].readSlider(sliderMaxVal);
+			}
+		}
+
+		/**
+		 * Set the sizes of panels based on
+		 * 
 		 * @param sliderPanel
 		 * @param controlPanel
 		 */
-		void initPanels(JPanel sliderPanel) {
-		//  Divide the applet area with structure on the left and controls on the right.
+		void initPanels() {
 
-			Dimension dim = sliderPanel.getPreferredSize();			
+			// Divide the applet area with structure on the left and controls on the right.
+
+			Dimension dim = sliderPanel.getPreferredSize();
+
+			sliderPanelWidth = dim.width;
+			sliderWidth = sliderPanelWidth / 2;
 
 			// width - height to create a roughly square panel
 
 			// Calculate numRows of each subtype
 			/** Number of extra rows above slider bar panel (for view panel) */
-			int numExtraRows = 5; // One for master slider bar, one for strainTitle, one for irrepTitle, and 2 for
-									// the lattice params.
+			int numExtraRows = 5;
+			// One for master slider bar, one for strainTitle, one for irrepTitle, and 2 for
+			// the lattice params.
 			/** Minimum number of rows in grid that will keep the rows thin */
 			int minRowNumber = (int) Math.floor(dim.height / barheight);
 
@@ -2197,44 +1860,47 @@ public class Variables {
 			int numSubRowsTotal = 0;
 			numSubRows = new int[numTypes];
 			subTypesPerRow = new int[numTypes];
-			for (int t = 0; t < numTypes; t++)// iterate over types
-			{
+			for (int t = 0; t < numTypes; t++) {
+				// iterate over types
 				subTypesPerRow[t] = Math.min(maxSubTypesPerRow, numSubTypes[t]);
 				numSubRows[t] = (int) Math.ceil((double) numSubTypes[t] / subTypesPerRow[t]);
 				numSubRowsTotal += numSubRows[t];
 			}
-			int rowCount = dispmodeNum + scalarmodeNum + magmodeNum + rotmodeNum + ellipmodeNum + strainmodeNum + numIrreps
-					+ numTypes + numExtraRows + numSubRowsTotal;
-			int rowNumber = Math.max(rowCount, minRowNumber);
-			
-			addControls(sliderPanel, dim.width, rowNumber);
-			sliderPanel.setPreferredSize(new Dimension(dim.width, rowNumber * barheight));
+			int rowCount = modes[DIS].count + modes[OCC].count + modes[MAG].count + modes[ROT].count
+					+ modes[ELL].count + modes[STRAIN].count + numIrreps + numTypes + numExtraRows + numSubRowsTotal;
+			int rowLength = Math.max(rowCount, minRowNumber);
+			sliderPanel.setPreferredSize(new Dimension(dim.width, rowLength * barheight));
+			addControls();
 		}
 
-		private int sliderWidth;
-		
-		private void addControls(JPanel sliderPanel, int sliderPanelWidth, int rowNumber) {
-		
-			sliderWidth = sliderPanelWidth / 2;
+		/**
+		 * Create the full slider panel. 
+		 * 
+		 */
+		private void addControls() {
+
+			setColors(false);
+
+			masterSliderPanel = new JPanel();
+			masterSliderPanel.setLayout(new BoxLayout(masterSliderPanel, BoxLayout.LINE_AXIS));
+			masterSliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
+			masterSliderPanel.setBackground(Color.WHITE);
 
 			// Master Slider Panel
-			superSliderLabel = new JLabel();// label for master slider bar
-			superSliderLabel.setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of master slider bar's
-																							// label
-			superSliderLabel.setBackground(Color.WHITE);
+			superSliderLabel = new JLabel("child");
+			superSliderLabel.setPreferredSize(new Dimension(superSliderLabelWidth, barheight));
 			superSliderLabel.setForeground(Color.BLACK);
 			superSliderLabel.setHorizontalAlignment(JLabel.CENTER);
 			superSliderLabel.setVerticalAlignment(JLabel.CENTER);
-			superSlider = newSlider("super", 0, sliderMax, sliderMax, Color.WHITE);
-			
-			masterSliderPanel = new JPanel(new GridLayout(1, 2));
-			masterSliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-			masterSliderPanel.setBackground(Color.WHITE);
-			masterSliderPanel.add(new JLabel("  parent"));// add master slider bar to left panel
-			masterSliderPanel.add(superSlider);// add master slider bar to left panel
-			masterSliderPanel.add(superSliderLabel);// add master slider bar's label to right panel
+			superSlider = newSlider("child", 0, sliderMax, sliderMax, Color.WHITE);
 
-			sliderPanel.add(masterSliderPanel);// add master slider bar to top of scrollPanel
+			masterSliderPanel.add(Box.createHorizontalGlue());
+			masterSliderPanel.add(new JLabel("parent "));
+			masterSliderPanel.add(superSlider);
+			masterSliderPanel.add(Box.createRigidArea(new Dimension(1,1)));
+			masterSliderPanel.add(superSliderLabel);
+			masterSliderPanel.add(Box.createHorizontalGlue());
+			sliderPanel.add(masterSliderPanel);
 
 			// Initialize type-specific subpanels of scrollPanel
 			typeLabel = new JLabel[numTypes];
@@ -2243,344 +1909,89 @@ public class Variables {
 			subTypeBoxes = new JCheckBox[numTypes][];
 			subTypeLabels = new JLabel[numTypes][];
 
-			dispPanels = new JPanel[numTypes];
-			dispmodeSliders = new JSlider[numTypes][];// creates the array of slider bars
-			dispmodeSliderLabels = new JLabel[numTypes][];// creates array of labels
-			dispmodeSliderVals = new double[numTypes][];
-
-			scalarPanels = new JPanel[numTypes];
-			scalarmodeSliders = new JSlider[numTypes][];// creates the array of slider bars
-			scalarmodeSliderLabels = new JLabel[numTypes][];// creates array of labels
-			scalarmodeSliderVals = new double[numTypes][];
-
-			magPanels = new JPanel[numTypes];
-			magmodeSliders = new JSlider[numTypes][];// creates the array of slider bars
-			magmodeSliderLabels = new JLabel[numTypes][];// creates array of labels
-			magmodeSliderVals = new double[numTypes][];
-
-			rotPanels = new JPanel[numTypes];
-			rotmodeSliders = new JSlider[numTypes][];// creates the array of slider bars
-			rotmodeSliderLabels = new JLabel[numTypes][];// creates array of labels
-			rotmodeSliderVals = new double[numTypes][];
-
-			ellipsePanels = new JPanel[numTypes];
-			ellipsemodeSliders = new JSlider[numTypes][];// creates the array of slider bars
-			ellipmodeSliderLabels = new JLabel[numTypes][];// creates array of labels
-			ellipmodeSliderVals = new double[numTypes][];
-
 			// The big loop over types
 			for (int t = 0; t < numTypes; t++) {
-				subTypeBoxes[t] = new JCheckBox[numSubTypes[t]];// initialize
+				Color c = modes[DIS].colorT[t];
+				JPanel tp = new JPanel(new GridLayout(2,1));
+				tp.setBorder(new EmptyBorder(2,2,5,2));
+				tp.setBackground(c);
+				subTypeBoxes[t] = new JCheckBox[numSubTypes[t]];
 				subTypeLabels[t] = new JLabel[numSubTypes[t]];
-				dispmodeSliders[t] = new JSlider[dispmodePerType[t]];// creates the array of slider bars
-				dispmodeSliderLabels[t] = new JLabel[dispmodePerType[t]];// creates array of labels
-				dispmodeSliderVals[t] = new double[dispmodePerType[t]];
-				scalarmodeSliders[t] = new JSlider[scalarmodePerType[t]];// creates the array of slider bars
-				scalarmodeSliderLabels[t] = new JLabel[scalarmodePerType[t]];// creates array of labels
-				scalarmodeSliderVals[t] = new double[scalarmodePerType[t]];
-				magmodeSliders[t] = new JSlider[magmodePerType[t]];// creates the array of slider bars
-				magmodeSliderLabels[t] = new JLabel[magmodePerType[t]];// creates array of labels
-				magmodeSliderVals[t] = new double[magmodePerType[t]];
-				rotmodeSliders[t] = new JSlider[rotmodePerType[t]];// creates the array of slider bars
-				rotmodeSliderLabels[t] = new JLabel[rotmodePerType[t]];// creates array of labels
-				rotmodeSliderVals[t] = new double[rotmodePerType[t]];
-				ellipsemodeSliders[t] = new JSlider[ellipmodePerType[t]];// creates the array of slider bars
-				ellipmodeSliderLabels[t] = new JLabel[ellipmodePerType[t]];// creates array of labels
-				ellipmodeSliderVals[t] = new double[ellipmodePerType[t]];
-				Color c = color[t];
-				// typeNamePanel
-				typeLabel[t] = new JLabel();
-				typeLabel[t].setText("" + atomTypeName[t] + " Modes");
-				typeLabel[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight));// size of slider labels
-				typeLabel[t].setBackground(c);// color labels
-				typeLabel[t].setForeground(Color.WHITE);
-				typeLabel[t].setHorizontalAlignment(JLabel.CENTER);
-				typeLabel[t].setVerticalAlignment(JLabel.CENTER);
-				typeNamePanels[t] = new JPanel(new GridLayout(1, 1, 0, 0));// make a new panel to hold color/checkboxes and label
+				typeLabel[t] = newLabel("" + atomTypeName[t] + " Modes", sliderPanelWidth, c, JLabel.CENTER);
+				typeNamePanels[t] = new JPanel(new GridLayout(1, 1, 0, 0));
 				typeNamePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-				typeNamePanels[t].setBackground(c);
 				typeNamePanels[t].add(typeLabel[t]);
-//				System.out.println("t: "+t+", numSubTypes[t]: "+numSubTypes[t]+", boxesPerRow[t]: "+boxesPerRow[t]+", numCheckRows[t]: "+numCheckRows[t]);
-
-				sliderPanel.add(typeNamePanels[t]);
-
+				typeNamePanels[t].setBackground(c);
 				// typeDataPanel
 				typeDataPanels[t] = new JPanel(new GridLayout(numSubRows[t], subTypesPerRow[t], 0, 0));
 				typeDataPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, numSubRows[t] * barheight));
 				typeDataPanels[t].setBackground(c);
 				for (int s = 0; s < numSubTypes[t]; s++) {
 					subTypeBoxes[t][s] = newCheckbox("subType_" + t + "_" + s, c);
-					subTypeLabels[t][s] = new JLabel();
-					subTypeLabels[t][s].setPreferredSize(new Dimension(subTypeWidth - subTypeBoxWidth, barheight));
-					subTypeLabels[t][s].setBackground(c);
-					subTypeLabels[t][s].setForeground(Color.WHITE);
-					subTypeLabels[t][s].setHorizontalAlignment(JLabel.LEFT);
+					subTypeLabels[t][s] = newLabel("", subTypeWidth - subTypeBoxWidth, c, JLabel.LEFT);
 					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
 					p.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-					p.setBackground(c);			        
+					p.setBackground(c);
 					p.add(subTypeBoxes[t][s]);
 					p.add(subTypeLabels[t][s]);
 					typeDataPanels[t].add(p);
 				}
+				// Makes sure that each subtype row is full for alignment purposes
 				for (int s = numSubTypes[t]; s < numSubRows[t] * subTypesPerRow[t]; s++)
-					typeDataPanels[t].add(new JLabel("")); // Makes sure that each subtype row is full for allignment
-															// purposes
-
-				sliderPanel.add(typeDataPanels[t]);
-
-				dispPanels[t] = new JPanel(new GridLayout(dispmodePerType[t], 2, 0, 0));
-				dispPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, dispmodePerType[t] * barheight));
-																												// labels
-				dispPanels[t].setBackground(c);
-				for (int m = 0; m < dispmodePerType[t]; m++)// iterate through array of slider bars
-				{
-					dispmodeSliderLabels[t][m] = new JLabel();// add label to left panel
-					dispmodeSliderLabels[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
-																											// labels
-					dispmodeSliderLabels[t][m].setBackground(c);// color labels
-					dispmodeSliderLabels[t][m].setForeground(Color.WHITE);// color labels
-					dispmodeSliderLabels[t][m].setHorizontalAlignment(JLabel.LEFT);
-					dispmodeSliderLabels[t][m].setVerticalAlignment(JLabel.CENTER);
-
-					dispmodeSliders[t][m] = newSlider("disp_"+t+"_" + m, -(int) sliderMax, (int) sliderMax,
-							(int) ((dispmodeInitAmp[t][m] / dispmodeMaxAmp[t][m]) * sliderMax), c);
-					
-					dispPanels[t].add(dispmodeSliders[t][m]);// add slider bar to left of modePanel
-					dispPanels[t].add(dispmodeSliderLabels[t][m]);// add slider bar to left of modePanel
+					typeDataPanels[t].add(new JLabel(""));
+				tp.add(typeNamePanels[t]);
+				tp.add(typeDataPanels[t]);
+				sliderPanel.add(tp);
+				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
+					initModeGUI(modes[i], t, sliderPanel);
 				}
 
-				sliderPanel.add(dispPanels[t]);// add this modePanel to scrollPanel
-
-				// scalarPanel
-				scalarPanels[t] = new JPanel(new GridLayout(scalarmodePerType[t], 2, 0, 0));
-				scalarPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, scalarmodePerType[t] * barheight));// size
-																													// of
-																													// slider
-																													// labels
-				scalarPanels[t].setBackground(scalarcolor[t]);
-				Color color = scalarcolor[t];
-
-				for (int m = 0; m < scalarmodePerType[t]; m++)// iterate through array of slider bars
-				{
-					scalarmodeSliderLabels[t][m] = new JLabel();// add label to left panel
-					scalarmodeSliderLabels[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of
-																												// slider
-																												// labels
-					scalarmodeSliderLabels[t][m].setBackground(scalarcolor[t]);// color labels
-					scalarmodeSliderLabels[t][m].setForeground(Color.WHITE);// color labels
-					scalarmodeSliderLabels[t][m].setHorizontalAlignment(JLabel.LEFT);
-					scalarmodeSliderLabels[t][m].setVerticalAlignment(JLabel.CENTER);
-					scalarmodeSliders[t][m] = newSlider("scalar_"+t+"_" + m,  -(int) sliderMax, (int) sliderMax,
-							(int) ((scalarmodeInitAmp[t][m] / scalarmodeMaxAmp[t][m]) * sliderMax), color);
-					
-					scalarPanels[t].add(scalarmodeSliders[t][m]);// add slider bar to left of modePanel
-					scalarPanels[t].add(scalarmodeSliderLabels[t][m]);// add slider bar to right of modePanel
-				}
-
-				sliderPanel.add(scalarPanels[t]);// add this modePanel to scrollPanel
-
-				// magPanel
-				magPanels[t] = new JPanel(new GridLayout(magmodePerType[t], 2, 0, 0));
-				magPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, magmodePerType[t] * barheight));// size of
-																												// slider
-																												// labels
-				magPanels[t].setBackground(magcolor[t]);
-				color = magcolor[t];
-				for (int m = 0; m < magmodePerType[t]; m++)// iterate through array of slider bars
-				{
-					magmodeSliderLabels[t][m] = new JLabel();// add label to left panel
-					magmodeSliderLabels[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
-																											// labels
-					magmodeSliderLabels[t][m].setBackground(magcolor[t]);// color labels
-					magmodeSliderLabels[t][m].setForeground(Color.WHITE);// color labels
-					magmodeSliderLabels[t][m].setHorizontalAlignment(JLabel.LEFT);
-					magmodeSliderLabels[t][m].setVerticalAlignment(JLabel.CENTER);
-
-					magmodeSliders[t][m] = newSlider("mag_"+t+"_" + m, -(int) sliderMax, (int) sliderMax,
-							(int) ((magmodeInitAmp[t][m] / magmodeMaxAmp[t][m]) * sliderMax), color);
-
-					magPanels[t].add(magmodeSliders[t][m]);// add slider bar to left of modePanel
-					magPanels[t].add(magmodeSliderLabels[t][m]);// add slider bar to left of modePanel
-				}
-
-				sliderPanel.add(magPanels[t]);// add this modePanel to scrollPanel
-
-				// rotPanel
-				rotPanels[t] = new JPanel(new GridLayout(rotmodePerType[t], 2, 0, 0));
-				rotPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, rotmodePerType[t] * barheight));// size of
-																												// slider
-																												// labels
-				rotPanels[t].setBackground(rotcolor[t]);
-				color = rotcolor[t];
-				for (int m = 0; m < rotmodePerType[t]; m++)// iterate through array of slider bars
-				{
-					rotmodeSliderLabels[t][m] = new JLabel();// add label to left panel
-					rotmodeSliderLabels[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
-																											// labels
-					rotmodeSliderLabels[t][m].setBackground(rotcolor[t]);// color labels
-					rotmodeSliderLabels[t][m].setForeground(Color.WHITE);// color labels
-					rotmodeSliderLabels[t][m].setHorizontalAlignment(JLabel.LEFT);
-					rotmodeSliderLabels[t][m].setVerticalAlignment(JLabel.CENTER);
-
-					rotmodeSliders[t][m] = newSlider("rot_"+t+"_" + m, -(int) sliderMax, (int) sliderMax,
-							(int) ((rotmodeInitAmp[t][m] / rotmodeMaxAmp[t][m]) * sliderMax), color);
-					
-					rotPanels[t].add(rotmodeSliders[t][m]);// add slider bar to left of modePanel
-					rotPanels[t].add(rotmodeSliderLabels[t][m]);// add slider bar to left of modePanel
-				}
-
-				sliderPanel.add(rotPanels[t]);// add this modePanel to scrollPanel
-
-				// ellipPanel
-				ellipsePanels[t] = new JPanel(new GridLayout(ellipmodePerType[t], 2, 0, 0));
-				ellipsePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, ellipmodePerType[t] * barheight));// size of
-																													// slider
-																													// labels
-				ellipsePanels[t].setBackground(ellipcolor[t]);
-				color = ellipcolor[t];
-				for (int m = 0; m < ellipmodePerType[t]; m++)// iterate through array of slider bars
-				{
-					ellipmodeSliderLabels[t][m] = new JLabel();// add label to left panel
-					ellipmodeSliderLabels[t][m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of
-																											// slider labels
-					ellipmodeSliderLabels[t][m].setBackground(ellipcolor[t]);// color labels
-					ellipmodeSliderLabels[t][m].setForeground(Color.WHITE);// color labels
-					ellipmodeSliderLabels[t][m].setHorizontalAlignment(JLabel.LEFT);
-					ellipmodeSliderLabels[t][m].setVerticalAlignment(JLabel.CENTER);
-
-					ellipsemodeSliders[t][m] = newSlider("ellipse_" + t + "_" + m, -(int) sliderMax, (int) sliderMax,
-							(int) ((ellipmodeInitAmp[t][m] / ellipmodeMaxAmp[t][m]) * sliderMax), color);
-
-					ellipsePanels[t].add(ellipsemodeSliders[t][m]);// add slider bar to left of modePanel
-					ellipsePanels[t].add(ellipmodeSliderLabels[t][m]);// add slider bar to left of modePanel
-				}
-
-				sliderPanel.add(ellipsePanels[t]);// add this modePanel to scrollPanel
 			}
-
-			// strainTitlePanel
-			JLabel strainTitle = new JLabel("StrainModes");
-			strainTitle.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-			strainTitle.setBackground(Color.DARK_GRAY);// color labels
-			strainTitle.setForeground(Color.WHITE);
-			strainTitle.setHorizontalAlignment(JLabel.CENTER);
-			strainTitle.setVerticalAlignment(JLabel.CENTER);
-
-			JPanel strainTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));// make a new panel to hold color/checkboxes and label
+			Color c = Color.DARK_GRAY;
+			JLabel strainTitle = newLabel("Strain Modes", sliderPanelWidth, c, JLabel.CENTER);
+			JPanel strainTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
 			strainTitlePanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-			strainTitlePanel.setBackground(Color.DARK_GRAY);
+			strainTitlePanel.setBackground(c);
 			strainTitlePanel.add(strainTitle);
-
 			sliderPanel.add(strainTitlePanel);
 
 			// strainDataPanel
 			for (int n = 0; n < 6; n++) {
-				sLattLabel[n] = new JLabel();
-				sLattLabel[n].setPreferredSize(new Dimension(lattWidth, barheight));// size of slider labels
-				sLattLabel[n].setBackground(Color.DARK_GRAY);// color labels
-				sLattLabel[n].setForeground(Color.WHITE);
-				sLattLabel[n].setHorizontalAlignment(JLabel.LEFT);
-				sLattLabel[n].setVerticalAlignment(JLabel.CENTER);
-
-				pLattLabel[n] = new JLabel();
-				pLattLabel[n].setPreferredSize(new Dimension(lattWidth, barheight));// size of slider labels
-				pLattLabel[n].setBackground(Color.DARK_GRAY);// color labels
-				pLattLabel[n].setForeground(Color.WHITE);
-				pLattLabel[n].setHorizontalAlignment(JLabel.LEFT);
-				pLattLabel[n].setVerticalAlignment(JLabel.CENTER);
+				sLattLabel[n] = newLabel("", lattWidth, c, JLabel.LEFT);
+				pLattLabel[n] = newLabel("", lattWidth, c, JLabel.LEFT);
 			}
-			parentLabel = new JLabel("  Pcell");
-			parentLabel.setPreferredSize(new Dimension(lattWidth, barheight));// size of slider labels
-			parentLabel.setBackground(Color.DARK_GRAY);// color labels
-			parentLabel.setForeground(Color.WHITE);
-			parentLabel.setHorizontalAlignment(JLabel.LEFT);
-			parentLabel.setVerticalAlignment(JLabel.CENTER);
-
-			superLabel = new JLabel("  Scell");
-			superLabel.setPreferredSize(new Dimension(lattWidth, barheight));// size of slider labels
-			superLabel.setBackground(Color.DARK_GRAY);// color labels
-			superLabel.setForeground(Color.WHITE);
-			superLabel.setHorizontalAlignment(JLabel.LEFT);
-			superLabel.setVerticalAlignment(JLabel.CENTER);
-
-			JPanel strainDataPanel = new JPanel(new GridLayout(2, 6, 0, 0));// make a new panel to hold color/checkboxes and label
+			parentLabel = newLabel("  Pcell", lattWidth, c, JLabel.LEFT);
+			superLabel = newLabel("  Scell", lattWidth, c, JLabel.LEFT);
+			JPanel strainDataPanel = new JPanel(new GridLayout(2, 6, 0, 0));
 			strainDataPanel.setPreferredSize(new Dimension(sliderPanelWidth, 2 * barheight));
-			strainDataPanel.setBackground(Color.DARK_GRAY);
+			strainDataPanel.setBackground(c);
 			strainDataPanel.add(parentLabel);
 			for (int n = 0; n < 6; n++)
 				strainDataPanel.add(pLattLabel[n]);
 			strainDataPanel.add(superLabel);
 			for (int n = 0; n < 6; n++)
 				strainDataPanel.add(sLattLabel[n]);
-
 			sliderPanel.add(strainDataPanel);
+			initNonAtomGUI(modes[STRAIN], c);
 
-			// strainPanel
-			strainPanel = new JPanel(new GridLayout(strainmodeNum, 2, 0, 0));
-			strainPanel.setPreferredSize(new Dimension(sliderPanelWidth, strainmodeNum * barheight));// size of slider
-																										// labels
-			strainPanel.setBackground(Color.DARK_GRAY);
-			strainmodeSlider = new JSlider[strainmodeNum];// creates the array of slider bars
-			strainmodeSliderLabel = new JLabel[strainmodeNum];// creates array of labels
-			strainmodeSliderVal = new double[strainmodeNum];
-			for (int m = 0; m < strainmodeNum; m++)// iterate through array of slider bars
-			{
-				strainmodeSliderLabel[m] = new JLabel();// add label to left panel
-				strainmodeSliderLabel[m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
-																										// labels
-				strainmodeSliderLabel[m].setBackground(Color.DARK_GRAY);// color labels
-				strainmodeSliderLabel[m].setForeground(Color.WHITE);// color labels
-				strainmodeSliderLabel[m].setHorizontalAlignment(JLabel.LEFT);
-				strainmodeSliderLabel[m].setVerticalAlignment(JLabel.CENTER);
-
-				strainmodeSlider[m] = newSlider("strain_" + m, -(int) sliderMax, (int) sliderMax,
-						(int) ((strainmodeInitAmp[m] / strainmodeMaxAmp[m]) * sliderMax), Color.DARK_GRAY);
-
-				strainPanel.add(strainmodeSlider[m]);// add slider bar to left of modePanel
-				strainPanel.add(strainmodeSliderLabel[m]);// add slider bar's label to right of modePanel
-
-				sliderPanel.add(strainPanel);// add this modePanel to scrollPanel
-			}
-
-			// irrepTitlePanel
-			JLabel irrepTitle = new JLabel("Single-Irrep Master Amplitudes");
-			irrepTitle.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-			irrepTitle.setBackground(Color.LIGHT_GRAY);// color labels
-			irrepTitle.setForeground(Color.WHITE);
-			irrepTitle.setHorizontalAlignment(JLabel.CENTER);
-			irrepTitle.setVerticalAlignment(JLabel.CENTER);
-
-			JPanel irrepTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));// make a new panel to hold color/checkboxes and label
+			c = Color.LIGHT_GRAY;
+			JLabel irrepTitle = newLabel("Single-Irrep Master Amplitudes", sliderPanelWidth, Color.LIGHT_GRAY,
+					JLabel.CENTER);
+			JPanel irrepTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
 			irrepTitlePanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-			irrepTitlePanel.setBackground(Color.LIGHT_GRAY);
+			irrepTitlePanel.setBackground(c);
 			irrepTitlePanel.add(irrepTitle);
-
 			sliderPanel.add(irrepTitlePanel);
+			initNonAtomGUI(modes[IRREP], c);
+		}
 
-			// irrepPanel
-			irrepPanel = new JPanel(new GridLayout(numIrreps, 2, 0, 0));
-			irrepPanel.setPreferredSize(new Dimension(sliderPanelWidth, numIrreps * barheight));// size of slider labels
-			irrepPanel.setBackground(Color.LIGHT_GRAY);
-			irrepmodeSlider = new JSlider[numIrreps];// creates the array of slider bars
-			irrepmodeSliderLabel = new JLabel[numIrreps];// creates array of labels
-			irrepmodeSliderVal = new double[numIrreps];
-			for (int m = 0; m < numIrreps; m++)// iterate through array of slider bars
-			{
-				irrepmodeSliderLabel[m] = new JLabel();// add label to left panel
-				irrepmodeSliderLabel[m].setPreferredSize(new Dimension(sliderLabelWidth, barheight));// size of slider
-																										// labels
-				irrepmodeSliderLabel[m].setBackground(Color.LIGHT_GRAY);// color labels
-				irrepmodeSliderLabel[m].setForeground(Color.WHITE);// color labels
-				irrepmodeSliderLabel[m].setHorizontalAlignment(JLabel.LEFT);
-				irrepmodeSliderLabel[m].setVerticalAlignment(JLabel.CENTER);
-
-				irrepmodeSlider[m] = newSlider("irrep_" + m, 0, (int) sliderMax, sliderMax, Color.LIGHT_GRAY);
-
-				irrepPanel.add(irrepmodeSlider[m]);// add slider bar to left of modePanel
-				irrepPanel.add(irrepmodeSliderLabel[m]);// add slider bar's label to right of modePanel
-
-				sliderPanel.add(irrepPanel);// add this modePanel to scrollPanel
-			}
+		private JLabel newLabel(String text, int width, Color c, int hAlign) {
+			JLabel l = new JLabel(text);
+			l.setPreferredSize(new Dimension(width, barheight));
+			l.setForeground(Color.WHITE);
+			l.setHorizontalAlignment(hAlign);
+			l.setVerticalAlignment(JLabel.CENTER);
+			return l;
 		}
 
 		private JCheckBox newCheckbox(String name, Color c) {
@@ -2597,29 +2008,89 @@ public class Variables {
 			return b;
 		}
 
-		private JSlider newSlider(String name, int min, int max, int val, Color color) {
+		private JSlider newSlider(String name, int min, int max, int val, Color c) {
 			JSlider s = new JSlider(JSlider.HORIZONTAL, min, max, val);
 			s.setName(name);
-			s.setPreferredSize(new Dimension(sliderWidth, barheight));// size of slider labels
-			if (color != null)
-				s.setBackground(color);
+			s.setPreferredSize(new Dimension(sliderWidth, barheight));
+			if (c != null)
+				s.setBackground(c);
 			s.addChangeListener(this);
 			s.setFocusable(false);
 			return s;
 		}
 
 		/**
-		 * Listens for moving slider bars.
+		 * Set up the upper mode-related panels.
+		 * 
+		 * @param mode
+		 * @param t
+		 * @param sliderPanel
+		 */
+		private void initModeGUI(Mode mode, int t, JPanel sliderPanel) {
+			if (!mode.isActive)
+				return;
+			if (t == 0) {
+				mode.panels = new JPanel[numTypes];
+				mode.sliderTM = new JSlider[numTypes][];
+				mode.sliderLabelsTM = new JLabel[numTypes][];
+				mode.sliderValsTM = new double[numTypes][];
+			}
+			Color c = (mode.colorT == null ? Color.PINK : mode.colorT[t]);
+			int nModes = mode.modesPerType[t];
+			mode.sliderTM[t] = new JSlider[nModes];
+			mode.sliderLabelsTM[t] = new JLabel[nModes];
+			mode.sliderValsTM[t] = new double[nModes];
+			mode.panels[t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
+			mode.panels[t].setPreferredSize(new Dimension(sliderPanelWidth, mode.modesPerType[t] * barheight));
+			mode.panels[t].setBackground(c);
+			for (int m = 0; m < nModes; m++) {
+				mode.sliderLabelsTM[t][m] = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
+				mode.sliderTM[t][m] = newSlider("mode[" + mode.type + "]" + t + "_" + m, -(int) sliderMax,
+						(int) sliderMax, (int) ((mode.initAmpTM[t][m] / mode.maxAmpTM[t][m]) * sliderMax), c);
+				mode.panels[t].add(mode.sliderTM[t][m]);
+				mode.panels[t].add(mode.sliderLabelsTM[t][m]);
+			}
+			if (sliderPanel != null)
+				sliderPanel.add(mode.panels[t]);
+
+		}
+
+		/**
+		 * Set up the strain and irreducible representation panels.
+		 * 
+		 * @param mode
+		 * @param c
+		 */
+		private void initNonAtomGUI(Mode mode, Color c) {
+			initModeGUI(mode, 0, null);
+			int min = (mode.type == STRAIN ? -(int) sliderMax : 0);
+			mode.panels[0] = new JPanel(new GridLayout(mode.count, 2, 0, 0));
+			mode.panels[0].setPreferredSize(new Dimension(sliderPanelWidth, mode.count * barheight));
+			mode.panels[0].setBackground(c);
+			mode.sliderTM = new JSlider[1][mode.count];
+			mode.sliderLabelsTM[0] = new JLabel[mode.count];
+			mode.sliderValsTM[0] = new double[mode.count];
+			for (int m = 0; m < mode.count; m++) {
+				mode.sliderLabelsTM[0][m] = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
+				mode.sliderTM[0][m] = newSlider("mode[" + mode.type + "]" + m, min, (int) sliderMax,
+						(int) ((mode.initAmpTM[0][m] / mode.maxAmpTM[0][m]) * sliderMax), c);
+				mode.panels[0].add(mode.sliderTM[0][m]);
+				mode.panels[0].add(mode.sliderLabelsTM[0][m]);
+				sliderPanel.add(mode.panels[0]);
+			}
+		}
+
+		/**
+		 * Listens for moving slider bars. called when a slider bar is moved.
+		 * 
 		 */
 		@Override
-		public void stateChanged(ChangeEvent e)// called when a slider bar is moved
-		{
+		public void stateChanged(ChangeEvent e) {
 			if (isAdjusting)
 				return;
 			isChanged = true;
 			app.updateDisplay();
 		}
-
 
 		void setLattLabels(double[] pLatt, double[] sLatt) {
 			// set the parent and supercell lattice parameter labels
@@ -2629,29 +2100,25 @@ public class Variables {
 				sLattLabel[n].setText(varToString(sLatt[n], 2, -5));
 				sLattLabel[n + 3].setText(varToString((180 / Math.PI) * sLatt[n + 3], 2, -5));
 			}
-
 		}
 
 		/**
+		 * Indicate max values (average for occupation) in the subtype label.
 		 * 
 		 * @param t
 		 * @param s
-		 * @param maxdisp
-		 * @param avgocc
-		 * @param maxmag
-		 * @param maxrot
-		 * @param maxellip not implemented
+		 * @param  max[]
 		 */
-		void setSubTypeText(int t, int s, double maxdisp, double avgocc, double maxmag, double maxrot, double maxellip) {
-			subTypeLabels[t][s].setText(" " + subTypeName[t][s] + "  [" + varToString(maxdisp, 2, -4) + ", "
-					+ varToString(avgocc, 2, -4) + ", " + varToString(maxmag, 2, -4) + ", "
-					+ varToString(maxrot, 2, -4) + "]");
+		void setSubTypeText(int t, int s, double[] max) {
+			subTypeLabels[t][s].setText(
+					" " + subTypeName[t][s] + "  [" + varToString(max[DIS], 2, -4) + ", " + varToString(max[OCC], 2, -4)
+							+ ", " + varToString(max[MAG], 2, -4) + ", " + varToString(max[ROT], 2, -4) + "]");
 		}
 
- 		public void getColors(int t, double[] rgb) {
-			rgb[0] = color[t].getRed() / 255.0;
-			rgb[1] = color[t].getGreen() / 255.0;
-			rgb[2] = color[t].getBlue() / 255.0;
+		public void getColors(int t, double[] rgb) {
+			rgb[0] = modes[DIS].colorT[t].getRed() / 255.0;
+			rgb[1] = modes[DIS].colorT[t].getGreen() / 255.0;
+			rgb[2] = modes[DIS].colorT[t].getBlue() / 255.0;
 		}
 
 	}
@@ -2668,7 +2135,7 @@ public class Variables {
 		gui.subTypeBoxes[t][s].setSelected(b);
 	}
 
-	public void setSubtypesSelected(boolean b) {
+	public void selectAllSubtypes(boolean b) {
 		for (int t = 0; t < numTypes; t++)
 			for (int s = 0; s < numSubTypes[t]; s++)
 				setSubtypeSelected(t, s, b);
@@ -2678,4 +2145,49 @@ public class Variables {
 		gui.getColors(t, rgb);
 	}
 
-} // end the main class
+	public double getSetSuperSliderValue(double newVal) {
+		double d = superSliderVal;
+		superSliderVal = newVal;
+		return d;
+	}
+
+	public int getStrainModesCount() {
+		return modes[STRAIN].count;
+	}
+
+	public double[] getStrainmodeSliderValues() {
+		return modes[STRAIN].sliderValsTM[0];
+	}
+
+	public double[] get(int mode, int i) {
+		return atoms[i].vector1[mode];
+	}
+
+	public double getInitialOccupancy(int i) {
+		return atoms[i].vector0[OCC][0];
+	}
+
+	public double getOccupancy(int i) {
+		return atoms[i].vector1[OCC][0];
+	}
+
+	public String getAtomTypeSymbol(int i) {
+		return atomTypeSymbol[atoms[i].t];
+	}
+
+	public Atom getAtom(int ia) {
+		return atoms[ia];
+	}
+
+	public void updateFormData(Object mapFormData) {
+//		+ "\"mode001001\":\".1\"," 
+//		+ "\"mode002001\":\".2\"," 
+//		+ "\"mode003001\":\".05\","
+//		+ "\"mode003002\":\".15\"," 
+//		+ "\"mode003003\":\"0\"," 
+
+		// TODO 
+	}
+
+
+}

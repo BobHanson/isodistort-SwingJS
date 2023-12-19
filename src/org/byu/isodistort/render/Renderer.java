@@ -725,8 +725,6 @@ public class Renderer {
 
 //RENDER ONE OBJECT FOR THIS FRAME
 
-	private Matrix cam = new Matrix(); // BH opt #1#
-
 	private void render(Geometry s, Matrix camera) {
 		if (!s.isEnabled())
 			return;

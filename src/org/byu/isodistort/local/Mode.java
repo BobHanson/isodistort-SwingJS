@@ -12,7 +12,7 @@ import org.byu.isodistort.local.Variables.VariableParser;
 
 /**
  * A class to hold the arrays relating to individual types of symmetry modes,
- * specificall: displacement, magnetic, rotational, anisotroic ("ellipsoidal"),
+ * specifically: displacement, magnetic, rotational, anisotroic ("ellipsoidal"),
  * strain, and irreducible representations.
  * 
  * STRAIN and IRREP are special in that they are not atom-specific. Thus,

@@ -58,7 +58,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".7"; 
+	final static String minorVersion = ".7b"; 
 	
 	/**
 	 * The variables are all read. Time to do any app-specific 

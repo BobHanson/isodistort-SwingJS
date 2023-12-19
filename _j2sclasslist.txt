@@ -321,6 +321,7 @@ org/byu/isodistort/local/Elements.js
 org/byu/isodistort/local/FileUtil.js
 org/byu/isodistort/local/IsoApp.js
 org/byu/isodistort/local/Matrix.js
+org/byu/isodistort/local/Mode.js
 org/byu/isodistort/local/Variables.js
 org/byu/isodistort/local/MathUtil.js
 org/byu/isodistort/render/Geometry.js

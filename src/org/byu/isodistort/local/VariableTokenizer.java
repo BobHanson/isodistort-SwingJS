@@ -112,7 +112,7 @@ class VariableTokenizer {
 	}
 
 	String getString(int pt) {
-		return (len() < pt ? null : (new String(bytes, from(pt), len(pt))));
+		return (pt >= len() ? null : (new String(bytes, from(pt), len(pt))));
 	}
 
 	/**

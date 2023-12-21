@@ -19,6 +19,7 @@ import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import org.byu.isodistort.local.Variables.VariableParser;
 import org.byu.isodistort2.ISOApplet;
 import org.byu.isodistort2.render.Vec;
 
@@ -326,9 +327,14 @@ public class CommonStuff implements ChangeListener
 	{		this.applet = applet;
 			getData = new StringTokenizer(dataString);//chop the string into separate numbers and string chunks
 			diffraction = isDiffraction;
+			
+			long t = System.currentTimeMillis();
 			parseDataTags();
 			identifyUniqueAtoms();
-			
+
+			System.out.println("CommonStuff parsed in " + (System.currentTimeMillis() - t) + " ms");
+
+
 			color = new Color[numTypes];//array of colors for slider bars
 			scalarcolor = new Color[numTypes];//array of colors for scalar slider bars
 			magcolor = new Color[numTypes]; //array of colors for magnetic slider bars
@@ -343,7 +349,6 @@ public class CommonStuff implements ChangeListener
 	/**
 	* Listens for moving slider bars.
 	*/
-	@Override
 	public void stateChanged(ChangeEvent e)//called when a slider bar is moved
 	{
 		isChanged = true;

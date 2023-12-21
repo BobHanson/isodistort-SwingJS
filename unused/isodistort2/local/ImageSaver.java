@@ -36,12 +36,10 @@ public class ImageSaver
 			fc = new JFileChooser();
 			fc.addChoosableFileFilter(new FileFilter()
 			{
-				@Override
 				public String getDescription()
 				{
 					return "*."+fileType;
 				}
-				@Override
 				public boolean accept(File f)
 				{
 				    if (f.isDirectory())

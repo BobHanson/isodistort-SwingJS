@@ -68,7 +68,10 @@ public abstract class IsoApp {
 	public final static int ELL = Mode.ELL; // ellipsoidal
 	
 	final static String minorVersion = ".7b"; 
+
 	
+	public long t0 = System.currentTimeMillis();
+
 	/**
 	 * The variables are all read. Time to do any app-specific 
 	 * initialization before we make the frame visible. 
@@ -231,7 +234,7 @@ public abstract class IsoApp {
 	/** False for datafile and True for html file */
 	protected boolean readMode = false;
 	/** The datafile to use when readMode is false */
-	protected String whichdatafile = "data/test28.txt";//"data/test28.txt";
+	protected String whichdatafile = "data/ZrP2O7-sg205-sg61-distort.isoviz";////"data/test28.txt";//"data/test28.txt";
 
 	protected JFrame frame;
 
@@ -389,9 +392,12 @@ public abstract class IsoApp {
 	private Object readFileData(String path) {
 
 		try {
+			long t = System.currentTimeMillis();
 			if (asBytes) {
+				// 33 ms to read 8 MB
 				BufferedInputStream bis = null;
 				try {
+					
 				File f = new File(path);
 				bis = new BufferedInputStream(new FileInputStream(f));
 				} catch (Exception e) {
@@ -406,37 +412,43 @@ public abstract class IsoApp {
 					return null;
 				}
 				bis.reset();
-				return FileUtil.getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
+				
+				
+				
+				byte[] bytes = FileUtil.getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
+				System.out.println("IsoApp.readFileData " + (System.currentTimeMillis() - t) + " ms for " + bytes.length + " bytes");
+				return bytes;
 			}
-					
-			BufferedReader br = null;
-			try {
-				br = new BufferedReader(new FileReader(path));
-			} catch (Exception e) {
-				Object data = getClass().getResource("/" + path).getContent();
-				br = new BufferedReader(new InputStreamReader((FilterInputStream) data));
 
-			}
-			long t = System.currentTimeMillis();
-			StringBuffer dataString = new StringBuffer();
-			dataString.append(readLineSkipComments(br));
-			if (dataString.indexOf("!isoversion") != 0) {
-				br.close();
-				return null;
-			}
-			dataString.append('\n');
-			String s;
-			while ((s = readLineSkipComments(br)) != null) {
-				dataString.append(s).append('\n');
-			}
-			br.close();
-			System.out.println("File " + path + "\nBytes read: " + dataString.length() + " in "+(System.currentTimeMillis() - t)+" ms");
-			return dataString.toString();
+//			// StringBuffer was 121 ms to read 8 MB
+//					
+//			BufferedReader br = null;
+//			try {
+//				br = new BufferedReader(new FileReader(path));
+//			} catch (Exception e) {
+//				Object data = getClass().getResource("/" + path).getContent();
+//				br = new BufferedReader(new InputStreamReader((FilterInputStream) data));
+//
+//			}
+//			StringBuffer dataString = new StringBuffer();
+//			dataString.append(readLineSkipComments(br));
+//			if (dataString.indexOf("!isoversion") != 0) {
+//				br.close();
+//				return null;
+//			}
+//			dataString.append('\n');
+//			String s;
+//			while ((s = readLineSkipComments(br)) != null) {
+//				dataString.append(s).append('\n');
+//			}
+//			br.close();
+//			System.out.println("IsoApp.readFileData " + (System.currentTimeMillis() - t) + " ms for " + dataString.length() + " bytes");
+//			return dataString.toString();
 		} catch (IOException exception) {
 			exception.printStackTrace();
 			System.out.println("Oops. File not found.");
-			return null;
 		}
+		return null;
 	}
 
 	private String readLineSkipComments(BufferedReader br) throws IOException {
@@ -667,7 +679,7 @@ public abstract class IsoApp {
 		consumer.accept(data);
 	}
 
-	String testData = "#isodistort_version_number \r\n" + "!isoversion 6.12\r\n" + "\r\n"
+	final static String testData = "#isodistort_version_number \r\n" + "!isoversion 6.12\r\n" + "\r\n"
 			+ "#atom_sphere_radius_in_angstroms \r\n" + "!atommaxradius    0.40000\r\n" + "\r\n"
 			+ "#angstroms_per_magneton \r\n" + "!angstromspermagneton    0.50000\r\n" + "\r\n"
 			+ "#angstroms_per_radian \r\n" + "!angstromsperradian    4.00000\r\n" + "\r\n"

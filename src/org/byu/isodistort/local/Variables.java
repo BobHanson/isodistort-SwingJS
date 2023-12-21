@@ -705,7 +705,7 @@ public class Variables {
 		 */
 		byte[] parse(Object data) {
 			try {
-				vt = new VariableTokenizer(data, !isSwitch);
+				vt = new VariableTokenizer(data, isSwitch ? VariableTokenizer.QUIET : VariableTokenizer.DEBUG_LOW);
 				
 				isoversion = getOneString("isoversion", null);
 

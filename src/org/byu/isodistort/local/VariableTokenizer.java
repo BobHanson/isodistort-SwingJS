@@ -147,6 +147,7 @@ public class VariableTokenizer {
 				bytes = new byte[0];
 			}
 		}
+		//verbosity = DEBUG_HIGH;
 		readBlocks(bytes, blockMap, verbosity);
 	}
 
@@ -405,6 +406,7 @@ public class VariableTokenizer {
 	private final static int STATE_EOL = 2;
 	private final static int STATE_KEY = 3;
 	private final static int STATE_VALUE = 4;
+	private final static int STATE_DONE = 5;
 
 	private static void readBlocks(byte[] bytes, Map<String, int[]> map, int verbosity) {
 		int dataStart = -1;
@@ -413,10 +415,10 @@ public class VariableTokenizer {
 		int pt = 0;
 		int n = bytes.length;
 		int state = STATE_EOL;
-		boolean isEnd = false;
 		String key = null;
 		boolean isVerbose = (verbosity != QUIET);
 		boolean verboseHigh = (verbosity == DEBUG_HIGH);
+		int endState = -1;
 		for (int i = 0; i < n; i++) {
 			byte b = bytes[i];
 			if (verboseHigh) {
@@ -434,7 +436,10 @@ public class VariableTokenizer {
 				switch (state) {
 				case STATE_KEY:
 				case STATE_VALUE:
-					isEnd = true;
+					endState = STATE_NONE;
+					break;
+				default:
+					state = STATE_NONE;
 					break;
 				}
 				break;
@@ -443,7 +448,7 @@ public class VariableTokenizer {
 				switch (state) {
 				case STATE_KEY:
 				case STATE_VALUE:
-					isEnd = true;
+					endState = STATE_EOL;
 					break;
 				default:
 					state = STATE_EOL;
@@ -454,7 +459,7 @@ public class VariableTokenizer {
 				switch (state) {
 				case STATE_KEY:
 				case STATE_VALUE:
-					isEnd = true;
+					endState = STATE_COMMENT;
 					break;
 				default:
 					state = STATE_COMMENT;
@@ -474,7 +479,7 @@ public class VariableTokenizer {
 				case STATE_VALUE:
 					// check for last char in stream closing value
 					if (i == n - 1) {
-						isEnd = true;
+						endState = STATE_DONE;
 						i++; // will break out
 						break;
 					}
@@ -483,7 +488,7 @@ public class VariableTokenizer {
 					continue;
 				}
 			}
-			if (isEnd) {
+			if (endState >= 0) {
 				// process end-of-key or end-of-value
 				switch (state) {
 				case STATE_KEY:
@@ -499,6 +504,8 @@ public class VariableTokenizer {
 						pointers = new int[65]; // capacity for 32 values
 						pt = 1;
 						map.put(key, pointers);
+						if (key.equals("appletwidth"))
+							System.out.println("???");
 					}
 
 					if (isVerbose)
@@ -519,8 +526,8 @@ public class VariableTokenizer {
 					break;
 				}
 				// end of key or value
-				state = (b == '#' ? STATE_COMMENT : STATE_NONE);
-				isEnd = false;
+				state = endState;
+				endState = -1;
 			}
 		}
 	}

@@ -3,8 +3,8 @@
 
 package org.byu.isodistort.render;
 
-import org.byu.isodistort.local.Matrix;
 import org.byu.isodistort.local.MathUtil;
+import org.byu.isodistort.local.Matrix;
 
 /**
  * Provides the computational functionality to render geometric objects in
@@ -13,7 +13,7 @@ import org.byu.isodistort.local.MathUtil;
  * @author Ken Perlin 2001
  */
 
-public class Renderer {
+class Renderer {
 
 	//String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
@@ -98,7 +98,7 @@ public class Renderer {
 	 * @param height
 	 * @param pixels
 	 */
-	public void reinit(int width, int height, int[] pixels) {
+	void reinit(int width, int height, int[] pixels) {
 		this.W = width;
 		this.H = height;
 		pix = pixels;
@@ -151,7 +151,7 @@ public class Renderer {
 	 * @param value field of view
 	 */
 	void setFOV(double value) {
-		FOV = value;
+		fov = value;
 	}
 
 	/**
@@ -160,7 +160,7 @@ public class Renderer {
 	 * @return value field of view
 	 */
 	double getFOV() {
-		return FOV;
+		return fov;
 	}
 
 	/**
@@ -254,7 +254,7 @@ public class Renderer {
 	 * @param theta horizontal angle (radians)
 	 * @param phi   vertical angle (radians)
 	 */
-	public synchronized void setCamera(double t, double p) {
+	synchronized void setCamera(double t, double p) {
 		Matrix.identity(camera);
 		theta = t;
 		phi = p;
@@ -403,8 +403,11 @@ public class Renderer {
 		return epsilonPlane;
 	}
 
+	
+	long t0;
 	/**
-	 * Render the entire world for this frame.
+	 * Render the entire world for 
+	 * this frame.
 	 */
 	synchronized void render() {
 
@@ -416,96 +419,119 @@ public class Renderer {
 
 		// inverseCamera.invert(camera);
 
-		if (isAnaglyph) {
-			anaglyphEye = 0;
-			if (isOutline)
-				isAnaglyph = false;
-			refresh();
-			clearScreen();
-			isAnaglyph = true;
-			cX = -.1 * FL;
-			renderWorld();
-			if (isOutline)
-				convertToOutline();
-
-			anaglyphEye = 1;
-			cX = .1 * FL;
-			refresh();
-			clearScreen();
-			renderWorld();
-			if (isOutline)
-				convertToOutline();
-		} else {
+//		if (isAnaglyph) {
+//			anaglyphEye = 0;
+//			if (isOutline)
+//				isAnaglyph = false;
+//			refresh();
+//			clearScreen();
+//			isAnaglyph = true;
+//			cX = -.1 * FL;
+//			renderWorld();
+//			if (isOutline)
+//				convertToOutline();
+//
+//			anaglyphEye = 1;
+//			cX = .1 * FL;
+//			refresh();
+//			clearScreen();
+//			renderWorld();
+//			if (isOutline)
+//				convertToOutline();
+//		} else {
+		
+//		long t = System.currentTimeMillis();
 			clearScreen(); // BLANK OUT RESULTS FROM PREVIOUS FRAME
+		long t1 = System.currentTimeMillis();
 			renderWorld(); // RENDER EVERYTHING IN SCENE
-			if (isOutline)
-				convertToOutline();
+			
+		long t2 = System.currentTimeMillis();
+		
+		report("R:" + (t2-t1));
+		//System.out.println("RT ntri=" + ntri + " " + (t1 - t0) + " " + (t1 - t) + " " + (t2 - t1));
+
+		ntri = 0;
+		t0 = t2;
+//			if (isOutline)
+//				convertToOutline();
+//			
+//		}
+
+	}
+
+//	void convertToOutline() {
+//		int zn, z0, zp, dz1, dz2;
+//		for (int y = Math.max(1, TOP); y < Math.min(BOTTOM, H - 1); y++)
+//			for (int x = Math.max(1, LEFT); x < Math.min(RIGHT, W - 1); x++) {
+//				int i = xy2i(x, y);
+//
+//				zn = zbuffer[i - 1];
+//				z0 = zbuffer[i];
+//				zp = zbuffer[i + 1];
+//				dz1 = Math.abs(z0 - zn);
+//				dz2 = Math.abs(zp - z0);
+//				if (dz1 > 20 * dz2 || dz2 > 20 * dz1)
+////					if (isAnaglyph)
+////						pack(pix, i, 0, 0, 0);
+////					else
+//						pix[i] = black;
+//				else {
+//					boolean isEdge = edge(pix[i], pix[i + 1]) + edge(pix[i], pix[i + W]) > threshold;
+////					if (isAnaglyph) {
+////						int c = isEdge ? 0 : 255 + (anaglyphEye == 0 ? getR(pix[i]) : getG(pix[i])) >> 1;
+////						pack(pix, i, c, c, c);
+////					} else
+//						pix[i] = isEdge ? black : whiten(pix[i]);
+//				}
+//			}
+//	}
+//
+//	int whiten(int packed) {
+//		return packed == white ? white : 0xff000000 | ((0xfefefe & packed) >> 1) + 0x7f7f7f;
+//	}
+//
+//	/**
+//	 * Returns the outline threshold parameter for sketch-like (artistic) rendition
+//	 * of the scene.
+//	 */
+//	double getOutline() {
+//		return outline_t;
+//	}
+//
+//	/**
+//	 * Thresholds t to produce a sketch-like (artistic) rendition of the scene.
+//	 * 
+//	 * @param t outline threshold
+//	 */
+//	void outline(double t) {
+//		outline_t = t;
+////		isOutline = (t > 0);
+////		if (isOutline)
+////			threshold = (int) (256 * t * t);
+//		refresh();
+//	}
+//
+//	private int edge(int p, int q) {
+//		int dr = getR(p) - getR(q), dg = getG(p) - getG(q), db = getB(p) - getB(q);
+////		if (isAnaglyph)
+////			switch (anaglyphEye) {
+////			case 0:
+////				return 3 * dr * dr;
+////			case 1:
+////				return 3 * dg * dg;
+////			}
+//		return dr * dr + dg * dg + db * db;
+//	}
+
+	private void report(String string) {
+		/**
+		 * @j2sNative
+		 * 
+		 * document.title = string + " " + C$.ntri;
+		 */
+		{
+			System.out.println("Renderer.report  " + string);
 		}
-
-	}
-
-	void convertToOutline() {
-		int zn, z0, zp, dz1, dz2;
-		for (int y = Math.max(1, TOP); y < Math.min(BOTTOM, H - 1); y++)
-			for (int x = Math.max(1, LEFT); x < Math.min(RIGHT, W - 1); x++) {
-				int i = xy2i(x, y);
-
-				zn = zbuffer[i - 1];
-				z0 = zbuffer[i];
-				zp = zbuffer[i + 1];
-				dz1 = Math.abs(z0 - zn);
-				dz2 = Math.abs(zp - z0);
-				if (dz1 > 20 * dz2 || dz2 > 20 * dz1)
-					if (isAnaglyph)
-						pack(pix, i, 0, 0, 0);
-					else
-						pix[i] = black;
-				else {
-					boolean isEdge = edge(pix[i], pix[i + 1]) + edge(pix[i], pix[i + W]) > threshold;
-					if (isAnaglyph) {
-						int c = isEdge ? 0 : 255 + (anaglyphEye == 0 ? getR(pix[i]) : getG(pix[i])) >> 1;
-						pack(pix, i, c, c, c);
-					} else
-						pix[i] = isEdge ? black : whiten(pix[i]);
-				}
-			}
-	}
-
-	int whiten(int packed) {
-		return packed == white ? white : 0xff000000 | ((0xfefefe & packed) >> 1) + 0x7f7f7f;
-	}
-
-	/**
-	 * Returns the outline threshold parameter for sketch-like (artistic) rendition
-	 * of the scene.
-	 */
-	double getOutline() {
-		return outline_t;
-	}
-
-	/**
-	 * Thresholds t to produce a sketch-like (artistic) rendition of the scene.
-	 * 
-	 * @param t outline threshold
-	 */
-	void outline(double t) {
-		outline_t = t;
-		isOutline = (t > 0);
-		if (isOutline)
-			threshold = (int) (256 * t * t);
-		refresh();
-	}
-
-	private int edge(int p, int q) {
-		int dr = getR(p) - getR(q), dg = getG(p) - getG(q), db = getB(p) - getB(q);
-		if (isAnaglyph)
-			switch (anaglyphEye) {
-			case 0:
-				return 3 * dr * dr;
-			case 1:
-				return 3 * dg * dg;
-			}
-		return dr * dr + dg * dg + db * db;
 	}
 
 	/**
@@ -532,8 +558,8 @@ public class Renderer {
 		return (int) (255 * t) & 255;
 	}
 
-	boolean isAnaglyph = false;
-	int anaglyphEye = 0;
+//	boolean isAnaglyph = false;
+//	int anaglyphEye = 0;
 
 //PACK RGB INTO ONE WORD
 
@@ -542,22 +568,22 @@ public class Renderer {
 //	}
 
 	private void pack(int px[], int i, int r, int g, int b) {
-		if (isAnaglyph) {
-			int c = r / 4 + g / 2 + b / 4 & 255;
-			switch (anaglyphEye) {
-			case 0:
-				px[i] = 0xff000000 | c << 16 | px[i] & 0x0000ffff;
-				break;
-			case 1:
-				px[i] = 0xff000000 | px[i] & 0x00ff0000 | c << 8 | c;
-				break;
-			}
-		} else
-			px[i] = r << 16 | g << 8 | b | 0xff000000;
+//		if (isAnaglyph) {
+//			int c = r / 4 + g / 2 + b / 4 & 255;
+//			switch (anaglyphEye) {
+//			case 0:
+//				px[i] = 0xff000000 | c << 16 | px[i] & 0x0000ffff;
+//				break;
+//			case 1:
+//				px[i] = 0xff000000 | px[i] & 0x00ff0000 | c << 8 | c;
+//				break;
+//			}
+//		} else
+			px[i] = r << 16 | g << 8 | b /*| 0xff000000*/;
 	}
 
 	private static int toRGB(int r, int g, int b) {
-		return r << 16 | g << 8 | b | 0xff000000;
+		return r << 16 | g << 8 | b /*| 0xff000000*/;
 	}
 
 //UNPACK RGB OUT OF ONE WORD
@@ -568,28 +594,28 @@ public class Renderer {
 //		rgb[2] = (packed) & 255;
 //	}
 
-	private static int getR(int packed) {
-		return (packed >> 16) & 255;
-	}
-
-	private static int getG(int packed) {
-		return (packed >> 8) & 255;
-	}
-
-	private static int getB(int packed) {
-		return (packed) & 255;
-	}
-
+//	private static int getR(int packed) {
+//		return (packed >> 16) & 255;
+//	}
+//
+//	private static int getG(int packed) {
+//		return (packed >> 8) & 255;
+//	}
+//
+//	private static int getB(int packed) {
+//		return (packed) & 255;
+//	}
+//
 //FILL A RECTANGLE WITH A COLOR
 
 	private void fill(int x, int y, int w, int h, int packed) {
 		for (int Y = y; Y < y + h; Y++) {
 			int i = xy2i(x, Y);
-			if (isAnaglyph) {
-				int r = getR(packed), g = getG(packed), b = getB(packed);
-				for (int X = x; X < x + w; X++)
-					pack(pix, i++, r, g, b);
-			} else
+//			if (isAnaglyph) {
+//				int r = getR(packed), g = getG(packed), b = getB(packed);
+//				for (int X = x; X < x + w; X++)
+//					pack(pix, i++, r, g, b);
+//			} else
 				for (int X = x; X < x + w; X++)
 					pix[i++] = packed;
 		}
@@ -610,7 +636,9 @@ public class Renderer {
 		int T = TOP = Math.max(TOP, 0);
 		int B = BOTTOM = Math.min(BOTTOM, H - 1);
 
-		fill(L, T, 1 + R - L, 1 + B - T, isOutline ? white : bgColor);
+		fill(L, T, 1 + R - L, 1 + B - T, 
+				//isOutline ? white : 
+					bgColor);
 
 		if (zbuffer == null)
 			zbuffer = new int[W * H];
@@ -909,28 +937,49 @@ public class Renderer {
 
 //CENTER OF PROJECTION
 
-	void setCx(double x) {
-		cX = x;
+//	void setCx(double x) {
+//		cX = x;
+//	}
+//
+//	void setCy(double y) {
+//		cY = y;
+//	}
+//
+//	double getCx() {
+//		return cX;
+//	}
+//
+//	double getCy() {
+//		return cY;
+//	}
+//
+//	// Permanently 
+	final double cX = 0.0, cY = 0.0;
+//
+	/**
+	 * set to true to removed all perspective
+	 */
+	private boolean isOrthographic = true; // our default for isoviz
+
+	/**
+	 * Turn perspective on or off
+	 * @param b true for perspective
+	 */
+	void setPerspective(boolean b) {
+		isOrthographic = !b;
 	}
-
-	void setCy(double y) {
-		cY = y;
-	}
-
-	double getCx() {
-		return cX;
-	}
-
-	double getCy() {
-		return cY;
-	}
-
-	private double cX = 0.0, cY = 0.0;
-
+	
 	void projectPoint(double v[]) {
-		v[2] = 1 / (FL - v[2]);
-		v[0] = W / 2 + W * (cX / FL + v[2] * (v[0] - cX)) / FOV;
-		v[1] = H / 2 - W * (cY / FL + v[2] * (v[1] - cY)) / FOV;
+		// FL = 10, fov = 0.0254 // cX and cY are always 0
+		if (isOrthographic) {
+			v[0] = W / 2 + W * v[0] / (fov * FL);
+			v[1] = H / 2 - W * v[1] / (fov * FL);
+			v[2] = 1 / (FL - v[2]);
+		} else {
+//		v[2] = 1 / (FL - v[2]);
+//		v[0] = W / 2 + W * (cX / FL + v[2] * (v[0] - cX)) / fov;
+//		v[1] = H / 2 - W * (cY / FL + v[2] * (v[1] - cY)) / fov;
+		}
 		return;
 	}
 
@@ -954,133 +1003,118 @@ public class Renderer {
 	}
 
 	private void fillAndClipTriangle(Geometry s, int iA, int iB, int iC) {
-		int clipping = 0;
+		fillTriangle(s, iA, iB, iC);		
+//		int clipping = 0;
+//
+//		if (t1[iA][2] + epsilonPlane > FL)
+//			clipping += 1;
+//		if (t1[iB][2] + epsilonPlane > FL)
+//			clipping += 2;
+//		if (t1[iC][2] + epsilonPlane > FL)
+//			clipping += 4;
 
-		if (t1[iA][2] + epsilonPlane > FL)
-			clipping += 1;
-		if (t1[iB][2] + epsilonPlane > FL)
-			clipping += 2;
-		if (t1[iC][2] + epsilonPlane > FL)
-			clipping += 4;
-
-		switch (clipping) {
-		case (0):
-			// render entire triangle
-			fillTriangle(s, iA, iB, iC);
-			break;
-		case (7):
-			// entire triangle clipped
-			return;
-		case (1):
-			clip1Vert(s, iA, iB, iC);
-			break;
-		case (2):
-			clip1Vert(s, iB, iA, iC);
-			break;
-		case (4):
-			clip1Vert(s, iC, iA, iB);
-			break;
-		case (3):
-			clip2Vert(s, iA, iB, iC);
-			break;
-		case (5):
-			clip2Vert(s, iA, iC, iB);
-			break;
-		case (6):
-			clip2Vert(s, iB, iC, iA);
-			break;
-		}
-
+//		switch (clipping) {
+//		case (0):
+//			// render entire triangle
+//		fillTriangle(s, iA, iB, iC);		
+//   	break;
+//		case (7):
+//			// entire triangle clipped
+//			return;
+//		case (1):
+//			clip1Vert(s, iA, iB, iC);
+//			break;
+//		case (2):
+//			clip1Vert(s, iB, iA, iC);
+//			break;
+//		case (4):
+//			clip1Vert(s, iC, iA, iB);
+//			break;
+//		case (3):
+//			clip2Vert(s, iA, iB, iC);
+//			break;
+//		case (5):
+//			clip2Vert(s, iA, iC, iB);
+//			break;
+//		case (6):
+//			clip2Vert(s, iB, iC, iA);
+//			break;
+//		}
+//
 	}
 
-	private void clip1Vert(Geometry s, int clip, int b, int c) {
-
-		double[] n1 = new double[s.verticedepth];
-		double[] n2 = new double[s.verticedepth];
-
-		clip(n1, t1[clip], t1[b]);
-		clip(n2, t1[clip], t1[c]);
-
-		perspective(n1, tv1);
-		perspective(n2, tv2);
-
-		n1 = s.vertices[clip];
-		renderVertex(s, n1, tv1);
-
-		n2 = s.vertices[clip];
-		renderVertex(s, n2, tv2);
-
-		renderVertex(s, b);
-		renderVertex(s, c);
-
-		fillTriangle(s, tv1, t[b], t[c]);
-		fillTriangle(s, tv1, tv2, t[c]);
-
-	}
-
-	private void clip2Vert(Geometry s, int clip1, int clip2, int c) {
-		// 1. compute vertices
-		// 2. do perspective transform
-		// 3. render with material
-		// 4. fill triangle
-
-		double[] n1 = new double[s.verticedepth];
-		double[] n2 = new double[s.verticedepth];
-
-		clip(n1, t1[clip1], t1[c]);
-		clip(n2, t1[clip2], t1[c]);
-
-		perspective(n1, tv1);
-		perspective(n2, tv2);
-
-		n1 = s.vertices[clip1];
-		renderVertex(s, n1, tv1);
-
-		n2 = s.vertices[clip2];
-		renderVertex(s, n2, tv2);
-
-		renderVertex(s, c);
-
-		fillTriangle(s, tv1, tv2, t[c]);
-
-	}
+//	private void clip1Vert(Geometry s, int clip, int b, int c) {
+//
+//		double[] n1 = new double[s.verticedepth];
+//		double[] n2 = new double[s.verticedepth];
+//
+//		clip(n1, t1[clip], t1[b]);
+//		clip(n2, t1[clip], t1[c]);
+//
+//		perspective(n1, tv1);
+//		perspective(n2, tv2);
+//
+//		n1 = s.vertices[clip];
+//		renderVertex(s, n1, tv1);
+//
+//		n2 = s.vertices[clip];
+//		renderVertex(s, n2, tv2);
+//
+//		renderVertex(s, b);
+//		renderVertex(s, c);
+//
+//		fillTriangle(s, tv1, t[b], t[c]);
+//		fillTriangle(s, tv1, tv2, t[c]);
+//
+//	}
+//
+//	private void clip2Vert(Geometry s, int clip1, int clip2, int c) {
+//		// 1. compute vertices
+//		// 2. do perspective transform
+//		// 3. render with material
+//		// 4. fill triangle
+//
+//		double[] n1 = new double[s.verticedepth];
+//		double[] n2 = new double[s.verticedepth];
+//
+//		clip(n1, t1[clip1], t1[c]);
+//		clip(n2, t1[clip2], t1[c]);
+//
+//		perspective(n1, tv1);
+//		perspective(n2, tv2);
+//
+//		n1 = s.vertices[clip1];
+//		renderVertex(s, n1, tv1);
+//
+//		n2 = s.vertices[clip2];
+//		renderVertex(s, n2, tv2);
+//
+//		renderVertex(s, c);
+//
+//		fillTriangle(s, tv1, tv2, t[c]);
+//
+//	}
 
 //	private static double lerp(double t, double a, double b) {
 //		return a + t * (b - a);
 //	}
 
-	private void clip(double[] n, double[] a, double[] b) {
-		n[2] = FL - epsilonPlane;
-
-		for (int i = 0; i < 2; i++) {
-			n[i] = ((b[i] - a[i]) / (b[2] - a[2])) * (FL - epsilonPlane - a[2]) + a[i];
-		}
-
-		if (a.length > 6) {
-			double t = (b[2] - n[2]) / (b[2] - a[2]);
-			for (int i = 6; i < a.length; i++) {
-				n[i] = b[i] - t * (b[i] - a[i]);
-				n[i] = n[i];
-			}
-		}
-	}
-
-	private void perspective(double v[], int tv[]) {
-
-		double pz = 1 / (FL - v[2]);
-		ti[0] = W / 2 + W * (cX / FL + pz * (v[0] - cX)) / FOV;
-		ti[1] = H / 2 - W * (cY / FL + pz * (v[1] - cY)) / FOV;
-		ti[2] = pz * (1 << 31 - NB);
-
-		for (int j = 0; j < 3; j++)
-			tv[j] = (int) ti[j] << NB;
-
-		for (int j = 6; j < v.length; j++) {
-			tv[j] = (int) (v[j] * pz * (1 << 31 - NB));
-		}
-
-	}
-
+//	private void clip(double[] n, double[] a, double[] b) {
+//		n[2] = FL - epsilonPlane;
+//
+//		for (int i = 0; i < 2; i++) {
+//			n[i] = ((b[i] - a[i]) / (b[2] - a[2])) * (FL - epsilonPlane - a[2]) + a[i];
+//		}
+//
+//		if (a.length > 6) {
+//			double t = (b[2] - n[2]) / (b[2] - a[2]);
+//			for (int i = 6; i < a.length; i++) {
+//				n[i] = b[i] - t * (b[i] - a[i]);
+//				n[i] = n[i];
+//			}
+//		}
+//	}
+//
 	private void renderVertex(Geometry s, int i) {
 
 		if (t[i][3] != UNRENDERED)
@@ -1106,28 +1140,31 @@ public class Renderer {
 		return;
 	}
 
-	private void renderVertex(Geometry s, double[] v, int[] tv) {
-
-		double nn[] = normal;
-
-		normat.rotate(v[3], v[4], v[5], nn);
-		MathUtil.normalize(nn);
-		for (int j = 0; j < 3; j++)
-			ti[j + 3] = nn[j];
-
-		renderVertex(ti, s.material);
-
-		for (int j = 3; j < 6; j++)
-			tv[j] = (int) ti[j] << NB;
-
-		/*
-		 * for (int j=6; j< s.verticedepth; j++) { ti[j] = v[j]; double mt = (ti[j] * (1
-		 * << 31 -NB)); tv[j] = (int) mt; }
-		 */
-	}
-
+//	private void renderVertex(Geometry s, double[] v, int[] tv) {
+//
+//		double nn[] = normal;
+//
+//		normat.rotate(v[3], v[4], v[5], nn);
+//		MathUtil.normalize(nn);
+//		for (int j = 0; j < 3; j++)
+//			ti[j + 3] = nn[j];
+//
+//		renderVertex(ti, s.material);
+//
+//		for (int j = 3; j < 6; j++)
+//			tv[j] = (int) ti[j] << NB;
+//
+//		/*
+//		 * for (int j=6; j< s.verticedepth; j++) { ti[j] = v[j]; double mt = (ti[j] * (1
+//		 * << 31 -NB)); tv[j] = (int) mt; }
+//		 */
+//	}
+//
+	public static int ntri = 0;
+	
 	private void fillTriangle(Geometry s, int iA, int iB, int iC) {
 
+		//ntri++;
 		int A[] = t[iA], B[] = t[iB], C[] = t[iC];
 
 		renderVertex(s, iA);
@@ -1433,34 +1470,36 @@ public class Renderer {
 //WHEN DOING SHINY CALCULATION). -KEN
 
 //	private static double v[] = { 0, 0, 0, 0, 0, 0 };
-
-	/**
-	 * Renders vertex i ( packed x,y,z) with material m.
-	 * 
-	 * @param i vertex to be rendered
-	 * @param m material properties to be applied to the vertex
-	 */
-	void renderVertex(int i, Material m) {
-
-		if (!tableMode || !m.tableMode)
-			return;
-
-		int izx = i >> m.resP;
-		int iz = izx >> m.resP;
-		int ix = izx & m.res - 1;
-		int iy = i & m.res - 1;
-
-		int n = 1 << m.resP - 1;
-
-		double x = (double) (ix - n) / (n - 1);
-		double y = -(double) (iy - n) / (n - 1);
-		double z = (iz == 0 ? 1 : -1) * Math.sqrt(1 - x * x - y * y);
-		m.v[3] = x;
-		m.v[4] = y;
-		m.v[5] = z;
-		renderVertex(ix, iy, iz, x, y, z, m.v, m);
-	}
-
+//
+//	/**
+//	 * Renders vertex i ( packed x,y,z) with material m.
+//	 * 
+//	 * @param i vertex to be rendered
+//	 * @param m material properties to be applied to the vertex
+//	 */
+//	void renderVertex(int i, Material m) {
+//
+//		ntri++;
+//		
+//		if (!tableMode || !m.tableMode)
+//			return;
+//
+//		int izx = i >> m.resP;
+//		int iz = izx >> m.resP;
+//		int ix = izx & m.res - 1;
+//		int iy = i & m.res - 1;
+//
+//		int n = 1 << m.resP - 1;
+//
+//		double x = (double) (ix - n) / (n - 1);
+//		double y = -(double) (iy - n) / (n - 1);
+//		double z = (iz == 0 ? 1 : -1) * Math.sqrt(1 - x * x - y * y);
+//		m.v[3] = x;
+//		m.v[4] = y;
+//		m.v[5] = z;
+//		renderVertex(ix, iy, iz, x, y, z, m.v, m);
+//	}
+//
 	/**
 	 * Renders vertex v with material m, if table mode is enabled the data is just
 	 * looked up in the material's table, otherwise it is computed.
@@ -1473,18 +1512,21 @@ public class Renderer {
 			v[3] = v[4] = v[5] = 0;
 			return;
 		}
+		
+	ntri++;
+	
 		double x = v[3], y = v[4], z = v[5];
 		int ix = 0, iy = 0, iz = 0;
 
-		if (m.anisotropic) {
-			double a2[] = { x, y, z };
-			double a3[] = { 0, 0, 0 };
-			MathUtil.cross(a1, a2, a3);
-			MathUtil.normalize(a3);
-			x = a3[0];
-			y = a3[1];
-			z = a3[2];
-		}
+//		if (m.anisotropic) {
+//			double a2[] = { x, y, z };
+//			double a3[] = { 0, 0, 0 };
+//			MathUtil.cross(a1, a2, a3);
+//			MathUtil.normalize(a3);
+//			x = a3[0];
+//			y = a3[1];
+//			z = a3[2];
+//		}
 
 		// NORMAL LOOKUP MAP
 
@@ -1496,11 +1538,8 @@ public class Renderer {
 			int packed = m.getTable(ix, iy, iz);
 			if (packed != 0) {
 				v[3] = (packed >> 16) & 255;
-				;
 				v[4] = (packed >> 8) & 255;
-				;
 				v[5] = (packed) & 255;
-				;
 				return;
 			}
 			x = (double) (ix - n) / (n - 1);
@@ -1529,8 +1568,8 @@ public class Renderer {
 			t = L[0] * x + L[1] * y + L[2] * z;
 			if (D[3] != 1)
 				t = Math.pow(.5 + .5 * t, D[3]) * 2 - 1;
-			if (m.anisotropic)
-				t = Math.sqrt(1 - t * t);
+//			if (m.anisotropic)
+//				t = Math.sqrt(1 - t * t);
 			t = Math.max(0, t);
 // BH removed			if (m.noiseA != 0)
 //				t *= noiseTexture(m, x, y, z);
@@ -1539,15 +1578,15 @@ public class Renderer {
 			bD += L[5] * t;
 
 			if (isSpecular) {
-				if (m.anisotropic) {
-					double a1[] = { L[0], L[1], L[2] + 2 };
-					MathUtil.normalize(a1);
-					double a2[] = { x, y, z };
-					t = MathUtil.matmul(a1, a2);
-					t = Math.sqrt(1 - t * t);
-					double dp = L[0] * v[3] + L[1] * v[4] + L[2] * v[5];
-					t = Math.max(0, dp * t);
-				} else
+//				if (m.anisotropic) {
+//					double a1[] = { L[0], L[1], L[2] + 2 };
+//					MathUtil.normalize(a1);
+//					double a2[] = { x, y, z };
+//					t = MathUtil.matmul(a1, a2);
+//					t = Math.sqrt(1 - t * t);
+//					double dp = L[0] * v[3] + L[1] * v[4] + L[2] * v[5];
+//					t = Math.max(0, dp * t);
+//				} else
 					t = computeFastHilite(x, y, z, L);
 				if (t > 0) {
 					t = Math.pow(t, S[3]);
@@ -1638,7 +1677,7 @@ public class Renderer {
 	private int[] pix; // THE FRAME BUFFER (actual integer pixel buffer in image)
 
 	private double FL = 10; // FOCAL LENGTH OF VIEW
-	private double FOV = 1; // FIELD OF VIEW
+	private double fov = 1; // FIELD OF VIEW
 	private Geometry world; // THE ROOT OF THE GEOMETRY TREE
 	int W; // THE RESOLUTION OF THE IMAGE
 
@@ -1670,13 +1709,18 @@ public class Renderer {
 	private int nLights = 0; // NUM. OF LIGHT SOURCES DEFINED
 	private double light[][] = new double[20][6]; // DATA FOR LIGHTS
 	private boolean dragging = false;
-	private boolean isOutline = false;
-	private int threshold = 256;
-	private double outline_t = -1;
-	private int black = toRGB(0, 0, 0), white = toRGB(255, 255, 255);
+//	private boolean isOutline = false;
+//	private int threshold = 256;
+//	private double outline_t = -1;
+	//private int black = toRGB(0, 0, 0), 
+	//private int white = toRGB(255, 255, 255);
 
 	private double cameraPos[] = { 0., 0., FL }; // camera position
 	private double cameraAim[] = { 0., 0., 0. }; // look at point
 	private double cameraUp[] = { 0., 1., 0. }; // camera up vector
+
+	boolean isOrthographic() {
+		return isOrthographic;
+	}
 
 }

@@ -17,12 +17,15 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -58,6 +61,12 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
+	public final static int DIS = Mode.DIS; // displacive
+	public final static int OCC = Mode.OCC; // occupancy (aka "scalar")
+	public final static int MAG = Mode.MAG; // magnetic
+	public final static int ROT = Mode.ROT; // rotational
+	public final static int ELL = Mode.ELL; // ellipsoidal
+	
 	final static String minorVersion = ".7b"; 
 	
 	/**
@@ -122,7 +131,7 @@ public abstract class IsoApp {
 	private static final int controlPanelHeight = 55;
 	private final static int roomForScrollBar = 15;
 	
-	protected String[] args;
+	protected Object[] args;
 
 	private IsoApp[] appSettings = new IsoApp[2];
 
@@ -218,7 +227,7 @@ public abstract class IsoApp {
 	/** An instance of the Variables class that holds all the input data */
 	protected Variables variables;
 	/** A string containing all of the input data */
-	protected String isoData = "";
+	protected Object isoData = "";
 	/** False for datafile and True for html file */
 	protected boolean readMode = false;
 	/** The datafile to use when readMode is false */
@@ -347,13 +356,16 @@ public abstract class IsoApp {
 	}
 
 	/**
-	 * This data reader has two modes of operation. For data files, it uses a
-	 * buffered reader to get the data into a single string. The alternative is to
-	 * read a single-string data sequence directly from the html file that calls the
-	 * applet (injected as isoData). The Variables class then has a method that
-	 * parses this string.
+	 * This data reader has two modes of operatinon.
+	 * 
+	 * For data files, it can accept byte[], String, or InputStream data.
+	 * 
+	 * The alternative is to read a single-string data sequence directly from the
+	 * html file that calls the app (injected as isoData).
+	 * 
+	 * The Variables class then has a method that parses the byte[] representation of the string.
 	 */
-	protected String readFile() {
+	protected Object readFile() {
 		switch (args == null ? 0 : args.length) {
 		case 3:
 			document = args[2];
@@ -372,8 +384,31 @@ public abstract class IsoApp {
 		return isoData;
 	}
 
-	private String readFileData(String path) {
+	boolean asBytes = true;
+	//boolean asInputStream = true;
+	private Object readFileData(String path) {
+
 		try {
+			if (asBytes) {
+				BufferedInputStream bis = null;
+				try {
+				File f = new File(path);
+				bis = new BufferedInputStream(new FileInputStream(f));
+				} catch (Exception e) {
+					bis = new BufferedInputStream((InputStream) getClass().getResource("/" + path).getContent());
+				}
+				bis.mark(200);
+				byte[] header = new byte[200];
+				bis.read(header);
+				String s = new String(header);
+				if (s.indexOf("!isoversion") < 0) {
+					bis.close();
+					return null;
+				}
+				bis.reset();
+				return FileUtil.getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
+			}
+					
 			BufferedReader br = null;
 			try {
 				br = new BufferedReader(new FileReader(path));
@@ -432,7 +467,7 @@ public abstract class IsoApp {
 		default:
 			return false;
 		}
-		String data = readFileData(f.getAbsolutePath());
+		Object data = readFileData(f.getAbsolutePath());
 		if (data == null)
 			return false;
 		boolean isIsoDistort = (appType == APP_ISODISTORT);
@@ -456,7 +491,7 @@ public abstract class IsoApp {
 
 	}
 
-	private void openApplication(int appType, String data, boolean isDrop) {
+	private void openApplication(int appType, Object data, boolean isDrop) {
 		if (data == null)
 			return;
 		if (!prepareToSwapOut())
@@ -466,7 +501,7 @@ public abstract class IsoApp {
 			boolean isIsoDistort = (appType == APP_ISODISTORT);
 			IsoApp app = (isIsoDistort ? new IsoDistortApp() : new IsoDiffractApp());
 			if (args == null || args.length == 0)
-				args = new String[1];
+				args = new Object[1];
 			args[0] = data;
 			JFrame frame = me.frame;
 			dispose();
@@ -533,7 +568,7 @@ public abstract class IsoApp {
 		
 	};
 	
-	private void start(JFrame frame, String[] args, Variables oldVariables, boolean isDrop) {
+	private void start(JFrame frame, Object[] args, Variables oldVariables, boolean isDrop) {
 		if (oldVariables == null && !isDrop)
 			frame.setJMenuBar((JMenuBar) new MenuActions(this).createMenuBar());			
 		this.frame = frame;
@@ -544,7 +579,8 @@ public abstract class IsoApp {
 			long t = System.currentTimeMillis();
 
 			initializePanels();
-			variables = new Variables(this, readFile(), appType == APP_ISODIFFRACT, oldVariables != null);
+			variables = new Variables(this, appType == APP_ISODIFFRACT, oldVariables != null);
+			isoData = variables.parse(readFile());
 			if (oldVariables == null) {
 				frameContentPane.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
 			} else {
@@ -625,8 +661,8 @@ public abstract class IsoApp {
 	 * 
 	 * @param consumer in case we need to go asynchronous on this.
 	 */
-	public void getData(Consumer<String> consumer) {
-		String data = isoData;
+	public void getData(Consumer<Object> consumer) {
+		Object data = isoData;
 		// just the original data so far. 
 		consumer.accept(data);
 	}
@@ -1010,10 +1046,10 @@ public abstract class IsoApp {
 		Object mapFormData = ServerUtil.json2Map(formData);
 		variables.updateFormData(mapFormData);
 		
-		getData(new Consumer<String>() {
+		getData(new Consumer<Object>() {
 
 			@Override
-			public void accept(String data) {
+			public void accept(Object data) {
 				FileUtil.saveDataFile(frame, data, "isoviz", false);
 				
 			}
@@ -1022,10 +1058,10 @@ public abstract class IsoApp {
 	}
 
 	public void saveOriginal() {
-		getData(new Consumer<String>() {
+		getData(new Consumer<Object>() {
 
 			@Override
-			public void accept(String data) {
+			public void accept(Object data) {
 				FileUtil.saveDataFile(frame, data, "isoviz", false);
 				
 			}

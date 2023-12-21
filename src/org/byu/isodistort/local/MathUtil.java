@@ -152,7 +152,7 @@ public class MathUtil {
 	 * @param src2 original vector 2; if null, then this is a scalar addition
 	 * @param dst  output vector
 	 */
-	public static void vecadd(double[] src1, double[] src2, double const2, double[] dst) {
+	public static void vecadd(double[] src1, double const2, double[] src2, double[] dst) {
 		if (src2 == null) {
 			for (int i = src1.length; --i >= 0;)
 				dst[i] = src1[i] + const2;			
@@ -259,17 +259,20 @@ public class MathUtil {
 	 * 
 	 * @param voigt is the voigt form of the tensor
 	 * @param mat   input matrix
+	 * @param mXX   set to one for "plus identity"
+	 * @param return mat[][]
 	 */
-	public static void voigt2matrix(double voigt[], double mat[][]) {
-		mat[0][0] = voigt[0];
-		mat[1][1] = voigt[1];
-		mat[2][2] = voigt[2];
-		mat[1][2] = 0.5 * voigt[3];
-		mat[2][1] = 0.5 * voigt[3];
-		mat[0][2] = 0.5 * voigt[4];
-		mat[2][0] = 0.5 * voigt[4];
-		mat[0][1] = 0.5 * voigt[5];
-		mat[1][0] = 0.5 * voigt[5];
+	public static double[][] voigt2matrix(double voigt[], double mat[][], int mXX) {
+		mat[0][0] = voigt[0] + mXX;
+		mat[0][1] = voigt[5] / 2;
+		mat[0][2] = voigt[4] / 2;
+		mat[1][0] = voigt[5] / 2;
+		mat[1][1] = voigt[1] + mXX;
+		mat[1][2] = voigt[3] / 2;
+		mat[2][0] = voigt[4] / 2;
+		mat[2][1] = voigt[3] / 2;
+		mat[2][2] = voigt[2] + mXX;
+		return mat;
 	}
 
 	private static double[] temp = new double[3];
@@ -279,7 +282,7 @@ public class MathUtil {
 	 * @param bond return [x, y, z, theta, phi, len, okflag(1 or 0)]
 	 * @return true if OK
 	 */
-	public static boolean getBondInfo(double[] atom1, double[] atom2, double[] bond) {
+	public static boolean setBondInfo(double[] atom1, double[] atom2, double[] bond) {
 		int x = 0, y = 1, z = 2, X = 3, Y = 4;
 		double lensq = 0;
 		for (int i = 0; i < 3; i++) {
@@ -306,15 +309,12 @@ public class MathUtil {
 	/**
 	 * Calculates the description used to render an arrow -- Branton Campbell
 	 * 
-	 * @param orien      is the vector input.
+	 * @param xyz       is the vector input.
 	 * @param arrowInfo is the [X-angle, Y-angle, Length] output.
 	 */
-	public static void calculateArrow(double[] orien, double[] arrowInfo) {
+	public static void calculateArrow(double[] xyz, double[] arrowInfo) {
 		int x = 0, y = 1, z = 2, X = 0, Y = 1, L = 2;
-		double lensq = 0;
-
-		for (int i = 0; i < 3; i++)
-			lensq += orien[i] * orien[i];
+		double lensq = MathUtil.lenSq3(xyz);
 
 		if (lensq < 0.000000000001) {
 			arrowInfo[X] = 0;
@@ -324,11 +324,15 @@ public class MathUtil {
 		}
 
 		double d = Math.sqrt(lensq);
-		for (int i = 0; i < 3; i++)
-			orien[i] /= d;
 
-		arrowInfo[X] = -Math.asin(orien[y]); // X rotation
-		arrowInfo[Y] = Math.atan2(orien[x], orien[z]); // Y rotation
+// BH Q! scaling the input array??	
+//
+//		for (int i = 0; i < 3; i++)
+//			xyz[i] /= d;
+//
+		// BH: added / d in asin. Why normalize this? 
+		arrowInfo[X] = -Math.asin(xyz[y] / d); // X rotation
+		arrowInfo[Y] = Math.atan2(xyz[x], xyz[z]); // Y rotation
 		arrowInfo[L] = d; // Length
 	}
 
@@ -400,13 +404,12 @@ public class MathUtil {
 
 	/**
 	 * Copies 3-vector from second parameter triad to first
-	 * 
-	 * @param dest
 	 * @param src
+	 * @param dest
 	 * 
 	 * @author Bob Hanson
 	 */
-	public static void set3(double[] dest, double[] src) {
+	public static void set3(double[] src, double[] dest) {
 		dest[0] = src[0];
 		dest[1] = src[1];
 		dest[2] = src[2];
@@ -466,6 +469,49 @@ public class MathUtil {
 				MathUtil.matmul(pBasisCartTranspose[A], pBasisCartTranspose[B]) / Math.max(lattice[A] * lattice[B], 0.001));
 		
 
+	}
+
+	private static final String ZEROES = "000000000000";
+	private static final String BLANKS = "            ";
+
+	public static String varToString(double val, int n, int w) {
+		// rounding
+		boolean leftAlign = (w < 0);
+		w = Math.abs(w);		
+		double incr = 0.5;
+		for (int j = n; j > 0; j--)
+			incr /= 10;
+		val = (Math.abs(val) <= 0.00001 ? 0 : val + incr * (val / Math.abs(val)));
+		String s = Double.toString(val);
+		int n1 = s.indexOf('.');
+		int n2 = s.length() - n1 - 1;
+		if (n > n2) {
+			s += ZEROES.substring(0, n - n2);
+		} else if (n2 > n) {
+			s = s.substring(0, n1 + n + 1);	
+		}		
+		if (w > s.length()) {
+			String b = BLANKS.substring(0, w - s.length());
+			s = (leftAlign ? s + b : b + s);
+		}
+		return s;
+	}
+
+	public static void copy3(double[] src, double[] dest) {
+		dest[0] = src[0];
+		dest[1] = src[1];
+		dest[2] = src[2];
+	}
+
+	/**
+	 * Compare the length of v (or distance from origin) squared to d2 and return the largest 
+	 * @param p
+	 * @param d2
+	 * @return
+	 */
+	public static double maxlen(double[] p, double d2) {
+		double d = MathUtil.lenSq3(p);
+		return (d > d2 ? d : d2);
 	}
 
 

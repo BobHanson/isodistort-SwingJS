@@ -3,10 +3,10 @@
 
 package org.byu.isodistort.render;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-
-import javax.swing.Timer;
+//import java.awt.event.ActionEvent;
+//import java.awt.event.ActionListener;
+//
+//import javax.swing.Timer;
 
 //A VERY SIMPLE 3D RENDERER BUILT IN JAVA 1.0 - KEN PERLIN
 
@@ -18,47 +18,47 @@ import javax.swing.Timer;
  *
  * @author Ken Perlin 2001
  */
-public class Material implements Runnable {
+public class Material {//implements Runnable {
 
-	private Renderer renderer;
+//	private Renderer renderer;
 
 	public Material(Renderer renderer) {
-		this.renderer = renderer;
+//		this.renderer = renderer;
 	}
 
-	private Timer timer;
-
-	private void setTimer() {
-		if (timer != null) {
-			timer.stop();
-			timer = null;
-		}
-		if (timer == null) {
-			timer = new Timer(20, new ActionListener() {
-
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					run();
-				}
-
-			});
-			timer.setRepeats(true);
-		}
-	}
-
+//	private Timer timer;
+//
+//	private void setTimer() {
+//		if (timer != null) {
+//			timer.stop();
+//			timer = null;
+//		}
+//		if (timer == null) {
+//			timer = new Timer(20, new ActionListener() {
+//
+//				@Override
+//				public void actionPerformed(ActionEvent e) {
+////					run();
+//				}
+//
+//			});
+//			timer.setRepeats(true);
+//		}
+//	}
+//
 	//String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 	/**
 	 * Flag determining whether to precompute and store color tables for direct look
 	 * up instead of on the fly computation.
 	 */
-	public boolean tableMode = true;
+	public boolean tableMode = false;//true;
 
-	/**
-	 * Indicator whether background caching started.
-	 */
-	private boolean startedBackgroundCaching = false;
-
+//	/**
+//	 * Indicator whether background caching started.
+//	 */
+//	private boolean startedBackgroundCaching = false;
+//
 	/**
 	 * Bit depth of the resolution.
 	 */
@@ -74,17 +74,17 @@ public class Material implements Runnable {
 	 */
 	protected int table[] = new int[2 * res * res];
 
-	/**
-	 * Indicates whether the material is double sided.
-	 */
-	public boolean isDoubleSided = false;
-
-	/**
-	 * Indicates whether the material is anisotropic (light reflection varies with
-	 * respect to direction).
-	 */
-	public boolean anisotropic = false;
-
+//	/**
+//	 * Indicates whether the material is double sided.
+//	 */
+//	public boolean isDoubleSided = false;
+//
+//	/**
+//	 * Indicates whether the material is anisotropic (light reflection varies with
+//	 * respect to direction).
+//	 */
+//	public boolean anisotropic = false;
+//
 // BH removed	
 //	/**
 //	 * Noise frequency.
@@ -121,7 +121,7 @@ public class Material implements Runnable {
 	public void setTable(int ix, int iy, int iz, int p) {
 		if (!tableMode)
 			return;
-		startedBackgroundCaching = true;
+//		startedBackgroundCaching = true;
 		if (iz < 0 || iz > 1 || ix < 0 || ix >= res || iy < 0 || iy >= res)
 			return;
 		table[tableIndex(ix, iy, iz)] = p;
@@ -135,7 +135,7 @@ public class Material implements Runnable {
 	public void initTable(int p) {
 		if (!tableMode)
 			return;
-		startedBackgroundCaching = false;
+//		startedBackgroundCaching = false;
 		resP = p;
 		res = 1 << resP;
 		table = new int[2 * res * res];
@@ -143,7 +143,7 @@ public class Material implements Runnable {
 			for (int ix = 0; ix < res; ix++)
 				for (int iy = 0; iy < res; iy++)
 					table[tableIndex(ix, iy, iz)] = 0;
-		tableIndex = 0;
+		//tableIndex = 0;
 	}
 
 	/**
@@ -263,7 +263,7 @@ public class Material implements Runnable {
 		diffuse[1] = g;
 		diffuse[2] = b;
 		diffuse[3] = p;
-		recache();
+		//recache();
 		return this;
 	}
 
@@ -293,7 +293,7 @@ public class Material implements Runnable {
 		specular[1] = g;
 		specular[2] = b;
 		specular[3] = p;
-		recache();
+		//recache();
 		return this;
 	}
 
@@ -322,7 +322,7 @@ public class Material implements Runnable {
 		ambient[0] = r;
 		ambient[1] = g;
 		ambient[2] = b;
-		recache();
+		//recache();
 		return this;
 	}
 
@@ -437,104 +437,104 @@ public class Material implements Runnable {
 		return ((setDiffuse(dr, dg, db, dp)).setSpecular(sr, sg, sb, sp)).setAmbient(ar, ag, ab);
 	}
 
-	/**
-	 * Sets the double sided flag true to indicate whether the object is double
-	 * sided.
-	 * 
-	 * @param t new value of isDoubleSided
-	 * @return the material
-	 */
-	public Material setDoubleSided(boolean t) {
-		isDoubleSided = t;
-		return this;
-	}
-
-	/**
-	 * Sets the transparency of the material (0 transparent to 1 opaque).
-	 * 
-	 * @param t new transparency value
-	 * @return the material
-	 */
-	public Material setTransparency(double t) {
-		transparency = t;
-		return this;
-	}
-
-	/**
-	 * Returns the transparency of the material (0 transparent to 1 opaque).
-	 * 
-	 * @return the actual transparency of the material
-	 */
-	public double getTransparency() {
-		return transparency;
-	}
-
+//	/**
+//	 * Sets the double sided flag true to indicate whether the object is double
+//	 * sided.
+//	 * 
+//	 * @param t new value of isDoubleSided
+//	 * @return the material
+//	 */
+//	public Material setDoubleSided(boolean t) {
+//		isDoubleSided = t;
+//		return this;
+//	}
+//
+//	/**
+//	 * Sets the transparency of the material (0 transparent to 1 opaque).
+//	 * 
+//	 * @param t new transparency value
+//	 * @return the material
+//	 */
+//	public Material setTransparency(double t) {
+//		transparency = t;
+//		return this;
+//	}
+//
+//	/**
+//	 * Returns the transparency of the material (0 transparent to 1 opaque).
+//	 * 
+//	 * @return the actual transparency of the material
+//	 */
+//	public double getTransparency() {
+//		return transparency;
+//	}
+//
 // THE REST OF THIS CLASS IS DEDICATED TO BACKGROUND CACHING - FILLING
 // UP A NORMAL-MAP TABLE IN THE BACKGROUND DURING THE FIRST FEW SECONDS
 // THAT THE APPLET IS RUNNING.
 
 	//private Thread t = null;
 
-	/**
-	 * Start background caching thread.
-	 */
-	private void start() {
-		setTimer();
-		//timer.start();
-//		if (t == null) {
-//			t = new Thread(this);
-//			t.start();
-//		}
-	}
-
-	/**
-	 * Stop background caching thread.
-	 */
-	private void stop() {
-		stopped = true;
-		timer.stop();
-		timer = null;
-	}
-
-	public void recache() {
-		initTable(7);
-		if (tableMode)
-			start();
-	}
+//	/**
+//	 * Start background caching thread.
+//	 */
+//	private void start() {
+////		setTimer();
+//		//timer.start();
+////		if (t == null) {
+////			t = new Thread(this);
+////			t.start();
+////		}
+//	}
+//
+//	/**
+//	 * Stop background caching thread.
+//	 */
+//	private void stop() {
+//		stopped = true;
+//		timer.stop();
+//		timer = null;
+//	}
+//
+//	public void recache() {
+//		initTable(7);
+//		if (tableMode)
+//			start();
+//	}
 
 	protected double v[] = new double[6];
-	private volatile boolean stopped = false;
-	private volatile int tableIndex;
+//	private volatile boolean stopped = false;
+//	private volatile int tableIndex;
 
-	/**
-	 * Thread that runs in the background ( provided the resources are available -
-	 * no mouse dragging for example) and computes the normal map table of values
-	 * for quick look up later.
-	 */
-	@Override
-	public void run() {
-		stopped = false;
-		int chunk = 0;
-		if (!stopped) {
-
-			if (tableMode && startedBackgroundCaching && !renderer.isDragging()) {
-
-				for (chunk = 0; chunk < 500; chunk++) {
-
-					if (table[tableIndex] == 0) {
-						renderer.renderVertex(tableIndex, this);
-					}
-
-					tableIndex++;
-
-					if (tableIndex == table.length || stopped) {
-						stop();
-						return;
-					}
-				}
-			}
-
-		}
-	}
+//	/**
+//	 * Thread that runs in the background ( provided the resources are available -
+//	 * no mouse dragging for example) and computes the normal map table of values
+//	 * for quick look up later.
+//	 */
+//	@Override
+//	public void run() {
+//		stopped = false;
+//		int chunk = 0;
+//		if (!stopped) {
+//
+//			if (tableMode && startedBackgroundCaching && !renderer.isDragging()) {
+//
+//				for (chunk = 0; chunk < 500; chunk++) {
+//
+//					if (table[tableIndex] == 0) {
+//						renderer.renderVertex(tableIndex, this);
+//					}
+//
+//					tableIndex++;
+//
+//					if (tableIndex == table.length || stopped) {
+//						stop();
+//						return;
+//					}
+//				}
+//			}
+//
+//		}
+//	}
 }
 

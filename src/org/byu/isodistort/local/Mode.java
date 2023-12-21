@@ -8,7 +8,6 @@ import javax.swing.JPanel;
 import javax.swing.JSlider;
 
 import org.byu.isodistort.local.Variables.Atom;
-import org.byu.isodistort.local.Variables.VariableParser;
 
 /**
  * A class to hold the arrays relating to individual types of symmetry modes,
@@ -18,7 +17,7 @@ import org.byu.isodistort.local.Variables.VariableParser;
  * STRAIN and IRREP are special in that they are not atom-specific. Thus,
  * sometimes
  * 
- * @author hanso
+ * @author Bob Hanson
  *
  */
 class Mode {
@@ -61,10 +60,10 @@ class Mode {
 	 */
 	JPanel[] typePanels;
 
-	/**
-	 * This [atomtype][mode][subtype][subatom][value]
-	 */
-	double[][][][][] fileModeCoeffsTMSA; // was xxxmodeVect
+//	/**
+//	 * This [atomtype][mode][subtype][subatom][value]
+//	 */
+//	double[][][][][] fileModeCoeffsTMSA; // was xxxmodeVect
 
 	/**
 	 * [atomtype][modefortype]
@@ -87,6 +86,11 @@ class Mode {
 	Color[] colorT;
 
 	boolean isActive;
+
+	public boolean isActive() {
+		return isActive && count > 0;
+	}
+
 
 	final private double[] delta;
 
@@ -118,28 +122,42 @@ class Mode {
 		delta = new double[columnCount];
 	}
 
-	void initAtoms() {
-		// nothing to do -- now saved in Atom.vector0, Atom.vector1, and Atom.mode
-	}
-
 	/**
-	 * Prepare the STRAIN and IRREP array data, which do not involve specific atoms.
+	 * Prepare the arrays for holding parsed data of the sort
+	 * [atomType][modeIndex][...].
 	 * 
-	 * @param num
+	 * For STRAIN and IRREP, these are just single-type [1][count] arrays.
+	 * 
+	 * @param perType
+	 * @param count
 	 */
-	void initArraysNonAtom(int num) {
+	void initArrays(int[] perType, int count) {
+		if (perType == null) {
+			// STRAIN or IRREP
+			numTypes = 1; // already done in Mode(), but just pointing this out here
+			perType = new int[] { count };
+		}
 		isActive = true;
-		count = num;
-		nameTM = new String[1][num];
-		modesPerType = new int[] { num };
-		initAmpTM = new double[1][num];
-		maxAmpTM = new double[1][num];
+		this.count = count;
+		this.modesPerType = perType;
+
+		nameTM = new String[numTypes][];
+		initAmpTM = new double[numTypes][];
+		maxAmpTM = new double[numTypes][];
+		irrepTM = new int[numTypes][];
+		for (int t = 0; t < numTypes; t++) {
+			int nmodes = modesPerType[t];
+			nameTM[t] = new String[nmodes];
+			initAmpTM[t] = new double[nmodes];
+			maxAmpTM[t] = new double[nmodes];
+			irrepTM[t] = new int[nmodes];
+		}
 
 		switch (type) {
 		case STRAIN:
 			columnCount = 6;
-			irrepTM = new int[1][num];
-			vector = new double[num][6];
+			irrepTM = new int[1][count];
+			vector = new double[count][6];
 			break;
 		case IRREP:
 			for (int m = 0; m < count; m++) {
@@ -147,68 +165,7 @@ class Mode {
 			}
 			break;
 		}
-	}
 
-	/**
-	 * Prepare the arrays for holding parsed data.
-	 * 
-	 * @param perType
-	 * @param count
-	 */
-	void initArraysMode(int[] perType, int count) {
-		isActive = true;
-		this.count = count;
-		this.modesPerType = perType;
-		initAmpTM = new double[numTypes][];
-		maxAmpTM = new double[numTypes][];
-		irrepTM = new int[numTypes][];
-		nameTM = new String[numTypes][];
-		fileModeCoeffsTMSA = new double[numTypes][][][][];
-		for (int t = 0; t < numTypes; t++) {
-			int nmodes = modesPerType[t];
-			irrepTM[t] = new int[nmodes];
-			initAmpTM[t] = new double[nmodes];
-			maxAmpTM[t] = new double[nmodes];
-			nameTM[t] = new String[nmodes];
-			fileModeCoeffsTMSA[t] = new double[nmodes][][][];
-			int nsub = numSubTypes[t];
-			int[] natom = numSubAtoms[t];
-			for (int m = 0; m < nmodes; m++) {
-				fileModeCoeffsTMSA[t][m] = new double[nsub][][];
-				for (int s = 0; s < nsub; s++)
-					fileModeCoeffsTMSA[t][m][s] = new double[natom[s]][columnCount];
-			}
-		}
-	}
-
-	/**
-	 * Parse and save all mode-related data.
-	 * 
-	 * 
-	 * @param parser
-	 */
-	void getModeData(VariableParser parser) {
-		// input mode array [atom type][mode number of that type][atom
-		// number of that type][column data]
-		int[] modeTracker = new int[numTypes];
-		int[][] subAtoms = parser.numSubAtomsRead;
-		for (int pt = 0, m = 0; m < count; m++) {
-			int thisType = parser.getInt(pt++) - 1;
-			int mode = modeTracker[thisType]++;
-			if (mode + 1 != parser.getInt(pt++))
-				parser.parseError("The modes are not given in ascending order", 2);
-			initAmpTM[thisType][mode] = parser.getDouble(pt++);
-			maxAmpTM[thisType][mode] = parser.getDouble(pt++);
-			irrepTM[thisType][mode] = parser.getInt(pt++) - 1;
-			nameTM[thisType][mode] = parser.getItem(pt++);
-			for (int s = 0; s < numSubTypes[thisType]; s++) {
-				for (int a = 0; a < subAtoms[thisType][s]; a++) {
-					for (int i = 0; i < columnCount; i++) {
-						fileModeCoeffsTMSA[thisType][mode][s][a][i] = parser.getDouble(pt++);
-					}
-				}
-			}
-		}
 	}
 
 	/**
@@ -237,19 +194,11 @@ class Mode {
 			MathUtil.vecfill(delta, 0);
 			int t = a.t;
 			int s = a.s;
-			if (isActive) {
-				// prepare atom modes
-				if (a.modes[type] == null) {
-					a.modes[type] = new double[modesPerType[t]][];
-					for (int m = 0; m < modesPerType[t]; m++) {
-						a.modes[type][m] = fileModeCoeffsTMSA[t][m][s][a.a];
-						// fileModeCoeffsTMSA[t][m][s][a.a] = null; // no longe
-					}
-				}
+			if (isActive()) {
 				// accumulate distortion deltas
 				for (int m = 0; m < modesPerType[t]; m++) {
 					double d = irrepVals[irrepTM[t][m]] * sliderValsTM[t][m] * superVal;
-					MathUtil.vecadd(delta, a.modes[type][m], d, delta);
+					MathUtil.vecadd(delta, d, a.modes[type][m], delta);
 				}
 			}
 
@@ -258,7 +207,7 @@ class Mode {
 			if (v1 == null) {
 				v1 = a.vector1[type] = new double[columnCount];
 			}
-			MathUtil.vecadd(a.vector0[type], delta, 1, v1);
+			MathUtil.vecadd(a.vector0[type], 1, delta, v1);
 
 			// next is just for the labels
 			switch (columnCount) {
@@ -272,7 +221,7 @@ class Mode {
 					max[t][s][type] = d;
 				break;
 			case 6: // ELL
-				MathUtil.voigt2matrix(v1, tempmat);
+				MathUtil.voigt2matrix(v1, tempmat, 0);
 				MathUtil.mul(v.sBasisCart, tempmat, tempmat);
 				MathUtil.mul(tempmat, v.sBasisCartInverse, tempmat);
 				// ellipsoid in cartesian coords
@@ -295,7 +244,7 @@ class Mode {
 	 * 
 	 */
 	void saveMode() {
-		if (!isActive)
+		if (!isActive())
 			return;
 		if (savedSliderValues == null) {
 			savedSliderValues = new double[numTypes][];
@@ -317,7 +266,7 @@ class Mode {
 	 * @param isGM
 	 */
 	void randomizeModes(Random rval, boolean isGM) {
-		if (!isActive)
+		if (!isActive())
 			return;
 		for (int t = 0; t < numTypes; t++) {
 			for (int m = 0; m < modesPerType[t]; m++) {
@@ -337,7 +286,7 @@ class Mode {
 	 * 
 	 */
 	void restoreMode() {
-		if (!isActive)
+		if (!isActive())
 			return;
 		for (int t = 0; t < numTypes; t++) {
 			for (int m = 0; m < modesPerType[t]; m++) {
@@ -350,7 +299,7 @@ class Mode {
 	 * Set the color of this mode's panels to their designated colors
 	 */
 	void colorPanels() {
-		if (typePanels == null || !isActive)
+		if (typePanels == null || !isActive())
 			return;
 		for (int t = 0; t < numTypes; t++) {
 			Color c = colorT[t];
@@ -369,7 +318,7 @@ class Mode {
 	 * @param n
 	 */
 	void setSliders(int n) {
-		if (!isActive)
+		if (!isActive())
 			return;
 		switch (type) {
 		case STRAIN:
@@ -392,7 +341,7 @@ class Mode {
 	 * @param sliderMax
 	 */
 	void resetSliders(int sliderMax) {
-		if (!isActive)
+		if (!isActive())
 			return;
 		switch (type) {
 		case STRAIN:
@@ -426,7 +375,7 @@ class Mode {
 			for (int m = 0; m < modesPerType[t]; m++) {
 				sliderValsTM[t][m] = maxAmpTM[t][m] * (sliderTM[t][m].getValue() / sliderMaxVal);
 				double d = sliderValsTM[t][m] * (isIrrep ? 1 : irreps.sliderValsTM[0][irrepTM[t][m]]) * superSliderVal;
-				sliderLabelsTM[t][m].setText(Variables.varToString(d, prec, -8) + "  " + nameTM[t][m]);
+				sliderLabelsTM[t][m].setText(MathUtil.varToString(d, prec, -8) + "  " + nameTM[t][m]);
 			}
 		}
 	}
@@ -492,30 +441,16 @@ class Mode {
 	 * @return the Voigt strain tensor plus Identity
 	 */
 	double[][] getVoigtStrainTensor(double superSliderVal, Mode irreps) {
+		double[] irrepVals = irreps.sliderValsTM[0];
+		double[] mySliderVals = sliderValsTM[0];
+		int[] myIrreps = irrepTM[0];
 		double[] v = new double[6];
 		for (int n = 0; n < 6; n++) {
 			for (int m = 0; m < count; m++) {
-				v[n] += vector[m][n] * irreps.sliderValsTM[0][irrepTM[0][m]] * sliderValsTM[0][m] * superSliderVal;
+				v[n] += vector[m][n] * irrepVals[myIrreps[m]] * mySliderVals[m] * superSliderVal;
 			}
 		}
-
-		// [ v0 + 1 v5 / 2 v4 / 2
-		//
-		// v5 / 2 v1 + 1 v3 / 2
-		//
-		// v4 / 2 v3 / 2 v2 + 1 ]
-		//
-		double[][] pStrainPlusIdentity = new double[3][3];
-		pStrainPlusIdentity[0][0] = v[0] + 1;
-		pStrainPlusIdentity[1][0] = v[5] / 2;
-		pStrainPlusIdentity[2][0] = v[4] / 2;
-		pStrainPlusIdentity[0][1] = v[5] / 2;
-		pStrainPlusIdentity[1][1] = v[1] + 1;
-		pStrainPlusIdentity[2][1] = v[3] / 2;
-		pStrainPlusIdentity[0][2] = v[4] / 2;
-		pStrainPlusIdentity[1][2] = v[3] / 2;
-		pStrainPlusIdentity[2][2] = v[2] + 1;
-		return pStrainPlusIdentity;
+		return MathUtil.voigt2matrix(v, new double[3][3], 1);
 	}
 	
 	@Override

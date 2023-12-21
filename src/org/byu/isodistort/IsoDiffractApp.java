@@ -28,7 +28,8 @@
  * This applet takes the data from the IsoDistort web page 
  * and uses it to render atoms and bonds and cells that represent various atomic crystal structures.
  * 
- */
+ 
+*/
 
 //	http://stokes.byu.edu/isodistort.html is isodistort website
 
@@ -40,7 +41,8 @@
  1 In the first section we import needed classes and instantiate the variables. 1
  1																				1
  11111111111111111111111111111111111111111111111111111111111111111111111111111111
- */
+ 
+*/
 
 package org.byu.isodistort;
 
@@ -74,8 +76,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	/**
 	 * An alternative panel to the RenderPanel3D of IsoDistortApp
 	 * 
-	 * @author hanso
+	 * @author Bob Hanson
 	 *
+	 * 
 	 */
 	private static class RenderPanel extends JPanel {
 
@@ -94,7 +97,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			if (app.drawWidth != d.width || app.drawHeight != d.height) {
 				app.updateDimensions();
 			}
-			//System.out.println("paint isodif " + getSize() + " " + getParent().getSize());
+			// System.out.println("paint isodif " + getSize() + " " +
+			// getParent().getSize());
 			if (im == null || im.getWidth() != d.width || im.getHeight() != d.height)
 				im = (BufferedImage) createImage(d.width, d.height);
 			Graphics g = im.getGraphics();
@@ -109,11 +113,17 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			Color.ORANGE };
 
 	// Variables that the user may want to adjust
-	/** Maximum number of diffraction peaks and tick marks in the display */
+	/**
+	 * Maximum number of diffraction peaks and tick marks in the display
+	 */
 	private int maxPeaks = 1000, powderMaxVisiblePeaks = 200, maxTicks = 100;
-	/** Axis & tick line thickness, tick length */
+	/**
+	 * Axis & tick line thickness, tick length
+	 */
 	private double lineThickness = 2, normalTickLength = 10;
-	/** Heights of powder display components */
+	/**
+	 * Heights of powder display components
+	 */
 	private final double powderAxisYOffset = 30, powderStickYOffset = 60, powderScaleAreaHeight = 80,
 			powderLabelOffset = 5;
 
@@ -122,11 +132,17 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	private int shortPowderHeight = 100;
 
-	/** Factor that determines the lowest observable intensities */
+	/**
+	 * Factor that determines the lowest observable intensities
+	 */
 	double logfac = 4.0;
-	/** Number of points in the powder pattern */
+	/**
+	 * Number of points in the powder pattern
+	 */
 	int powderXRange = 1024;
-	/** Anisotropic thermal parameter for simulating high-q intensity decay */
+	/**
+	 * Anisotropic thermal parameter for simulating high-q intensity decay
+	 */
 	double uiso = 0.15;
 
 	private final static int POWDER_PATTERN_TYPE_2THETA = 1;
@@ -135,15 +151,25 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	// Other global variables.
 	int hklType = 1;
-	/** Horizontal axis choice for powder pattern: (1) 2theta, (2) d-space, (3) q */
+	/**
+	 * Horizontal axis choice for powder pattern: (1) 2theta, (2) d-space, (3) q
+	 */
 	int powderPatternType = POWDER_PATTERN_TYPE_2THETA;
-	/** X-ray vs neutron diffraction */
+	/**
+	 * X-ray vs neutron diffraction
+	 */
 	public boolean isXray = true;
-	/** contains x-ray and neutron scattering factors for each element */
-	/** half the display width in pixels */
+	/**
+	 * contains x-ray and neutron scattering factors for each element
+	 */
+	/**
+	 * half the display width in pixels
+	 */
 	double drawHalfWidth;
 	double drawHalfHeight;
-	/** True means to make all atoms of the same element the same color */
+	/**
+	 * True means to make all atoms of the same element the same color
+	 */
 	boolean isSimpleColor;
 
 	boolean isPowder;
@@ -152,93 +178,165 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	boolean isMouseOver;
 
-	/** number of superHKL peaks contained within the display */
+	/**
+	 * number of superHKL peaks contained within the display
+	 */
 	int peakCount;
-	/** List of peak multiplicities for powder pattern */
+	/**
+	 * List of peak multiplicities for powder pattern
+	 */
 	double[] peakMultiplicities = new double[maxPeaks];
 	/**
 	 * List of dinverse values for peaks in either single-crystal or powder display
+	 * 
 	 */
 	double[] peakDInv = new double[maxPeaks];
-	/** List of types of peaks contained within the display */
+	/**
+	 * List of types of peaks contained within the display
+	 */
 	int[] peakColor = new int[maxPeaks];
 
-	/** unstrained dinverse-space metric tensor */
+	/**
+	 * unstrained dinverse-space metric tensor
+	 */
 	double[][] metric0 = new double[3][3];
-	/** strained dinverse-space metric tensor */
+	/**
+	 * strained dinverse-space metric tensor
+	 */
 	double[][] metric = new double[3][3];
-	/** transforms superHKL to properly-rotated XYZ cartesian */
+	/**
+	 * transforms superHKL to properly-rotated XYZ cartesian
+	 */
 	double[][] slatt2rotcart = new double[3][3];
-	/** transforms properly-rotated XYZ cartesian to superHKL */
+	/**
+	 * transforms properly-rotated XYZ cartesian to superHKL
+	 */
 	double[][] rotcart2slatt = new double[3][3];
 
-	/** distance (in pixels) to the nearest peak from the center */
+	/**
+	 * distance (in pixels) to the nearest peak from the center
+	 */
 	double crystalNearestDistanceToOrigin;
-	/** maximum peak radius */
+	/**
+	 * maximum peak radius
+	 */
 	double crystalMaxPeakRadius;
-	/** The hkl horizonal direction, upper direction, and center, */
+	/**
+	 * The hkl horizonal direction, upper direction, and center,
+	 */
 	double[] crystalHklCenter = new double[3];
-	/** number of single-crystal tickmarks to be displayed */
+	/**
+	 * number of single-crystal tickmarks to be displayed
+	 */
 	int[] crystalTickCount = new int[2];
-	/** List of tickmark supHKLs to be displayed */
+	/**
+	 * List of tickmark supHKLs to be displayed
+	 */
 	double[][][] crystalTickHKL = new double[2][maxTicks][3];
-	/** List of tickmark (X1Y1, X2Y2) coords to be displayed */
+	/**
+	 * List of tickmark (X1Y1, X2Y2) coords to be displayed
+	 */
 	double[][][] crystalTickXY2 = new double[2][maxTicks][4];
-	/** List of superHKLs contained within the display */
+	/**
+	 * List of superHKLs contained within the display
+	 */
 	double[][] crystalPeakHKL = new double[maxPeaks][3];
-	/** List of peak XY coords contained within the single-crystal display */
+	/**
+	 * List of peak XY coords contained within the single-crystal display
+	 */
 	double[][] crystalPeakXY = new double[maxPeaks][2];
-	/** List of peak radii contained within the single-crystal display */
+	/**
+	 * List of peak radii contained within the single-crystal display
+	 */
 	double[] crystalPeakRadius = new double[maxPeaks];
-	/** Plot axes for crystal display */
+	/**
+	 * Plot axes for crystal display
+	 */
 	double[][] crystalAxesXYDirXYLen = new double[2][5];
-	/** radius of the range of Q/2Pi contained within the crystal display */
+	/**
+	 * radius of the range of Q/2Pi contained within the crystal display
+	 */
 	double crystalDInvRange;
-	/** The hkl horizonal and upper directions, */
+	/**
+	 * The hkl horizonal and upper directions,
+	 */
 	double[][] crystalHkldirections = new double[2][3];
 
-	/** List of positions of powder peaks in either 2th, d or q units */
+	/**
+	 * List of positions of powder peaks in either 2th, d or q units
+	 */
 	double[] powderPeakY = new double[maxPeaks];
-	/** List of positions of powder peaks in scaled pixel units */
+	/**
+	 * List of positions of powder peaks in scaled pixel units
+	 */
 	double[] powderPeakX = new double[maxPeaks];
-	/** List of peak radii contained within the single-crystal display */
+	/**
+	 * List of peak radii contained within the single-crystal display
+	 */
 	double[] peakIntensity = new double[maxPeaks];
-	/** Largest powder peak multiplicity */
+	/**
+	 * Largest powder peak multiplicity
+	 */
 	double powderScaleFactor; // initial value of 1
-	/** Number of powder tick marks and tick labels to be displayed */
+	/**
+	 * Number of powder tick marks and tick labels to be displayed
+	 */
 	int powderAxisTickCount;
-	/** List of powder tick marks to be displayed in window pixel units */
+	/**
+	 * List of powder tick marks to be displayed in window pixel units
+	 */
 	double[] powderAxisTickX = new double[maxTicks];
-	/** List of powder tick labels to be displayed in window pixel units */
+	/**
+	 * List of powder tick labels to be displayed in window pixel units
+	 */
 	String[] powderAxisTickLabel = new String[maxTicks];
-	/** wavelength for computing 2theta scale in the powder display */
+	/**
+	 * wavelength for computing 2theta scale in the powder display
+	 */
 	double powderWavelength;
-	/** horizontal range minimum value in powder display */
+	/**
+	 * horizontal range minimum value in powder display
+	 */
 	double powderXMin;
-	/** horizontal range maximum value in powder display */
+	/**
+	 * horizontal range maximum value in powder display
+	 */
 	double powderXMax;
-	/** horizontal resolution in the powder display */
+	/**
+	 * horizontal resolution in the powder display
+	 */
 	double powderResolution;
-	/** vertical zoom factor in the powder display */
+	/**
+	 * vertical zoom factor in the powder display
+	 */
 	double powderZoom;
 	/**
 	 * dinvmin and dinvmax are the maximum and minimum values in the powder display
 	 * in d-inverse units
+	 * 
 	 */
 	double powderDinvmin, powderDinvmax, powderDinvres;
-	/** the array that holds the powder pattern */
+	/**
+	 * the array that holds the powder pattern
+	 */
 	double[] powderY = new double[powderXRange];
 
 	JLabel horizLabel, upperLabel, centerLabel, qrangeLabel, wavLabel, minLabel, maxLabel, fwhmLabel, zoomLabel,
 			mouseoverLabel;
 	JCheckBox colorBox;
-	/** Radio buttons */
+	/**
+	 * Radio buttons
+	 */
 	JRadioButton parentButton, superButton, xrayButton, neutronButton, crystalButton, powderButton, bothButton, dButton,
 			qButton, tButton;
-	/** Radio button groups -- only one element from a group can be selected */
+	/**
+	 * Radio button groups -- only one element from a group can be selected
+	 */
 	ButtonGroup xnButtons, hklButtons, pscButtons, rangeButtons;
 
-	/** Text fields for inputting viewing region */
+	/**
+	 * Text fields for inputting viewing region
+	 */
 	JTextField hHTxt, kHTxt, lHTxt, hVTxt, kVTxt, lVTxt, hOTxt, kOTxt, lOTxt, qTxt;
 	JTextField wavTxt, minTxt, maxTxt, fwhmTxt, zoomTxt;
 
@@ -277,12 +375,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	@Override
 	protected void updateDimensions() {
-		super.updateDimensions(); 
+		super.updateDimensions();
 		drawHalfWidth = drawWidth / 2;
 		drawHalfHeight = drawHeight / 2;
 
 	}
-	
+
 	@Override
 	public void updateDisplay() {
 		if (isAdjusting)
@@ -303,19 +401,16 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	}
 
-// BH now taken care of by RenderPanel	
-//	public void paint(Graphics gr) {
-//	super.paint(gr);
-//}
-
 	/**
 	 * From RenderPanel.paint(Graphics).
 	 * 
 	 * @param g
+	 * 
 	 */
 	void render(Graphics g) {
 		g.setColor(Color.BLACK);
-		//System.out.println("IDpaint " + drawWidth + " " + drawHeight + " " + shortPowderHeight);
+		// System.out.println("IDpaint " + drawWidth + " " + drawHeight + " " +
+		// shortPowderHeight);
 		if (isBoth || !isPowder) {
 			g.fillRect(0, 0, drawWidth, drawHeight);
 			drawCrystPeaks(g);
@@ -386,7 +481,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		double yrange = (drawHeight - scaleAreaHeight);
 		int ymin = (isBoth ? drawHeight - shortPowderHeight : 0);
 		double toXPix = 1.0 * drawWidth / powderXRange;
-		//System.out.println("drawpp pz " + powderZoom + " psf " + powderScaleFactor + " fy " + fy);
+		// System.out.println("drawpp pz " + powderZoom + " psf " + powderScaleFactor +
+		// " fy " + fy);
 		x0 = 0;
 		y0 = (int) Math.max(ymin, yrange * (1 - powderY[0] * fy));
 		for (int i = 1; i < powderXRange; i++) {
@@ -449,6 +545,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 * @param y      is the y-coordinate of the mouse in the Applet window
 	 * @param radius is the radius of tolerance for mouseover on a peaks
 	 * @return which peak is under the mouse
+	 * 
 	 */
 	private void mousePeak(double x, double y) {
 
@@ -463,7 +560,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 						&& (peakColor[p] < currentcolor)) {
 					currentpeak = p;
 					currentcolor = peakColor[p];
-					valuestring = Variables.varToString(powderPeakY[p], 2, -2);
+					valuestring = MathUtil.varToString(powderPeakY[p], 2, -2);
 					switch (powderPatternType) {
 					case POWDER_PATTERN_TYPE_2THETA:
 						specifictext = "2\u0398 = " + valuestring + " Degrees";
@@ -493,10 +590,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 				hkls[n] = crystalPeakHKL[currentpeak][n];
 			MathUtil.mul(variables.Tmat, hkls, hklp);
 
-			mouseovertext = "Parent HKL = (" + Variables.varToString(hklp[0], 2, -2) + ", "
-					+ Variables.varToString(hklp[1], 2, -2) + ", " + Variables.varToString(hklp[2], 2, -2)
-					+ ")       Super HKL = (" + Variables.varToString(hkls[0], 2, -2) + ", "
-					+ Variables.varToString(hkls[1], 2, -2) + ", " + Variables.varToString(hkls[2], 2, -2) + ")     "
+			mouseovertext = "Parent HKL = (" + MathUtil.varToString(hklp[0], 2, -2) + ", "
+					+ MathUtil.varToString(hklp[1], 2, -2) + ", " + MathUtil.varToString(hklp[2], 2, -2)
+					+ ")       Super HKL = (" + MathUtil.varToString(hkls[0], 2, -2) + ", "
+					+ MathUtil.varToString(hkls[1], 2, -2) + ", " + MathUtil.varToString(hkls[2], 2, -2) + ")     "
 					+ specifictext;
 			isMouseOver = true;
 		} else {
@@ -511,11 +608,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 * 222222222222222222222222222222222222222222222222222222222222222222222222222222
 	 * 2 These methods do the diffraction-related calculations 2
 	 * 222222222222222222222222222222222222222222222222222222222222222222222222222222
+	 * 
 	 */
 
 	/**
 	 * Recalculates strain info (e.g. metric tensor and slatt2rotcart). Called by
 	 * resetCrystalPeaks, resetPowerPeaks, recalcCrystal, recalcPowder.
+	 * 
 	 */
 	private void recalcStrainstuff() {
 		double[][] tempmat = new double[3][3];
@@ -559,6 +658,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	/**
 	 * Called by recalcCrystal, recalcPowder, assignPeakTypes.
+	 * 
 	 */
 	public void recalcIntensities() {
 		double zzzNR, zzzNI, pppNR, pppNI, scatNR, scatNI, scatM;
@@ -581,41 +681,41 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			MathUtil.normalize(qhat);
 			double d = 2 * Math.PI * peakDInv[p];
 			thermal = Math.exp(-0.5 * uiso * d * d);
-			
+
 			for (int ia = 0, n = variables.numAtoms; ia < n; ia++) {
-						MathUtil.set3(supxyz, variables.get(Variables.DIS, ia));
-						if (supxyz[0] >= 0 && supxyz[0] < 1 && supxyz[1] >= 0 && supxyz[1] < 1 && supxyz[2] >= 0
-								&& supxyz[2] < 1) {
-							// just [atomicNumber, 0] for xray
-							atomScatFac = Elements.getScatteringFactor(variables.getAtomTypeSymbol(ia), isXray);
-							phase = 2 * (Math.PI) * MathUtil.matmul(crystalPeakHKL[p], supxyz);
-							double occ = variables.getOccupancy(ia);
-							scatNR = occ * atomScatFac[0];
-							scatNI = occ * atomScatFac[1];
-							occ = variables.getInitialOccupancy(ia);
-							zzzNR += occ * atomScatFac[0];
-							zzzNI += occ * atomScatFac[1];
-							pppNR += scatNR * Math.cos(phase) - scatNI * Math.sin(phase);
-							pppNI += scatNI * Math.cos(phase) + scatNR * Math.sin(phase);
+				MathUtil.set3(variables.get(Variables.DIS, ia), supxyz);
+				if (supxyz[0] >= 0 && supxyz[0] < 1 && supxyz[1] >= 0 && supxyz[1] < 1 && supxyz[2] >= 0
+						&& supxyz[2] < 1) {
+					// just [atomicNumber, 0] for xray
+					atomScatFac = Elements.getScatteringFactor(variables.getAtomTypeSymbol(ia), isXray);
+					phase = 2 * (Math.PI) * MathUtil.matmul(crystalPeakHKL[p], supxyz);
+					double occ = variables.getOccupancy(ia);
+					scatNR = occ * atomScatFac[0];
+					scatNI = occ * atomScatFac[1];
+					occ = variables.getInitialOccupancy(ia);
+					zzzNR += occ * atomScatFac[0];
+					zzzNI += occ * atomScatFac[1];
+					pppNR += scatNR * Math.cos(phase) - scatNI * Math.sin(phase);
+					pppNI += scatNI * Math.cos(phase) + scatNR * Math.sin(phase);
 //	        				System.out.format("t:%d,s:%d,a:%d, pos:(%.2f,%.2f,%.2f), scatNR/NI:%.3f/%.3f, phase:%.3f%n", t, s, a, supxyz[0], supxyz[1], supxyz[2], scatNR, scatNI, phase);
-							// remember that magnetic mode vectors (magnetons/Angstrom) were predefined to
-							// transform this way.
-							MathUtil.mul(variables.sBasisCart, variables.get(Variables.MAG, ia), mucart);
-							if (isXray) {
-								scatM = 0.0;
-								for (int i = 0; i < 3; i++)
-									zzzM[i] += 0;
-							} else {
-								scatM = variables.getOccupancy(ia) * 5.4;
-								for (int i = 0; i < 3; i++)
-									zzzM[i] += scatM * mucart[i];
-							}
-							for (int i = 0; i < 3; i++)
-								pppM[i] += scatM * (mucart[i] - MathUtil.matmul(mucart, qhat) * qhat[i]) * Math.cos(phase);
-						}
+					// remember that magnetic mode vectors (magnetons/Angstrom) were predefined to
+					// transform this way.
+					MathUtil.mul(variables.sBasisCart, variables.get(Variables.MAG, ia), mucart);
+					if (isXray) {
+						scatM = 0.0;
+						for (int i = 0; i < 3; i++)
+							zzzM[i] += 0;
+					} else {
+						scatM = variables.getOccupancy(ia) * 5.4;
+						for (int i = 0; i < 3; i++)
+							zzzM[i] += scatM * mucart[i];
 					}
-		
-				Intensity000 = zzzNR * zzzNR + zzzNI * zzzNI + MathUtil.lenSq3(zzzM);
+					for (int i = 0; i < 3; i++)
+						pppM[i] += scatM * (mucart[i] - MathUtil.matmul(mucart, qhat) * qhat[i]) * Math.cos(phase);
+				}
+			}
+
+			Intensity000 = zzzNR * zzzNR + zzzNI * zzzNI + MathUtil.lenSq3(zzzM);
 			peakIntensity[p] = thermal * (pppNR * pppNR + pppNI * pppNI + MathUtil.lenSq3(pppM)) / Intensity000;
 		}
 	}
@@ -623,6 +723,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	/**
 	 * Recalculates peak positions and intensities for single-crystal pattern.
 	 * Called by resetCrystalPeaks and run().
+	 * 
 	 */
 	private void recalcCrystal() {
 		double[] tempvec0 = new double[3], tempvec = new double[3];
@@ -634,7 +735,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		// update the peak cartesian coordinates
 		for (int p = 0; p < peakCount; p++) {
-			MathUtil.vecadd(crystalPeakHKL[p], crystalHklCenter, -1.0, tempvec0);
+			MathUtil.vecadd(crystalPeakHKL[p], -1.0, crystalHklCenter, tempvec0);
 			MathUtil.mul(slatt2rotcart, tempvec0, tempvec);
 			double x = tempvec[0] * (drawHalfWidth / crystalDInvRange) + drawHalfWidth;
 			double y = -tempvec[1] * (drawHalfHeight / crystalDInvRange) + drawHalfHeight; // minus sign turns the
@@ -707,6 +808,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	/**
 	 * Creates the list of single-crystal peaks and their types Called by init() and
 	 * run().
+	 * 
 	 */
 	public void resetCrystalPeaks() {
 		double[] hklH = new double[3], hklV = new double[3], hklO = new double[3];
@@ -756,7 +858,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		variables.readSliders(); // Get the latest strain information
 		variables.recalcDistortion(); // Update the distortion
-		recalcStrainstuff(); // Get updat	ed slatt2rotcart transformation
+		recalcStrainstuff(); // Get updat ed slatt2rotcart transformation
 
 		// Find out the superHKL range covered within the Qrange specified.
 		MathUtil.set(tempvec0, crystalDInvRange, 0, 0);
@@ -813,7 +915,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 					planeQ = false;
 					rangeQ = false;
 					MathUtil.set(superhkl, H, K, L);
-					MathUtil.vecadd(superhkl, crystalHklCenter, -1.0, tempvec0);
+					MathUtil.vecadd(superhkl, -1.0, crystalHklCenter, tempvec0);
 					MathUtil.mul(slatt2rotcart, tempvec0, superhklcart);
 
 					inplanetest = Math.abs(MathUtil.matmul(tempvec0, uvw));
@@ -861,17 +963,17 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	/**
 	 * Recalculates structural parameters and peak positions and intensities for
 	 * powder pattern. Called by resetPowderPeaks and run().
+	 * 
 	 */
 	private void recalcPowder() {
 
 		// update the structure based on current slider values
-		variables.recalcDistortion();
-
 		// update the peak positions and values
-		recalcStrainstuff();
-
-		recalcPowderPeakPositionsAndValues();
 		// update the peak intensities based on current structure
+
+		variables.recalcDistortion();
+		recalcStrainstuff();
+		recalcPowderPeakPositionsAndValues();
 		recalcIntensities();
 		recalcPowderPattern();
 	}
@@ -921,6 +1023,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 * Creates the list of powder peaks and their types.
 	 * 
 	 * Called updateDisplay()
+	 * 
 	 */
 	private void resetPowderPeaks() {
 
@@ -1132,6 +1235,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 * 
 	 * @param dinvlist0
 	 * @param tol
+	 * 
 	 */
 	private void sortPowderPeaks(double[] dinvlist0, double tol) {
 		Integer[] sortList = new Integer[peakCount];
@@ -1185,7 +1289,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	}
 
 	private void setPowderDinvMinMaxRes() {
-		//System.out.println("PDMMR " + powderPatternType + " " + powderXMax + " " + powderXMin);
+		// System.out.println("PDMMR " + powderPatternType + " " + powderXMax + " " +
+		// powderXMin);
 		switch (powderPatternType) {
 		case POWDER_PATTERN_TYPE_2THETA:
 			powderDinvmin = (2 / powderWavelength) * Math.sin((Math.PI / 180) * powderXMin / 2);
@@ -1238,7 +1343,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		powderAxisTickCount = 0;
 		for (double t = tickmin; t < tickmax + tol; t += tickspacing) {
 			powderAxisTickX[powderAxisTickCount] = drawWidth * ((t - powderXMin) / (powderXMax - powderXMin));
-			powderAxisTickLabel[powderAxisTickCount++] = Variables.varToString(t, 2, -5);
+			powderAxisTickLabel[powderAxisTickCount++] = MathUtil.varToString(t, 2, -5);
 		}
 
 	}
@@ -1267,6 +1372,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 * Called by resetPowderPeaks.
 	 * 
 	 * @return true if hkla is better than or equal to hklb
+	 * 
 	 */
 	private static boolean comparePowderHKL(double[] hkla, double[] hklb) {
 		// dist calcalulated as count-sum or product-sum:
@@ -1374,6 +1480,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 * symmetry is needed soon. As of Apr 2015, the hexcheck was ignored and the
 	 * samecheck was weakened since it was finding false equivalences in a hexagonal
 	 * child structure.
+	 * 
 	 */
 	private boolean checkPowderPeakEquiv(double[] suphkla, double[] suphklb, double[][] tmat) {
 		int[] sa = new int[3];
@@ -1465,6 +1572,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	/**
 	 * identifies parent and super-lattice peaks that are systematically absent
 	 * Called by resetCrystalPeaks and resetPowderPeaks.
+	 * 
 	 */
 	public void assignPeakTypes() {
 
@@ -1519,10 +1627,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	 * 5 5 5 The fifth section has the methods that listen for the sliderbars, the
 	 * keyboard and the viewing buttons. 5 5 5
 	 * 55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555
+	 * 
 	 */
 
 	/**
 	 * keyinputListener responds to keyboard commands.
+	 * 
 	 */
 	@Override
 	public void keyPressed(KeyEvent e) {
@@ -1627,6 +1737,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	/**
 	 * mouseoverListener responds to mouseover-peak events.
+	 * 
 	 */
 	@Override
 	public void mouseDragged(MouseEvent e) {
@@ -1637,7 +1748,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 		mousePeak(e.getX(), e.getY());
 	}
 
-	/** creates the components of the control panel */
+	/**
+	 * creates the components of the control panel
+	 */
 	private void buildControls() {
 		rangeButtons = new ButtonGroup();
 		tButton = newRadioButton("2\u0398", true, rangeButtons);
@@ -1748,7 +1861,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	}
 
-	/** loads the control components into the control panel */
+	/**
+	 * loads the control components into the control panel
+	 */
 	private void showControls() {
 
 		// powder-only
@@ -1824,7 +1939,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			variables.recolorPanels();
 			drawPanel.repaint();
 			return;
-		} 
+		}
 		if (!((JToggleButton) src).isSelected())
 			return;
 		boolean setTextBoxes = false;
@@ -1889,9 +2004,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			needsRecalc = true;
 		}
 		if (setTextBoxes && !isAdjusting) {
-			minTxt.setText(Variables.varToString(powderXMin, 2, -5));
-			maxTxt.setText(Variables.varToString(powderXMax, 2, -5));
-			fwhmTxt.setText(Variables.varToString(powderResolution, 3, -5));
+			minTxt.setText(MathUtil.varToString(powderXMin, 2, -5));
+			maxTxt.setText(MathUtil.varToString(powderXMax, 2, -5));
+			fwhmTxt.setText(MathUtil.varToString(powderResolution, 3, -5));
 		}
 		updateDisplay();
 	}

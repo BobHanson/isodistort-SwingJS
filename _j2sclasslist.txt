@@ -323,6 +323,7 @@ org/byu/isodistort/local/IsoApp.js
 org/byu/isodistort/local/Matrix.js
 org/byu/isodistort/local/Mode.js
 org/byu/isodistort/local/Variables.js
+org/byu/isodistort/local/VariableTokenizer.js
 org/byu/isodistort/local/MathUtil.js
 org/byu/isodistort/render/Geometry.js
 org/byu/isodistort/render/Material.js

@@ -147,7 +147,7 @@ public class VariableTokenizer {
 				bytes = new byte[0];
 			}
 		}
-		//verbosity = DEBUG_HIGH;
+		//verbosity = DEBUG_HIGH; 
 		readBlocks(bytes, blockMap, verbosity);
 	}
 

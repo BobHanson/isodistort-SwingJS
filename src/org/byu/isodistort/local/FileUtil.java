@@ -4,8 +4,12 @@ import java.awt.Component;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -16,15 +20,19 @@ import javax.swing.TransferHandler;
 import javax.swing.filechooser.FileFilter;
 
 public class FileUtil {
+
 	private static JFileChooser fc;
 
 	/**
-	 * Get a file's final dot-extension and possibly match it against an extension or the beginning of an extension. 
+	 * Get a file's final dot-extension and possibly match it against an extension
+	 * or the beginning of an extension.
 	 * 
 	 * @param f
-	 * @param fileType null (just retrieve extension) or "xxx" (must match) or "xxx*" (must begin with xxx); must be lower-case if not null
-	 * @return extension or empty string if fileType is null, otherwise lower-case extension if a match or null if not
-	 */ 
+	 * @param fileType null (just retrieve extension) or "xxx" (must match) or
+	 *                 "xxx*" (must begin with xxx); must be lower-case if not null
+	 * @return extension or empty string if fileType is null, otherwise lower-case
+	 *         extension if a match or null if not
+	 */
 	public static String getExtension(File f, String fileType) {
 		String ext = null;
 		String s = f.getName();
@@ -158,6 +166,53 @@ public class FileUtil {
 			}
 		}
 
+	}
+
+	public static String toString(BufferedInputStream bis, boolean doClose) throws IOException {
+
+		return new String(getLimitedStreamBytes(bis, 0, doClose));
+	}
+
+	/**
+	 * Read a stream and deliver its associated byte[] array.
+	 * 
+	 * @param is      the InputStream; note that you cannot use
+	 *                InputStream.available() to reliably read zip data from the
+	 *                web.
+	 * 
+	 * @param n       if positive and not Integer.MAX_VALUE, the number of bytes to
+	 *                limit the read to, which is also then the size of the byte
+	 *                array for reading; if negative or Integer.MAX_VALUE, then the
+	 *                return array length is limited only to the stream's source.
+	 *                
+	 * @param doClose TRUE to close the stream
+	 * @return the byte array read
+	 * @throws IOException
+	 */
+	public static byte[] getLimitedStreamBytes(InputStream is, long n, boolean doClose) throws IOException {
+
+		int buflen = (n > 0 && n < 1024*512 ? (int) n : 1024*512);
+		byte[] buf = new byte[buflen];
+		byte[] bytes = new byte[n < 0 || n == Integer.MAX_VALUE ? 4096 : (int) n];
+		int len = 0;
+		int totalLen = 0;
+		if (n < 0)
+			n = Integer.MAX_VALUE;
+		while (totalLen < n && (len = is.read(buf, 0, buflen)) > 0) {
+			totalLen += len;
+			if (totalLen > bytes.length) {
+				bytes = Arrays.copyOf(bytes, totalLen * 2);
+			}
+			System.arraycopy(buf, 0, bytes, totalLen - len, len);
+			if (n != Integer.MAX_VALUE && totalLen + buflen > bytes.length)
+				buflen = bytes.length - totalLen;
+
+		}
+		if (totalLen == bytes.length)
+			return bytes;
+		buf = new byte[totalLen];
+		System.arraycopy(bytes, 0, buf, 0, totalLen);
+		return buf;
 	}
 
 }

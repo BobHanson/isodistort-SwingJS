@@ -25,7 +25,6 @@
 package org.byu.isodistort.local;
 
 import java.awt.event.ActionEvent;
-import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;

@@ -48,8 +48,6 @@ public class RenderPanel3D extends JPanel
 //	 */
 //	protected BufferedImage bufferIm;
 
-	protected double fov;
-
 	public RenderPanel3D(IsoApp app) {
 		this.app = app;
 		addMouseListener(this);
@@ -62,10 +60,6 @@ public class RenderPanel3D extends JPanel
 		removeMouseListener(this);
 		removeMouseMotionListener(this);
 		renderer = null;
-	}
-
-	public void changeFOV(double FOV) {
-		fov = FOV;
 	}
 
 	// --- PRIVATE DATA FIELDS
@@ -359,8 +353,12 @@ public class RenderPanel3D extends JPanel
 	 * @return true if dimensions are unchanged
 	 */
 	private boolean isInSync() {
-		return (getWidth() == renderer.W && getHeight() == renderer.H);
+		return (getWidth() * (isAntialiased ? 2 : 1) == renderer.W 
+				&& getHeight() * (isAntialiased ? 2 : 1) == renderer.H);
 	}
+	
+	
+//long lastt = 0;
 
 	/**
 	 * Check for a resize prior to rendering, and then carry out the rendering into
@@ -380,53 +378,88 @@ public class RenderPanel3D extends JPanel
 			
 			repaint();
 		} else if (!isInSync()) {
+
+// no obvious effect on my screen
+//			long t = System.currentTimeMillis();
+//			if (t > lastt + 2000) {
+//				isAntialiased = (Math.random() > 0.5);
+//				lastt = t;
+//			}
 			// prior to rendering, check for a resize
-			int width = Math.max(1, getWidth());
-			int height = Math.max(1, getHeight());
-			im = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+			int width = Math.max(1, getWidth()) * (isAntialiased ? 2 : 1);
+			int height = Math.max(1, getHeight() * (isAntialiased ? 2 : 1));
+			im = newBufferedImage(width, height);
 			int[] pixels = ((DataBufferInt) im.getRaster().getDataBuffer()).getData();
+			clearPixels(pixels);
 			renderer.reinit(width, height, pixels);
+			setBgColor(1, 1, 1);// background color: white
+
 		}
 	}
 
 //	long ttime = 0;
 
+	private void clearPixels(int[] pixels) {
+		for (int i = pixels.length; --i > 0;)
+			pixels[i] = -1;
+	}
+
+	private BufferedImage newBufferedImage(int w, int h) {
+		return new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+	}
+
+	// BH this did not have any particular effect that I could see.
+	boolean isAntialiased = false;
+	
 	@Override
 	public synchronized void paint(Graphics g) {
-		//long t1 = System.currentTimeMillis();
-		//System.out.println("RP timer " + (t1 - ttime));
-		//ttime = t1;
+		// long t1 = System.currentTimeMillis();
+		// System.out.println("RP timer " + (t1 - ttime));
+		// ttime = t1;
 		super.paint(g);
 		if (!isInSync()) {
 			// don't paint if we are not ready.
 			return;
 		}
-		g.drawImage(im, 0, 0, null);
+		int dw = im.getWidth();
+		int dh = im.getHeight();
+		int sw = isAntialiased ? dw << 1 : dw;
+		int sh = isAntialiased ? dh << 1 : dh;
 
+		if (isAntialiased) {
+			g.drawImage(im, 0, 0, dw, dh, 0, 0, sw, sh, null);
+		} else {
+			g.drawImage(im, 0, 0, null);
+		}
 		// debugging, testing ....
 
 		double dt = (getCurrentTime() - currentTime);
- 		elapsed += dt;
+		elapsed += dt;
 		currentTime = getCurrentTime();
 		if (elapsed > 0.00001)
 			frameRate = 0.9 * frameRate + 0.1 / elapsed;
 		elapsed = 0.0;
 		if (showFPS) {
+			@SuppressWarnings("unused")
 			String x = "" + // dt;//
 					(int) frameRate + "." + ((int) (frameRate * 10) % 10);
 			// in JavaScript we just put this up in the tab
-			/**
-			 * @j2sNative
-			 * 
-			 * 			document.title = ""+x
-			 */
-			{
-				g.setColor(Color.white);
-				g.fillRect(0, renderer.H - 14, 80, 14);
-				g.setColor(Color.black);
-				g.drawString(x + " fps ", 1, renderer.H - 1);
-			}
+//			/**
+//			 * @j2sNative
+//			 * 
+//			 * 			document.title = ""+x
+//			 */
+//			{
+//				g.setColor(Color.white);
+//				g.fillRect(0, renderer.H - 14, 80, 14);
+//				g.setColor(Color.black);
+//				g.drawString(x + " fps ", 1, renderer.H - 1);
+//			}
 		}
+
+		if (app.t0 != 0)
+			System.out.println("Time to load, render, and paint: "+(System.currentTimeMillis() - app.t0)+" ms");			
+		app.t0 = 0;
 	}
 
 //	/**
@@ -571,7 +604,8 @@ public class RenderPanel3D extends JPanel
 							/ (double) (1 + Math.sqrt((256 - x) * (256 - x) + (256 - y) * (256 - y)));
 					break;
 				case 4:
-					setFOV(fov = fov * (1 + (y - my) * 0.004));// y-direction motion changes field of view (zoom).
+					setFOV(renderer.getFOV() * (1 + (y - my) * 0.004));
+					// y-direction motion changes field of view (zoom).
 																// -David Tanner
 					phi = 0;
 					theta = 0;
@@ -589,7 +623,7 @@ public class RenderPanel3D extends JPanel
 			// MouseEvent.BUTTON2_MASK or MouseEvent.BUTTON3_MASK
 			theta = phi = sigma = 0;
 
-			double shiftRate = 0.01 * fov;
+			double shiftRate = 0.01 * renderer.getFOV();
 			double shiftX = shiftRate * (x - mx);
 			double shiftY = shiftRate * (y - my);
 
@@ -674,21 +708,34 @@ public class RenderPanel3D extends JPanel
 	}
 
 	public BufferedImage getImage() {
-		BufferedImage bi = new BufferedImage(im.getWidth(null), im.getHeight(null), BufferedImage.TYPE_INT_ARGB); 
+		int sw = im.getWidth(null);
+		int sh = im.getHeight(null);
+		int dw = isAntialiased ? sw >> 1 : sw;
+		int dh = isAntialiased ? sh >> 1 : sh;
+
+		
+		BufferedImage bi = newBufferedImage(dw, dh); 
 		Graphics2D g = bi.createGraphics();
-		g.drawImage(im, null, null); 
+		if (isAntialiased) {
+			g.drawImage(im, 0, 0, dw, dh, 0, 0, sw, sh,  null); 
+		} else {
+			g.drawImage(im, 0, 0, null); 			
+		}
 		g.dispose();
 		return bi; 
 	}
 
-	public void initializeSettings(double perspectivescaler, double scdSize) {
+	public void initializeSettings(
+			//double perspectivescaler, 
+			double scdSize) {
 		double fl = 10;
-		double fov = 2 * perspectivescaler * scdSize / fl;
+		double fov = 2 
+				//* perspectivescaler 
+				* scdSize / fl;
 		fov0 = fov;
 		setBgColor(1, 1, 1);// background color: white
 		setFOV(fov);// field of view
 		setFL(fl);// focal length: zoomed way out
-		changeFOV(fov);
 		setCamera(0, 0);
 		// Define position and color of light source (x, y, z, r, g, b)
 		double intensity = 0.38;
@@ -708,15 +755,23 @@ public class RenderPanel3D extends JPanel
 		double[] m = new double[16];
 		System.arraycopy(renderer.getCamera().getUnsafe(), 0, m, 0, 16);
 		return new double[][] {
-				new double[] { fov0, fov }, m }; 
+				new double[] { fov0, renderer.getFOV(), renderer.isOrthographic() ? 0 : 1 }, m }; 
 	}
 
 	public void setPerspective(double[][] params) {
 		double[] v = params[0];
 		fov0 = v[0];
-		fov = v[1];
-		renderer.setFOV(fov);
+		setFOV(v[1]);
+		setPerspective(v[2] != 0);
 		System.arraycopy(params[1], 0, renderer.getCamera().getUnsafe(), 0, 16);
+	}
+
+	/**
+	 * Turn perspective on or off
+	 * @param b true for perspective
+	 */
+	public void setPerspective(boolean b) {
+		renderer.setPerspective(b);
 	}
 
 }

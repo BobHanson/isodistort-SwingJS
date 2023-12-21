@@ -195,7 +195,7 @@ public class Geometry {
 	 * @return True if the object or its material is double-sided, false otherwise.
 	 */
 	boolean isDoubleSided() {
-		return isDoubleSided || material != null && material.isDoubleSided;
+		return false;//isDoubleSided || material != null && material.isDoubleSided;
 	}
 
 	/**

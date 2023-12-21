@@ -12,9 +12,10 @@ public class MathUtil {
 	/**
 	 * static access only
 	 */
-	
-	private MathUtil() {}
-	
+
+	private MathUtil() {
+	}
+
 	/**
 	 * Normalizes vector v to unit-length.
 	 * 
@@ -25,16 +26,16 @@ public class MathUtil {
 		if (s != 0)
 			for (int i = v.length; --i >= 0;)
 				v[i] /= s;
-	}	
+	}
 
 	public static double len3(double[] xyz) {
 		return Math.sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1] + xyz[2] * xyz[2]);
 	}
-	
+
 	public static double lenSq3(double[] xyz) {
 		return xyz[0] * xyz[0] + xyz[1] * xyz[1] + xyz[2] * xyz[2];
 	}
-	
+
 	/**
 	 * Computes the magnitude of the vector.
 	 * 
@@ -42,7 +43,7 @@ public class MathUtil {
 	 * @return the magnitude of vector v
 	 */
 	public static double norm(double[] v) {
-		return Math.sqrt(dot(v, v));
+		return Math.sqrt(matmul(v, v));
 	}
 
 	/**
@@ -53,7 +54,7 @@ public class MathUtil {
 	 * @param b source vector
 	 * @return the result of a dot b
 	 */
-	public static double dot(double[] a, double[] b) {
+	public static double matmul(double[] a, double[] b) {
 		double sum = 0;
 		for (int i = b.length; --i >= 0;)
 			sum += a[i] * b[i];
@@ -145,15 +146,20 @@ public class MathUtil {
 	}
 
 	/**
-	 * Add two vectors, while multiplying the 2nd by a constant -- Branton Campbell
+	 * Add two vectors, or apply a scalar while multiplying the 2nd by a constant -- Branton Campbell
 	 * 
 	 * @param src1 original vector 1
-	 * @param src2 original vector 2
+	 * @param src2 original vector 2; if null, then this is a scalar addition
 	 * @param dst  output vector
 	 */
-	public static void vecadd(double[] src1, double const1, double[] src2, double const2, double[] dst) {
-		for (int i = src1.length; --i >= 0;)
-			dst[i] = const1 * src1[i] + const2 * src2[i];
+	public static void vecadd(double[] src1, double const2, double[] src2, double[] dst) {
+		if (src2 == null) {
+			for (int i = src1.length; --i >= 0;)
+				dst[i] = src1[i] + const2;			
+		} else {
+			for (int i = src2.length; --i >= 0;)
+				dst[i] = src1[i] + const2 * src2[i];
+		}
 	}
 
 	/**
@@ -175,9 +181,9 @@ public class MathUtil {
 	 * @param mat  transformation matrix
 	 * @param vect input vector Branton Campbell
 	 */
-	public static void matdotvect(double mat[][], double vect[], double dst[]) {
+	public static void mul(double mat[][], double vect[], double dst[]) {
 		for (int i = mat.length; --i >= 0;)
-			dst[i] = dot(mat[i], vect);
+			dst[i] = matmul(mat[i], vect);
 	}
 
 	/**
@@ -193,7 +199,7 @@ public class MathUtil {
 		double[][] tempmat = new double[3][3];
 
 		cross(mat[0], mat[1], tempvec);
-		determinant = dot(tempvec, mat[2]);
+		determinant = matmul(tempvec, mat[2]);
 
 		for (int i = 0; i < 3; i++)
 			cross(mat[i], mat[(i + 1) % 3], tempmat[(i + 2) % 3]);
@@ -215,7 +221,7 @@ public class MathUtil {
 		double determinant;
 
 		cross(mat[0], mat[1], tempvec);
-		determinant = -dot(tempvec, mat[2]);
+		determinant = -matmul(tempvec, mat[2]);
 		return determinant;
 	}
 
@@ -239,13 +245,13 @@ public class MathUtil {
 	 * @param mat1 original matrix 1
 	 * @param mat2 original matrix 2 Branton Campbell
 	 */
-	public static void matdotmat(double mat1[][], double mat2[][], double dst[][]) {
+	public static void mul(double mat1[][], double mat2[][], double dst[][]) {
 		int mlen = mat1.length;
 		double[][] tmat2 = new double[mlen][mlen];
 		mattranspose(mat2, tmat2);
 		for (int j = mlen; --j >= 0;)
 			for (int i = mlen; --i >= 0;)
-				dst[i][j] = dot(mat1[i], tmat2[j]);
+				dst[i][j] = matmul(mat1[i], tmat2[j]);
 	}
 
 	/**
@@ -253,71 +259,81 @@ public class MathUtil {
 	 * 
 	 * @param voigt is the voigt form of the tensor
 	 * @param mat   input matrix
+	 * @param mXX   set to one for "plus identity"
+	 * @param return mat[][]
 	 */
-	public static void voigt2matrix(double voigt[], double mat[][]) {
-		mat[0][0] = voigt[0];
-		mat[1][1] = voigt[1];
-		mat[2][2] = voigt[2];
-		mat[1][2] = 0.5 * voigt[3];
-		mat[2][1] = 0.5 * voigt[3];
-		mat[0][2] = 0.5 * voigt[4];
-		mat[2][0] = 0.5 * voigt[4];
-		mat[0][1] = 0.5 * voigt[5];
-		mat[1][0] = 0.5 * voigt[5];
+	public static double[][] voigt2matrix(double voigt[], double mat[][], int mXX) {
+		mat[0][0] = voigt[0] + mXX;
+		mat[0][1] = voigt[5] / 2;
+		mat[0][2] = voigt[4] / 2;
+		mat[1][0] = voigt[5] / 2;
+		mat[1][1] = voigt[1] + mXX;
+		mat[1][2] = voigt[3] / 2;
+		mat[2][0] = voigt[4] / 2;
+		mat[2][1] = voigt[3] / 2;
+		mat[2][2] = voigt[2] + mXX;
+		return mat;
 	}
+
+	private static double[] temp = new double[3];
 
 	/**
 	 * Uses two xyz points to a calculate a bond. -- Branton Campbell
+	 * @param bond return [x, y, z, theta, phi, len, okflag(1 or 0)]
+	 * @return true if OK
 	 */
-	public static void pairtobond(double[] atom1, double[] atom2, double[] bond) {
+	public static boolean setBondInfo(double[] atom1, double[] atom2, double[] bond) {
 		int x = 0, y = 1, z = 2, X = 3, Y = 4;
 		double lensq = 0;
-		double orien[] = new double[3];
+		for (int i = 0; i < 3; i++) {
+			temp[i] = (atom2[i] - atom1[i]);
+			lensq += temp[i] * temp[i];
+		}
+
+		if (lensq < 0.000000000001) {
+			bond[6] = 0;
+			return false;
+		}
 
 		for (int i = 0; i < 3; i++) {
 			bond[i] = (atom2[i] + atom1[i]) / 2.0;
-			orien[i] = (atom2[i] - atom1[i]);
-			lensq += orien[i] * orien[i];
-		}
-
-		if (lensq < 0.000000000001) // BH Q: this is REALLY small!!! was sqrt() <= 0.000001
-			return;
-
-		for (int i = 0; i < 3; i++)
-			orien[i] = orien[i] / Math.sqrt(lensq);
-		bond[X] = -Math.asin(orien[y]);
-		bond[Y] = Math.atan2(orien[x], orien[z]);
+			temp[i] = temp[i] / Math.sqrt(lensq);
+		}		
+		bond[X] = -Math.asin(temp[y]);
+		bond[Y] = Math.atan2(temp[x], temp[z]);
 		bond[5] = Math.sqrt(lensq);
 		bond[6] = 1.0;
+		return true;
 	}
 
 	/**
 	 * Calculates the description used to render an arrow -- Branton Campbell
 	 * 
-	 * @param orien      is the vector input.
-	 * @param arrowstuff is the [X-angle, Y-angle, Length] output.
+	 * @param xyz       is the vector input.
+	 * @param arrowInfo is the [X-angle, Y-angle, Length] output.
 	 */
-	public static void calculatearrow(double[] orien, double[] arrowstuff) {
+	public static void calculateArrow(double[] xyz, double[] arrowInfo) {
 		int x = 0, y = 1, z = 2, X = 0, Y = 1, L = 2;
-		double lensq = 0;
-
-		for (int i = 0; i < 3; i++)
-			lensq += orien[i] * orien[i];
+		double lensq = MathUtil.lenSq3(xyz);
 
 		if (lensq < 0.000000000001) {
-			arrowstuff[X] = 0;
-			arrowstuff[Y] = 0;
-			arrowstuff[L] = 0;
+			arrowInfo[X] = 0;
+			arrowInfo[Y] = 0;
+			arrowInfo[L] = 0;
 			return;
 		}
 
 		double d = Math.sqrt(lensq);
-		for (int i = 0; i < 3; i++)
-			orien[i] /= d;
 
-		arrowstuff[X] = -Math.asin(orien[y]); // X rotation
-		arrowstuff[Y] = Math.atan2(orien[x], orien[z]); // Y rotation
-		arrowstuff[L] = d; // Length
+// BH Q! scaling the input array??	
+//
+//		for (int i = 0; i < 3; i++)
+//			xyz[i] /= d;
+//
+		// BH: added / d in asin. Why normalize this? 
+		arrowInfo[X] = -Math.asin(xyz[y] / d); // X rotation
+		arrowInfo[Y] = Math.atan2(xyz[x], xyz[z]); // Y rotation
+		arrowInfo[L] = d; // Length
 	}
 
 	/**
@@ -327,10 +343,10 @@ public class MathUtil {
 	 * @param ellipsoid is the [widthx, widthy, widthz, rotaxisx, rotaxisy,
 	 *                  rotaxisz, angle] output.
 	 */
-	public static void calculateellipstuff(double[][] matrixform, double[] ellipstuff) {
+	public static void calculateEllipsoid(double[][] matrixform, double[] ellipstuff) {
 		int wx = 0, wy = 1, wz = 2, dx = 3, dy = 4, dz = 5, ang = 6;
-		double trc = 0, 
-				//det = 0, lensq = 0, 
+		double trc = 0,
+				// det = 0, lensq = 0,
 				rotangle = 0;
 		double rotaxis[] = new double[3];
 		double widths[] = new double[3];
@@ -346,7 +362,7 @@ public class MathUtil {
 //				lensq += matrixform[i][j]* matrixform[i][j];
 //
 //		if ((Math.sqrt(lensq) < 0.000001) || (det < 0.000001) || true) // "true" temporarily bypasses the ellipoidal
-																		// analysis.
+		// analysis.
 		{
 			double avgrad = Math.sqrt(Math.abs(trc) / 3.0);
 			widths[0] = avgrad;
@@ -388,16 +404,115 @@ public class MathUtil {
 
 	/**
 	 * Copies 3-vector from second parameter triad to first
-	 * 
-	 * @param dest
 	 * @param src
+	 * @param dest
 	 * 
 	 * @author Bob Hanson
 	 */
-	public static void set3(double[] dest, double[] src) {
+	public static void set3(double[] src, double[] dest) {
 		dest[0] = src[0];
 		dest[1] = src[1];
 		dest[2] = src[2];
 	}
 
-} // end Vec class
+	/**
+	 * add srca and srcb; place the result in dest
+	 * @param srca
+	 * @param srcb
+	 * @param dest
+	 */
+	public static void add3(double[] srca, double[] srcb, double[] dest) {
+		dest[0] = srca[0] + srcb[0];
+		dest[1] = srca[1] + srcb[1];
+		dest[2] = srca[2] + srcb[2];
+	}
+
+	/**
+	 * Set an arbitrarily long vector to a scalar (0, probably).
+	 * 
+	 * @param vec
+	 * @param val
+	 */
+	public static void vecfill(double[] vec, double val) {
+		for (int i = vec.length; --i >= 0;)
+			vec[i] = val;
+	}
+
+	/**
+	 * Expands the minimum (minmax[0]) and maximum (minmax[1]) to contain vec.
+	 * 
+	 * @param vec
+	 * @param minmax
+	 */
+	public static void rangeCheck(double[] vec, double[][] minmax) {
+		for (int i = 0; i < 3; i++) {
+			if (vec[i] < minmax[0][i])
+				minmax[0][i] = vec[i];
+			if (vec[i] > minmax[1][i])
+				minmax[1][i] = vec[i];
+		}
+	}
+
+	private final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
+
+	static void recalculateLattice(double[] lattice, double[][] pBasisCart) {
+		double[][] pBasisCartTranspose = new double[3][3];
+		MathUtil.mattranspose(pBasisCart, pBasisCartTranspose);
+		lattice[A] = Math.sqrt(MathUtil.matmul(pBasisCartTranspose[A], pBasisCartTranspose[A]));
+		lattice[B] = Math.sqrt(MathUtil.matmul(pBasisCartTranspose[B], pBasisCartTranspose[B]));
+		lattice[C] = Math.sqrt(MathUtil.matmul(pBasisCartTranspose[C], pBasisCartTranspose[C]));
+		lattice[ALPHA] = Math.acos(
+				MathUtil.matmul(pBasisCartTranspose[B], pBasisCartTranspose[C]) / Math.max(lattice[B] * lattice[C], 0.001));
+		lattice[BETA] = Math.acos(
+				MathUtil.matmul(pBasisCartTranspose[A], pBasisCartTranspose[C]) / Math.max(lattice[A] * lattice[C], 0.001));
+		lattice[GAMMA] = Math.acos(
+				MathUtil.matmul(pBasisCartTranspose[A], pBasisCartTranspose[B]) / Math.max(lattice[A] * lattice[B], 0.001));
+		
+
+	}
+
+	private static final String ZEROES = "000000000000";
+	private static final String BLANKS = "            ";
+
+	public static String varToString(double val, int n, int w) {
+		// rounding
+		boolean leftAlign = (w < 0);
+		w = Math.abs(w);		
+		double incr = 0.5;
+		for (int j = n; j > 0; j--)
+			incr /= 10;
+		val = (Math.abs(val) <= 0.00001 ? 0 : val + incr * (val / Math.abs(val)));
+		String s = Double.toString(val);
+		int n1 = s.indexOf('.');
+		int n2 = s.length() - n1 - 1;
+		if (n > n2) {
+			s += ZEROES.substring(0, n - n2);
+		} else if (n2 > n) {
+			s = s.substring(0, n1 + n + 1);	
+		}		
+		if (w > s.length()) {
+			String b = BLANKS.substring(0, w - s.length());
+			s = (leftAlign ? s + b : b + s);
+		}
+		return s;
+	}
+
+	public static void copy3(double[] src, double[] dest) {
+		dest[0] = src[0];
+		dest[1] = src[1];
+		dest[2] = src[2];
+	}
+
+	/**
+	 * Compare the length of v (or distance from origin) squared to d2 and return the largest 
+	 * @param p
+	 * @param d2
+	 * @return
+	 */
+	public static double maxlen(double[] p, double d2) {
+		double d = MathUtil.lenSq3(p);
+		return (d > d2 ? d : d2);
+	}
+
+
+}

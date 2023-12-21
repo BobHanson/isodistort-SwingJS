@@ -17,12 +17,15 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -47,6 +50,7 @@ import javax.swing.SwingUtilities;
 
 import org.byu.isodistort.IsoDiffractApp;
 import org.byu.isodistort.IsoDistortApp;
+import org.byu.isodistort.server.ServerUtil;
 
 /**
  * 
@@ -57,8 +61,17 @@ import org.byu.isodistort.IsoDistortApp;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".6"; 
+	public final static int DIS = Mode.DIS; // displacive
+	public final static int OCC = Mode.OCC; // occupancy (aka "scalar")
+	public final static int MAG = Mode.MAG; // magnetic
+	public final static int ROT = Mode.ROT; // rotational
+	public final static int ELL = Mode.ELL; // ellipsoidal
 	
+	final static String minorVersion = ".7b"; 
+
+	
+	public long t0 = System.currentTimeMillis();
+
 	/**
 	 * The variables are all read. Time to do any app-specific 
 	 * initialization before we make the frame visible. 
@@ -121,7 +134,7 @@ public abstract class IsoApp {
 	private static final int controlPanelHeight = 55;
 	private final static int roomForScrollBar = 15;
 	
-	protected String[] args;
+	protected Object[] args;
 
 	private IsoApp[] appSettings = new IsoApp[2];
 
@@ -217,11 +230,11 @@ public abstract class IsoApp {
 	/** An instance of the Variables class that holds all the input data */
 	protected Variables variables;
 	/** A string containing all of the input data */
-	protected String isoData = "";
+	protected Object isoData = "";
 	/** False for datafile and True for html file */
 	protected boolean readMode = false;
 	/** The datafile to use when readMode is false */
-	protected String whichdatafile = "data/test28.txt";//"data/test28.txt";
+	protected String whichdatafile = "data/ZrP2O7-sg205-sg61-distort.isoviz";////"data/test28.txt";//"data/test28.txt";
 
 	protected JFrame frame;
 
@@ -346,13 +359,16 @@ public abstract class IsoApp {
 	}
 
 	/**
-	 * This data reader has two modes of operation. For data files, it uses a
-	 * buffered reader to get the data into a single string. The alternative is to
-	 * read a single-string data sequence directly from the html file that calls the
-	 * applet (injected as isoData). The Variables class then has a method that
-	 * parses this string.
+	 * This data reader has two modes of operatinon.
+	 * 
+	 * For data files, it can accept byte[], String, or InputStream data.
+	 * 
+	 * The alternative is to read a single-string data sequence directly from the
+	 * html file that calls the app (injected as isoData).
+	 * 
+	 * The Variables class then has a method that parses the byte[] representation of the string.
 	 */
-	protected String readFile() {
+	protected Object readFile() {
 		switch (args == null ? 0 : args.length) {
 		case 3:
 			document = args[2];
@@ -371,36 +387,68 @@ public abstract class IsoApp {
 		return isoData;
 	}
 
-	private String readFileData(String path) {
-		try {
-			BufferedReader br = null;
-			try {
-				br = new BufferedReader(new FileReader(path));
-			} catch (Exception e) {
-				Object data = getClass().getResource("/" + path).getContent();
-				br = new BufferedReader(new InputStreamReader((FilterInputStream) data));
+	boolean asBytes = true;
+	//boolean asInputStream = true;
+	private Object readFileData(String path) {
 
-			}
+		try {
 			long t = System.currentTimeMillis();
-			StringBuffer dataString = new StringBuffer();
-			dataString.append(readLineSkipComments(br));
-			if (dataString.indexOf("!isoversion") != 0) {
-				br.close();
-				return null;
+			if (asBytes) {
+				// 33 ms to read 8 MB
+				BufferedInputStream bis = null;
+				try {
+					
+				File f = new File(path);
+				bis = new BufferedInputStream(new FileInputStream(f));
+				} catch (Exception e) {
+					bis = new BufferedInputStream((InputStream) getClass().getResource("/" + path).getContent());
+				}
+				bis.mark(200);
+				byte[] header = new byte[200];
+				bis.read(header);
+				String s = new String(header);
+				if (s.indexOf("!isoversion") < 0) {
+					bis.close();
+					return null;
+				}
+				bis.reset();
+				
+				
+				
+				byte[] bytes = FileUtil.getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
+				System.out.println("IsoApp.readFileData " + (System.currentTimeMillis() - t) + " ms for " + bytes.length + " bytes");
+				return bytes;
 			}
-			dataString.append('\n');
-			String s;
-			while ((s = readLineSkipComments(br)) != null) {
-				dataString.append(s).append('\n');
-			}
-			br.close();
-			System.out.println("Bytes read: " + dataString.length() + " in "+(System.currentTimeMillis() - t)+" ms");
-			return dataString.toString();
+
+//			// StringBuffer was 121 ms to read 8 MB
+//					
+//			BufferedReader br = null;
+//			try {
+//				br = new BufferedReader(new FileReader(path));
+//			} catch (Exception e) {
+//				Object data = getClass().getResource("/" + path).getContent();
+//				br = new BufferedReader(new InputStreamReader((FilterInputStream) data));
+//
+//			}
+//			StringBuffer dataString = new StringBuffer();
+//			dataString.append(readLineSkipComments(br));
+//			if (dataString.indexOf("!isoversion") != 0) {
+//				br.close();
+//				return null;
+//			}
+//			dataString.append('\n');
+//			String s;
+//			while ((s = readLineSkipComments(br)) != null) {
+//				dataString.append(s).append('\n');
+//			}
+//			br.close();
+//			System.out.println("IsoApp.readFileData " + (System.currentTimeMillis() - t) + " ms for " + dataString.length() + " bytes");
+//			return dataString.toString();
 		} catch (IOException exception) {
 			exception.printStackTrace();
 			System.out.println("Oops. File not found.");
-			return null;
 		}
+		return null;
 	}
 
 	private String readLineSkipComments(BufferedReader br) throws IOException {
@@ -431,7 +479,7 @@ public abstract class IsoApp {
 		default:
 			return false;
 		}
-		String data = readFileData(f.getAbsolutePath());
+		Object data = readFileData(f.getAbsolutePath());
 		if (data == null)
 			return false;
 		boolean isIsoDistort = (appType == APP_ISODISTORT);
@@ -455,7 +503,7 @@ public abstract class IsoApp {
 
 	}
 
-	private void openApplication(int appType, String data, boolean isDrop) {
+	private void openApplication(int appType, Object data, boolean isDrop) {
 		if (data == null)
 			return;
 		if (!prepareToSwapOut())
@@ -465,7 +513,7 @@ public abstract class IsoApp {
 			boolean isIsoDistort = (appType == APP_ISODISTORT);
 			IsoApp app = (isIsoDistort ? new IsoDistortApp() : new IsoDiffractApp());
 			if (args == null || args.length == 0)
-				args = new String[1];
+				args = new Object[1];
 			args[0] = data;
 			JFrame frame = me.frame;
 			dispose();
@@ -507,42 +555,32 @@ public abstract class IsoApp {
 
 		@Override
 		public void windowClosing(WindowEvent e) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void windowClosed(WindowEvent e) {
 			shutDown();
 		}
 
 		@Override
+		public void windowClosed(WindowEvent e) {
+		}
+
+		@Override
 		public void windowIconified(WindowEvent e) {
-			// TODO Auto-generated method stub
-			
 		}
 
 		@Override
 		public void windowDeiconified(WindowEvent e) {
-			// TODO Auto-generated method stub
-			
 		}
 
 		@Override
 		public void windowActivated(WindowEvent e) {
-			// TODO Auto-generated method stub
-			
 		}
 
 		@Override
 		public void windowDeactivated(WindowEvent e) {
-			// TODO Auto-generated method stub
-			
 		}
 		
 	};
 	
-	private void start(JFrame frame, String[] args, Variables oldVariables, boolean isDrop) {
+	private void start(JFrame frame, Object[] args, Variables oldVariables, boolean isDrop) {
 		if (oldVariables == null && !isDrop)
 			frame.setJMenuBar((JMenuBar) new MenuActions(this).createMenuBar());			
 		this.frame = frame;
@@ -553,7 +591,8 @@ public abstract class IsoApp {
 			long t = System.currentTimeMillis();
 
 			initializePanels();
-			variables = new Variables(this, readFile(), appType == APP_ISODIFFRACT);
+			variables = new Variables(this, appType == APP_ISODIFFRACT, oldVariables != null);
+			isoData = variables.parse(readFile());
 			if (oldVariables == null) {
 				frameContentPane.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
 			} else {
@@ -634,13 +673,13 @@ public abstract class IsoApp {
 	 * 
 	 * @param consumer in case we need to go asynchronous on this.
 	 */
-	public void getData(Consumer<String> consumer) {
-		String data = isoData;
+	public void getData(Consumer<Object> consumer) {
+		Object data = isoData;
 		// just the original data so far. 
 		consumer.accept(data);
 	}
 
-	String testData = "#isodistort_version_number \r\n" + "!isoversion 6.12\r\n" + "\r\n"
+	final static String testData = "#isodistort_version_number \r\n" + "!isoversion 6.12\r\n" + "\r\n"
 			+ "#atom_sphere_radius_in_angstroms \r\n" + "!atommaxradius    0.40000\r\n" + "\r\n"
 			+ "#angstroms_per_magneton \r\n" + "!angstromspermagneton    0.50000\r\n" + "\r\n"
 			+ "#angstroms_per_radian \r\n" + "!angstromsperradian    4.00000\r\n" + "\r\n"
@@ -1014,13 +1053,27 @@ public abstract class IsoApp {
 	}
 
 	public void saveCurrent() {
+		if (formData == null)
+			formData = ServerUtil.testFormData;
+		Object mapFormData = ServerUtil.json2Map(formData);
+		variables.updateFormData(mapFormData);
+		
+		getData(new Consumer<Object>() {
+
+			@Override
+			public void accept(Object data) {
+				FileUtil.saveDataFile(frame, data, "isoviz", false);
+				
+			}
+			
+		});
 	}
 
 	public void saveOriginal() {
-		getData(new Consumer<String>() {
+		getData(new Consumer<Object>() {
 
 			@Override
-			public void accept(String data) {
+			public void accept(Object data) {
 				FileUtil.saveDataFile(frame, data, "isoviz", false);
 				
 			}

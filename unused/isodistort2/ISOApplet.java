@@ -39,7 +39,10 @@ public abstract class ISOApplet extends Applet implements Runnable {
 	/** False for datafile and True for html file */
 	protected boolean readMode = false;
 	/** The datafile to use when readMode is false */
-	protected String whichdatafile = "data/t-mod.txt";
+	protected String whichdatafile = "data/ZrP2O7-sg205-sg61-distort.isoviz"; // t-mod.txt";
+
+	
+	public long t0 = System.currentTimeMillis();
 
 	/**
 	 * This data reader has two modes of operation. For data files, it uses a
@@ -49,17 +52,31 @@ public abstract class ISOApplet extends Applet implements Runnable {
 	 * parses this string.
 	 */
 	protected void readFile() {
+
 		if (readMode)
 			dataString = getParameter("isoData");
 		else {
 			try {
+				long t = System.currentTimeMillis();
 				String path = IsoDistortApplet.class.getName();
 				path = path.substring(0, path.lastIndexOf('.') + 1).replace('.','/');
 				BufferedReader br = new BufferedReader(new FileReader(path + whichdatafile));// this reads the data
-				dataString = br.readLine() + "\n";// scrap the first data line of text
-				while (br.ready()) // previously used `for (int i=1;br.ready();i++)
-					dataString += br.readLine() + "\n";
+				int nlines = 0;
+				StringBuffer sb = new StringBuffer(br.readLine()).append("\n");// scrap the first data line of text
+				while (br.ready()) {
+					// previously used `for (int i=1;br.ready();i++)
+					sb.append(br.readLine()).append("\n");
+				nlines++;
+				
+				if ((nlines % 10000) == 0) {
+					System.out.println("reading..." + nlines + " " + (System.currentTimeMillis() - t));
+					Thread.yield();
+				}
+				}
 				br.close();
+				dataString = sb.toString();
+				System.out.println("ISOApplet time to load " + whichdatafile + ": " + (System.currentTimeMillis() - t) + " ms");
+				System.out.println("done");
 			} // close try
 			catch (IOException exception) {
 				exception.printStackTrace();
@@ -68,7 +85,6 @@ public abstract class ISOApplet extends Applet implements Runnable {
 		}
 	}
 
-	@Override
 	public String getParameter(String key) {
 		switch (key) {
 		case "isoData":
@@ -98,7 +114,6 @@ public abstract class ISOApplet extends Applet implements Runnable {
 		}
 	}
 
-	@Override
 	public void start() {
 		this.setVisible(true);
 		this.requestFocus();
@@ -109,7 +124,6 @@ public abstract class ISOApplet extends Applet implements Runnable {
 		timer.start();
 	}
 
-	@Override
 	public void run() {
 		if (!isRunning)
 			return;
@@ -118,7 +132,6 @@ public abstract class ISOApplet extends Applet implements Runnable {
 	/**
 	 * Stops the renderer thread.
 	 */
-	@Override
 	public void stop() {
 		if (timer != null) {
 			isRunning = false;

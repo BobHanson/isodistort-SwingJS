@@ -191,7 +191,7 @@ public class FileUtil {
 	 */
 	public static byte[] getLimitedStreamBytes(InputStream is, long n, boolean doClose) throws IOException {
 
-		int buflen = (n > 0 && n < 1024 ? (int) n : 1024);
+		int buflen = (n > 0 && n < 1024*512 ? (int) n : 1024*512);
 		byte[] buf = new byte[buflen];
 		byte[] bytes = new byte[n < 0 || n == Integer.MAX_VALUE ? 4096 : (int) n];
 		int len = 0;

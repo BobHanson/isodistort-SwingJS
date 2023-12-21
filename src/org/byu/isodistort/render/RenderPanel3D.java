@@ -456,6 +456,10 @@ public class RenderPanel3D extends JPanel
 //				g.drawString(x + " fps ", 1, renderer.H - 1);
 //			}
 		}
+
+		if (app.t0 != 0)
+			System.out.println("Time to load, render, and paint: "+(System.currentTimeMillis() - app.t0)+" ms");			
+		app.t0 = 0;
 	}
 
 //	/**

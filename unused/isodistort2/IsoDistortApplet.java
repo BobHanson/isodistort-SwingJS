@@ -160,7 +160,6 @@ public class IsoDistortApplet extends RenderApplet {
 	 * 222222222222222222222222222222222222222222222222222222222222222222222222222222
 	 */
 
-	@Override
 	public void initialize() {
 		this.addKeyListener(new keyinputListener());
 		readFile();
@@ -231,7 +230,6 @@ public class IsoDistortApplet extends RenderApplet {
 	boolean isFocused = true; // is the Applet in focus? If not, stop updating the display.
 	boolean viewFocused = false; // are the viewDir fields being accessed?
 
-	@Override
 	protected void runImpl() {
 		if (!isAnimate && !spin && --initializing < 0)
 			return;
@@ -242,7 +240,6 @@ public class IsoDistortApplet extends RenderApplet {
 
 	private boolean isAdjusting = false;
 	
-	@Override
 	public void updateDisplay() {
 		if (isAdjusting)
 			return;
@@ -845,15 +842,12 @@ public class IsoDistortApplet extends RenderApplet {
 
 	/** keyinputListener responds to keyboard commands. */
 	private class keyinputListener implements KeyListener {
-		@Override
 		public void keyPressed(KeyEvent e) {
 		}
 
-		@Override
 		public void keyReleased(KeyEvent e) {
 		}
 
-		@Override
 		public void keyTyped(KeyEvent e) {
 			char key = e.getKeyChar();
 
@@ -935,13 +929,11 @@ public class IsoDistortApplet extends RenderApplet {
 
 	/** listens for changes in focus in the ViewDirection fields. */
 	private class focusListener implements FocusListener {
-		@Override
 		public void focusGained(FocusEvent event) {
 			viewFocused = true; // Record the fact that we have focus.
 			updateDisplay();
 		}
 
-		@Override
 		public void focusLost(FocusEvent event) {
 			viewFocused = false; // Record the fact that we don't have focus.
 		}
@@ -949,7 +941,6 @@ public class IsoDistortApplet extends RenderApplet {
 
 	/** listens for the check boxes that highlight a given atomic subtype. */
 	private class checkboxListener implements ItemListener {
-		@Override
 		public void itemStateChanged(ItemEvent event) {
 			showAtoms = aBox.isSelected();
 			showBonds = bBox.isSelected();
@@ -969,7 +960,6 @@ public class IsoDistortApplet extends RenderApplet {
 
 	/** listens for the applet buttons, which specify the viewing angles. */
 	private class buttonListener implements ItemListener {
-		@Override
 		public void itemStateChanged(ItemEvent event) {
 			if (event.getSource() == nButton) {
 				theta = phi = sigma = 0;
@@ -1007,7 +997,6 @@ public class IsoDistortApplet extends RenderApplet {
 
 	/** Resets the view when the applyView button is pushed. */
 	private class viewListener implements ActionListener {
-		@Override
 		public void actionPerformed(ActionEvent event) {
 			if (event.getSource() == applyView)
 				resetViewDirection();

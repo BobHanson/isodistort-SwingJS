@@ -234,7 +234,7 @@ public abstract class IsoApp {
 	/** False for datafile and True for html file */
 	protected boolean readMode = false;
 	/** The datafile to use when readMode is false */
-	protected String whichdatafile = "data/ZrP2O7-sg205-sg61-distort.isoviz";////"data/test28.txt";//"data/test28.txt";
+	protected String whichdatafile = "data/test28.txt";//"data/ZrP2O7-sg205-sg61-distort.isoviz";////"data/test28.txt";
 
 	protected JFrame frame;
 

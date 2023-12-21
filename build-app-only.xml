@@ -1,0 +1,35 @@
+<project name="ISOViz" default="main" basedir=".">
+  <!--
+      DocumentId  $Id: build.xml 21793 2018-01-02 16:58:31Z hansonr $
+  -->
+
+  <!-- Contributions -->
+  <!-- <for list ...> construct needs ant-contrib.jar -->
+  <taskdef resource="net/sf/antcontrib/antlib.xml">
+    <classpath>
+      <pathelement location="tools/ant-contrib.jar" />
+    </classpath>
+  </taskdef>
+
+    <property name="dist.dir" value="dist" />
+
+  <!-- compile options -->
+  <property name="build.sysclasspath" value="ignore" />
+  <property name="debug" value="on" />
+  <property name="deprecation" value="off" />
+  <property name="optimization" value="off" />
+
+
+  <target name="main" id="main" depends="jar"/>
+  
+  <target name="jar" id="jar">
+     <jar destfile="build/ISOViz.jar"
+         manifest="manifest/application.txt">
+      <fileset dir="bin" >
+      </fileset>
+    </jar>
+  	<echo>build/ISOViz.jar created (unsigned)</echo>
+  	<copy file="build/ISOViz.jar" tofile="dist/ISOViz.jar" />    	
+  </target>
+  	
+</project>

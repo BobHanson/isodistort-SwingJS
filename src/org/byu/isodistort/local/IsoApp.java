@@ -21,10 +21,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.FilterInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,7 +64,7 @@ public abstract class IsoApp {
 	public final static int ROT = Mode.ROT; // rotational
 	public final static int ELL = Mode.ELL; // ellipsoidal
 	
-	final static String minorVersion = ".7b"; 
+	final static String minorVersion = ".8"; 
 
 	
 	public long t0 = System.currentTimeMillis();

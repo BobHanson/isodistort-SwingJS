@@ -1966,14 +1966,23 @@ public class Variables {
 
 	}
 
-	public void updateFormData(Object mapFormData) {
-//		+ "\"mode001001\":\".1\"," 
-//		+ "\"mode002001\":\".2\"," 
-//		+ "\"mode003001\":\".05\","
-//		+ "\"mode003002\":\".15\"," 
-//		+ "\"mode003003\":\"0\"," 
+	public void updateFormData(Map<String, Object> mapFormData, Object document) {
 
-		// TODO
+		// working here
+
+		Object val;
+		if (isModeActive(modes[STRAIN])) {
+			val = mapFormData.get("strain1");
+			if (val != null)
+				mapFormData.put("strain1", modes[STRAIN].sliderValsTM[0][0]);
+			val = mapFormData.get("strain2");
+			if (val != null)
+				mapFormData.put("strain2", modes[STRAIN].sliderValsTM[0][1]);
+		}
+		// now what about mode00t00m ? Need examples.
+		
+		// also change in document? 
+		
 	}
 
 	public boolean isModeActive(Mode mode) {
@@ -2018,6 +2027,10 @@ public class Variables {
 			MathUtil.calculateEllipsoid(tempmat2, info[ELL]);
 			// ellipsoidInfo array filled
 		}
+	}
+
+	public void updateIsoVizData(Object isoData) {
+		// now what?
 	}
 
 }

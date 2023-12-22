@@ -123,21 +123,22 @@ public class ServerUtil {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public static Object json2Map(Object formDataStr) {
-		if (formDataStr instanceof String) {
-			return (Map<String, Object>) new JSJSONParser().parse((String) formDataStr, false);
-		}
-		/**
-		 * @j2sNative
-		 * 
-		 * 			newFormData = {}; for (var key in formDataStr) { newFormData[key]
-		 *            = formDataStr[key]; } return newFormData;
-		 * 
-		 */
-		{
-			return (Map<String, Object>) ((HashMap<String, Object>) formDataStr).clone();
+	public static Map<String, Object> json2Map(Object formDataStr) {
 
+		if (formDataStr instanceof Map) {
+			return (Map<String, Object>) ((HashMap<String, Object>) formDataStr).clone();
 		}
+		if (!(formDataStr instanceof String)) {
+			/**
+			 * must be JSON; just deal with it as a string
+			 * 
+			 * @j2sNative
+			 * 
+			 * 			formDataStr = JSON.stringify(formDataStr);
+			 * 
+			 */
+		}
+		return (Map<String, Object>) new JSJSONParser().parse(formDataStr.toString(), false);
 	}
 
 	public static String toJSON(Map<String, Object> map) {

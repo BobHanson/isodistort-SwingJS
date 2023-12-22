@@ -192,6 +192,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			needsRecalc = true;
 			variables.isChanged = false;
 		}
+		if (rp == null)
+			return;
 		rp.updateForDisplay(false);
 		if (isRecalcMat) {
 			recalcMaterials();
@@ -679,7 +681,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	@Override
 	protected void dispose() {
-		rp.removeKeyListener(this);
+		if (rp != null)
+			rp.removeKeyListener(this);
 //		rp.dispose();
 //		rp = null;
 		super.dispose();
@@ -967,7 +970,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	@Override
 	protected boolean prepareToSwapOut() {
 		isAnimate = false;
-		rp.setSpinning(false);
+		if (rp != null) // could be blank window
+			rp.setSpinning(false);
 		return true;
 	}
 

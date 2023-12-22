@@ -14,8 +14,8 @@
 #applet_width_in_pixels 
 !appletwidth    800
  
-#supercell_parameters_in_angstroms_and_radians 
-!supercell 
+#parentcell_parameters_in_angstroms_and_radians 
+!parentcell 
         5.57313        5.57313        7.88160        1.57080        1.57080        1.57080
  
 #parent_origin_in_supercell_units 

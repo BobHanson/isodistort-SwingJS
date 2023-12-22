@@ -31,7 +31,7 @@ fetchIsoDistort = function(inputType, callback) {
 	// "isovizdistortion", createIsoDistortApplet
 	// "isovizdiffraction", createIsoDistortApplet
 	var formData = {};
-	$("input").each(function(i,e) {
+	$("form input").each(function(i,e) {
 		if (e.value == inputType) {
 			e.checked = true;
 		}

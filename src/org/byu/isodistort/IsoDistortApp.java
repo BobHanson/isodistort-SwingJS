@@ -907,16 +907,16 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * 
 	 */
 
-	private Timer timer;
+	private Timer animationTimer;
 
-	protected void setTimer() {
-		if (timer == null) {
+	public void start() {
+		if (animationTimer == null) {
 			int delay = (/**
 							 * @j2sNative true ? 50 :
 							 */
 			100);
 
-			timer = new Timer(delay, new ActionListener() {
+			animationTimer = new Timer(delay, new ActionListener() {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -924,15 +924,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				}
 
 			});
-			timer.setRepeats(true);
+			animationTimer.setRepeats(true);
 		}
-	}
-
-	public void start() {
-		setTimer();
 		isAnimationRunning = true;
 		ttime = System.currentTimeMillis();
-		timer.start();
+		animationTimer.start();
 	}
 
 	long ttime = 0;
@@ -966,11 +962,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * 
 	 */
 	public void stop() {
-		if (timer != null) {
+		if (animationTimer != null) {
 			isAnimationRunning = false;
-			timer.stop();
+			animationTimer.stop();
 		}
-		timer = null;
+		animationTimer = null;
 	}
 
 	@Override

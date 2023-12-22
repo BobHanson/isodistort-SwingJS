@@ -17,12 +17,9 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -96,12 +93,6 @@ public abstract class IsoApp {
 
 	boolean asBytes = true;
 	
-	/**
-	 * the file that was dropped
-	 * 
-	 */
-	private File droppedFile;
-
 	/**
 	 * false when the dispose() method has run
 	 */
@@ -181,11 +172,16 @@ public abstract class IsoApp {
 	protected Object formData;
 
 	/**
-	 * the ISOVIZ data associated with this app, in String or byte[] form
+	 * the ISOVIZ data associated with this app in byte[] form
 	 * 
 	 */
-	protected Object isoData = "";
+	protected byte[] isovisData = new byte[0];
 
+	/**
+	 * the distortion file data associated with this app in byte[] form
+	 */
+	protected byte[] distortionFileData;
+	
 	/**
 	 * the settings for perspective and sliders used to pass information
 	 * between IsoDistort and IsoDiffract
@@ -420,92 +416,54 @@ public abstract class IsoApp {
 			document = args[2];
 			// Fall through //
 		case 2:
-			formData = args[1];
+			formData = args[1]; // String or Map
 			// Fall through //
 		case 1:
-			isoData = args[0];
+			isovisData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
 			break;
 		default:
 			String path = getClass().getName();
 			path = path.substring(0, path.lastIndexOf('.') + 1).replace('.', '/');
-			isoData = readFileData(path + whichdatafile);
+			isovisData = FileUtil.readFileData(this, path + whichdatafile);
 		}
-		return isoData;
-	}
-
-	// boolean asInputStream = true;
-	private Object readFileData(String path) {
-		System.out.println("Reading file " + path);
-		try {
-			long t = System.currentTimeMillis();
-			// 33 ms to read 8 MB
-			BufferedInputStream bis = null;
-			try {
-
-				File f = new File(path);
-				bis = new BufferedInputStream(new FileInputStream(f));
-			} catch (Exception e) {
-				bis = new BufferedInputStream((InputStream) getClass().getResource("/" + path).getContent());
-			}
-			bis.mark(200);
-			byte[] header = new byte[200];
-			bis.read(header);
-			String s = new String(header);
-			if (s.indexOf("!isoversion") < 0) {
-				bis.close();
-				return null;
-			}
-			bis.reset();
-
-			byte[] bytes = FileUtil.getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
-			System.out.println(
-					"IsoApp.readFileData " + (System.currentTimeMillis() - t) + " ms for " + bytes.length + " bytes");
-			return bytes;
-
-//			// String concatenation (200K+ lines) was 600000+ ms (over 10 minutes) to read 8 MB
-//			// StringBuffer was 121 ms to read 8 MB
-//			// getLimitedStreamReader was 33 ms to read 8 MB
-		} catch (IOException exception) {
-			exception.printStackTrace();
-			System.out.println("Oops. File not found.");
-		}
-		return null;
+		return isovisData;
 	}
 
 	/**
-	 * Currently only isoviz and isovizq files.
-	 * 
 	 * @param f
 	 * @return
 	 */
-	public boolean loadDroppedFile(File f) {
+	public void loadDroppedFile(File f) {
 		if (f == null)
-			return false;
-		droppedFile = f;
-
-		String ext = FileUtil.getExtension(f, "isoviz*");
-		boolean known = (ext != null);
-		Object data = readFileData(f.getAbsolutePath());
+			return;
+		byte[] data = FileUtil.readFileData(this, f.getAbsolutePath());
 		if (data == null)
-			return false;
-		boolean isIsoDistort = (appType == APP_ISODISTORT);
-		boolean isMyType = (isIsoDistort == (!known || !ext.equals("isovizq")));
-		boolean doSwitch = !isMyType;
-		if (known && !isMyType) {
-			String msg = "This file is intended for " + (appType == APP_ISODISTORT ? "ISODIFFRACT" : "ISODISTORT")
-					+ ". Would you like to switch to that application?";
-			doSwitch = (JOptionPane.showConfirmDialog(null, msg, "File Drop Application",
-					JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION);
-		}
-		if (doSwitch) {
-			isIsoDistort = !isIsoDistort;
-		}
+			return;
+		switch (FileUtil.getIsoFileTypeFromContents(data)) {
+		case FileUtil.FILE_TYPE_DISTORTION:
+			distortionFileToISOVIZ(f.getName(), data);
+			return; 
+		case FileUtil.FILE_TYPE_ISOVIZ:
+			String ext = FileUtil.getExtension(f, "isoviz*");
+			int newType = ((ext == null) || !ext.equals("isovizq") ? APP_ISODISTORT : APP_ISODIFFRACT);
+			boolean isIsoDistort = (appType == APP_ISODISTORT);
+			boolean isMyType = (isIsoDistort == (newType == APP_ISODISTORT));
+			boolean doSwitch = !isMyType;
+			if (ext != null && !isMyType) {
+				String msg = "This file is intended for " + (appType == APP_ISODISTORT ? "ISODIFFRACT" : "ISODISTORT")
+						+ ". Would you like to switch to that application?";
+				doSwitch = (JOptionPane.showConfirmDialog(null, msg, "File Drop Application",
+						JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION);
+			}
+			if (doSwitch) {
+				isIsoDistort = !isIsoDistort;
+			}
 
-		int appType = isIsoDistort ? APP_ISODISTORT : APP_ISODIFFRACT;
-		new Thread(() -> {
-			openApplication(appType, data, true);
-		}, "isodistort_file_dropper").start();
-		return true;
+			int appType = isIsoDistort ? APP_ISODISTORT : APP_ISODIFFRACT;
+			new Thread(() -> {
+				openApplication(appType, data, true);
+			}, "isodistort_file_dropper").start();
+		}
 
 	}
 
@@ -528,7 +486,7 @@ public abstract class IsoApp {
 				clearSettingsForFileDrop();
 			} else {
 				app.appSettings = appSettings;
-				app.droppedFile = droppedFile;
+				//app.droppedFile = droppedFile;
 				app.document = document;
 				app.formData = formData;
 				app.variables.setValuesFrom(variables);
@@ -601,7 +559,7 @@ public abstract class IsoApp {
 
 			initializePanels();
 			variables = new Variables(this, appType == APP_ISODIFFRACT, oldVariables != null);
-			isoData = variables.parse(readFile());
+			isovisData = variables.parse(readFile());
 			if (oldVariables == null) {
 				frameContentPane.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
 			} else {
@@ -672,7 +630,7 @@ public abstract class IsoApp {
 			}
 			if (source == openOther) {
 				preserveAppData();
-				openApplication(appType == APP_ISODISTORT ? APP_ISODIFFRACT : APP_ISODISTORT, isoData, false);
+				openApplication(appType == APP_ISODISTORT ? APP_ISODIFFRACT : APP_ISODISTORT, isovisData, false);
 				return;
 			}
 		}
@@ -690,28 +648,25 @@ public abstract class IsoApp {
 		app.start(new JFrame(type), args, null, false);
 	}
 
+	/**
+	 * If we have form data, clone it, adjust its values, and pass the clone to
+	 * the server with a request to construct a new ISOVIZ file
+	 */
 	public void saveCurrent() {
-		// not available if dropped?
-		if (droppedFile != null) {
-			// if all we have is an isoviz file, how can we update it?
-			variables.updateIsoVizData(isoData);
-			sayNotPossible("after a file is dropped");
-			return;
-		}
-
-		if (formData == null)
-			formData = ServerUtil.testFormData;
-		Map<String, Object> mapFormData = ServerUtil.json2Map(formData);
-		variables.updateFormData(mapFormData, document);
-
-		ServerUtil.getData(this, ServerUtil.ISOVIZ, mapFormData, new Consumer<String>() {
+		createIsovizFromFormData(null, new Consumer<byte[]>() {
 
 			@Override
-			public void accept(String data) {
+			public void accept(byte[] data) {
 				FileUtil.saveDataFile(frame, data, "isoviz", false);
 			}
 
 		});
+	}
+
+	private Map<String, Object> ensureMapData(Object formData, boolean asClone) {
+		Map<String, Object> mapData = ServerUtil.json2Map(formData, asClone);
+		this.formData = mapData;
+		return mapData;
 	}
 
 	private void sayNotPossible(String msg) {
@@ -719,7 +674,7 @@ public abstract class IsoApp {
 	}
 
 	public void saveOriginal() {
-		FileUtil.saveDataFile(frame, isoData, "isoviz", false);
+		FileUtil.saveDataFile(frame, isovisData, "isoviz", false);
 	}
 
 	public void saveDistortion() {
@@ -758,4 +713,114 @@ public abstract class IsoApp {
 		sayNotPossible("yet");
 	}
 
+	//<P><FORM ACTION="isodistortuploadfile.php" METHOD="POST"  
+	//enctype="multipart/form-data">
+	//Import an ISODISTORT distortion file:
+	//<INPUT TYPE="hidden" NAME="input" VALUE="distort">
+	//<INPUT TYPE="hidden" NAME="origintype" VALUE="dfile">
+	//<INPUT CLASS="btn btn-primary" TYPE="submit" VALUE="OK">
+	//<input name="toProcess" type="file" size="30">
+	//</form>		
+
+	/**
+	 * Process the distortion file data by passing it to the server
+	 * and retrieving the ISODISTORT display page HTML data. Scrape
+	 * that for INPUT tags, and set the radio button for origintype
+	 * to "isovizdistortion". Send this to the server in order to 
+	 * retrieve the ISOVIZ file. Would be a lot simpler just to 
+	 * get the ISOVIZ file from the server directly.
+	 * 
+	 * @param f
+	 */
+	private void distortionFileToISOVIZ(String fileName, byte[] data) {
+		// 1) send distortion file data to the isodistort server
+		Map<String, Object> mapFormData = new LinkedHashMap<String, Object>();
+		mapFormData.put("input", "distort");
+		mapFormData.put("origintype", "dfile");
+		mapFormData.put("toProcess", data);
+		if (fileName != null)
+			mapFormData.put("fileName", fileName);
+		
+		ServerUtil.fetch(this, FileUtil.FILE_TYPE_DISTORTION, mapFormData, new Consumer<byte[]>() {
+
+			@Override
+			public void accept(byte[] d) {
+				ServerUtil.getTempFile(IsoApp.this, new String(d), new Consumer<byte[]>() {
+
+					@Override
+					public void accept(byte[] b) {
+						extractHTMLPageFormAndSendToServer(new String(b));
+					}
+					
+				});
+			}
+
+		});
+	}
+
+	protected void extractHTMLPageFormAndSendToServer(String html) {
+		Map<String, Object> mapFormData = setServerFormOriginType(ServerUtil.scrapeHTML(html), "isovizdistortion");
+		if (mapFormData == null) {
+			JOptionPane.showMessageDialog(frame, "The server was not able to read the data necessary to create ISOVIS file data. " + html);
+			return;
+		} 
+		this.createIsovizFromFormData(mapFormData, new Consumer<byte[]>() {
+
+			@Override
+			public void accept(byte[] data) {
+				new Thread(() -> {
+					openApplication(APP_ISODISTORT, data, true);
+				}, "isodistort_from_server").start();
+				
+			}
+			
+		});
+	}
+
+	private void createIsovizFromFormData(Object formData, Consumer<byte[]> consumer) {
+		// not available if dropped?
+		boolean isSwitch = (formData == null);
+		if (isSwitch)
+			formData = this.formData;
+		//formData = ServerUtil.testFormData;
+		if (formData == null) {
+			// if all we have is an isoviz file, how can we update it?
+			sayNotPossible("no form data to process");
+			return;
+		}
+
+		Map<String, Object> mapData = ensureMapData(formData, isSwitch);
+		if (isSwitch)
+			variables.updateFormData(mapData, document);
+		ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, mapData, consumer);
+	}
+
+
+	
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="isovizdistortion" CHECKED> Save interactive distortion
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="isovizdiffraction"> Save interactive diffraction
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="structurefile"> CIF file
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="distortionfile"> Distortion file
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="domains"> Domains
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="primary"> Primary order parameters
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="modesdetails"> Modes details
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="completemodesdetails"> Complete modes details
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="topas"> TOPAS.STR
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="fullprof"> FULLPROF.pcr
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="irreps"> IR matrices
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="tree"> Subgroup tree
+
+	/**
+	 * "Press" the radio button for the page
+	 * @param formData
+	 * @param type
+	 * @return
+	 */
+	protected Map<String, Object> setServerFormOriginType(Map<String, Object> formData, String type) {
+		if (formData == null || formData.get("origintype") == null)
+			return null;
+		formData.put("origintype", type);
+		this.formData = formData;
+		return formData;
+	}
 }

@@ -1749,7 +1749,7 @@ public class Variables {
 					typeDataPanels[t].add(new JLabel(""));
 				tp.add(typeNamePanels[t]);
 				tp.add(typeDataPanels[t]);
-//				tp.setPreferredSize(new Dimension(sliderPanelWidth, (numSubRows[t] +1)* barheight));
+				tp.setPreferredSize(new Dimension(sliderPanelWidth, (numSubRows[t] +1)* barheight));
 				sliderPanel.add(tp);
 				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 					initModeGUI(modes[i], t, sliderPanel);

@@ -36,7 +36,13 @@ import org.byu.isodistort.render.RenderPanel3D;
 
 public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
-	protected boolean isRunning;
+	/**
+	 * initial value for indicating time required from loading to rendering.
+	 */
+	public long t0 = System.currentTimeMillis();
+
+
+	protected boolean isAnimationRunning;
 
 	// Variables that the user may want to adjust
 	/**
@@ -924,7 +930,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	public void start() {
 		setTimer();
-		isRunning = true;
+		isAnimationRunning = true;
 		ttime = System.currentTimeMillis();
 		timer.start();
 	}
@@ -937,7 +943,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		long dt = t1 - ttime;
 		ttime = t1;
 		// System.out.println("IDA timer " + (t1 - ttime));
-		if (!isRunning)
+		if (!isAnimationRunning)
 			return;
 		boolean animating = (isAnimate || rp.isSpinning());
 		if (!animating && --initializing < 0)
@@ -961,7 +967,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 */
 	public void stop() {
 		if (timer != null) {
-			isRunning = false;
+			isAnimationRunning = false;
 			timer.stop();
 		}
 		timer = null;

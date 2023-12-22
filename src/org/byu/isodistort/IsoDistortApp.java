@@ -805,8 +805,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	}
 
-	@Override
-	public void updateViewOptions() {
+	
+	private void updateViewOptions() {
 		showAtoms = aBox.isSelected();
 		showBonds = bBox.isSelected();
 		showCells = cBox.isSelected();

@@ -1029,11 +1029,6 @@ public abstract class IsoApp {
 		app.start(new JFrame(type), args, null, false);
 	}
 
-	public void updateViewOptions() {
-		// TODO Auto-generated method stub
-		
-	}
-
 	public void saveCurrent() {
 		if (formData == null)
 			formData = ServerUtil.testFormData;

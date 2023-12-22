@@ -6,6 +6,7 @@ import java.awt.datatransfer.Transferable;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +21,10 @@ import javax.swing.TransferHandler;
 import javax.swing.filechooser.FileFilter;
 
 public class FileUtil {
+
+	public final static int FILE_TYPE_UNKNOWN = 0;
+	public final static int FILE_TYPE_DISTORTION = 1;
+	public final static int FILE_TYPE_ISOVIZ = 2;
 
 	private static JFileChooser fc;
 
@@ -117,14 +122,14 @@ public class FileUtil {
 	public static class FileDropHandler extends TransferHandler {
 
 //		static DataFlavor uriListFlavor; // for Linux
-		private IsoApp panel;
+		private IsoApp app;
 
 		/**
 		 * Constructor.
 		 * 
 		 */
-		public FileDropHandler(IsoApp applet) {
-			this.panel = applet;
+		public FileDropHandler(IsoApp app) {
+			this.app = app;
 //			if (uriListFlavor == null)
 //				try {
 //					uriListFlavor = new DataFlavor("text/uri-list;class=java.lang.String");
@@ -133,11 +138,6 @@ public class FileUtil {
 //				}
 		}
 
-		/**
-		 * Check to see that we can import this file. It if is NOT a video-type file
-		 * (mp4, jpg, etc) then set the drop action to COPY rather than MOVE.
-		 * 
-		 */
 		@Override
 		public boolean canImport(TransferHandler.TransferSupport support) {
 			return (support.isDataFlavorSupported(DataFlavor.javaFileListFlavor));
@@ -148,8 +148,8 @@ public class FileUtil {
 			if (!canImport(support))
 				return false;
 			File f = getFileObject(support.getTransferable());
-			new Thread(()->{
-				panel.loadDroppedFile(f);
+			new Thread(() -> {
+				app.loadDroppedFile(f);
 			}, "isodistort_file_dropper").start();
 			return true;
 		}
@@ -190,14 +190,14 @@ public class FileUtil {
 	 *                limit the read to, which is also then the size of the byte
 	 *                array for reading; if negative or Integer.MAX_VALUE, then the
 	 *                return array length is limited only to the stream's source.
-	 *                
+	 * 
 	 * @param doClose TRUE to close the stream
 	 * @return the byte array read
 	 * @throws IOException
 	 */
 	public static byte[] getLimitedStreamBytes(InputStream is, long n, boolean doClose) throws IOException {
 
-		int buflen = (n > 0 && n < 1024*512 ? (int) n : 1024*512);
+		int buflen = (n > 0 && n < 1024 * 512 ? (int) n : 1024 * 512);
 		byte[] buf = new byte[buflen];
 		byte[] bytes = new byte[n < 0 || n == Integer.MAX_VALUE ? 4096 : (int) n];
 		int len = 0;
@@ -220,5 +220,63 @@ public class FileUtil {
 		System.arraycopy(bytes, 0, buf, 0, totalLen);
 		return buf;
 	}
+
+	public static int getIsoFileTypeFromContents(byte[] data) {
+		int type = FILE_TYPE_UNKNOWN;
+		for (int pt = 0, i = 0, n = Math.min(data.length - 20, 500); i < n; i++) {
+			switch (data[i]) {
+			case 0:
+			case -1:
+				i = n;
+				break;
+			case '\n':
+			case '\r':
+				pt = i + 1;
+				break;
+			case '!':
+				if (i == pt) {
+					String tag = new String(data, i + 1, 20);
+					if (tag.equals("begin distortionFile")) {
+						type = FILE_TYPE_DISTORTION;
+					} else if (tag.startsWith("isoversion")) {
+						type = FILE_TYPE_ISOVIZ;
+					}
+				}
+				i = n;
+				break;
+			}
+		}
+		return type;
+	}
+
+	// boolean asInputStream = true;
+		public static byte[] readFileData(IsoApp app, String path) {
+			System.out.println("FileUtil.readFileData " + path);
+			try {
+				long t = System.currentTimeMillis();
+				// 33 ms to read 8 MB
+				BufferedInputStream bis = null;
+				try {
+	
+					File f = new File(path);
+					bis = new BufferedInputStream(new FileInputStream(f));
+				} catch (Exception e) {
+					bis = new BufferedInputStream((InputStream) app.getClass().getResource("/" + path).getContent());
+				}
+				byte[] bytes = getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
+				System.out.println(
+						"FileUtil.readFileData " + (System.currentTimeMillis() - t) + " ms for " + bytes.length + " bytes");
+				return bytes;
+	
+	//			// String concatenation (200K+ lines) was 600000+ ms (over 10 minutes) to read 8 MB
+	//			// StringBuffer was 121 ms to read 8 MB
+	//			// getLimitedStreamReader was 33 ms to read 8 MB
+				
+			} catch (IOException exception) {
+				exception.printStackTrace();
+				System.out.println("Oops. File not found.");
+			}
+			return null;
+		}
 
 }

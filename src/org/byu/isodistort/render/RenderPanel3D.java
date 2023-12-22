@@ -16,7 +16,7 @@ import java.awt.image.MemoryImageSource;
 
 import javax.swing.JPanel;
 
-import org.byu.isodistort.local.IsoApp;
+import org.byu.isodistort.IsoDistortApp;
 import org.byu.isodistort.local.Matrix;
 
 /**
@@ -48,7 +48,7 @@ public class RenderPanel3D extends JPanel
 //	 */
 //	protected BufferedImage bufferIm;
 
-	public RenderPanel3D(IsoApp app) {
+	public RenderPanel3D(IsoDistortApp app) {
 		this.app = app;
 		addMouseListener(this);
 		addMouseMotionListener(this);
@@ -312,7 +312,7 @@ public class RenderPanel3D extends JPanel
 
 	// --- SYSTEM LEVEL PUBLIC METHODS ---
 
-	private IsoApp app;
+	private IsoDistortApp app;
 
 	private BufferedImage im;
 

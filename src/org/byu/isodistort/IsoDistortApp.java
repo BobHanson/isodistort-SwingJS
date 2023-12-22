@@ -36,7 +36,13 @@ import org.byu.isodistort.render.RenderPanel3D;
 
 public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
-	protected boolean isRunning;
+	/**
+	 * initial value for indicating time required from loading to rendering.
+	 */
+	public long t0 = System.currentTimeMillis();
+
+
+	protected boolean isAnimationRunning;
 
 	// Variables that the user may want to adjust
 	/**
@@ -805,8 +811,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	}
 
-	@Override
-	public void updateViewOptions() {
+	
+	private void updateViewOptions() {
 		showAtoms = aBox.isSelected();
 		showBonds = bBox.isSelected();
 		showCells = cBox.isSelected();
@@ -901,16 +907,16 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * 
 	 */
 
-	private Timer timer;
+	private Timer animationTimer;
 
-	protected void setTimer() {
-		if (timer == null) {
+	public void start() {
+		if (animationTimer == null) {
 			int delay = (/**
 							 * @j2sNative true ? 50 :
 							 */
 			100);
 
-			timer = new Timer(delay, new ActionListener() {
+			animationTimer = new Timer(delay, new ActionListener() {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -918,15 +924,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				}
 
 			});
-			timer.setRepeats(true);
+			animationTimer.setRepeats(true);
 		}
-	}
-
-	public void start() {
-		setTimer();
-		isRunning = true;
+		isAnimationRunning = true;
 		ttime = System.currentTimeMillis();
-		timer.start();
+		animationTimer.start();
 	}
 
 	long ttime = 0;
@@ -937,7 +939,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		long dt = t1 - ttime;
 		ttime = t1;
 		// System.out.println("IDA timer " + (t1 - ttime));
-		if (!isRunning)
+		if (!isAnimationRunning)
 			return;
 		boolean animating = (isAnimate || rp.isSpinning());
 		if (!animating && --initializing < 0)
@@ -960,11 +962,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * 
 	 */
 	public void stop() {
-		if (timer != null) {
-			isRunning = false;
-			timer.stop();
+		if (animationTimer != null) {
+			isAnimationRunning = false;
+			animationTimer.stop();
 		}
-		timer = null;
+		animationTimer = null;
 	}
 
 	@Override

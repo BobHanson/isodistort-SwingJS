@@ -31,7 +31,6 @@ import java.util.Map;
 
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
-import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -46,14 +45,12 @@ import javax.swing.JMenuItem;
 public class MenuActions {
 
 	protected IsoApp app;
-	private JFrame frame;
 
 	Map<String, IsoAction> actions = new LinkedHashMap<String, IsoAction>();
 
 
 	MenuActions(IsoApp app) {
 		this.app = app;
-		this.frame = app.frame; 
 	}
 
 	public JMenuBar createMenuBar() {

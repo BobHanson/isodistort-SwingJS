@@ -145,7 +145,13 @@ public class FileUtil {
 
 		@Override
 		public boolean importData(TransferHandler.TransferSupport support) {
-			return (canImport(support) && panel.loadDroppedFile(getFileObject(support.getTransferable())));
+			if (!canImport(support))
+				return false;
+			File f = getFileObject(support.getTransferable());
+			new Thread(()->{
+				panel.loadDroppedFile(f);
+			}, "isodistort_file_dropper").start();
+			return true;
 		}
 
 		/**

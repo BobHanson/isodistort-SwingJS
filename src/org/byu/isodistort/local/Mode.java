@@ -76,6 +76,11 @@ class Mode {
 	JLabel[][] sliderLabelsTM;
 	double[][] sliderValsTM;
 
+	/**
+	 * name of the box on the HTML page; for example, m003001 for DIS t=1,m=1
+	 */
+	String[][] htmlNameTM;
+
 	private double[][] savedSliderValues;
 
 	/**
@@ -141,6 +146,7 @@ class Mode {
 		this.count = count;
 		this.modesPerType = perType;
 
+		htmlNameTM = new String[numTypes][];
 		nameTM = new String[numTypes][];
 		initAmpTM = new double[numTypes][];
 		maxAmpTM = new double[numTypes][];
@@ -187,7 +193,7 @@ class Mode {
 	 * @param tempmat
 	 */
 	void calcDistortion(Variables v, double[][][] max, double[] tempvec, double[][] tempmat) {
-		double[] irrepVals = v.modes[IRREP].sliderValsTM[0];
+		double[] irrepVals = (v.modes[IRREP] == null ? null : v.modes[IRREP].sliderValsTM[0]);
 		double superVal = v.superSliderVal;
 		for (int ia = 0, n = v.numAtoms; ia < n; ia++) {
 			Atom a = v.atoms[ia];

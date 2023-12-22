@@ -3,8 +3,8 @@ package org.byu.isodistort.local;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.BitSet;
-import java.util.Hashtable;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * The VariableTokenizer class reads an ISOVIZ file as a monolithic byte array
@@ -13,7 +13,12 @@ import java.util.Map;
  * parsed until a request is made for a value. Then they are parsed as int,
  * double, boolean, String, or BitSet 1/0 values.
  * 
- * Reading:
+ * VariableTokenizer extends TreeMap. This means that it inherits all the fields
+ * of TreeMap, such as getKeySet(), and it collects and delivers keys entries in
+ * sequential order based on their addition. In this way, it can be used to read
+ * and then later write entries in order.
+ * 
+ * Reading ISOVIZ files:
  * 
  * The first entry in the file should be !isoversion. This may be preceded by
  * comments, though a reader may require the !isoversion key to be within some
@@ -25,8 +30,10 @@ import java.util.Map;
  * values. Double values are simple numbers optionally containing a '.'.
  * Currently no exponential notation is allowed.
  * 
- * Comments are started with a '#' and end with a new-line character (\n or \r),
- * and are treated as whitespace.
+ * Whitespace is generally defined as [SPACE], [TAB], \n, or \r.
+ * 
+ * Comments start with a '#' and end with a new-line character (\n or \r), and
+ * are treated as whitespace.
  * 
  * VariableTokenizer.readBlocks() scans the byte array for keys, values, and
  * whitespace. For each key that it finds that has values, it creates an entry
@@ -42,6 +49,32 @@ import java.util.Map;
  * more trailing zeros.
  * 
  * Empty keys are not recorded.
+ * 
+ * 
+ * Reading DISTORTION files:
+ * 
+ * Rules for reading are the same as for ISOVIZ files, with two caveats:
+ * 
+ * 1) If the key ends with "String" (for example, "wyckoffString"), then only \n
+ * and \r will be considered to be whitespace. ' ' and '\t' will be considered
+ * part of the value.
+ * 
+ * 2) The syntax
+ * 
+ * !begin xxx
+ * 
+ * !isodistortVersion
+ * 
+ * 6.12.1
+ * 
+ * ...
+ * 
+ * !end xxx
+ * 
+ * will be read by prepending all keys found between begin and end statements
+ * with "xxx."
+ * 
+ * 
  * 
  * Parsing:
  * 
@@ -72,6 +105,8 @@ import java.util.Map;
  * 
  * double getDouble(i)
  * 
+ * KeySet<String> getKeySet()
+ * 
  * int getInt(i)
  * 
  * String getString(i)
@@ -83,7 +118,7 @@ import java.util.Map;
  * @author Bob Hanson
  *
  */
-public class VariableTokenizer {
+public class VariableTokenizer extends TreeMap<String, int[]> {
 
 	/**
 	 * the file data
@@ -110,16 +145,10 @@ public class VariableTokenizer {
 	private int[] currentBlock;
 
 	/**
-	 * a map relating
-	 */
-	private Map<String, int[]> blockMap = new Hashtable<>();
-
-	/**
 	 * clear the objects in this class to speed garbage collection
 	 */
 	public void dispose() {
 		bytes = null;
-		blockMap = null;
 		currentBlock = null;
 	}
 
@@ -147,8 +176,8 @@ public class VariableTokenizer {
 				bytes = new byte[0];
 			}
 		}
-		//verbosity = DEBUG_HIGH; 
-		readBlocks(bytes, blockMap, verbosity);
+		// verbosity = DEBUG_HIGH;
+		readBlocks(bytes, this, verbosity);
 	}
 
 	/**
@@ -165,7 +194,7 @@ public class VariableTokenizer {
 		if (!containsKey(key))
 			return 0;
 		currentKey = key;
-		currentBlock = blockMap.get(key);
+		currentBlock = get(key);
 		int len = len();
 		System.out.println(currentKey + " " + len);
 		return len;
@@ -187,7 +216,7 @@ public class VariableTokenizer {
 	 * @return the string, or null if pt past the end of the data
 	 */
 	public String getString(int pt) {
-		return (pt < len() ? new String(bytes, from(pt), len(pt)) : null);
+		return (pt < len() ? asString(bytes, from(pt), to(pt)) : null);
 	}
 
 	/**
@@ -285,9 +314,8 @@ public class VariableTokenizer {
 		return to(i) - from(i);
 	}
 
-	private boolean containsKey(String key) {
-		int[] data = blockMap.get(key);
-		return (data != null && data[0] != 0);
+	private static String asString(byte[] bytes, int from, int to) {
+		return new String(bytes, from, to - from); 
 	}
 
 	private int bytesToInt(int i) {
@@ -411,19 +439,19 @@ public class VariableTokenizer {
 	private static void readBlocks(byte[] bytes, Map<String, int[]> map, int verbosity) {
 		int dataStart = -1;
 		int keyStart = -1;
+		int lineStart = 0;
 		int[] pointers = null; // first point is reserved for count
 		int pt = 0;
 		int n = bytes.length;
 		int state = STATE_EOL;
 		String key = null;
-		boolean isVerbose = (verbosity != QUIET);
+		String filePrefix = "";
+		boolean isString = false;
 		boolean verboseHigh = (verbosity == DEBUG_HIGH);
 		int endState = -1;
 		for (int i = 0; i < n; i++) {
 			byte b = bytes[i];
-			if (verboseHigh) {
-				System.out.println("i=" + i + " b=" + (char) b + " state=" + state);
-			}
+//				System.out.println("i=" + i + " b=" + esc(b) + " state=" + state);
 			switch (b) {
 			case '!':
 				if (state == STATE_EOL) {
@@ -433,7 +461,11 @@ public class VariableTokenizer {
 				continue;
 			case ' ':
 			case '\t':
+				if (isString)
+					continue;
 				switch (state) {
+				case STATE_COMMENT:
+					continue;
 				case STATE_KEY:
 				case STATE_VALUE:
 					endState = STATE_NONE;
@@ -445,6 +477,11 @@ public class VariableTokenizer {
 				break;
 			case '\n':
 			case '\r':
+				if (verboseHigh && lineStart < i) {
+					System.out.println(">>" + asString(bytes, lineStart, i));
+				}
+				lineStart = i + 1;
+				isString = false;
 				switch (state) {
 				case STATE_KEY:
 				case STATE_VALUE:
@@ -456,6 +493,8 @@ public class VariableTokenizer {
 				}
 				break;
 			case '#':
+				if (isString)
+					continue;
 				switch (state) {
 				case STATE_KEY:
 				case STATE_VALUE:
@@ -471,6 +510,7 @@ public class VariableTokenizer {
 				case STATE_KEY:
 					// could check here for proper key alphanumeric syntax
 					continue;
+				case STATE_EOL:
 				case STATE_NONE:
 					// start value
 					state = STATE_VALUE;
@@ -494,35 +534,41 @@ public class VariableTokenizer {
 				case STATE_KEY:
 					if (keyStart != i) {
 						// key must length or it is ignored
-						key = new String(bytes, keyStart, i - keyStart);
+						key = asString(bytes, keyStart, i);
+						isString = key.endsWith("String");
 					}
 					pointers = null;
 					break;
 				case STATE_VALUE:
-					// check for first value
-					if (pointers == null) {
-						pointers = new int[65]; // capacity for 32 values
-						pt = 1;
-						map.put(key, pointers);
-						if (key.equals("appletwidth"))
-							System.out.println("???");
-					}
+					if (key.equals("begin")) {
+						filePrefix = asString(bytes, dataStart, i) + ".";
+					} else if (key.equals("end")) {
+						filePrefix = "";
+					} else {
+						String filekey = filePrefix + key;
+						// check for first value
+						if (pointers == null) {
+							pointers = new int[65]; // capacity for 32 values
+							pt = 1;
+							map.put(filekey, pointers);
+						}
 
-					if (isVerbose)
-						System.out.println(key + "[" + pointers[0] + "](" + dataStart + "," + i + ")=>"
-								+ new String(bytes, dataStart, i - dataStart));
+						if (verboseHigh)
+							System.out.println(filekey + "[" + pointers[0] + "](" + dataStart + "," + i + ")=>"
+									+ asString(bytes, dataStart, i));
 
-					// check for need a larger array install it
-					if (pt + 2 == pointers.length) {
-						int[] p = new int[(pointers.length << 1) - 1];
-						System.arraycopy(pointers, 0, p, 0, pointers.length);
-						pointers = p;
-						map.put(key, pointers);
+						// check for need a larger array install it
+						if (pt + 2 == pointers.length) {
+							int[] p = new int[(pointers.length << 1) - 1];
+							System.arraycopy(pointers, 0, p, 0, pointers.length);
+							pointers = p;
+							map.put(filekey, pointers);
+						}
+						// increment and set pointers
+						pointers[0]++;
+						pointers[pt++] = dataStart;
+						pointers[pt++] = i;
 					}
-					// increment and set pointers
-					pointers[0]++;
-					pointers[pt++] = dataStart;
-					pointers[pt++] = i;
 					break;
 				}
 				// end of key or value
@@ -533,7 +579,27 @@ public class VariableTokenizer {
 	}
 
 	/**
-	 * For debugging.
+	 * for debugging only
+	 * 
+	 * @param b
+	 * @return
+	 */
+	@SuppressWarnings("unused")
+	private static String esc(byte b) {
+		switch (b) {
+		case '\n':
+			return "\\n";
+		case '\r':
+			return "\\r";
+		case '\t':
+			return "\\t";
+		default:
+			return " " + (char) b;
+		}
+	}
+
+	/**
+	 * For debugging only
 	 * 
 	 * @param bytes
 	 * @param map
@@ -541,32 +607,67 @@ public class VariableTokenizer {
 	private static void dumpMap(byte[] bytes, Map<String, int[]> map) {
 		// String s = new String(bytes);
 		// System.out.println("String was \n" + s + "<");
+		System.out.println("------VariableTokenizer.dumpMap------");
 		for (String s1 : map.keySet()) {
 			int[] data = map.get(s1);
 			for (int i = 1, p = 0; p < data[0]; p++) {
 				int a = data[i++];
 				int b = data[i++];
-				System.out.println(s1 + "[" + p + "]=>" + new String(bytes, a, b - a) + "<");
+				System.out.println(s1 + "[" + p + "]=>" + asString(bytes, a, b) + "<");
 			}
+			System.out.println("-------------------------------------");
 		}
 	}
 
+	//// testing
+	
+	
 	/**
-	 * For debugging.
-	 * 
-	 * @param args
-	 * 
-	 * @j2sIgnore
+	 * Test distortionFile prototype
 	 */
-	public static void main(String args[]) {
+	static void testDistort() {
+
+		String s = "!begin distortionFile\r\n" + 
+				"#version of isodistort\r\n" + 
+				"!isodistortVersion\r\n" + 
+				"6.12.1              \r\n#make CIF movie\r\n" + 
+				"!makeCIFMovie\r\n" + 
+				" F\r\n" + 
+				"!end distortionFile\r\n" + 
+				"\r\n" + 
+				"#modes file\r\n" + 
+				"!begin modesFile\r\n" + 
+				"#maximum number of atoms in applet for each wyckoff position\r\n" + 
+				"!maxAtomsApplet\r\n" + 
+				"      12\r\n" + 
+				"!end modesFile\r\n" + 
+				"";
+		VariableTokenizer vt = new VariableTokenizer(s, DEBUG_LOW);
+		dumpMap(vt.bytes, vt);
+
+	}
+
+	/**
+	 * Test numerical parsers.
+	 *   
+	 */
+	static void testViz() {
 		String s = "!test1 0 0.0 2.5 -3.2 4.0001 1234567 123456.7890123456 123456789.01234567890123 3.56000000 #3 adf4\n 5 \n\n\n#!test2 testing  \n\n!test3 OK";
 		VariableTokenizer vt = new VariableTokenizer(s, QUIET);// DEBUG_HIGH);
-		dumpMap(vt.bytes, vt.blockMap);
+		dumpMap(vt.bytes, vt);
 		int nData = vt.setData("test1");
 		for (int i = 0; i < nData; i++) {
 			System.out.println(vt.getDouble(i));
 		}
+		parseSpeedTest(vt);
+	}
 
+	/**
+	 * Speed test for 1M numerical parsings relative to Integer.parseInt and Double.parseDouble
+	 *  
+	 * @param vt
+	 */
+	private static void parseSpeedTest(VariableTokenizer vt) {
 		long t = System.currentTimeMillis();
 
 		for (int i = 0; i < 1000000; i++)
@@ -581,7 +682,6 @@ public class VariableTokenizer {
 
 		System.out.println("Double.parseDouble: " + (System.currentTimeMillis() - t));
 
-
 		t = System.currentTimeMillis();
 
 		for (int i = 0; i < 1000000; i++)
@@ -595,7 +695,19 @@ public class VariableTokenizer {
 			Integer.parseInt(new String(vt.bytes, vt.from(5), vt.to(5) - vt.from(5)));
 
 		System.out.println("Integer.parseInt: " + (System.currentTimeMillis() - t));
+	}
 
-}
+	/**
+	 * For debugging.
+	 * 
+	 * @param args
+	 * 
+	 * @j2sIgnore
+	 */
+	public static void main(String args[]) {
+		testViz();
+		testDistort();
+	}
+
 
 }

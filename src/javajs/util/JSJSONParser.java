@@ -2,7 +2,9 @@ package javajs.util;
 
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 
 /**
@@ -239,7 +241,7 @@ public class JSJSONParser {
   }
 
   private Object getObject() {
-    Map<String, Object> map = (asHashTable ? new Hashtable<String, Object>() : new HashMap<String, Object>());
+    Map<String, Object> map = (asHashTable ? new Hashtable<String, Object>() : new LinkedHashMap<String, Object>());
     String key = null;
     switch (getChar()) {
     case '}':

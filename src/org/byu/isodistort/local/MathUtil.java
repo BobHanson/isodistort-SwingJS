@@ -21,11 +21,8 @@ public class MathUtil {
 	 * 
 	 * @param v a vector
 	 */
-	public static void normalize(double[] v) {
-		double s = norm(v);
-		if (s != 0)
-			for (int i = v.length; --i >= 0;)
-				v[i] /= s;
+	public static void norm3(double[] v) {
+		scale3(v, 1/ len3(v));
 	}
 
 	public static double len3(double[] xyz) {
@@ -36,15 +33,6 @@ public class MathUtil {
 		return xyz[0] * xyz[0] + xyz[1] * xyz[1] + xyz[2] * xyz[2];
 	}
 
-	/**
-	 * Computes the magnitude of the vector.
-	 * 
-	 * @param v a vector
-	 * @return the magnitude of vector v
-	 */
-	public static double norm(double[] v) {
-		return Math.sqrt(matmul(v, v));
-	}
 
 	/**
 	 * Computes the dot product of vectors a and b. Vectors a and b must be of the
@@ -275,51 +263,20 @@ public class MathUtil {
 		return mat;
 	}
 
-	private static double[] temp = new double[3];
-
-	/**
-	 * Uses two xyz points to a calculate a bond. -- Branton Campbell
-	 * @param bond return [x, y, z, theta, phi, len, okflag(1 or 0)]
-	 * @return true if OK
-	 */
-	public static boolean setBondInfo(double[] atom1, double[] atom2, double[] bond) {
-		int x = 0, y = 1, z = 2, X = 3, Y = 4;
-		double lensq = 0;
-		for (int i = 0; i < 3; i++) {
-			temp[i] = (atom2[i] - atom1[i]);
-			lensq += temp[i] * temp[i];
-		}
-
-		if (lensq < 0.000000000001) {
-			bond[6] = 0;
-			return false;
-		}
-
-		for (int i = 0; i < 3; i++) {
-			bond[i] = (atom2[i] + atom1[i]) / 2.0;
-			temp[i] = temp[i] / Math.sqrt(lensq);
-		}		
-		bond[X] = -Math.asin(temp[y]);
-		bond[Y] = Math.atan2(temp[x], temp[z]);
-		bond[5] = Math.sqrt(lensq);
-		bond[6] = 1.0;
-		return true;
-	}
-
 	/**
 	 * Calculates the description used to render an arrow -- Branton Campbell
 	 * 
 	 * @param xyz       is the vector input.
-	 * @param arrowInfo is the [X-angle, Y-angle, Length] output.
+	 * @param info is the [X-angle, Y-angle, Length] output.
 	 */
-	public static void calculateArrow(double[] xyz, double[] arrowInfo) {
+	public static void calculateArrow(double[] xyz, double[] info) {
 		int x = 0, y = 1, z = 2, X = 0, Y = 1, L = 2;
 		double lensq = MathUtil.lenSq3(xyz);
 
 		if (lensq < 0.000000000001) {
-			arrowInfo[X] = 0;
-			arrowInfo[Y] = 0;
-			arrowInfo[L] = 0;
+			info[X] = 0;
+			info[Y] = 0;
+			info[L] = 0;
 			return;
 		}
 
@@ -331,9 +288,9 @@ public class MathUtil {
 //			xyz[i] /= d;
 //
 		// BH: added / d in asin. Why normalize this? 
-		arrowInfo[X] = -Math.asin(xyz[y] / d); // X rotation
-		arrowInfo[Y] = Math.atan2(xyz[x], xyz[z]); // Y rotation
-		arrowInfo[L] = d; // Length
+		info[X] = -Math.asin(xyz[y] / d); // X rotation
+		info[Y] = Math.atan2(xyz[x], xyz[z]); // Y rotation
+		info[L] = d; // Length
 	}
 
 	/**
@@ -343,7 +300,7 @@ public class MathUtil {
 	 * @param ellipsoid is the [widthx, widthy, widthz, rotaxisx, rotaxisy,
 	 *                  rotaxisz, angle] output.
 	 */
-	public static void calculateEllipsoid(double[][] matrixform, double[] ellipstuff) {
+	public static void calculateEllipsoid(double[][] matrixform, double[] info) {
 		int wx = 0, wy = 1, wz = 2, dx = 3, dy = 4, dz = 5, ang = 6;
 		double trc = 0,
 				// det = 0, lensq = 0,
@@ -392,13 +349,13 @@ public class MathUtil {
 //	System.out.println(NV[0][0]+" "+NV[0][1]+" "+NV[0][2]+" "+NV[1][0]+" "+NV[1][1]+" "+NV[1][2]+" "+NV[2][0]+" "+NV[2][1]+" "+NV[2][2]);
 //	System.out.println("lensq="+lensq+", det="+det+", w0="+widths[0]+", w1="+widths[1]+", w2="+widths[2]+", r0="+rotaxis[0]+", r1="+rotaxis[1]+", r2="+rotaxis[2]);
 
-		ellipstuff[wx] = widths[0];
-		ellipstuff[wy] = widths[1];
-		ellipstuff[wz] = widths[2];
-		ellipstuff[dx] = rotaxis[0];
-		ellipstuff[dy] = rotaxis[1];
-		ellipstuff[dz] = rotaxis[2];
-		ellipstuff[ang] = rotangle % (2 * Math.PI) - Math.PI;
+		info[wx] = widths[0];
+		info[wy] = widths[1];
+		info[wz] = widths[2];
+		info[dx] = rotaxis[0];
+		info[dy] = rotaxis[1];
+		info[dz] = rotaxis[2];
+		info[ang] = rotangle % (2 * Math.PI) - Math.PI;
 
 	}
 
@@ -509,9 +466,15 @@ public class MathUtil {
 	 * @param d2
 	 * @return
 	 */
-	public static double maxlen(double[] p, double d2) {
+	public static double maxlen2(double[] p, double d2) {
 		double d = MathUtil.lenSq3(p);
 		return (d > d2 ? d : d2);
+	}
+
+	public static void scale3(double[] a, double d) {
+		a[0] *= d;
+		a[1] *= d;
+		a[2] *= d;
 	}
 
 

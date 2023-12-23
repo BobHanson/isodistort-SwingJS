@@ -668,7 +668,7 @@ class Renderer {
 			T[1] = cameraAim[1] - cameraPos[1];
 			T[2] = cameraAim[2] - cameraPos[2];
 
-			MathUtil.normalize(T);
+			MathUtil.norm3(T);
 
 			double vz = MathUtil.matmul(T, cameraUp);
 			double vy = Math.sqrt(1 - vz * vz);
@@ -1123,7 +1123,7 @@ class Renderer {
 		double nn[] = normal;
 
 		normat.rotate(v[3], v[4], v[5], nn);
-		MathUtil.normalize(nn);
+		MathUtil.norm3(nn);
 		for (int j = 0; j < 3; j++)
 			ti[j + 3] = nn[j];
 

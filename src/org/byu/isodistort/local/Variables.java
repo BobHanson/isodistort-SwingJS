@@ -104,9 +104,9 @@ public class Variables {
 	 */
 	public double defaultUiso;
 	/**
-	 * Maximum bond length in Angstroms beyond which bonds are not drawn
+	 * Half of the maximum bond length in Angstroms beyond which bonds are not drawn
 	 */
-	public double maxBondLength;
+	public double maxHalfBondLength;
 	/**
 	 * Minimum atomic occupancy below which bonds are not drawn
 	 */
@@ -598,13 +598,13 @@ public class Variables {
 		 * the initial parameter vector, by mode type
 		 * 
 		 */
-		double[][] vector0 = new double[MODE_COUNT][];
+		final double[][] vector0 = new double[MODE_COUNT][];
 
 		/**
 		 * the final paramater vector, by mode type
 		 * 
 		 */
-		double[][] vector1 = new double[MODE_COUNT][];
+		final double[][] vector1 = new double[MODE_COUNT][];
 
 		/**
 		 * the IR component symmetry mode IR coefficients, originally by atomType and
@@ -613,7 +613,7 @@ public class Variables {
 		 * 
 		 * 
 		 */
-		double[][][] modes = new double[MODE_COUNT][][];
+		final double[][][] modes = new double[MODE_COUNT][][];
 
 		/**
 		 * Holds a vector of information intrinsic to each mode. 
@@ -625,13 +625,13 @@ public class Variables {
 		 * 
 		 * MAG:  [mx, my, mz] The magnetic moment
 		 * 
-		 * ROT:
+		 * ROT:  [X-angle, Y-angle, Length]
 		 * 
-		 * ELL:
+		 * ELL:  [widthX, widthY, widthZ, axisX, axisY, axisZ, angle]
 		 * 
 		 * 
 		 */
-		public double[][] info = new double[MODE_COUNT][];
+		public final double[][] info = new double[MODE_COUNT][];
 
 		/**
 		 * 
@@ -656,6 +656,18 @@ public class Variables {
 		}
 	}
 
+	public class Bond {
+		
+		int[] ab = new int[2];
+		
+		double d2;
+		
+	    Bond(int a, int b) {
+	    	ab[0] = a;
+	    	ab[1] = b;
+	    }
+	}
+	
 	public class VariableParser {
 
 		private VariableTokenizer vt;
@@ -1261,7 +1273,9 @@ public class Variables {
 		}
 
 		private void parseBonds() {
-			maxBondLength = getOneDouble("maxbondlength", 2.5);
+			if (isDiffraction)
+				return;
+			maxHalfBondLength = getOneDouble("maxbondlength", 2.5) / 2;
 			// find minimum atomic occupancy for which bonds should be displayed
 			minBondOcc = getOneDouble("minbondocc", 0.5);
 			int numBondsRead = checkSizeN("bondlist", 6, false);
@@ -1726,7 +1740,7 @@ public class Variables {
 				subTypeLabels[t] = new JLabel[numSubTypes[t]];
 				typeLabel[t] = newLabel("" + atomTypeName[t] + " Modes", sliderPanelWidth, c, JLabel.CENTER);
 				typeNamePanels[t] = new JPanel(new GridLayout(1, 1, 0, 0));
-				typeNamePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight));
+				typeNamePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight / 2));
 				typeNamePanels[t].add(typeLabel[t]);
 				typeNamePanels[t].setBackground(c);
 				// typeDataPanel
@@ -1738,7 +1752,7 @@ public class Variables {
 					subTypeBoxes[t][s] = newCheckbox("subType_" + t + "_" + s, c);
 					subTypeLabels[t][s] = newLabel("", subTypeWidth - subTypeBoxWidth, c, JLabel.LEFT);
 					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
-					p.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
+					p.setPreferredSize(new Dimension(sliderPanelWidth, barheight / 2));
 					p.setBackground(c);
 					p.add(subTypeBoxes[t][s]);
 					p.add(subTypeLabels[t][s]);

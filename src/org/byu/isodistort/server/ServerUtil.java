@@ -21,6 +21,31 @@ import javajs.http.HttpClient.HttpResponse;
 import javajs.http.HttpClientFactory;
 import javajs.util.JSJSONParser;
 
+/**
+ * The ServerUtil class handles all transactions with the iso.byu server and
+ * maintains a few useful utility methods.
+ * 
+ * Public methods include:
+ * 
+ * public static boolean fetch(IsoApp app, int type, Map<String, Object>
+ * mapFormData, Consumer<byte[]> consumer, int delay)
+ * 
+ * This is the main method for initiating a transaction. All transactions are asynchronous, 
+ * utilizing java.util.function.Consumer to effect a callback to the app.
+ * 
+ * 
+ * public static Map<String, Object> json2Map(Object formData, boolean asClone)
+ * 
+ * This method ensures that maps from JavaScrpt and Java, might be in the form of 
+ * actual Java HashMap or LinkedHashMap are compatible with JavaScript's simple associative
+ * array idea. 
+ * 
+ * 
+ * 
+ * 
+ * @author Bob Hanson
+ *
+ */
 public class ServerUtil {
 
 	private ServerUtil() {
@@ -101,9 +126,9 @@ public class ServerUtil {
 		}
 	}
 
-	final static byte[] SET_TIMEOUT = "setTimeout".getBytes();
+	private final static byte[] SET_TIMEOUT = "setTimeout".getBytes();
 	
-	public static void getTempFile(IsoApp app, int type, byte[] bytes, Consumer<byte[]> consumer, int delay) {
+	private static void getTempFile(IsoApp app, int type, byte[] bytes, Consumer<byte[]> consumer, int delay) {
 
 // about 340 bytes:
 //
@@ -130,7 +155,7 @@ public class ServerUtil {
 		System.out.println("ServerUtil.getTempFile " + map.get("filename") + " delay " + delay + " ms");
 		map.put("_service", service);
 		
-		Timer tempFileTimer = new Timer(delay, new ActionListener() {
+		Timer tempFileTimer = new Timer(1000, new ActionListener() {
 
 			/**
 			 * this will go 1, 4, 16, 64, 256, then 512, 1024, 2048, etc. ms
@@ -176,51 +201,6 @@ public class ServerUtil {
 	}
 
 	/**
-	 * Get a value from the form data. In Java this will be a java.util.Map; in
-	 * JavaScript it will be a JavaScript associative array (probably).
-	 * 
-	 * @param mapFormData
-	 * @param key
-	 * @return the value or null
-	 */
-	@SuppressWarnings("unchecked")
-	public static String getFormData(Object mapFormData, String key) {
-		if (mapFormData instanceof Map) {
-			return (String) ((Map<String, Object>) mapFormData).get(key);
-		}
-		/**
-		 * @j2sNative
-		 * 
-		 * 			return mapFormData[key] || null;
-		 */
-		{
-			return null;
-		}
-	}
-
-	/**
-	 * Get a value from the form data. In Java this will be a java.util.Map; in
-	 * JavaScript it will be a JavaScript associative array (probably).
-	 * 
-	 * @param mapFormData
-	 * @param key
-	 * @return the value or null
-	 */
-	@SuppressWarnings("unchecked")
-	public static void setFormData(Object mapFormData, String key, String value) {
-		if (mapFormData instanceof Map) {
-			((Map<String, Object>) mapFormData).put(key, value);
-		}
-		/**
-		 * @j2sNative
-		 * 
-		 * 			mapFormData[key] = value;
-		 */
-		{
-		}
-	}
-
-	/**
 	 * Conver the form data into a Map if it is a String, or just return it if it is
 	 * not.
 	 * 
@@ -246,6 +226,12 @@ public class ServerUtil {
 		return new JSJSONParser().parseMap(formData.toString(), false);
 	}
 
+	/**
+	 * A simple JSON producer. 
+	 * 
+	 * @param map
+	 * @return
+	 */
 	public static String toJSON(Map<String, Object> map) {
 		StringBuffer sb = new StringBuffer();
 		sb.append("{\n");

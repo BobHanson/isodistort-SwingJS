@@ -26,10 +26,6 @@ public class ServerUtil {
 	private ServerUtil() {
 		// no instance; static only
 	}
-
-	// <form action="isodistortuploadfile.php" method="POST"
-	// enctype="multipart/form-data"
-
 	// bh test platform "https://jmol.stolaf.edu/jmol/test/t.php";
 	final static String publicServerURL = "https://iso.byu.edu/iso/";
 	final static String testServerURL = "https://isotest.byu.edu/iso/";
@@ -37,24 +33,26 @@ public class ServerUtil {
 	/**
 	 * Fetch a result from the server. This method handles all such requests.
 	 */
-	public static boolean fetch(IsoApp app, int type, Map<String, Object> mapFormData, Consumer<byte[]> consumer) {
+
+	public static boolean fetch(IsoApp app, int type, Map<String, Object> mapFormData, Consumer<byte[]> consumer, int delay) {
+
 		boolean testing = false;
 
 		byte[] fileData = (byte[]) mapFormData.remove("toProcess");
 		String fileName = (String) mapFormData.remove("fileName");
+		String service = (String) mapFormData.remove("_service");
 
-		boolean useWWW = false;
-		String service;
-		switch (type) {
-		case FileUtil.FILE_TYPE_DISTORTION:
-			service = "isodistortuploadfile.php";
-			break;
-		case FileUtil.FILE_TYPE_ISOVIZ:
-			service = "isodistortform.php";
-			useWWW = true;
-			break;
-		default:
-			return false;
+		if (service == null) {
+			switch (type) {
+			case FileUtil.FILE_TYPE_DISTORTION:
+				service = "isodistortuploadfile.php";
+				break;
+			case FileUtil.FILE_TYPE_ISOVIZ:
+				service = "isodistortform.php";
+				break;
+			default:
+				return false;
+			}
 		}
 
 		String url = (testing ? testServerURL : publicServerURL) + service;
@@ -69,7 +67,7 @@ public class ServerUtil {
 				request.addHeader("Accept", "text/plain, */*; q=0.01");
 				for (Entry<String, Object> e : mapFormData.entrySet()) {
 					request.addFormPart(e.getKey(), e.getValue().toString());
-					//System.out.println(e.getKey() + " = " + e.getValue());
+					// System.out.println(e.getKey() + " = " + e.getValue());
 				}
 				if (fileData != null)
 					request.addFilePart("toProcess", new ByteArrayInputStream(fileData), "text/plain",
@@ -81,7 +79,12 @@ public class ServerUtil {
 				cleanBytes(bytes);
 				//System.out.println(new String(bytes));
 				System.out.println("ServerUtil.fetch received " + bytes.length + " bytes");
-				consumer.accept(bytes);
+
+				if (bytes.length > 100 && bytes.length < 1000) {
+					ServerUtil.getTempFile(app, type, bytes, consumer, delay);
+				} else {
+					consumer.accept(bytes);
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 				consumer.accept(null);
@@ -96,6 +99,80 @@ public class ServerUtil {
 			if (b != 9 && b < 0x0A || b > 127)
 				bytes[i] = ' ';
 		}
+	}
+
+	final static byte[] SET_TIMEOUT = "setTimeout".getBytes();
+	
+	public static void getTempFile(IsoApp app, int type, byte[] bytes, Consumer<byte[]> consumer, int delay) {
+
+// about 340 bytes:
+//
+//		<html><head><title>ISODISTORT</title></head>
+//		<BODY BGCOLOR="#FFFFFF" onload="setTimeout ('document.forms[0].submit()', 1000)">
+//		<FORM ACTION="isodistortform.php" METHOD="POST">
+//		<INPUT TYPE="hidden" NAME="input" VALUE="distort">
+//		<INPUT TYPE="hidden" NAME="origintype" VALUE="dfile">
+//		<INPUT TYPE="hidden" NAME="filename" VALUE="/tmp/pwd_public/isodistort_67727.iso">
+//		</FORM>
+//		</BODY>
+//		</HTML>
+		
+		if (!bytesContain(bytes, SET_TIMEOUT)) {
+			consumer.accept(bytes);
+			return;
+		}
+		String html = new String(bytes); 
+		Map<String, Object> map = scrapeHTML(html);
+		String service = getHTMLAttr(html, "ACTION");
+		if (map == null || service == null) {
+			throw new RuntimeException("ServerUtil.getTempFile cannot process server html: " + html);
+		}
+		System.out.println("ServerUtil.getTempFile " + map.get("filename") + " delay " + delay + " ms");
+		map.put("_service", service);
+		
+		Timer tempFileTimer = new Timer(delay, new ActionListener() {
+
+			/**
+			 * this will go 1, 4, 16, 64, 256, then 512, 1024, 2048, etc. ms
+			 */
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				fetch(app, type, map, consumer, (delay < 500 ? (delay << 2) : (delay << 1)));
+			}
+		});
+		tempFileTimer.setRepeats(false);
+		tempFileTimer.start();
+	}
+
+	private static boolean bytesContain(byte[] bytes, byte[] b) {
+
+		int nb = bytes.length, n = b.length;
+		if (nb < n || nb == 0) {
+			return false;
+		}
+		byte b0 = b[0];
+		int i0 = 0;
+		int i1 = nb - n;   
+		// 012345678901
+		// ......abc...
+		//0......ababc..
+		// ....... ^ pt = 2, i0 = 
+		for (int pt = 0, i = 0; i - pt <= i1; i++) {
+			if (bytes[i] == b[pt++]) {
+				if (pt == n)
+					return true;
+				if (i0 == 0 && bytes[i + 1] == b0){
+					i0 = i + 1;
+				}
+				continue;
+			} 
+			if (i0 > 0) {
+				i = i0 - 1;
+				i0 = 0;
+			}
+			pt = 0;
+		}
+		return false;
 	}
 
 	/**
@@ -181,55 +258,114 @@ public class ServerUtil {
 		return sb.toString();
 	}
 
-	public final static String testFormData = "{\r\n" + "  \"input\": \"displaydistort\",\r\n"
-			+ "  \"spacegroup\": \"221 Pm-3m      Oh-1\",\r\n" + "  \"settingaxesm\": \"a(b)c               \",\r\n"
-			+ "  \"settingcell\": \"1\",\r\n" + "  \"settingorigin\": \"2\",\r\n" + "  \"settingaxesh\": \"h\",\r\n"
-			+ "  \"settingaxeso\": \"abc                 \",\r\n" + "  \"settingssg\": \"standard\",\r\n"
-			+ "  \"parentsetting\": \"323\",\r\n" + "  \"parentsettingstring\": \"\",\r\n"
-			+ "  \"lattparam\": \"a=4.2\",\r\n"
-			+ "  \"dlattparam\": \"   4.2000000000000002        4.2000000000000002        4.2000000000000002        90.000000000000000        90.000000000000000        90.000000000000000\",\r\n"
-			+ "  \"wycount\": \"  3\",\r\n" + "  \"wypointer001\": \"1627\",\r\n" + "  \"wynumber001\": \" 2\",\r\n"
-			+ "  \"wytype001\": \" 1\",\r\n" + "  \"wyckoff001\": \"1b (1/2,1/2,1/2)\",\r\n"
-			+ "  \"wyatom001\": \"Sr\",\r\n" + "  \"wyatomtype001\": \"Sr\",\r\n"
-			+ "  \"wyparam001\": \"   0.0000000000000000        0.0000000000000000        0.0000000000000000\",\r\n"
-			+ "  \"wyocc001\": \"   1.0000000000000000\",\r\n" + "  \"wypointer002\": \"1626\",\r\n"
-			+ "  \"wynumber002\": \" 1\",\r\n" + "  \"wytype002\": \" 2\",\r\n"
-			+ "  \"wyckoff002\": \"1a (0,0,0)\",\r\n" + "  \"wyatom002\": \"Ti\",\r\n"
-			+ "  \"wyatomtype002\": \"Ti\",\r\n"
-			+ "  \"wyparam002\": \"   0.0000000000000000        0.0000000000000000        0.0000000000000000\",\r\n"
-			+ "  \"wyocc002\": \"   1.0000000000000000\",\r\n" + "  \"wypointer003\": \"1629\",\r\n"
-			+ "  \"wynumber003\": \" 4\",\r\n" + "  \"wytype003\": \" 3\",\r\n"
-			+ "  \"wyckoff003\": \"3d (1/2,0,0)\",\r\n" + "  \"wyatom003\": \"O\",\r\n"
-			+ "  \"wyatomtype003\": \"O\",\r\n"
-			+ "  \"wyparam003\": \"   0.0000000000000000        0.0000000000000000        0.0000000000000000\",\r\n"
-			+ "  \"wyocc003\": \"   1.0000000000000000\",\r\n" + "  \"includedisplacive001\": \"true\",\r\n"
-			+ "  \"includedisplacive002\": \"true\",\r\n" + "  \"includedisplacive003\": \"true\",\r\n"
-			+ "  \"includestrain\": \"true\",\r\n" + "  \"irrepcount\": \"1\",\r\n"
-			+ "  \"kvec1\": \"R, k13 (1/2,1/2,1/2)\",\r\n" + "  \"kvecnumber1\": \"  5\",\r\n"
-			+ "  \"kparam1\": \"    0    0    0    1\",\r\n" + "  \"nmodstar1\": \"0\",\r\n"
-			+ "  \"irrep1\": \"R4+, k13t9\",\r\n" + "  \"irrpointer1\": \" 9807\",\r\n"
-			+ "  \"isofilename\": \"            \",\r\n"
-			+ "  \"orderparam\": \"P1      (a,0,0) 140 I4/mcm, basis={(1,1,0),(-1,1,0),(0,0,2)}, origin=(0,0,0), s=2, i=6, k-active= (1/2,1/2,1/2)\",\r\n"
-			+ "  \"isosubgroup\": \"12431\",\r\n" + "  \"subgroupsym\": \"   140\",\r\n"
-			+ "  \"subgroupsetting\": \" 225\",\r\n" + "  \"subgroupsettingstring\": \"\",\r\n"
-			+ "  \"modesfilename\": \"isodistort_04491.iso \",\r\n"
-			+ "  \"atomsfilename\": \"                     \",\r\n"
-			+ "  \"lattparamsubstring\": \"a=5.93970, b=5.93970, c=8.40000, alpha=90.00000, beta=90.00000, gamma=90.00000\",\r\n"
-			+ "  \"origintype\": \"isovizdistortion\",\r\n" + "  \"\": \"OK\",\r\n" + "  \"inputvalues\": \"true\",\r\n"
-			+ "  \"mode003001\": \" 0.00000\",\r\n" + "  \"strain1\": \" 0.00000\",\r\n"
-			+ "  \"strain2\": \" 0.00000\",\r\n" + "  \"atomicradius\": \"0.400\",\r\n"
-			+ "  \"bondlength\": \"2.500\",\r\n" + "  \"appletwidth\": \" 1024\",\r\n"
-			+ "  \"supercellxmin\": \"0.000\",\r\n" + "  \"supercellxmax\": \"1.000\",\r\n"
-			+ "  \"supercellymin\": \"0.000\",\r\n" + "  \"supercellymax\": \"1.000\",\r\n"
-			+ "  \"supercellzmin\": \"0.000\",\r\n" + "  \"supercellzmax\": \"1.000\",\r\n"
-			+ "  \"modeamplitude\": \"1.000\",\r\n" + "  \"strainamplitude\": \"0.100\",\r\n"
-			+ "  \"settingwrt\": \"parent\",\r\n" + "  \"basist11\": \"2 \",\r\n" + "  \"basist12\": \"0\",\r\n"
-			+ "  \"basist13\": \"0\",\r\n" + "  \"basist21\": \"0\",\r\n" + "  \"basist22\": \"2 \",\r\n"
-			+ "  \"basist23\": \"0\",\r\n" + "  \"basist31\": \"0\",\r\n" + "  \"basist32\": \"0\",\r\n"
-			+ "  \"basist33\": \"2 \",\r\n" + "  \"origint1\": \"0\",\r\n" + "  \"origint2\": \"0\",\r\n"
-			+ "  \"origint3\": \"0\",\r\n" + "  \"ampmincifmovie\": \"0\",\r\n" + "  \"ampmaxcifmovie\": \"1\",\r\n"
-			+ "  \"nframescifmovie\": \"10\",\r\n" + "  \"varcifmovie\": \"linear\",\r\n"
-			+ "  \"periodscifmovie\": \"1\"\r\n" + "}";
+	/**
+	 * Extract all the INPUT data from the HTML page.
+	 * 
+	 * @param html
+	 * @return
+	 */
+	public static Map<String, Object> scrapeHTML(String html) {
+		Map<String, Object> map = new LinkedHashMap<>();
+
+		// <FORM...> ...... </FORM>
+		html = getInnerHTML(html, "FORM");
+		if (html == null)
+			return null;
+		String[] inputs = html.replace("<input","<INPUT").split("<INPUT");
+		for (int i = 1; i < inputs.length; i++) {
+			addEntry(map, inputs[i]);
+		}
+		return map;
+	}
+
+	private static String getInnerHTML(String html, String tag) {
+		String[] parts = html.split(tag.toUpperCase());
+		return (parts.length > 2 ? parts[1] : null);
+	}
+
+	private static void addEntry(Map<String, Object> map, String line) {
+		String type = getHTMLAttr(line, "TYPE");
+		if (type == null)
+			return;
+		switch (type) {
+		case "radio":
+		case "checkbox":
+			if (line.indexOf("CHECKED") < 0)
+				return;
+			break;
+		case "text":
+		case "hidden":
+			break;
+		default:
+			return;
+		}
+		String value = getHTMLAttr(line, "VALUE");
+		String name = getHTMLAttr(line, "NAME");
+		map.put(name, value);
+	}
+
+	private static String getHTMLAttr(String line, String attr) {
+		String key = attr + "=\"";
+		int pt = line.indexOf(key);
+		if (pt < 0)
+			pt = line.indexOf(key.toLowerCase());
+
+		if (pt < 0 || (pt = pt + key.length()) > line.length())
+			return null;
+		int pt1 = line.indexOf("\"", pt);
+		return (pt1 < 0 ? null : line.substring(pt, pt1).trim());
+	}
+
+
+//	public final static String testFormData = "{\r\n" + "  \"input\": \"displaydistort\",\r\n"
+//			+ "  \"spacegroup\": \"221 Pm-3m      Oh-1\",\r\n" + "  \"settingaxesm\": \"a(b)c               \",\r\n"
+//			+ "  \"settingcell\": \"1\",\r\n" + "  \"settingorigin\": \"2\",\r\n" + "  \"settingaxesh\": \"h\",\r\n"
+//			+ "  \"settingaxeso\": \"abc                 \",\r\n" + "  \"settingssg\": \"standard\",\r\n"
+//			+ "  \"parentsetting\": \"323\",\r\n" + "  \"parentsettingstring\": \"\",\r\n"
+//			+ "  \"lattparam\": \"a=4.2\",\r\n"
+//			+ "  \"dlattparam\": \"   4.2000000000000002        4.2000000000000002        4.2000000000000002        90.000000000000000        90.000000000000000        90.000000000000000\",\r\n"
+//			+ "  \"wycount\": \"  3\",\r\n" + "  \"wypointer001\": \"1627\",\r\n" + "  \"wynumber001\": \" 2\",\r\n"
+//			+ "  \"wytype001\": \" 1\",\r\n" + "  \"wyckoff001\": \"1b (1/2,1/2,1/2)\",\r\n"
+//			+ "  \"wyatom001\": \"Sr\",\r\n" + "  \"wyatomtype001\": \"Sr\",\r\n"
+//			+ "  \"wyparam001\": \"   0.0000000000000000        0.0000000000000000        0.0000000000000000\",\r\n"
+//			+ "  \"wyocc001\": \"   1.0000000000000000\",\r\n" + "  \"wypointer002\": \"1626\",\r\n"
+//			+ "  \"wynumber002\": \" 1\",\r\n" + "  \"wytype002\": \" 2\",\r\n"
+//			+ "  \"wyckoff002\": \"1a (0,0,0)\",\r\n" + "  \"wyatom002\": \"Ti\",\r\n"
+//			+ "  \"wyatomtype002\": \"Ti\",\r\n"
+//			+ "  \"wyparam002\": \"   0.0000000000000000        0.0000000000000000        0.0000000000000000\",\r\n"
+//			+ "  \"wyocc002\": \"   1.0000000000000000\",\r\n" + "  \"wypointer003\": \"1629\",\r\n"
+//			+ "  \"wynumber003\": \" 4\",\r\n" + "  \"wytype003\": \" 3\",\r\n"
+//			+ "  \"wyckoff003\": \"3d (1/2,0,0)\",\r\n" + "  \"wyatom003\": \"O\",\r\n"
+//			+ "  \"wyatomtype003\": \"O\",\r\n"
+//			+ "  \"wyparam003\": \"   0.0000000000000000        0.0000000000000000        0.0000000000000000\",\r\n"
+//			+ "  \"wyocc003\": \"   1.0000000000000000\",\r\n" + "  \"includedisplacive001\": \"true\",\r\n"
+//			+ "  \"includedisplacive002\": \"true\",\r\n" + "  \"includedisplacive003\": \"true\",\r\n"
+//			+ "  \"includestrain\": \"true\",\r\n" + "  \"irrepcount\": \"1\",\r\n"
+//			+ "  \"kvec1\": \"R, k13 (1/2,1/2,1/2)\",\r\n" + "  \"kvecnumber1\": \"  5\",\r\n"
+//			+ "  \"kparam1\": \"    0    0    0    1\",\r\n" + "  \"nmodstar1\": \"0\",\r\n"
+//			+ "  \"irrep1\": \"R4+, k13t9\",\r\n" + "  \"irrpointer1\": \" 9807\",\r\n"
+//			+ "  \"isofilename\": \"            \",\r\n"
+//			+ "  \"orderparam\": \"P1      (a,0,0) 140 I4/mcm, basis={(1,1,0),(-1,1,0),(0,0,2)}, origin=(0,0,0), s=2, i=6, k-active= (1/2,1/2,1/2)\",\r\n"
+//			+ "  \"isosubgroup\": \"12431\",\r\n" + "  \"subgroupsym\": \"   140\",\r\n"
+//			+ "  \"subgroupsetting\": \" 225\",\r\n" + "  \"subgroupsettingstring\": \"\",\r\n"
+//			+ "  \"modesfilename\": \"isodistort_04491.iso \",\r\n"
+//			+ "  \"atomsfilename\": \"                     \",\r\n"
+//			+ "  \"lattparamsubstring\": \"a=5.93970, b=5.93970, c=8.40000, alpha=90.00000, beta=90.00000, gamma=90.00000\",\r\n"
+//			+ "  \"origintype\": \"isovizdistortion\",\r\n" + "  \"\": \"OK\",\r\n" + "  \"inputvalues\": \"true\",\r\n"
+//			+ "  \"mode003001\": \" 0.00000\",\r\n" + "  \"strain1\": \" 0.00000\",\r\n"
+//			+ "  \"strain2\": \" 0.00000\",\r\n" + "  \"atomicradius\": \"0.400\",\r\n"
+//			+ "  \"bondlength\": \"2.500\",\r\n" + "  \"appletwidth\": \" 1024\",\r\n"
+//			+ "  \"supercellxmin\": \"0.000\",\r\n" + "  \"supercellxmax\": \"1.000\",\r\n"
+//			+ "  \"supercellymin\": \"0.000\",\r\n" + "  \"supercellymax\": \"1.000\",\r\n"
+//			+ "  \"supercellzmin\": \"0.000\",\r\n" + "  \"supercellzmax\": \"1.000\",\r\n"
+//			+ "  \"modeamplitude\": \"1.000\",\r\n" + "  \"strainamplitude\": \"0.100\",\r\n"
+//			+ "  \"settingwrt\": \"parent\",\r\n" + "  \"basist11\": \"2 \",\r\n" + "  \"basist12\": \"0\",\r\n"
+//			+ "  \"basist13\": \"0\",\r\n" + "  \"basist21\": \"0\",\r\n" + "  \"basist22\": \"2 \",\r\n"
+//			+ "  \"basist23\": \"0\",\r\n" + "  \"basist31\": \"0\",\r\n" + "  \"basist32\": \"0\",\r\n"
+//			+ "  \"basist33\": \"2 \",\r\n" + "  \"origint1\": \"0\",\r\n" + "  \"origint2\": \"0\",\r\n"
+//			+ "  \"origint3\": \"0\",\r\n" + "  \"ampmincifmovie\": \"0\",\r\n" + "  \"ampmaxcifmovie\": \"1\",\r\n"
+//			+ "  \"nframescifmovie\": \"10\",\r\n" + "  \"varcifmovie\": \"linear\",\r\n"
+//			+ "  \"periodscifmovie\": \"1\"\r\n" + "}";
 
 	// gives
 
@@ -609,170 +745,30 @@ public class ServerUtil {
 			+ "</FORM><p>\r\n" + "</div>\r\n" + "<script src=\"swingjs/swingjs2.js\"></script>\r\n"
 			+ "<script src=\"isodistort.js\"></script>\r\n" + "</BODY>\r\n" + "</HTML>\r\n" + "";
 
-// giving 
-//	
-//			atomsfilename=><
-//			basist11=>2<
-//			basist21=>0<
-//			basist31=>0<
-//			dlattparam=>4.2000000000000002        4.2000000000000002        4.2000000000000002        90.000000000000000        90.000000000000000        90.000000000000000<
-//			includedisplacive001=>true<
-//			includedisplacive002=>true<
-//			includedisplacive003=>true<
-//			includestrain=>true<
-//			input=>displaydistort<
-//			inputvalues=>true<
-//			irrep1=>R4+, k13t9<
-//			irrepcount=>1<
-//			irrpointer1=>9807<
-//			isofilename=><
-//			isosubgroup=>12431<
-//			kparam1=>0    0    0    1<
-//			kvec1=>R, k13 (1/2,1/2,1/2)<
-//			kvecnumber1=>5<
-//			lattparam=>a=4.2<
-//			lattparamsubstring=>a=5.93970, b=5.93970, c=8.40000, alpha=90.00000, beta=90.00000, gamma=90.00000<
-//			modesfilename=>isodistort_04491.iso<
-//			nmodstar1=>0<
-//			orderparam=>P1      (a,0,0) 140 I4/mcm, basis={(1,1,0),(-1,1,0),(0,0,2)}, origin=(0,0,0), s=2, i=6, k-active= (1/2,1/2,1/2)<
-//			origint1=>0<
-//			origintype=>isovizdistortion<
-//			parentsetting=>323<
-//			parentsettingstring=><
-//			settingaxesh=>h<
-//			settingaxesm=>a(b)c<
-//			settingaxeso=>abc<
-//			settingcell=>1<
-//			settingorigin=>2<
-//			settingssg=>standard<
-//			settingwrt=>parent<
-//			spacegroup=>221 Pm-3m      Oh-1<
-//			subgroupsetting=>225<
-//			subgroupsettingstring=><
-//			subgroupsym=>140<
-//			varcifmovie=>linear<
-//			wyatom001=>Sr<
-//			wyatom002=>Ti<
-//			wyatom003=>O<
-//			wyatomtype001=>Sr<
-//			wyatomtype002=>Ti<
-//			wyatomtype003=>O<
-//			wyckoff001=>1b (1/2,1/2,1/2)<
-//			wyckoff002=>1a (0,0,0)<
-//			wyckoff003=>3d (1/2,0,0)<
-//			wycount=>3<
-//			wynumber001=>2<
-//			wynumber002=>1<
-//			wynumber003=>4<
-//			wyocc001=>1.0000000000000000<
-//			wyocc002=>1.0000000000000000<
-//			wyocc003=>1.0000000000000000<
-//			wyparam001=>0.0000000000000000        0.0000000000000000        0.0000000000000000<
-//			wyparam002=>0.0000000000000000        0.0000000000000000        0.0000000000000000<
-//			wyparam003=>0.0000000000000000        0.0000000000000000        0.0000000000000000<
-//			wypointer001=>1627<
-//			wypointer002=>1626<
-//			wypointer003=>1629<
-//			wytype001=>1<
-//			wytype002=>2<
-//			wytype003=>3<
-//	
+	
 	/**
-	 * Extract all the INPUT data from the HTML page.
+	 * @j2sIgnore
 	 * 
-	 * @param html
-	 * @return
+	 * @param args
 	 */
-	public static Map<String, Object> scrapeHTML(String html) {
-		Map<String, Object> map = new LinkedHashMap<>();
-
-		// <FORM...> ...... </FORM>
-		html = getInnerHTML(html, "FORM");
-		if (html == null)
-			return null;
-		String[] inputs = html.replace("<input","<INPUT").split("<INPUT");
-		for (int i = 1; i < inputs.length; i++) {
-			addEntry(map, inputs[i]);
-		}
-		return map;
-	}
-
-	private static String getInnerHTML(String html, String tag) {
-		String[] parts = html.split(tag.toUpperCase());
-		return (parts.length > 2 ? parts[1] : null);
-	}
-
-	private static void addEntry(Map<String, Object> map, String line) {
-		String type = getHTMLAttr(line, "TYPE");
-		if (type == null)
-			return;
-		switch (type) {
-		case "radio":
-		case "checkbox":
-			if (line.indexOf("CHECKED") < 0)
-				return;
-			break;
-		case "text":
-		case "hidden":
-			break;
-		default:
-			return;
-		}
-		String value = getHTMLAttr(line, "VALUE");
-		String name = getHTMLAttr(line, "NAME");
-		map.put(name, value);
-	}
-
-	private static String getHTMLAttr(String line, String attr) {
-		String key = attr + "=\"";
-		int pt = line.indexOf(key);
-		if (pt < 0)
-			pt = line.indexOf(key.toLowerCase());
-
-		if (pt < 0 || (pt = pt + key.length()) > line.length())
-			return null;
-		int pt1 = line.indexOf("\"", pt);
-		return (pt1 < 0 ? null : line.substring(pt, pt1).trim());
-	}
-
 	public static void main(String[] args) {
-		Map<String, Object> map = scrapeHTML(htmlTest);
-		System.out.println(toJSON(map));
+//
+//		System.out.println(bytesContain("....abc...".getBytes(), "abc".getBytes()));
+//		
+//		System.out.println(bytesContain("....abc...".getBytes(), "ab".getBytes()));
+//		System.out.println(bytesContain("....abc".getBytes(), "ab".getBytes()));
+//		
+//		System.out.println(bytesContain("abc".getBytes(), "abc".getBytes()));
+//
+//		System.out.println(bytesContain("abc...".getBytes(), "abc".getBytes()));
+//
+//		System.out.println(bytesContain("ababc".getBytes(), "abc".getBytes()));
+//
+//		System.out.println(!bytesContain("abab".getBytes(), "abc".getBytes()));
 
-	}
+		//		Map<String, Object> map = scrapeHTML(htmlTest);
+//		System.out.println(toJSON(map));
 
-	public static boolean getTempFile(IsoApp app, String html, Consumer<byte[]> consumer) {
-
-		// should be:
-
-//		<html><head><title>ISODISTORT</title></head>
-//		<BODY BGCOLOR="#FFFFFF" onload="setTimeout ('document.forms[0].submit()', 1000)">
-//		<FORM ACTION="isodistortform.php" METHOD="POST">
-//		<INPUT TYPE="hidden" NAME="input" VALUE="distort">
-//		<INPUT TYPE="hidden" NAME="origintype" VALUE="dfile">
-//		<INPUT TYPE="hidden" NAME="filename" VALUE="/tmp/pwd_public/isodistort_67727.iso">
-//		</FORM>
-//		</BODY>
-//		</HTML>
-
-		Map<String, Object> map = scrapeHTML(html);
-		String service = getHTMLAttr(html, "ACTION");
-		if (map == null || service == null) {
-			return false;
-		}
-
-		System.out.println("ServerUtil.getTempFile " + map.get("filename"));
-		Timer tempFileTimer = new Timer(5000, new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				fetch(app, FileUtil.FILE_TYPE_ISOVIZ, map, consumer);
-			}
-
-		});
-		tempFileTimer.setRepeats(false);
-		tempFileTimer.start();
-		return true;
 	}
 
 }

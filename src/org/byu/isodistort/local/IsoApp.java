@@ -489,6 +489,7 @@ public abstract class IsoApp {
 				//app.droppedFile = droppedFile;
 				app.document = document;
 				app.formData = formData;
+				app.distortionFileData = distortionFileData;
 				app.variables.setValuesFrom(variables);
 				app.setControlsFrom((IsoApp) appSettings[app.appType]);
 			}
@@ -742,20 +743,13 @@ public abstract class IsoApp {
 			mapFormData.put("fileName", fileName);
 		
 		ServerUtil.fetch(this, FileUtil.FILE_TYPE_DISTORTION, mapFormData, new Consumer<byte[]>() {
-
 			@Override
-			public void accept(byte[] d) {
-				ServerUtil.getTempFile(IsoApp.this, new String(d), new Consumer<byte[]>() {
-
-					@Override
-					public void accept(byte[] b) {
-						extractHTMLPageFormAndSendToServer(new String(b));
-					}
-					
-				});
+			public void accept(byte[] b) {
+				distortionFileData = b;
+				extractHTMLPageFormAndSendToServer(new String(b));
 			}
 
-		});
+		}, 1);
 	}
 
 	protected void extractHTMLPageFormAndSendToServer(String html) {
@@ -792,14 +786,15 @@ public abstract class IsoApp {
 		Map<String, Object> mapData = ensureMapData(formData, isSwitch);
 		if (isSwitch)
 			variables.updateFormData(mapData, document);
-		ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, mapData, consumer);
+		ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, mapData, consumer, 20);
 	}
 
 
 	
 //	<INPUT TYPE="radio" NAME="origintype" VALUE="isovizdistortion" CHECKED> Save interactive distortion
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="isovizdiffraction"> Save interactive diffraction
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="structurefile"> CIF file
+//	<INPUT TYPE="radio" NAME="origintype" VALUE="isovizdiffraction"> Save interactive diffraction // BH NO LONGER NECESSSARY
+
+	//	<INPUT TYPE="radio" NAME="origintype" VALUE="structurefile"> CIF file
 //	<INPUT TYPE="radio" NAME="origintype" VALUE="distortionfile"> Distortion file
 //	<INPUT TYPE="radio" NAME="origintype" VALUE="domains"> Domains
 //	<INPUT TYPE="radio" NAME="origintype" VALUE="primary"> Primary order parameters

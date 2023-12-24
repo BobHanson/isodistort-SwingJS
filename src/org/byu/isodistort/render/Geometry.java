@@ -27,11 +27,19 @@ public class Geometry {
 	 */
 	Material material;
 
-//	/**
-//	 * Stores the name of the geometry
-//	 */
-//	private String name = "";
+	/**
+	 * Stores the name of the geometry
+	 */
+	private String name = "";
 
+	public Geometry setName(String name) {
+		this.name = name;
+		return this;
+	}
+	
+	public String getName() {
+		return name;
+	}
 	/**
 	 * Stores the children geometries of the current geometry.
 	 */
@@ -700,7 +708,7 @@ public class Geometry {
 				U[k] = P[j][k + 3];
 				W[k] = j == n ? (loop ? P[1][k] - P[0][k] : P[n][k] - P[n - 1][k]) : P[j + 1][k] - P[j][k];
 			}
-			double radius = MathUtil.norm(U);
+			double radius = MathUtil.len3(U);
 			computeCrossVectors(W, U, V);
 			for (int i = 0; i <= m; i++) {
 				double x = O[i][0];
@@ -737,12 +745,12 @@ public class Geometry {
 	 * @param V vector
 	 */
 	private void computeCrossVectors(double W[], double U[], double V[]) {
-		MathUtil.normalize(W);
-		MathUtil.normalize(U);
-		MathUtil.cross(W, U, V);
-		MathUtil.normalize(V);
-		MathUtil.cross(V, W, U);
-		MathUtil.normalize(U);
+		MathUtil.norm3(W);
+		MathUtil.norm3(U);
+		MathUtil.cross3(U, W, V);
+		MathUtil.norm3(V);
+		MathUtil.cross3(W, V, U);
+		MathUtil.norm3(U);
 	}
 
 	/**
@@ -823,8 +831,8 @@ public class Geometry {
 					for (int k = 0; k < 3; k++)
 						B[k] = .5 * (V(i, j + 1)[k] - V(i, j - 1)[k]);
 
-				MathUtil.cross(B, A, nn);
-				MathUtil.normalize(nn);
+				MathUtil.cross3(A, B, nn);
+				MathUtil.norm3(nn);
 				for (int k = 0; k < 3; k++)
 					vertices[N][k + 3] = nn[k];
 				N++;
@@ -911,7 +919,7 @@ public class Geometry {
 				} else
 					dr = (C[1] - C[0]) / r;
 				double nn[] = { r * x, r * y, dr };
-				MathUtil.normalize(nn);
+				MathUtil.norm3(nn);
 				setVertex(i * (m + 1) + j, r * x, r * y, z, nn[0], nn[1], nn[2]);
 			}
 		computedMeshNormals = true;
@@ -1339,7 +1347,7 @@ public class Geometry {
 	}
 
 	int childCount = 0;
-
+	
 	public int getChildCount() {
 		return childCount;
 	}
@@ -1962,4 +1970,8 @@ public class Geometry {
 //	}
 //
 
+	@Override
+	public String toString() {
+		return "[Geom" + name + "]";
+	}
 }

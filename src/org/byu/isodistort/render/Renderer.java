@@ -447,7 +447,7 @@ class Renderer {
 			
 		long t2 = System.currentTimeMillis();
 		
-		report("R:" + (t2-t1));
+		//report("R:" + (t2-t1));
 		//System.out.println("RT ntri=" + ntri + " " + (t1 - t0) + " " + (t1 - t) + " " + (t2 - t1));
 
 		ntri = 0;
@@ -668,17 +668,17 @@ class Renderer {
 			T[1] = cameraAim[1] - cameraPos[1];
 			T[2] = cameraAim[2] - cameraPos[2];
 
-			MathUtil.normalize(T);
+			MathUtil.norm3(T);
 
-			double vz = MathUtil.matmul(T, cameraUp);
+			double vz = MathUtil.dot3(T, cameraUp);
 			double vy = Math.sqrt(1 - vz * vz);
 
 			Matrix.identity(camtmp);
 
 			double crossUT[] = new double[3];
-			double dotTU = MathUtil.matmul(T, cameraUp);
+			double dotTU = MathUtil.dot3(T, cameraUp);
 
-			MathUtil.cross(cameraUp, T, crossUT);
+			MathUtil.cross3(T, cameraUp, crossUT);
 
 			for (int i = 0; i < 3; i++) {
 				camtmp.set(2, i, T[i]);
@@ -1123,7 +1123,7 @@ class Renderer {
 		double nn[] = normal;
 
 		normat.rotate(v[3], v[4], v[5], nn);
-		MathUtil.normalize(nn);
+		MathUtil.norm3(nn);
 		for (int j = 0; j < 3; j++)
 			ti[j + 3] = nn[j];
 

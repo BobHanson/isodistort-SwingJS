@@ -204,7 +204,7 @@ class Mode {
 				// accumulate distortion deltas
 				for (int m = 0; m < modesPerType[t]; m++) {
 					double d = irrepVals[irrepTM[t][m]] * sliderValsTM[t][m] * superVal;
-					MathUtil.vecadd(delta, d, a.modes[type][m], delta);
+					MathUtil.vecaddN(delta, d, a.modes[type][m], delta);
 				}
 			}
 
@@ -213,7 +213,7 @@ class Mode {
 			if (v1 == null) {
 				v1 = a.vector1[type] = new double[columnCount];
 			}
-			MathUtil.vecadd(a.vector0[type], 1, delta, v1);
+			MathUtil.vecaddN(a.vector0[type], 1, delta, v1);
 
 			// next is just for the labels
 			switch (columnCount) {
@@ -221,15 +221,15 @@ class Mode {
 				max[t][s][type] += v1[0] / numSubAtoms[t][s];
 				break;
 			case 3: // DIS, MAG, ROT
-				MathUtil.mul(v.sBasisCart, v1, tempvec);
+				MathUtil.mat3mul(v.sBasisCart, v1, tempvec);
 				double d = MathUtil.len3(tempvec);
 				if (d > max[t][s][type])
 					max[t][s][type] = d;
 				break;
 			case 6: // ELL
 				MathUtil.voigt2matrix(v1, tempmat, 0);
-				MathUtil.mul(v.sBasisCart, tempmat, tempmat);
-				MathUtil.mul(tempmat, v.sBasisCartInverse, tempmat);
+				MathUtil.mat3product(v.sBasisCart, tempmat, tempmat);
+				MathUtil.mat3product(tempmat, v.sBasisCartInverse, tempmat);
 				// ellipsoid in cartesian coords
 				d = 0;
 				for (int i = 0; i < 3; i++) {

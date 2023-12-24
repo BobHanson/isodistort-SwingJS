@@ -267,6 +267,8 @@ public class RenderPanel3D extends JPanel
 	 *          directions.
 	 */
 	public void translate(double v[]) {
+		if (v == null)
+			System.out.println("?????");
 		translate(v[0], v[1], v[2]);
 	}
 
@@ -388,6 +390,7 @@ public class RenderPanel3D extends JPanel
 			// prior to rendering, check for a resize
 			int width = Math.max(1, getWidth()) * (isAntialiased ? 2 : 1);
 			int height = Math.max(1, getHeight() * (isAntialiased ? 2 : 1));
+			System.out.println("RenderPanel3D size " + width + "x" + height);
 			im = newBufferedImage(width, height);
 			int[] pixels = ((DataBufferInt) im.getRaster().getDataBuffer()).getData();
 			clearPixels(pixels);

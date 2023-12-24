@@ -162,10 +162,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		drawPanel.add(rp, BorderLayout.CENTER);
 		rp.addKeyListener(this);
 		initMaterials();
-		atomObjects = rp.world.add();
-		bondObjects = rp.world.add();
-		cellObjects = rp.world.add();
-		axisObjects = rp.world.add();
+		Geometry world = rp.getWorld();
+		atomObjects = world.add();
+		bondObjects = world.add();
+		cellObjects = world.add();
+		axisObjects = world.add();
 		initAtoms();
 		initBonds();
 		initCells();

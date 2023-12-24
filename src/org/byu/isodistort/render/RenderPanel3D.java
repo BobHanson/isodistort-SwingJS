@@ -12,7 +12,6 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
-import java.awt.image.MemoryImageSource;
 
 import javax.swing.JPanel;
 
@@ -35,34 +34,23 @@ import org.byu.isodistort.local.Matrix;
  */
 
 public class RenderPanel3D extends JPanel
-// APS (April 2009): edits thanks to: http://www.dgp.toronto.edu/~mjmcguff/learn/java/04-mouseInput/
 		implements MouseListener, MouseMotionListener {
 
+	// APS (April 2009): edits thanks to: http://www.dgp.toronto.edu/~mjmcguff/learn/java/04-mouseInput/
+
 	/**
-	 * Image memory source object
+	 * Flag chooses x,y,z-Rotate modes.
 	 */
-	protected MemoryImageSource mis;
+	private int rotAxis = 0; // Branton Campbell
 
-//	/**
-//	 * Secondary frambuffer for displaying additional information
-//	 */
-//	protected BufferedImage bufferIm;
+	/**
+	 * Flag controls continuous spin mode.
+	 */
+	private boolean spin = false; // Branton Campbell
 
-	public RenderPanel3D(IsoDistortApp app) {
-		this.app = app;
-		addMouseListener(this);
-		addMouseMotionListener(this);
-		initialize();
-	}
+	private boolean isMouseZooming;
 
-	public void dispose() {
-		app = null;
-		removeMouseListener(this);
-		removeMouseMotionListener(this);
-		renderer = null;
-	}
-
-	// --- PRIVATE DATA FIELDS
+	private double fov0;
 
 	/**
 	 * Current mouse position
@@ -93,24 +81,26 @@ public class RenderPanel3D extends JPanel
 
 	private int top = 0; // MATRIX STACK POINTER
 	
-	// public String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+	// private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
-	// --- PUBLIC DATA FIELDS
 
 	/**
 	 * {@link Renderer} object
 	 */
-	public Renderer renderer;
+	private Renderer renderer;
 
 	/**
 	 * root of the scene {@link Geometry}
 	 */
-	public Geometry world;
+	private Geometry world;
 
+	public Geometry getWorld() {
+		return world;
+	}
 	/**
 	 * Flag that determines whether to display current frame rate.
 	 */
-	public boolean showFPS = true;
+	private boolean showFPS = true;
 
 	/** These doubles determine how far off center the image is */
 	protected double xOff = 0, yOff = 0, zOff = 0;
@@ -118,16 +108,19 @@ public class RenderPanel3D extends JPanel
 	/** This int determines whether or not the panning is normal or inverted */
 	protected int invert = 1;
 
-//--- PUBLIC METHODS
+	public RenderPanel3D(IsoDistortApp app) {
+		this.app = app;
+		addMouseListener(this);
+		addMouseMotionListener(this);
+		initialize();
+	}
 
-//   /**
-//     Forces a refresh of the renderer. Sets isDamage true.
-//   */
-//   public void damage()
-//   {
-//      renderer.refresh();
-//      isDamage = true;
-//   }
+	public void dispose() {
+		app = null;
+		removeMouseListener(this);
+		removeMouseMotionListener(this);
+		renderer = null;
+	}
 
 	/**
 	 * Sets the field of view value.
@@ -135,7 +128,7 @@ public class RenderPanel3D extends JPanel
 	 * @param value
 	 * @see Renderer#setFOV(double value)
 	 */
-	public void setFOV(double value) {
+	private void setFOV(double value) {
 		renderer.setFOV(value);
 	}
 
@@ -145,7 +138,7 @@ public class RenderPanel3D extends JPanel
 	 * @param value focal length
 	 * @see Renderer#setFL(double value)
 	 */
-	public void setFL(double value) {
+	private void setFL(double value) {
 		renderer.setFL(value);
 	}
 
@@ -156,7 +149,7 @@ public class RenderPanel3D extends JPanel
 	 * @param g green component 0..1
 	 * @param b blue component 0..1
 	 */
-	public void setBgColor(double r, double g, double b) {
+	private void setBgColor(double r, double g, double b) {
 		renderer.setBgColor(r, g, b);
 		setBackground(new Color((int) (r * 255), (int) (g * 255), (int) (b * 255)));
 	}
@@ -170,13 +163,13 @@ public class RenderPanel3D extends JPanel
 	 * @see Renderer#addLight(double x,double y,double z, double r,double g,double
 	 *      b)
 	 */
-	public void addLight(double x, double y, double z, // ADD A LIGHT SOURCE
+	private void addLight(double x, double y, double z, // ADD A LIGHT SOURCE
 			double r, double g, double b) {
 		renderer.addLight(x, y, z, r, g, b);
 	}
 	
 
-	// PUBLIC METHODS TO LET THE PROGRAMMER MANIPULATE A MATRIX STACK
+	// private METHODS TO LET THE PROGRAMMER MANIPULATE A MATRIX STACK
 
 	/**
 	 * Sets current matrix to the identity matrix.
@@ -190,7 +183,7 @@ public class RenderPanel3D extends JPanel
 	 * 
 	 * @return the top matrix on the stack
 	 */
-	public Matrix m() {
+	private Matrix m() {
 		return matrix[top];
 	}
 
@@ -283,7 +276,7 @@ public class RenderPanel3D extends JPanel
 		m().translate(x, y, z);
 	}
 
-	// PUBLIC METHODS TO LET THE PROGRAMMER DEFORM AN OBJECT
+	// private METHODS TO LET THE PROGRAMMER DEFORM AN OBJECT
 
 //	/**
 //	 * Deforms a geometric shape according to the beginning, middle, and end
@@ -307,18 +300,18 @@ public class RenderPanel3D extends JPanel
 //	 * @return 1 if pull operation was successful, 0 otherwise
 //	 * @see Geometry#pull
 //	 */
-//	public int pull(Geometry s, double x0, double x1, double x2, double y0, double y1, double y2, double z0, double z1,
+//	private int pull(Geometry s, double x0, double x1, double x2, double y0, double y1, double y2, double z0, double z1,
 //			double z2) {
 //		return s.pull(m(), x0, x1, x2, y0, y1, y2, z0, z1, z2);
 //	}
 
-	// --- SYSTEM LEVEL PUBLIC METHODS ---
+	// --- SYSTEM LEVEL private METHODS ---
 
 	private IsoDistortApp app;
 
 	private BufferedImage im;
 
-	public void initialize() {
+	private void initialize() {
 		renderer = new Renderer();
 		world = renderer.getWorld(); // GET ROOT OF GEOMETRY
 		for (int i = 0; i < matrix.length; i++)
@@ -329,9 +322,9 @@ public class RenderPanel3D extends JPanel
 	/**
 	 * Euler angles for camera positioning (horizontal and vertical view rotation).
 	 */
-	public double theta = 0;
-	public double phi = 0;
-	public double sigma = 0;
+	private double theta = 0;
+	private double phi = 0;
+	private double sigma = 0;
 
 //	private synchronized void recalculateSize(int width, int height) {
 //		// BH we are now just directly tapping the int[] raster of the
@@ -415,7 +408,7 @@ public class RenderPanel3D extends JPanel
 	boolean isAntialiased = false;
 	
 	@Override
-	public synchronized void paint(Graphics g) {
+    public synchronized void paint(Graphics g) {
 		// long t1 = System.currentTimeMillis();
 		// System.out.println("RP timer " + (t1 - ttime));
 		// ttime = t1;
@@ -473,42 +466,29 @@ public class RenderPanel3D extends JPanel
 //	 * @param xyz output point in world coords
 //	 * @return true iff not a background pixel
 //	 */
-//	public boolean getPoint(int x, int y, double xyz[]) {
+//	private boolean getPoint(int x, int y, double xyz[]) {
 //		return renderer.getPoint(x, y, xyz);
 //	}
 //
-	/**
-	 * Returns the Geometry of the frontmost object at the point (x, y) in the image
-	 * (like a z-buffer value of geometries).
-	 * 
-	 * @param x x coordinate in the image
-	 * @param y y coordinate in the image
-	 * @return the geometry of the foremost object at that location
-	 */
-	public Geometry getGeometry(int x, int y) {
-		if (renderer.bufferg == false) {
-			renderer.bufferg = true;
-//         isDamage = true;
-		}
-		return renderer.getGeometry(x, y);
-	}
-
-	/**
-	 * Flag chooses x,y,z-Rotate modes.
-	 */
-	public int rotAxis = 0; // Branton Campbell
-
-	/**
-	 * Flag controls continuous spin mode.
-	 */
-	public boolean spin = false; // Branton Campbell
-
-	private boolean isMouseZooming;
-
-	private double fov0;
+//	/**
+//	 * Returns the Geometry of the frontmost object at the point (x, y) in the image
+//	 * (like a z-buffer value of geometries).
+//	 * 
+//	 * @param x x coordinate in the image
+//	 * @param y y coordinate in the image
+//	 * @return the geometry of the foremost object at that location
+//	 */
+//	private Geometry getGeometry(int x, int y) {
+//		if (renderer.bufferg == false) {
+//			renderer.bufferg = true;
+////         isDamage = true;
+//		}
+//		return renderer.getGeometry(x, y);
+//	}
 
 	@Override
 	public void mouseClicked(MouseEvent e) {
+		app.setStatus(null);
 	}
 
 	@Override
@@ -673,14 +653,14 @@ public class RenderPanel3D extends JPanel
 		return spin;
 	}
 
-	public double getFrameRate() {
-		return frameRate;
-	}
-
-	public Renderer getRenderer() {
-		return renderer;
-	}
-
+//	private double getFrameRate() {
+//		return frameRate;
+//	}
+//
+//	private Renderer getRenderer() {
+//		return renderer;
+//	}
+//
 	public void clearAngles() {
 		theta = phi = sigma = 0;
 	}
@@ -773,7 +753,7 @@ public class RenderPanel3D extends JPanel
 	 * Turn perspective on or off
 	 * @param b true for perspective
 	 */
-	public void setPerspective(boolean b) {
+	private void setPerspective(boolean b) {
 		renderer.setPerspective(b);
 	}
 

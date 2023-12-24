@@ -29,6 +29,7 @@ import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
+import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenuBar;
@@ -36,10 +37,12 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
+import javax.swing.text.DefaultCaret;
 
 import org.byu.isodistort.IsoDiffractApp;
 import org.byu.isodistort.IsoDistortApp;
@@ -93,7 +96,7 @@ public abstract class IsoApp {
 	/**
 	 * a few common parameters for initializing the GUI
 	 */
-	private static final int padding = 4, controlPanelHeight = 55, roomForScrollBar = 15;
+	private static final int padding = 4, controlPanelHeight = 75, roomForScrollBar = 15;
 
 	/**
 	 * this app's type, either APP_ISODISTORT or APP_ISODIFFRACT
@@ -145,6 +148,49 @@ public abstract class IsoApp {
 	 * Pane that holds the scroll panels
 	 */
 	private JScrollPane sliderPane;
+
+	private static class StatusPanel extends JTextArea {
+		
+		private IsoApp app;
+		private JPanel controlPanel;
+
+		StatusPanel(IsoApp app, JPanel controlPanel) {
+			this.controlPanel = controlPanel;
+			this.app = app;
+			setEditable(false);
+			setAutoscrolls(true);
+			((DefaultCaret)getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+		}
+		
+		public void addText(String text) {
+			System.out.println("AI SP " + text);
+			if (text == null) {
+				setText("");
+				setVisible(false);
+			} else {
+				String s = getText();
+				setText((s.length() == 0 ? "" : s + "\n") + text);
+				setVisible(true);
+			}
+		}
+		
+		@Override
+		public void setVisible(boolean b) {
+			if (b) { 
+				setPreferredSize(controlPanel.getSize());
+			}
+			controlPanel.setVisible(!b);
+			super.setVisible(b);
+		}
+	}
+	/**
+	 * Panel that swaps for control panel during server actions.
+	 * 
+	 * @author Bob Hanson
+	 *
+	 */
+	private StatusPanel statusPanel;
+
 
 	/**
 	 * Panel that holds all control components
@@ -287,6 +333,10 @@ public abstract class IsoApp {
 		}
 	};
 
+
+	private JPanel controlStatusPanel;
+
+
 	private static int buttonID = 0;
 
 	protected JRadioButton newRadioButton(String label, boolean selected, ButtonGroup g) {
@@ -325,6 +375,16 @@ public abstract class IsoApp {
 		controlPanel = new JPanel();
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
+		statusPanel = new StatusPanel(this, controlPanel);
+		statusPanel.setBackground(Color.LIGHT_GRAY);
+		statusPanel.setAutoscrolls(true);
+		statusPanel.setVisible(false);
+		statusPanel.setBorder(BorderFactory.createLineBorder(Color.RED, 1));
+		controlStatusPanel = new JPanel(new FlowLayout());
+		controlStatusPanel.setBackground(Color.WHITE);
+		controlStatusPanel.add(controlPanel);
+		controlStatusPanel.add(statusPanel);
+		controlPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
 		isoPanel = new JPanel(new BorderLayout())
 //		{	// BH testing paints
 ////			@Override 
@@ -360,8 +420,7 @@ public abstract class IsoApp {
 		sliderPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
 		isoPanel.add(sliderPane, BorderLayout.EAST);// add to east of Applet
 
-		controlPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
-		isoPanel.add(controlPanel, BorderLayout.SOUTH);// add to east of Applet
+		isoPanel.add(controlStatusPanel, BorderLayout.SOUTH);// add to east of Applet
 
 		drawPanel = new JPanel(new BorderLayout());
 		isoPanel.add(drawPanel, BorderLayout.CENTER);
@@ -488,6 +547,7 @@ public abstract class IsoApp {
 			return;
 		IsoApp me = this;
 		new Thread(() -> {
+			setStatus(null);
 			boolean isIsoDistort = (appType == APP_ISODISTORT);
 			IsoApp app = (isIsoDistort ? new IsoDistortApp() : new IsoDiffractApp());
 			if (args == null || args.length == 0)
@@ -590,6 +650,8 @@ public abstract class IsoApp {
 			int sliderPanelHeight = sliderPaneHeight - padding;
 			sliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, sliderPanelHeight));
 			variables.initSliderPanel(sliderPanel);
+			controlStatusPanel.setPreferredSize(new Dimension(controlStatusPanel.getWidth(), controlPanelHeight));
+			controlPanel.setPreferredSize(new Dimension(controlStatusPanel.getWidth(), controlPanelHeight));
 			frame.pack();
 			updateDimensions();
 			init();
@@ -755,7 +817,7 @@ public abstract class IsoApp {
 		mapFormData.put("toProcess", data);
 		if (fileName != null)
 			mapFormData.put("fileName", fileName);
-		
+		setStatus("...uploading " + data.length + " bytes of distortion file data to iso.byu...");
 		ServerUtil.fetch(this, FileUtil.FILE_TYPE_DISTORTION, mapFormData, new Consumer<byte[]>() {
 			@Override
 			public void accept(byte[] b) {
@@ -776,6 +838,7 @@ public abstract class IsoApp {
 
 			@Override
 			public void accept(byte[] data) {
+				setStatus("...opening ISODISTORT for " + data.length + " bytes of data...");
 				new Thread(() -> {
 					openApplication(APP_ISODISTORT, data, true);
 				}, "isodistort_from_server").start();
@@ -793,13 +856,14 @@ public abstract class IsoApp {
 		//formData = ServerUtil.testFormData;
 		if (formData == null) {
 			// if all we have is an isoviz file, how can we update it?
-			sayNotPossible("no form data to process");
+			sayNotPossible("no form data to process; open a DISTORTION file first.");
 			return;
 		}
 
 		Map<String, Object> mapData = ensureMapData(formData, isSwitch);
 		if (isSwitch)
 			variables.updateFormData(mapData, document);
+		setStatus("...fetching ISOVIZ file from iso.byu...");
 		ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, mapData, consumer, 20);
 	}
 
@@ -832,4 +896,10 @@ public abstract class IsoApp {
 		this.formData = formData;
 		return formData;
 	}
+	
+
+	public void setStatus(String status) {
+		statusPanel.addText(status);
+	}
+
 }

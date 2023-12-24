@@ -1662,13 +1662,6 @@ public class Variables {
 			}
 		}
 
-		/**
-		 * Set the sizes of panels based on
-		 * 
-		 * @param sliderPanel
-		 * @param controlPanel
-		 * 
-		 */
 		void initPanels() {
 
 			// Divide the applet area with structure on the left and controls on the right.
@@ -1710,17 +1703,6 @@ public class Variables {
 					+ numStrains + numIrreps + numTypes + numExtraRows + numSubRowsTotal;
 			int rowLength = Math.max(rowCount, minRowNumber);
 			sliderPanel.setPreferredSize(new Dimension(dim.width, rowLength * barheight));
-			addControls();
-
-		}
-
-		/**
-		 * Create the full slider panel.
-		 * 
-		 * 
-		 */
-		private void addControls() {
-
 			needSimpleColor = identifyUniqueAtoms(atomTypeSymbol);
 
 			setColors(false);

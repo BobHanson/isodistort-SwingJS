@@ -447,7 +447,7 @@ class Renderer {
 			
 		long t2 = System.currentTimeMillis();
 		
-		report("R:" + (t2-t1));
+		//report("R:" + (t2-t1));
 		//System.out.println("RT ntri=" + ntri + " " + (t1 - t0) + " " + (t1 - t) + " " + (t2 - t1));
 
 		ntri = 0;
@@ -670,15 +670,15 @@ class Renderer {
 
 			MathUtil.norm3(T);
 
-			double vz = MathUtil.matmul(T, cameraUp);
+			double vz = MathUtil.dot3(T, cameraUp);
 			double vy = Math.sqrt(1 - vz * vz);
 
 			Matrix.identity(camtmp);
 
 			double crossUT[] = new double[3];
-			double dotTU = MathUtil.matmul(T, cameraUp);
+			double dotTU = MathUtil.dot3(T, cameraUp);
 
-			MathUtil.cross(cameraUp, T, crossUT);
+			MathUtil.cross3(T, cameraUp, crossUT);
 
 			for (int i = 0; i < 3; i++) {
 				camtmp.set(2, i, T[i]);

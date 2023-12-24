@@ -27,8 +27,10 @@ import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.Timer;
 
+import org.byu.isodistort.local.Bspt.CubeIterator;
 import org.byu.isodistort.local.IsoApp;
 import org.byu.isodistort.local.MathUtil;
+import org.byu.isodistort.local.Variables;
 import org.byu.isodistort.local.Variables.Atom;
 import org.byu.isodistort.render.Geometry;
 import org.byu.isodistort.render.Material;
@@ -44,7 +46,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	protected boolean isAnimationRunning;
 
-	// Variables that the user may want to adjust
+	
+	// variables that the user may want to adjust
 	/**
 	 * Cell-edge tube parameters
 	 */
@@ -96,8 +99,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 // Global variables that pertain to atom, cell and bond properties	
 
-	double[][] bondInfo;
-
 	BitSet bsBondsEnabled;
 
 	/**
@@ -119,7 +120,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * Materials for coloring bonds and cells.
 	 * 
 	 */
-	Material bondMaterial, parentCellMaterial, superCellMaterial, xAxisMaterial, yAxisMaterial, zAxisMaterial;
+	public static Material bondMaterial, parentCellMaterial, superCellMaterial, xAxisMaterial, yAxisMaterial, zAxisMaterial;
 	/**
 	 * Array of materials for coloring atoms[type][subtype][regular,highlighted]
 	 * 
@@ -213,11 +214,19 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	private void initBonds() {
 		showBonds = showBonds0;
 		int n = variables.numBonds;
-		bondInfo = new double[n][6];
 		bsBondsEnabled = new BitSet();
 		bondObjects.clear(0);
-		for (int b = 0; b < n; b++)
-			bondObjects.add().tube(numBondSides).setMaterial(bondMaterial);
+		if (n > 0) {
+			for (int b = 0; b < n; b++)
+				addBondObject("bond_" + b);
+		}
+	}
+
+	/**
+	 * For dynamic addition of bonds by variables using the Binary 
+	 */
+	public void addBondObject(String name) {
+		bondObjects.add().tube(numBondSides).setMaterial(bondMaterial).setName(name);
 	}
 
 	/**
@@ -281,8 +290,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		}
 	}
 
-	private final static int RX = 3, RY = 4, L_2 = 5;
-
 	private static final int VIEW_TYPE_SUPER_HKL = 1;
 	private static final int VIEW_TYPE_SUPER_UVW = 2;
 	private static final int VIEW_TYPE_PARENT_HKL = 3;
@@ -320,7 +327,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			if (showBonds) {
 				r = variables.atomMaxRadius * bondMultiplier;
 				for (int b = bsBondsEnabled.nextSetBit(0); b >= 0; b = bsBondsEnabled.nextSetBit(b + 1)) {
-					transformCylinder(r, bondInfo[b], bondObjects.child(b));
+					transformCylinder(r, variables.bondInfo[b], bondObjects.child(b));
 				}
 			}
 			if (showCells) {
@@ -345,9 +352,9 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		rp.push();
 		{
 			rp.translate(info);
-			rp.rotateY(info[RY]);
-			rp.rotateX(info[RX]);
-			rp.scale(r, r, info[L_2]);
+			rp.rotateY(info[Variables.RY]);
+			rp.rotateX(info[Variables.RX]);
+			rp.scale(r, r, info[Variables.L_2]);
 			rp.transform(child);
 		}
 		rp.pop();
@@ -379,8 +386,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			return;
 		rp.push();
 		{
-			rp.rotateY(info[RY]);// y-angle orientation of arrow number q
-			rp.rotateX(info[RX]);// x-angle orientation of arrow number q
+			rp.rotateY(info[Variables.RY]);// y-angle orientation of arrow number q
+			rp.rotateX(info[Variables.RX]);// x-angle orientation of arrow number q
 			rp.scale(r, r, 0.62 + info[2] * scale);
 
 			// The factor
@@ -409,27 +416,38 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 		enableRendering();
 
-		if (showAtoms) {
+		if (showAtoms || showBonds) {
 			variables.setAtomInfo();
 		}
 
 		if (showBonds) {
 			// calculate the new bondInfo in bond format
-			for (int b = 0; b < variables.numBonds; b++) {
-				// calculate bondInfo(x-cen, y-cen, z-cen, thetaX, thetaY,
-				// length)
-				int[] bond = variables.bonds[b];
-				int a0 = bond[0];
-				int a1 = bond[1];
-				double[] info = bondInfo[b];
-				double[][] info0 = variables.atoms[a0].info;
-				double[][] info1 = variables.atoms[a1].info;
-				boolean ok = (info[L_2] > 0 && info[L_2] < variables.maxHalfBondLength
-						&& info0[OCC][0] > variables.minBondOcc && info1[OCC][0] > variables.minBondOcc);
-				setBondInfo(info0[DIS], info1[DIS], info);
-				bondObjects.child(b).setEnabled(ok);
-				bsBondsEnabled.set(b, ok);
+			long t = System.currentTimeMillis();
+
+			if (bondsUseBSPT) {
+				checkBonding();
+			} else {
+				bsBondsEnabled.set(0, variables.numBonds);
+				for (int b = bsBondsEnabled.nextSetBit(0); b >= 0; b = bsBondsEnabled.nextSetBit(b + 1)) {
+					// calculate bondInfo(x-cen, y-cen, z-cen, thetaX, thetaY,
+					// length)
+					double[] info = variables.bondInfo[b];
+					int a0 = (int) info[6];
+					int a1 = (int) info[7];
+
+					double[][] info0 = variables.atoms[a0].info;
+					double[][] info1 = variables.atoms[a1].info;
+					boolean ok = (info[Variables.L_2] > 0 && info[Variables.L_2] < variables.halfMaxBondLength
+							&& info0[OCC][0] > variables.minBondOcc && info1[OCC][0] > variables.minBondOcc);
+					variables.setBondInfo(info0[DIS], info1[DIS], info, -1);
+					bondObjects.child(b).setEnabled(ok);
+					bsBondsEnabled.set(b, ok);
+				}
+//				if (ok)
+//					System.out.println("bond " + Math.min(a0,  a1) + " " + Math.max(a0,  a1) + " " + (info[L_2] * 2));
 			}
+			System.out.println("IsoDistortApp bonds enabled=" + bsBondsEnabled.cardinality() + " t=" + (System.currentTimeMillis() - t));
+
 		}
 
 		// calculate cellInfo (in bond format) associated with each of 12 edges
@@ -441,7 +459,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		if (showCells) {
 			for (int pt = 0, c = 0; c < 24; c++) {
 				double[][] vertices = (c < 12 ? variables.parentCellVertices : variables.superCellCartesianVertices);
-				setBondInfo(vertices[buildCell[(pt++) % 24]], vertices[buildCell[(pt++) % 24]], cellInfo[c]);
+				variables.setBondInfo(vertices[buildCell[(pt++) % 24]], vertices[buildCell[(pt++) % 24]], cellInfo[c], -1);
 			}
 		}
 
@@ -463,17 +481,17 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				extent[i] = pOrigin[i] + (t3[i] = pBasisCart[i][axis]) - sCenter[i];
 			}
 			MathUtil.norm3(t3);
-			MathUtil.vecadd(extent, 2.0 * rmax, t3, paxesbegs[axis]);
-			MathUtil.vecadd(extent, 3.5 * rmax, t3, paxesends[axis]);
-			setBondInfo(paxesbegs[axis], paxesends[axis], axesInfo[axis]);
+			MathUtil.vecaddN(extent, 2.0 * rmax, t3, paxesbegs[axis]);
+			MathUtil.vecaddN(extent, 3.5 * rmax, t3, paxesends[axis]);
+			variables.setBondInfo(paxesbegs[axis], paxesends[axis], axesInfo[axis], -1);
 			for (int i = 0; i < 3; i++) {
 				// BH Q: unless sCenter is [0 0 0], this will fail.
 				extent[i] = (t3[i] = sBasisCart[i][axis]) - sCenter[i];
 			}
 			MathUtil.norm3(t3);
-			MathUtil.vecadd(extent, 1.5 * rmax, t3, saxesbegs[axis]);
-			MathUtil.vecadd(extent, 4.0 * rmax, t3, saxesends[axis]);
-			setBondInfo(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3]);
+			MathUtil.vecaddN(extent, 1.5 * rmax, t3, saxesbegs[axis]);
+			MathUtil.vecaddN(extent, 4.0 * rmax, t3, saxesends[axis]);
+			variables.setBondInfo(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3], -1);
 		}
 
 		// Calculate the maximum distance from applet center (used to determine FOV).
@@ -495,6 +513,49 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		scdSize = Math.sqrt(d2) + 2 * rmax;
 		// this includes the width of atoms that might be at the extremes of the
 		// longest cell diagonal.
+	}
+
+	public void checkBonding() {
+		if (variables.bondInfo == null)
+			variables.bondInfo = new double[64][];
+		bsBondsEnabled.clear();
+		int numBonds = variables.numBonds;
+		for (int i = 0; i < numBonds; i++)
+			bondObjects.child(i).setEnabled(false);
+		CubeIterator iterator = variables.getCubeIterator();
+		double r = variables.halfMaxBondLength * 2;
+		double r2 = r * r;
+		double range = variables.halfMaxBondLength * 2;
+		double minBondOcc = variables.minBondOcc;
+		for (int a1 = 0, n = variables.numAtoms; a1 < n; a1++) {
+			double[][] info1 = variables.getAtomInfo(a1);
+			if (info1[OCC][0] < minBondOcc)
+				continue;
+			double[] center = info1[DIS];
+			String key1 = a1 + "_";
+			iterator.initialize(center, range, false);
+			while (iterator.hasNext()) {
+				// we store the atom index in the "coordinate" of the atom as the fourth element
+				// of that array.
+				int a2 = (int) iterator.next()[3];
+				double[][] info2;
+				double d2 = iterator.foundDistance2(); 
+//				System.out.println(a1 + " " + a2 + " " + d2);
+				if (a2 <= a1 || d2 < 0.000000000001 || d2 > r2
+						|| (info2 = variables.getAtomInfo(a2))[OCC][0] < minBondOcc)
+					continue;
+				String key12 = key1 + a2;
+				double[] ab = variables.getBondinfoFromKey(key12);
+				if (ab == null) {
+					ab = variables.addBond(key12, a1, a2);
+					addBondObject("bond_" + (int) (ab[8]));
+				}
+				variables.setBondInfo(center, info2[DIS], ab, d2);
+				int b = (int) ab[8];
+				bsBondsEnabled.set(b);
+				bondObjects.child(b).setEnabled(true);
+			}
+		}
 	}
 
 	private void enableRendering() {
@@ -554,7 +615,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		 */
 		double[] viewDir = new double[3];
 		/**
-		 * Variables for viewer computation
+		 * variables for viewer computation
 		 */
 		double xV = 0, yV = 0, zV = 0, tX, tY;
 		/**
@@ -576,26 +637,26 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		viewIndices[1] = Double.parseDouble(vView.getText());
 		viewIndices[2] = Double.parseDouble(wView.getText());
 
-		MathUtil.matinverse(variables.sBasisCart, tempmat);
-		MathUtil.mattranspose(tempmat, recipsuperCell);
-		MathUtil.matinverse(variables.pBasisCart, tempmat);
-		MathUtil.mattranspose(tempmat, recipparentCell);
+		MathUtil.mat3inverse(variables.sBasisCart, tempmat);
+		MathUtil.mat3transpose(tempmat, recipsuperCell);
+		MathUtil.mat3inverse(variables.pBasisCart, tempmat);
+		MathUtil.mat3transpose(tempmat, recipparentCell);
 
 		switch (viewType) {
 		case VIEW_TYPE_SUPER_HKL:
-			MathUtil.mattranspose(recipsuperCell, tempmat);
+			MathUtil.mat3transpose(recipsuperCell, tempmat);
 			break;
 		case VIEW_TYPE_SUPER_UVW:
-			MathUtil.mattranspose(variables.sBasisCart, tempmat);
+			MathUtil.mat3transpose(variables.sBasisCart, tempmat);
 			break;
 		case VIEW_TYPE_PARENT_HKL:
-			MathUtil.mattranspose(recipparentCell, tempmat);
+			MathUtil.mat3transpose(recipparentCell, tempmat);
 			break;
 		case VIEW_TYPE_PARENT_UVW:
-			MathUtil.mattranspose(variables.pBasisCart, tempmat);
+			MathUtil.mat3transpose(variables.pBasisCart, tempmat);
 			break;
 		}
-		MathUtil.mul(tempmat, viewIndices, viewDir);
+		MathUtil.mat3mul(tempmat, viewIndices, viewDir);
 		double l2 = MathUtil.lenSq3(viewDir);
 		if (l2 > 0.000000000001) {
 			MathUtil.scale3(viewDir, 1 / Math.sqrt(l2));
@@ -925,34 +986,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		variables.isChanged = true;
 		updateViewOptions();
 		updateDisplay();
-	}
-
-	private static double[] temp = new double[3];
-
-	/**
-	 * Uses two xyz points to a calculate a bond. -- Branton Campbell
-	 * 
-	 * @param bond return [x, y, z, theta, phi, len, okflag(1 or 0)]
-	 * @return true if OK
-	 */
-	private boolean setBondInfo(double[] atom1, double[] atom2, double[] bond) {
-		double lensq = 0;
-		for (int i = 0; i < 3; i++) {
-			temp[i] = (atom2[i] - atom1[i]);
-			lensq += temp[i] * temp[i];
-		}
-		if (lensq < 0.000000000001) {
-			lensq = 0;
-		} else {
-			MathUtil.scale3(temp, 1 / Math.sqrt(lensq));
-			for (int i = 0; i < 3; i++) {
-				bond[i] = (atom2[i] + atom1[i]) / 2.0;
-			}
-		}
-		bond[RX] = -Math.asin(temp[1]);
-		bond[RY] = Math.atan2(temp[0], temp[2]);
-		bond[L_2] = Math.sqrt(lensq) / 2;
-		return true;
 	}
 
 	public static void main(String[] args) {

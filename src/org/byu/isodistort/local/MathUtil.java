@@ -3,6 +3,8 @@
 
 package org.byu.isodistort.local;
 
+import org.byu.isodistort.local.Variables.Atom;
+
 /**
  * Provides functionality to manipulate vectors.
  */
@@ -42,28 +44,28 @@ public class MathUtil {
 	 * @param b source vector
 	 * @return the result of a dot b
 	 */
-	public static double matmul(double[] a, double[] b) {
+	public static double dot3(double[] a, double[] b) {
 		double sum = 0;
-		for (int i = b.length; --i >= 0;)
+		for (int i = 3; --i >= 0;)
 			sum += a[i] * b[i];
 		return sum;
 	}
 
-	/**
-	 * Computes the cross-product of two vectors a and b and stores the result in
-	 * dst. a, b, and dst must be 3 dimensional vectors.
-	 * 
-	 * @param a   source vector 1
-	 * @param b   source vector 2
-	 * @param dst resulting vector from a cross b Branton: this actually computes
-	 *            bxa, use with care.
-	 */
-	public static void cross(double[] a, double[] b, double[] dst) {
-		dst[0] = b[1] * a[2] - b[2] * a[1];
-		dst[1] = b[2] * a[0] - b[0] * a[2];
-		dst[2] = b[0] * a[1] - b[1] * a[0];
-	}
-
+//	/**
+//	 * Computes the cross-product of two vectors a and b and stores the result in
+//	 * dst. a, b, and dst must be 3 dimensional vectors.
+//	 * 
+//	 * @param a   source vector 1
+//	 * @param b   source vector 2
+//	 * @param dst resulting vector from a cross b Branton: this actually computes
+//	 *            bxa, use with care.
+//	 */
+//	public static void cross(double[] a, double[] b, double[] dst) {
+//		dst[0] = b[1] * a[2] - b[2] * a[1];
+//		dst[1] = b[2] * a[0] - b[0] * a[2];
+//		dst[2] = b[0] * a[1] - b[1] * a[0];
+//	}
+//
 	/**
 	 * Computes the cross-product of two vectors a and b and stores the result in
 	 * dst. a, b, and dst must be 3 dimensional vectors. I created this because
@@ -73,7 +75,7 @@ public class MathUtil {
 	 * @param b   source vector 2
 	 * @param dst resulting vector from a cross b
 	 */
-	public static void mycross(double[] a, double[] b, double[] dst) {
+	public static void cross3(double[] a, double[] b, double[] dst) {
 		dst[0] = b[2] * a[1] - b[1] * a[2];
 		dst[1] = b[0] * a[2] - b[2] * a[0];
 		dst[2] = b[1] * a[0] - b[0] * a[1];
@@ -86,7 +88,7 @@ public class MathUtil {
 	 * @param src original vector
 	 * @param dst copy of original vector
 	 */
-	public static void copy(double[] src, double[] dst) {
+	public static void copyN(double[] src, double[] dst) {
 		for (int i = src.length; --i >= 0;)
 			dst[i] = src[i];
 	}
@@ -98,7 +100,7 @@ public class MathUtil {
 	 * @param src original matrix
 	 * @param dst copy of original matrix
 	 */
-	public static void matcopy(double[][] src, double[][] dst) {
+	public static void mat3copy(double[][] src, double[][] dst) {
 		for (int j = src.length, inlen = src[0].length; --j >= 0;)
 			for (int i = inlen; --i >= 0;)
 				dst[i][j] = src[i][j];
@@ -112,7 +114,7 @@ public class MathUtil {
 	 * @param y   component 1
 	 * @param z   component 2
 	 */
-	public static void set(double[] dst, double x, double y, double z) {
+	public static void set3(double[] dst, double x, double y, double z) {
 		dst[0] = x;
 		dst[1] = y;
 		dst[2] = z;
@@ -140,12 +142,12 @@ public class MathUtil {
 	 * @param src2 original vector 2; if null, then this is a scalar addition
 	 * @param dst  output vector
 	 */
-	public static void vecadd(double[] src1, double const2, double[] src2, double[] dst) {
+	public static void vecaddN(double[] src1, double const2, double[] src2, double[] dst) {
 		if (src2 == null) {
 			for (int i = src1.length; --i >= 0;)
 				dst[i] = src1[i] + const2;			
 		} else {
-			for (int i = src2.length; --i >= 0;)
+			for (int i = Math.min(dst.length,  src2.length); --i >= 0;)
 				dst[i] = src1[i] + const2 * src2[i];
 		}
 	}
@@ -156,9 +158,9 @@ public class MathUtil {
 	 * @param dst transposed output matrix
 	 * @param mat input matrix
 	 */
-	public static void mattranspose(double mat[][], double dst[][]) {
-		for (int j = mat.length, inlen = mat[0].length; --j >= 0;)
-			for (int i = inlen; --i >= 0;)
+	public static void mat3transpose(double mat[][], double dst[][]) {
+		for (int j = 3; --j >= 0;)
+			for (int i = 3; --i >= 0;)
 				dst[i][j] = mat[j][i];
 	}
 
@@ -169,28 +171,68 @@ public class MathUtil {
 	 * @param mat  transformation matrix
 	 * @param vect input vector Branton Campbell
 	 */
-	public static void mul(double mat[][], double vect[], double dst[]) {
-		for (int i = mat.length; --i >= 0;)
-			dst[i] = matmul(mat[i], vect);
+	public static void mat3mul(double mat[][], double vect[], double dst[]) {
+		for (int i = 3; --i >= 0;)
+			dst[i] = dot3(mat[i], vect);
 	}
 
-	/**
-	 * Invert a 3x3 matrix -- Branton Campbell
-	 * 
-	 * @param dst inverted output matrix
-	 * @param mat input matrix Accounts for the fact that "cross" is backwards; two
-	 *            wrongs make a right.
-	 */
-	public static void matinverse(double mat[][], double dst[][]) {
+//	/**
+//	 * Invert a 3x3 matrix -- Branton Campbell
+//	 * 
+//	 * @param dst inverted output matrix
+//	 * @param mat input matrix Accounts for the fact that "cross" is backwards; two
+//	 *            wrongs make a right.
+//	 */
+//	public static void xxxmatinverse(double mat[][], double dst[][]) {
+//		
+////		
+////		matinverse2(mat, dst);
+////		
+////		System.out.println(toString(dst));
+////
+//		
+//		double determinant;
+//		double[] tempvec = new double[3];
+//		double[][] tempmat = new double[3][3];
+//
+//		cross(mat[0], mat[1], tempvec);
+//		determinant = dot3(tempvec, mat[2]);
+//
+//		for (int i = 0; i < 3; i++)
+//			cross(mat[i], mat[(i + 1) % 3], tempmat[(i + 2) % 3]);
+//
+//		for (int i = 0; i < 3; i++)
+//			for (int j = 0; j < 3; j++)
+//				dst[i][j] = tempmat[j][i] / determinant;
+//		
+//		System.out.println(toString(dst));
+//		return;
+//		
+//	}
+	
+//	  public static String toString(double[][] m) {
+//		    String s = "[\n";
+//		    for (int i = 0; i < 3; i++) {
+//		      s += "  [";
+//		      for (int j = 0; j < 3; j++)
+//		        s += " " + m[i][j];
+//		      s += "]\n";
+//		    }
+//		    s += "]";
+//		    return s;
+//		  }
+//
+
+	public static void mat3inverse(double mat[][], double dst[][]) {
 		double determinant;
 		double[] tempvec = new double[3];
 		double[][] tempmat = new double[3][3];
 
-		cross(mat[0], mat[1], tempvec);
-		determinant = matmul(tempvec, mat[2]);
+		cross3(mat[0], mat[1], tempvec);
+		determinant = dot3(tempvec, mat[2]);
 
 		for (int i = 0; i < 3; i++)
-			cross(mat[i], mat[(i + 1) % 3], tempmat[(i + 2) % 3]);
+			cross3(mat[i], mat[(i + 1) % 3], tempmat[(i + 2) % 3]);
 
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 3; j++)
@@ -204,12 +246,12 @@ public class MathUtil {
 	 * @param mat         input matrix Accounts for the fact that "cross" is
 	 *                    backwards.
 	 */
-	public static double matdeterminant(double mat[][]) {
+	public static double mat3determinant(double mat[][]) {
 		double[] tempvec = new double[3];
 		double determinant;
 
-		cross(mat[0], mat[1], tempvec);
-		determinant = -matmul(tempvec, mat[2]);
+		cross3(mat[0], mat[1], tempvec);
+		determinant = dot3(tempvec, mat[2]);
 		return determinant;
 	}
 
@@ -219,7 +261,7 @@ public class MathUtil {
 	 * @param trace sum of diagonal elements
 	 * @param mat   input matrix
 	 */
-	public static double mattrace(double mat[][]) {
+	public static double mat3trace(double mat[][]) {
 		double trace;
 
 		trace = mat[0][0] + mat[1][1] + mat[2][2];
@@ -233,13 +275,13 @@ public class MathUtil {
 	 * @param mat1 original matrix 1
 	 * @param mat2 original matrix 2 Branton Campbell
 	 */
-	public static void mul(double mat1[][], double mat2[][], double dst[][]) {
+	public static void mat3product(double mat1[][], double mat2[][], double dst[][]) {
 		int mlen = mat1.length;
 		double[][] tmat2 = new double[mlen][mlen];
-		mattranspose(mat2, tmat2);
+		mat3transpose(mat2, tmat2);
 		for (int j = mlen; --j >= 0;)
 			for (int i = mlen; --i >= 0;)
-				dst[i][j] = matmul(mat1[i], tmat2[j]);
+				dst[i][j] = dot3(mat1[i], tmat2[j]);
 	}
 
 	/**
@@ -312,7 +354,7 @@ public class MathUtil {
 
 //    System.out.println ("ellipmat: "+matrixform[0][0]+", "+matrixform[0][1]+", "+matrixform[0][2]+", "+matrixform[1][0]+", "+matrixform[1][1]+", "+matrixform[1][2]+", "+matrixform[2][0]+", "+matrixform[2][1]+", "+matrixform[2][2]);
 
-		trc = mattrace(matrixform);
+		trc = mat3trace(matrixform);
 //		det = matdeterminant(matrixform);
 //		for (int i = 0; i < 3; i++)
 //			for (int j = 0; j < 3; j++)
@@ -414,16 +456,16 @@ public class MathUtil {
 
 	static void recalculateLattice(double[] lattice, double[][] pBasisCart) {
 		double[][] pBasisCartTranspose = new double[3][3];
-		MathUtil.mattranspose(pBasisCart, pBasisCartTranspose);
-		lattice[A] = Math.sqrt(MathUtil.matmul(pBasisCartTranspose[A], pBasisCartTranspose[A]));
-		lattice[B] = Math.sqrt(MathUtil.matmul(pBasisCartTranspose[B], pBasisCartTranspose[B]));
-		lattice[C] = Math.sqrt(MathUtil.matmul(pBasisCartTranspose[C], pBasisCartTranspose[C]));
+		MathUtil.mat3transpose(pBasisCart, pBasisCartTranspose);
+		lattice[A] = Math.sqrt(MathUtil.dot3(pBasisCartTranspose[A], pBasisCartTranspose[A]));
+		lattice[B] = Math.sqrt(MathUtil.dot3(pBasisCartTranspose[B], pBasisCartTranspose[B]));
+		lattice[C] = Math.sqrt(MathUtil.dot3(pBasisCartTranspose[C], pBasisCartTranspose[C]));
 		lattice[ALPHA] = Math.acos(
-				MathUtil.matmul(pBasisCartTranspose[B], pBasisCartTranspose[C]) / Math.max(lattice[B] * lattice[C], 0.001));
+				MathUtil.dot3(pBasisCartTranspose[B], pBasisCartTranspose[C]) / Math.max(lattice[B] * lattice[C], 0.001));
 		lattice[BETA] = Math.acos(
-				MathUtil.matmul(pBasisCartTranspose[A], pBasisCartTranspose[C]) / Math.max(lattice[A] * lattice[C], 0.001));
+				MathUtil.dot3(pBasisCartTranspose[A], pBasisCartTranspose[C]) / Math.max(lattice[A] * lattice[C], 0.001));
 		lattice[GAMMA] = Math.acos(
-				MathUtil.matmul(pBasisCartTranspose[A], pBasisCartTranspose[B]) / Math.max(lattice[A] * lattice[B], 0.001));
+				MathUtil.dot3(pBasisCartTranspose[A], pBasisCartTranspose[B]) / Math.max(lattice[A] * lattice[B], 0.001));
 		
 
 	}
@@ -475,6 +517,23 @@ public class MathUtil {
 		a[0] *= d;
 		a[1] *= d;
 		a[2] *= d;
+	}
+
+	public static double dist3(double[] a, double[] b) {
+		double dx = a[0] - b[0];
+		double dy = a[1] - b[1];
+		double dz = a[2] - b[2];
+		return Math.sqrt(dx * dx + dy * dy + dz * dz);
+	}
+
+	public static String vecToString(double[] v) {
+		String s = "[";
+		String sep = "";
+		for (int i = 0; i < v.length; i++) {
+			s += sep + v[i];
+			sep = ",";
+		}
+		return s+"]";
 	}
 
 

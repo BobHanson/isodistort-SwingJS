@@ -56,6 +56,25 @@ public abstract class IsoApp {
 
 	final static String minorVersion = ".8";
 
+	
+	/**
+	 * 
+	 * set TRUE to ignore the bonds in the bondlist and instead
+	 * use the binary space partition tree to find the bonds on the fly
+	 * 
+	 * Looks like the real-time BSPT adds about 30 ms to rendering time during 
+	 * slider action for the 6000-bonds file ZrP2O7-sg205-sg61-distort.isoviz  
+	 */
+	public boolean bondsUseBSPT = true;
+	
+
+	/**
+	 * the datafile to use for startup
+	 */
+	protected String whichdatafile = "data/test28.txt";//"data/ZrP2O7-sg205-sg61-distort.isoviz";////"data/test28.txt";
+
+
+	
 	final static protected int APP_ISODISTORT = 0;
 	final static protected int APP_ISODIFFRACT = 1;
 
@@ -85,11 +104,6 @@ public abstract class IsoApp {
 	 * An instance of the Variables class that holds all the data
 	 */
 	protected Variables variables;
-
-	/**
-	 * the datafile to use for startup
-	 */
-	protected String whichdatafile = "data/data.isoviz";// "data/test28.txt";//"data/ZrP2O7-sg205-sg61-distort.isoviz";////"data/test28.txt";
 
 	boolean asBytes = true;
 	

@@ -160,10 +160,11 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 	 * Initiate the tokenizer.
 	 * 
 	 * @param data      String, byte[], or InputStream data
+	 * @param ignore    semicolon-separated list of blocks to ignore
 	 * @param verbosity QUIET (0) no reporting; DEBUG_LOW (1) key and number of
 	 *                  values only; DEBUG_HIGH (2) full report for each byte parsed
 	 */
-	public VariableTokenizer(Object data, int verbosity) {
+	public VariableTokenizer(Object data, String ignore, int verbosity) {
 		if (data instanceof String) {
 			bytes = ((String) data).getBytes();
 		} else if (data instanceof byte[]) {
@@ -177,7 +178,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 			}
 		}
 		// verbosity = DEBUG_HIGH;
-		readBlocks(bytes, this, verbosity);
+		readBlocks(bytes, ignore, this, verbosity);
 	}
 
 	/**
@@ -436,7 +437,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 	private final static int STATE_VALUE = 4;
 	private final static int STATE_DONE = 5;
 
-	private static void readBlocks(byte[] bytes, Map<String, int[]> map, int verbosity) {
+	private static void readBlocks(byte[] bytes, String ignore, Map<String, int[]> map, int verbosity) {
 		int dataStart = -1;
 		int keyStart = -1;
 		int lineStart = 0;
@@ -449,6 +450,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 		boolean isString = false;
 		boolean verboseHigh = (verbosity == DEBUG_HIGH);
 		int endState = -1;
+		boolean ignoringData = false;
 		for (int i = 0; i < n; i++) {
 			byte b = bytes[i];
 //				System.out.println("i=" + i + " b=" + esc(b) + " state=" + state);
@@ -512,6 +514,8 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 					continue;
 				case STATE_EOL:
 				case STATE_NONE:
+					if (ignoringData)
+						continue;
 					// start value
 					state = STATE_VALUE;
 					dataStart = i;
@@ -535,7 +539,10 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 					if (keyStart != i) {
 						// key must length or it is ignored
 						key = asString(bytes, keyStart, i);
+						ignoringData = (ignore != null && ignore.indexOf(";" + key + ";")>=0);
 						isString = key.endsWith("String");
+						if (ignoringData)
+							state = STATE_NONE;
 					}
 					pointers = null;
 					break;
@@ -642,7 +649,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 				"      12\r\n" + 
 				"!end modesFile\r\n" + 
 				"";
-		VariableTokenizer vt = new VariableTokenizer(s, DEBUG_LOW);
+		VariableTokenizer vt = new VariableTokenizer(s, null, DEBUG_LOW);
 		dumpMap(vt.bytes, vt);
 
 	}
@@ -653,7 +660,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 	 */
 	static void testViz() {
 		String s = "!test1 0 0.0 2.5 -3.2 4.0001 1234567 123456.7890123456 123456789.01234567890123 3.56000000 #3 adf4\n 5 \n\n\n#!test2 testing  \n\n!test3 OK";
-		VariableTokenizer vt = new VariableTokenizer(s, QUIET);// DEBUG_HIGH);
+		VariableTokenizer vt = new VariableTokenizer(s, null, QUIET);// DEBUG_HIGH);
 		dumpMap(vt.bytes, vt);
 		int nData = vt.setData("test1");
 		for (int i = 0; i < nData; i++) {

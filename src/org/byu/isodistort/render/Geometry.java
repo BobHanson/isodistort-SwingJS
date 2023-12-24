@@ -27,11 +27,19 @@ public class Geometry {
 	 */
 	Material material;
 
-//	/**
-//	 * Stores the name of the geometry
-//	 */
-//	private String name = "";
+	/**
+	 * Stores the name of the geometry
+	 */
+	private String name = "";
 
+	public Geometry setName(String name) {
+		this.name = name;
+		return this;
+	}
+	
+	public String getName() {
+		return name;
+	}
 	/**
 	 * Stores the children geometries of the current geometry.
 	 */
@@ -739,9 +747,9 @@ public class Geometry {
 	private void computeCrossVectors(double W[], double U[], double V[]) {
 		MathUtil.norm3(W);
 		MathUtil.norm3(U);
-		MathUtil.cross(W, U, V);
+		MathUtil.cross3(U, W, V);
 		MathUtil.norm3(V);
-		MathUtil.cross(V, W, U);
+		MathUtil.cross3(W, V, U);
 		MathUtil.norm3(U);
 	}
 
@@ -823,7 +831,7 @@ public class Geometry {
 					for (int k = 0; k < 3; k++)
 						B[k] = .5 * (V(i, j + 1)[k] - V(i, j - 1)[k]);
 
-				MathUtil.cross(B, A, nn);
+				MathUtil.cross3(A, B, nn);
 				MathUtil.norm3(nn);
 				for (int k = 0; k < 3; k++)
 					vertices[N][k + 3] = nn[k];
@@ -1339,7 +1347,7 @@ public class Geometry {
 	}
 
 	int childCount = 0;
-
+	
 	public int getChildCount() {
 		return childCount;
 	}
@@ -1962,4 +1970,8 @@ public class Geometry {
 //	}
 //
 
+	@Override
+	public String toString() {
+		return "[Geom" + name + "]";
+	}
 }

@@ -7,9 +7,8 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.InputEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 
@@ -33,8 +32,7 @@ import org.byu.isodistort.local.Matrix;
  * @author Ken Perlin 2001
  */
 
-public class RenderPanel3D extends JPanel
-		implements MouseListener, MouseMotionListener {
+public class RenderPanel3D extends JPanel {
 
 	// APS (April 2009): edits thanks to: http://www.dgp.toronto.edu/~mjmcguff/learn/java/04-mouseInput/
 
@@ -108,17 +106,20 @@ public class RenderPanel3D extends JPanel
 	/** This int determines whether or not the panning is normal or inverted */
 	protected int invert = 1;
 
+	MouseAdapter adapter;
+	
 	public RenderPanel3D(IsoDistortApp app) {
 		this.app = app;
-		addMouseListener(this);
-		addMouseMotionListener(this);
+		adapter = new Adapter();
+		addMouseListener(adapter);
+		addMouseMotionListener(adapter);
 		initialize();
 	}
 
 	public void dispose() {
 		app = null;
-		removeMouseListener(this);
-		removeMouseMotionListener(this);
+		removeMouseListener(adapter);
+		removeMouseMotionListener(adapter);
 		renderer = null;
 	}
 
@@ -486,22 +487,12 @@ public class RenderPanel3D extends JPanel
 //		return renderer.getGeometry(x, y);
 //	}
 
-	@Override
-	public void mouseClicked(MouseEvent e) {
-		app.setStatus(null);
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent e) {
-	}
-
-	@Override
-	public void mouseExited(MouseEvent e) {
-	}
-
+	private class Adapter extends MouseAdapter {
 	@Override
 	public void mousePressed(MouseEvent e) {
-		
+
+		app.setStatusVisible(false);
+
 		//System.out.println("RP mouseDown " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
 
 		// requestFocus is necessary for SwingJS if mouse has clicked on the page outside of applet
@@ -540,99 +531,98 @@ public class RenderPanel3D extends JPanel
 		}
 	}
 
-	@Override
-	public void mouseDragged(MouseEvent e) {
-		
-		
-		int x = e.getX();
-		int y = e.getY();
-		
+		@Override
+		public void mouseDragged(MouseEvent e) {
+
+			int x = e.getX();
+			int y = e.getY();
+
 //		System.out.println("RP mouseDrag " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()) 
 //		+ "" + e.isControlDown());
 
-		/**
-		 * LEFT-DRAG but not CTRL-LEFT-DRAG for rotation
-		 */
-		boolean isRotation = ((e.getModifiersEx() & InputEvent.BUTTON1_DOWN_MASK) != 0  
-				&& !e.isControlDown());
-		
-		if (isRotation) {
+			/**
+			 * LEFT-DRAG but not CTRL-LEFT-DRAG for rotation
+			 */
+			boolean isRotation = ((e.getModifiersEx() & InputEvent.BUTTON1_DOWN_MASK) != 0 && !e.isControlDown());
 
-			double spinrate;
-			if (spin)
-				spinrate = 0.0003;
-			else
-				spinrate = 0.006;
-			if (renderer.isDragging()) {
-				switch (rotAxis) {
-				case 0:
-					phi += spinrate * (double) (y - my); // VERTICAL VIEW ROTATION
-					theta += spinrate * (double) (x - mx); // VERTICAL VIEW ROTATION
-					sigma = 0;
-					break;
-				case 1:
-					phi += spinrate * (double) (y - my);
-					theta = 0;
-					sigma = 0;
-					break;
-				case 2:
-					phi = 0;
-					theta += spinrate * (double) (x - mx);
-					sigma = 0;
-					break;
-				case 3:
-					phi = 0;
-					theta = 0;
-					sigma += -spinrate * (double) ((x - mx) * (256 - y) - (y - my) * (256 - x))
-							/ (double) (1 + Math.sqrt((256 - x) * (256 - x) + (256 - y) * (256 - y)));
-					break;
-				case 4:
-					setFOV(renderer.getFOV() * (1 + (y - my) * 0.004));
-					// y-direction motion changes field of view (zoom).
-																// -David Tanner
-					phi = 0;
-					theta = 0;
-					sigma = 0;
-					break;
+			if (isRotation) {
+
+				double spinrate;
+				if (spin)
+					spinrate = 0.0003;
+				else
+					spinrate = 0.006;
+				if (renderer.isDragging()) {
+					switch (rotAxis) {
+					case 0:
+						phi += spinrate * (double) (y - my); // VERTICAL VIEW ROTATION
+						theta += spinrate * (double) (x - mx); // VERTICAL VIEW ROTATION
+						sigma = 0;
+						break;
+					case 1:
+						phi += spinrate * (double) (y - my);
+						theta = 0;
+						sigma = 0;
+						break;
+					case 2:
+						phi = 0;
+						theta += spinrate * (double) (x - mx);
+						sigma = 0;
+						break;
+					case 3:
+						phi = 0;
+						theta = 0;
+						sigma += -spinrate * (double) ((x - mx) * (256 - y) - (y - my) * (256 - x))
+								/ (double) (1 + Math.sqrt((256 - x) * (256 - x) + (256 - y) * (256 - y)));
+						break;
+					case 4:
+						setFOV(renderer.getFOV() * (1 + (y - my) * 0.004));
+						// y-direction motion changes field of view (zoom).
+						// -David Tanner
+						phi = 0;
+						theta = 0;
+						sigma = 0;
+						break;
+					}
+					mx = x;
+					my = y;
 				}
+			} else {
+				// panning
+
+				// If we want this to be only at right click, then
+				// we would need to check e.getModifiers with
+				// MouseEvent.BUTTON2_MASK or MouseEvent.BUTTON3_MASK
+				theta = phi = sigma = 0;
+
+				double shiftRate = 0.01 * renderer.getFOV();
+				double shiftX = shiftRate * (x - mx);
+				double shiftY = shiftRate * (y - my);
+
 				mx = x;
 				my = y;
+
+				push();
+				{
+					identity();
+					xOff += invert * shiftX * renderer.getCamera().get(0, 0);
+					yOff += invert * shiftX * renderer.getCamera().get(0, 1);
+					zOff += invert * shiftX * renderer.getCamera().get(0, 2);
+
+					xOff -= invert * shiftY * renderer.getCamera().get(1, 0);
+					yOff -= invert * shiftY * renderer.getCamera().get(1, 1);
+					zOff -= invert * shiftY * renderer.getCamera().get(1, 2);
+					translate(xOff, yOff, zOff);
+					for (int i = 0; i < 16; i++)
+						if (world.child(i) != null)
+							transform(world.child(i));
+				}
+				pop();
 			}
-		} else {
-			// panning
-			
-			// If we want this to be only at right click, then
-			// we would need to check e.getModifiers with
-			// MouseEvent.BUTTON2_MASK or MouseEvent.BUTTON3_MASK
-			theta = phi = sigma = 0;
-
-			double shiftRate = 0.01 * renderer.getFOV();
-			double shiftX = shiftRate * (x - mx);
-			double shiftY = shiftRate * (y - my);
-
-			mx = x;
-			my = y;
-
-			push();
-			{
-				identity();
-				xOff += invert * shiftX * renderer.getCamera().get(0, 0);
-				yOff += invert * shiftX * renderer.getCamera().get(0, 1);
-				zOff += invert * shiftX * renderer.getCamera().get(0, 2);
-
-				xOff -= invert * shiftY * renderer.getCamera().get(1, 0);
-				yOff -= invert * shiftY * renderer.getCamera().get(1, 1);
-				zOff -= invert * shiftY * renderer.getCamera().get(1, 2);
-				translate(xOff, yOff, zOff);
-				for (int i = 0; i < 16; i++)
-					if (world.child(i) != null)
-						transform(world.child(i));
-			}
-			pop();
+			app.updateDisplay();
 		}
-		app.updateDisplay();
-	}
 
+	}
 	// --- PRIVATE METHODS
 
 	private double getCurrentTime() {

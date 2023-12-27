@@ -180,8 +180,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	@Override
 	protected void frameResized() {
+		super.frameResized();
 		needsRecalc = true;
-		updateDisplay();
 	}
 
 	/**

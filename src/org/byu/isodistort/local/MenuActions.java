@@ -25,11 +25,14 @@
 package org.byu.isodistort.local;
 
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.swing.AbstractAction;
+import javax.swing.Box;
 import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -91,6 +94,15 @@ public class MenuActions {
 
 		actions.put("File.", null);
 		actions.put("View.", null);
+		actions.put("Help.", new IsoAction("help", "Help", null) {
+			// Because this is a menu, not just an item, this action will be connected to the mousePressed action. 
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				menuMap.get("Help.showStatus").setText(app.isStatusVisible() ? "Hide Status Bar" : "Show Status Bar");
+			}
+			
+		});
 
 		// this list is in the order of how the menu will be created.
 		actions.put("File.saveOriginal",
@@ -437,6 +449,15 @@ public class MenuActions {
 				});
 
 		
+		actions.put("Help.showStatus",
+				new IsoAction("helpShowStatus", "Show Status Bar", "Show the status bar. Click on the ") {
+					@Override
+					public void actionPerformed(ActionEvent e) {	
+						app.toggleStatusVisible();
+					}
+				});
+
+		
 //		actions.put("",
 //				new IsoAction("viewPrimary", "View Primary Order Parameters", "View.") {
 //					@Override
@@ -489,14 +510,33 @@ public class MenuActions {
 		item.setName(menuID);
 		if (action != null) {
 			item.setText(action.label);
-			item.setAction(action);
+			if (item instanceof JMenu) {
+				item.addMouseListener(new MouseAdapter() {
+					@Override
+					public void mousePressed(MouseEvent e) {
+						action.actionPerformed(new ActionEvent(e.getSource(), ActionEvent.ACTION_PERFORMED, action.id + ".open"));
+					}					
+				});
+			} else {
+				item.setAction(action);
+			}
 		}
-		if (menuBar != null && item instanceof JMenu && menuID.lastIndexOf(".", menuID.length() - 2) < 0)
+		if (menuID.equals("Help.") && menuBar != null) {
+				menuBar.add(Box.createHorizontalGlue());
+		}
+		if (menuBar != null && item instanceof JMenu && menuID.lastIndexOf(".", menuID.length() - 2) < 0) {
+			// top-level JMenu has only a single "."
 			menuBar.add(item);
-		else
-			menu.add(item);		
+		} else {
+			menu.add(item);
+		}
 		item.setName(menuID);
 		menuMap.put(menuID, item);
+	}
+
+	public MenuActions setApp(IsoApp app) {
+		this.app = app;
+		return this;
 	}
 	
 

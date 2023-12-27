@@ -12,6 +12,7 @@ import java.util.Random;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
@@ -260,15 +261,6 @@ public class Variables {
 	 * The master slider bar value.
 	 */
 	double superSliderVal;
-
-	/**
-	 * Number of rows needed for checkboxes; [type]
-	 */
-	private int[] numSubRows;
-	/**
-	 * Actual number of check boxes per row
-	 */
-	private int[] subTypesPerRow;
 
 	private boolean isAdjusting;
 
@@ -554,34 +546,6 @@ public class Variables {
 			}
 		}
 	}
-
-	/**
-	 * An ordered list
-	 * 
-	 * 
-	 */
-	final static String[] knownTags = new String[] { //
-			"isoversion", //
-			"atommaxradius", //
-			"angstromspermagneton", //
-			"angstromsperradian", //
-			"defaultuiso", //
-			"maxbondlength", //
-			"appletwidth", //
-			"parentcell", //
-			"parentorigin", //
-			"parentbasis", //
-			"atomtypelist", //
-			"atomsubtypelist", //
-			"atomcoordlist", //
-			"atomocclist", //
-			"atommaglist", //
-			"atomrotlist", //
-			"bondlist", //
-			"irreplist", //
-			"modes[STRAIN].list", //
-			"displacivemodelist"//
-	};
 
 	/*
 	 * A class to collect all atom-related content.
@@ -1671,38 +1635,18 @@ public class Variables {
 			sliderPanelWidth = dim.width;
 			sliderWidth = sliderPanelWidth / 2;
 
-			// width - height to create a roughly square panel
-
-			// Calculate numRows of each subtype
-			/**
-			 * Number of extra rows above slider bar panel (for view panel)
-			 */
-			int numExtraRows = 5;
-			// One for master slider bar, one for strainTitle, one for irrepTitle, and 2 for
-			// the lattice params.
-			/**
-			 * Minimum number of rows in grid that will keep the rows thin
-			 */
-			int minRowNumber = (int) Math.floor(dim.height / barheight);
-
 			/**
 			 * Maximum number of check boxes per row the GUI will hold
 			 */
 			int maxSubTypesPerRow = (int) Math.floor(dim.width / subTypeWidth);
 
-			int numSubRowsTotal = 0;
-			numSubRows = new int[numTypes];
-			subTypesPerRow = new int[numTypes];
+			int[] numSubRows = new int[numTypes];
+			int[] subTypesPerRow = new int[numTypes];
 			for (int t = 0; t < numTypes; t++) {
 				// iterate over types
 				subTypesPerRow[t] = Math.min(maxSubTypesPerRow, numSubTypes[t]);
 				numSubRows[t] = (int) Math.ceil((double) numSubTypes[t] / subTypesPerRow[t]);
-				numSubRowsTotal += numSubRows[t];
 			}
-			int rowCount = modes[DIS].count + modes[OCC].count + modes[MAG].count + modes[ROT].count + modes[ELL].count
-					+ numStrains + numIrreps + numTypes + numExtraRows + numSubRowsTotal;
-			int rowLength = Math.max(rowCount, minRowNumber);
-			sliderPanel.setPreferredSize(new Dimension(dim.width, rowLength * barheight));
 			needSimpleColor = identifyUniqueAtoms(atomTypeSymbol);
 
 			setColors(false);
@@ -1772,7 +1716,7 @@ public class Variables {
 				tp.add(typeDataPanels[t]);
 				tp.setPreferredSize(new Dimension(sliderPanelWidth, (numSubRows[t] + 1) * barheight));
 				sliderPanel.add(tp);
-				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
+ 				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 					initModeGUI(modes[i], t, sliderPanel);
 				}
 
@@ -2121,4 +2065,17 @@ public class Variables {
 		return ab;
 	}
 
+	/**
+	 * Pack size is sum of total of JPanel component heights.
+	 * (Prior to this it is set to the full page height.
+	 */
+	public void setPackedSize() {
+		JComponent p= sliderPanel;
+		int h = 0;
+		for (int i = 0; i < p.getComponentCount(); i++) {
+			h += p.getComponent(i).getHeight();  
+		}
+		sliderPanel.setPreferredSize(new Dimension(sliderPanel.getWidth(), h));
+		sliderPanel.setSize(new Dimension(sliderPanel.getWidth(), h));
+	}
 }

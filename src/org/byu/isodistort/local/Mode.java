@@ -393,9 +393,11 @@ class Mode {
 	 */
 	void setValues(Mode otherMode) {
 		int n = (type >= MODE_ATOMIC_COUNT ? 1 : numTypes);
-		for (int t = 0; t < n; t++)
-			for (int m = 0; m < otherMode.modesPerType[t]; m++)
+		for (int t = 0; t < n; t++) {
+			for (int m = 0; m < otherMode.modesPerType[t]; m++) {
 				sliderTM[t][m].setValue((int) otherMode.sliderTM[t][m].getValue());
+			}
+		}
 	}
 
 	/**

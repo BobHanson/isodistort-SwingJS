@@ -29,7 +29,6 @@ import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
-import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenuBar;
@@ -42,6 +41,7 @@ import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
+import javax.swing.border.Border;
 import javax.swing.text.DefaultCaret;
 
 import org.byu.isodistort.IsoDiffractApp;
@@ -57,7 +57,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".8";
+	final static String minorVersion = ".8_2023.12.26";
 
 	
 	/**
@@ -147,40 +147,48 @@ public abstract class IsoApp {
 	/**
 	 * Pane that holds the scroll panels
 	 */
-	private JScrollPane sliderPane;
+	private JScrollPane sliderScrollPane;
 
-	private static class StatusPanel extends JTextArea {
-		
-		private IsoApp app;
-		private JPanel controlPanel;
+	private class StatusPanel extends JTextArea {
 
-		StatusPanel(IsoApp app, JPanel controlPanel) {
-			this.controlPanel = controlPanel;
-			this.app = app;
+		StatusPanel() {
 			setEditable(false);
+			setMargin(new Insets(5,5,5,5));
 			setAutoscrolls(true);
 			((DefaultCaret)getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+			setBackground(Color.LIGHT_GRAY);
+			setVisible(false);
 		}
 		
-		public void addText(String text) {
-			System.out.println("AI SP " + text);
-			if (text == null) {
+		void addText(String status) {
+			if (status == null) {
 				setText("");
-				setVisible(false);
 			} else {
+				System.out.println(status);
 				String s = getText();
-				setText((s.length() == 0 ? "" : s + "\n") + text);
-				setVisible(true);
+				setText((s.length() == 0 ? "" : s + "\n") + status);
 			}
 		}
-		
-		@Override
-		public void setVisible(boolean b) {
-			if (b) { 
-				setPreferredSize(controlPanel.getSize());
-			}
-			controlPanel.setVisible(!b);
-			super.setVisible(b);
+
+		boolean isLockedVisible = false;
+
+		/**
+		 * 
+		 * @param b true for visible
+		 * @param andLock set true to ensure that FALSE is triggered only by andLock=true
+		 */
+		void setVisible(boolean b, boolean andLock) {
+			if (andLock) {
+				isLockedVisible = b;
+			} 
+			if (b == isVisible())
+				return;
+			if (b || !isLockedVisible) {
+					controlPanel.setVisible(!b);
+					super.setVisible(b);
+				}
+			controlStatusPanel.setBackground(b ? Color.LIGHT_GRAY : Color.WHITE);
+			controlStatusPanel.setBorder(b ? statusBorder : controlBorder);
 		}
 	}
 	/**
@@ -259,11 +267,6 @@ public abstract class IsoApp {
 	 * we make the frame visible.
 	 */
 	abstract protected void init();
-
-	/**
-	 * frame has been resized -- update renderer and display
-	 */
-	abstract protected void frameResized();
 
 	/**
 	 * Get the image from the renderer for saving.
@@ -369,22 +372,21 @@ public abstract class IsoApp {
 		return cb;
 	}
 
+	final static Border controlBorder = BorderFactory.createLineBorder(Color.BLACK, 1);
+	final static Border statusBorder = BorderFactory.createLineBorder(Color.RED, 1);
+	
 	protected void initializePanels() {
 		frameContentPane.setTransferHandler(new FileUtil.FileDropHandler(this));
 		frameContentPane.removeAll();
 		controlPanel = new JPanel();
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
-		statusPanel = new StatusPanel(this, controlPanel);
-		statusPanel.setBackground(Color.LIGHT_GRAY);
-		statusPanel.setAutoscrolls(true);
-		statusPanel.setVisible(false);
-		statusPanel.setBorder(BorderFactory.createLineBorder(Color.RED, 1));
+		statusPanel = new StatusPanel();
 		controlStatusPanel = new JPanel(new FlowLayout());
 		controlStatusPanel.setBackground(Color.WHITE);
 		controlStatusPanel.add(controlPanel);
 		controlStatusPanel.add(statusPanel);
-		controlPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+		controlStatusPanel.setBorder(controlBorder);
 		isoPanel = new JPanel(new BorderLayout())
 //		{	// BH testing paints
 ////			@Override 
@@ -415,10 +417,10 @@ public abstract class IsoApp {
 			// sets grid length equal to number of rows.
 		}
 
-		sliderPane = new JScrollPane(sliderPanel, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+		sliderScrollPane = new JScrollPane(sliderPanel, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
 				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-		sliderPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
-		isoPanel.add(sliderPane, BorderLayout.EAST);// add to east of Applet
+		sliderScrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
+		isoPanel.add(sliderScrollPane, BorderLayout.EAST);// add to east of Applet
 
 		isoPanel.add(controlStatusPanel, BorderLayout.SOUTH);// add to east of Applet
 
@@ -563,6 +565,7 @@ public abstract class IsoApp {
 				//app.droppedFile = droppedFile;
 				app.document = document;
 				app.formData = formData;
+				app.actions = actions.setApp(app);
 				app.distortionFileData = distortionFileData;
 				app.variables.setValuesFrom(variables);
 				app.setControlsFrom((IsoApp) appSettings[app.appType]);
@@ -570,6 +573,19 @@ public abstract class IsoApp {
 			app.frameResized();
 		}, "isodistort_application").start();
 	}
+
+	/**
+	 * Frame has been resized -- update renderer and display.
+	 * This will occur inititially and upon user resize drag. 
+	 * 
+	 */
+	 protected void frameResized() {
+		 	Dimension d = new Dimension(controlStatusPanel.getWidth() - 5, controlPanelHeight);
+			controlPanel.setPreferredSize(d);
+			statusPanel.setPreferredSize(d);
+			variables.setPackedSize();
+	 }
+
 
 	protected void dispose() {
 		isEnabled = false;
@@ -590,6 +606,7 @@ public abstract class IsoApp {
 		public void componentResized(ComponentEvent e) {
 			updateDimensions();
 			frameResized();
+			updateDisplay();
 		}
 	};
 
@@ -622,9 +639,13 @@ public abstract class IsoApp {
 
 	};
 
+	private MenuActions actions;
+	
 	private void start(JFrame frame, Object[] args, Variables oldVariables, boolean isDrop) {
-		if (oldVariables == null && !isDrop)
-			frame.setJMenuBar((JMenuBar) new MenuActions(this).createMenuBar());
+		if (oldVariables == null && !isDrop) {
+			actions = new MenuActions(this);
+			frame.setJMenuBar((JMenuBar) actions.createMenuBar());
+		}
 		this.frame = frame;
 		this.args = args;
 		frameContentPane = (JPanel) frame.getContentPane();
@@ -649,11 +670,11 @@ public abstract class IsoApp {
 			int sliderPanelWidth = frameContentPane.getWidth() - sliderPaneHeight - roomForScrollBar - padding;
 			int sliderPanelHeight = sliderPaneHeight - padding;
 			sliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, sliderPanelHeight));
-			variables.initSliderPanel(sliderPanel);
+			variables.initSliderPanel(sliderPanel);			
 			controlStatusPanel.setPreferredSize(new Dimension(controlStatusPanel.getWidth(), controlPanelHeight));
-			controlPanel.setPreferredSize(new Dimension(controlStatusPanel.getWidth(), controlPanelHeight));
 			frame.pack();
 			updateDimensions();
+			
 			init();
 			frame.setVisible(true);
 			String title = frame.getTitle();
@@ -661,7 +682,7 @@ public abstract class IsoApp {
 			frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion);
 			frame.addComponentListener(componentListener);
 			frame.addWindowListener(windowListener);
-			System.out.println("Time to load: " + (System.currentTimeMillis() - t) + " ms");
+			addStatus("Time to load: " + (System.currentTimeMillis() - t) + " ms");
 		} catch (Throwable e) {
 			JOptionPane.showMessageDialog(frame, "Error reading input data " + e.getMessage());
 			e.printStackTrace();
@@ -821,6 +842,10 @@ public abstract class IsoApp {
 		ServerUtil.fetch(this, FileUtil.FILE_TYPE_DISTORTION, mapFormData, new Consumer<byte[]>() {
 			@Override
 			public void accept(byte[] b) {
+				if (b == null) {
+					addStatus("upload failed");
+					return;
+				}		
 				distortionFileData = b;
 				extractHTMLPageFormAndSendToServer(new String(b));
 			}
@@ -898,8 +923,27 @@ public abstract class IsoApp {
 	}
 	
 
-	public void setStatus(String status) {
+	public void addStatus(String status) {
 		statusPanel.addText(status);
+	}
+	
+	public void setStatus(String status) {
+		addStatus(status);
+		setStatusVisible(true);
+	}
+
+	public void setStatusVisible(boolean b) {
+		statusPanel.setVisible(b, false);
+	}
+
+	public boolean toggleStatusVisible() {
+		boolean b = !statusPanel.isVisible();
+		statusPanel.setVisible(b, true);
+		return b;
+	}
+
+	public boolean isStatusVisible() {
+		return statusPanel.isVisible();
 	}
 
 }

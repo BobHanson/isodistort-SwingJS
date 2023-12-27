@@ -52,7 +52,7 @@ import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseAdapter;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -71,7 +71,7 @@ import org.byu.isodistort.local.IsoApp;
 import org.byu.isodistort.local.MathUtil;
 import org.byu.isodistort.local.Variables;
 
-public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionListener {
+public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	/**
 	 * An alternative panel to the RenderPanel3D of IsoDistortApp
@@ -84,8 +84,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 		private IsoDiffractApp app;
 
+		private MouseAdapter adapter;
+		
 		RenderPanel(IsoDiffractApp app) {
 			this.app = app;
+			adapter = new Adapter();
+			addMouseMotionListener(adapter);
+			addMouseListener(adapter);
 		}
 
 		private BufferedImage im;
@@ -105,6 +110,25 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			app.render(g);
 			g.dispose();
 			gr.drawImage(im, 0, 0, d.width, d.height, this);
+		}
+
+		public void dispose() {
+			removeMouseListener(adapter);
+			removeMouseMotionListener(adapter);
+		}
+		
+		private class Adapter extends MouseAdapter {
+
+			@Override
+			public void mouseMoved(MouseEvent e) {
+				app.mousePeak(e.getX(), e.getY());
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				app.setStatusVisible(false);
+			}
+
 		}
 
 	}
@@ -349,14 +373,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 	@Override
 	protected void dispose() {
 		drawPanel.removeKeyListener(this);
-		drawPanel.removeMouseMotionListener(this);
+		rp.dispose();
 		super.dispose();
 	}
 
 	@Override
 	protected void init() {
 		drawPanel.addKeyListener(this);
-		drawPanel.addMouseMotionListener(this);
 		buildControls();
 		showControls();
 		rp = new RenderPanel(this);
@@ -365,12 +388,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 
 	@Override
 	protected void frameResized() {
-		updateDimensions();
+		super.frameResized();
 		needsRecalc = true;
 		if (rp == null)
 			return;
 		rp.im = null;
-		updateDisplay();
 	}
 
 	@Override
@@ -1732,19 +1754,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener, MouseMotionLi
 			variables.isChanged = true;
 			break;
 		}
-	}
-
-	/**
-	 * mouseoverListener responds to mouseover-peak events.
-	 * 
-	 */
-	@Override
-	public void mouseDragged(MouseEvent e) {
-	}
-
-	@Override
-	public void mouseMoved(MouseEvent e) {
-		mousePeak(e.getX(), e.getY());
 	}
 
 	/**

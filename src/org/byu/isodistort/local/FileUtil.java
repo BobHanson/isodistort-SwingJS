@@ -251,7 +251,7 @@ public class FileUtil {
 
 	// boolean asInputStream = true;
 		public static byte[] readFileData(IsoApp app, String path) {
-			System.out.println("FileUtil.readFileData " + path);
+			app.addStatus("FileUtil.readFileData " + path);
 			try {
 				long t = System.currentTimeMillis();
 				// 33 ms to read 8 MB

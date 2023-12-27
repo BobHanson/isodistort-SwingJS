@@ -81,7 +81,7 @@ public class ServerUtil {
 		}
 
 		String url = (testing ? testServerURL : publicServerURL) + service;
-		System.out.println("ServerUtil.fetch " + url + " " + mapFormData.get("origintype"));
+		app.addStatus("ServerUtil.fetch " + url + " " + mapFormData.get("origintype"));
 		new Thread(() -> {
 			try {
 				URI uri = new URI(url);
@@ -103,7 +103,7 @@ public class ServerUtil {
 				// temporary fix for garbage in wyck line
 				cleanBytes(bytes);
 				//System.out.println(new String(bytes));
-				System.out.println("ServerUtil.fetch received " + bytes.length + " bytes");
+				app.addStatus("ServerUtil.fetch received " + bytes.length + " bytes");
 
 				if (bytes.length > 100 && bytes.length < 1000) {
 					ServerUtil.getTempFile(app, type, bytes, consumer, delay);
@@ -152,7 +152,7 @@ public class ServerUtil {
 		if (map == null || service == null) {
 			throw new RuntimeException("ServerUtil.getTempFile cannot process server html: " + html);
 		}
-		System.out.println("ServerUtil.getTempFile " + map.get("filename") + " delay " + delay + " ms");
+		app.addStatus("ServerUtil.getTempFile " + map.get("filename") + " delay " + delay + " ms");
 		map.put("_service", service);
 		
 		Timer tempFileTimer = new Timer(1000, new ActionListener() {

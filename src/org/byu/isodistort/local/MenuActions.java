@@ -25,6 +25,7 @@
 package org.byu.isodistort.local;
 
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+
 
 /**
  * A class to maintain a map of actions keyed by name. These actions are
@@ -77,12 +79,14 @@ public class MenuActions {
 		String id;
 		String label;
 		String tip;
+		private int mnemonic;
 
-		public IsoAction(String id, String label, String tip) {
+		public IsoAction(String id, String label, String tip, int mnemonic) {
 			super(label);
 			this.id	= id;
 			this.label = label;
 			this.tip = tip;
+			this.mnemonic = 0;// mnemonic;
 		}
 
 	}
@@ -94,7 +98,15 @@ public class MenuActions {
 
 		actions.put("File.", null);
 		actions.put("View.", null);
-		actions.put("Help.", new IsoAction("help", "Help", null) {
+		actions.put("Set.", new IsoAction("set", "Set", null, 0) {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				menuMap.get("Set.center").setEnabled(app.appType == IsoApp.APP_ISODISTORT);
+			}
+			
+		});
+		actions.put("Help.", new IsoAction("help", "Help", null, 0) {
 			// Because this is a menu, not just an item, this action will be connected to the mousePressed action. 
 
 			@Override
@@ -106,7 +118,7 @@ public class MenuActions {
 
 		// this list is in the order of how the menu will be created.
 		actions.put("File.saveOriginal",
-				new IsoAction("saveOriginal", "Save original", "Save original values as an isoviz file.") {
+				new IsoAction("saveOriginal", "Save original", "Save original values as an isoviz file.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						app.saveOriginal();
@@ -114,7 +126,7 @@ public class MenuActions {
 				});
 	
 		actions.put("File.saveCurrent",
-				new IsoAction("saveCurrent", "Save current", "Save current values as an isoviz file.") {
+				new IsoAction("saveCurrent", "Save current", "Save current values as an isoviz file.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						app.saveCurrent();
@@ -122,7 +134,7 @@ public class MenuActions {
 				});
 		
 		actions.put("File.saveCIF",
-				new IsoAction("saveCIF", "Save CIF", "Save current configuration as CIF file.") {
+				new IsoAction("saveCIF", "Save CIF", "Save current configuration as CIF file.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						app.saveCIF();
@@ -130,7 +142,7 @@ public class MenuActions {
 				});
 		
 		actions.put("File.saveDistortionFile",
-				new IsoAction("saveDistortionFile", "Save Distortion File", "Save current configuration as a distortion file.") {
+				new IsoAction("saveDistortionFile", "Save Distortion File", "Save current configuration as a distortion file.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						app.saveDistortion();
@@ -138,7 +150,7 @@ public class MenuActions {
 				});
 
 		actions.put("View.domains",
-				new IsoAction("viewDomains", "View Domains", "View domains for this distortion.") {
+				new IsoAction("viewDomains", "View Domains", "View domains for this distortion.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 					}
@@ -228,7 +240,7 @@ public class MenuActions {
 				});
 
 		actions.put("View.primaryOrderParameters",
-				new IsoAction("viewPrimary", "View Primary Order Parameters", "View a list of the primary order parameters.") {
+				new IsoAction("viewPrimary", "View Primary Order Parameters", "View a list of the primary order parameters.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						
@@ -251,7 +263,7 @@ public class MenuActions {
 				});
 		
 		actions.put("View.modesDetails",
-				new IsoAction("viewModesDetails", "View Modes Details", "View a detailed description of the symmetry modes.") {
+				new IsoAction("viewModesDetails", "View Modes Details", "View a detailed description of the symmetry modes.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						
@@ -335,7 +347,7 @@ public class MenuActions {
 				
 
 		actions.put("View.viewCompleteMode",
-				new IsoAction("viewComplete", "View Complete Mode Details","View the complete listing of symmetry mode details.") {
+				new IsoAction("viewComplete", "View Complete Mode Details","View the complete listing of symmetry mode details.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						
@@ -346,7 +358,7 @@ public class MenuActions {
 				
 
 		actions.put("File.TopasStr",
-				new IsoAction("saveTOPAS", "Save TOPAS str", "Save distortion as a TOPAS str file") {
+				new IsoAction("saveTOPAS", "Save TOPAS str", "Save distortion as a TOPAS str file", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						
@@ -372,7 +384,7 @@ public class MenuActions {
 
 
 		actions.put("File.saveFULLPROF",
-				new IsoAction("saveFULLPROF", "Save FULLPROF CPR Input", "Save ") {
+				new IsoAction("saveFULLPROF", "Save FULLPROF CPR Input", "Save ", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						
@@ -398,7 +410,7 @@ public class MenuActions {
 		
 		
 		actions.put("File.saveIRMatrices",
-				new IsoAction("saveIRMatrices", "Save IR Matrices", "Save the full list of irreducible representation matrices.") {
+				new IsoAction("saveIRMatrices", "Save IR Matrices", "Save the full list of irreducible representation matrices.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						
@@ -422,7 +434,7 @@ public class MenuActions {
 
 		
 		actions.put("View.subgroupTree",
-				new IsoAction("viewSubgroupTree", "View Subgroup Tree", "View the subgroup tree listing for this distortion.") {
+				new IsoAction("viewSubgroupTree", "View Subgroup Tree", "View the subgroup tree listing for this distortion.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						
@@ -450,12 +462,53 @@ public class MenuActions {
 
 		
 		actions.put("Help.showStatus",
-				new IsoAction("helpShowStatus", "Show Status Bar", "Show the status bar. Click on the ") {
+				new IsoAction("helpShowStatus", "Show Status Bar", "Show the status bar.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {	
 						app.toggleStatusVisible();
 					}
 				});
+
+		actions.put("Set.center",
+				new IsoAction("setCenter", "Center Structure", "Center the strucure in the window.", 0) {
+					@Override
+					public void actionPerformed(ActionEvent e) {	
+						app.centerImage();
+					}
+				});
+
+
+		actions.put("Set.zero",
+				new IsoAction("setZero", "Set Variables to 0", "Set the sliders to their 0 'parent' positions.", 'z') {
+					@Override
+					public void actionPerformed(ActionEvent e) {	
+						app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 'z', 0));
+					}
+				});
+
+		actions.put("Set.resetView",
+				new IsoAction("setResetView", "Reset View", "Reset the view and sliders to their original settings.", 'i') {
+					@Override
+					public void actionPerformed(ActionEvent e) {	
+						app.reset();		
+						}
+				});
+
+		actions.put("Set.resetVariables",
+				new IsoAction("setResetVariables", "Reset Variables", "Reset the sliders to their original 'child' positions.", 'i') {
+					@Override
+					public void actionPerformed(ActionEvent e) {	
+						app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 'i', 0));					}
+				});
+
+		actions.put("Set.toggle",
+				new IsoAction("setToggle", "Toggle Irrep Sliders", "Toggle Irrep sliders between full off and full on.", 's') {
+					@Override
+					public void actionPerformed(ActionEvent e) {	
+						app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 's', 0));
+					}
+				});
+
 
 		
 //		actions.put("",
@@ -500,7 +553,7 @@ public class MenuActions {
 			int pt = menuID.lastIndexOf(".");
 			String parentName = menuID.substring(0, pt + 1);
 			JMenu parentMenu = (JMenu) menuMap.get(parentName);
-			JMenuItem thisItem = new JMenuItem(action.label);
+			JMenuItem thisItem = new JMenuItem(action.label, action.mnemonic);
 			add(menuID, thisItem, null, parentMenu, action);
 		}
 		return (menuBar == null ? menu : menuBar);

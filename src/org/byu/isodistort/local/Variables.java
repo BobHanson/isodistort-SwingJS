@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.awt.event.KeyEvent;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -121,8 +122,8 @@ public class Variables {
 	 */
 	public int numBonds;
 	/**
-	 * bondInfo[bond index] = {avx, avy, avz, angleX, angleY, len^2, atom1 index, atom2 index, bond index}
-	 * reference atomInfo (below)
+	 * bondInfo[bond index] = {avx, avy, avz, angleX, angleY, len^2, atom1 index,
+	 * atom2 index, bond index} reference atomInfo (below)
 	 * 
 	 */
 	public double[][] bondInfo; // [numBonds][9]
@@ -220,14 +221,14 @@ public class Variables {
 	 */
 	public double[][] sCrystalAxisBasisCart = new double[3][3];
 	/**
-	 * Array of Cartesian vertices of strained window-centered parent cell. [edge number][x,
-	 * y, z]
+	 * Array of Cartesian vertices of strained window-centered parent cell. [edge
+	 * number][x, y, z]
 	 * 
 	 */
 	public double[][] parentCellCartesianVertices = new double[8][3];
 	/**
-	 * Array of Cartesian vertices of strained window-centered super cell. [edge number][x, y,
-	 * z]
+	 * Array of Cartesian vertices of strained window-centered super cell. [edge
+	 * number][x, y, z]
 	 * 
 	 */
 	public double[][] superCellCartesianVertices = new double[8][3];
@@ -380,18 +381,6 @@ public class Variables {
 		isChanged = true;
 		isAdjusting = false;
 		app.updateDisplay();
-	}
-
-	public void resetSliders() {
-		gui.resetSliders();
-	}
-
-	public void zeroSliders() {
-		gui.zeroSliders();
-	}
-
-	public void toggleIrrepSliders() {
-		gui.toggleIrrepSliders();
 	}
 
 	/**
@@ -589,8 +578,8 @@ public class Variables {
 		final double[][][] modes = new double[MODE_COUNT][][];
 
 		/**
-		 * info holds a vector of information intrinsic to each mode
-		 * transformed into Cartesian coordinates.
+		 * info holds a vector of information intrinsic to each mode transformed into
+		 * Cartesian coordinates.
 		 * 
 		 * 
 		 * DIS: [cx, cy, cz, index] Cartesian coordinates plus index (for bspt)
@@ -616,7 +605,7 @@ public class Variables {
 		 * @param s
 		 * @param a
 		 * @param coord
-		 * @param elementSymbol 
+		 * @param elementSymbol
 		 * 
 		 */
 		private Atom(int index, int t, int s, int a, double[] coord, String elementSymbol) {
@@ -631,7 +620,7 @@ public class Variables {
 		public double[] getFinalFractionalCoord() {
 			return vector1[DIS];
 		}
-		
+
 		public double[] get(int mode) {
 			return vector1[mode];
 		}
@@ -647,13 +636,14 @@ public class Variables {
 		public double[] getMagneticMoment() {
 			return get(MAG);
 		}
+
 		/**
-		 * Get the transformed Cartesian coordinate. The return value
-		 * includes a fourth index value that is used after binary partition tree
-		 * sorting to return the atom value. 
+		 * Get the transformed Cartesian coordinate. The return value includes a fourth
+		 * index value that is used after binary partition tree sorting to return the
+		 * atom value.
 		 * 
-		 * Care should be taken to not
-		 * transform this value with a Matrix object (which is 4x4)
+		 * Care should be taken to not transform this value with a Matrix object (which
+		 * is 4x4)
 		 * 
 		 * @return the FOUR-vector [cx, cy, cz, index]
 		 */
@@ -1758,7 +1748,7 @@ public class Variables {
 				tp.add(typeDataPanels[t]);
 				tp.setPreferredSize(new Dimension(sliderPanelWidth, (numSubRows[t] + 1) * barheight));
 				sliderPanel.add(tp);
- 				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
+				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 					initModeGUI(modes[i], t, sliderPanel);
 				}
 
@@ -1971,6 +1961,30 @@ public class Variables {
 					+ MathUtil.varToString(max[ROT], 2, -4) + "]");
 		}
 
+		public void keyTyped(KeyEvent e) {
+			isAdjusting = true;
+			switch (e.getKeyChar()) {
+			case 'z':
+			case 'Z':
+				zeroSliders();
+				isChanged = true;
+				break;
+			case 'i':
+			case 'I':
+				resetSliders();
+				isChanged = true;
+				break;
+			case 's':
+			case 'S':
+				toggleIrrepSliders();
+				isChanged = true;
+				break;
+			}
+			isAdjusting = false;
+			if (isChanged) 
+				app.updateDisplay();
+		}
+
 	}
 
 	public void updateFormData(Map<String, Object> mapFormData, Object document) {
@@ -2033,7 +2047,7 @@ public class Variables {
 	}
 
 	/**
-	 * Set atom.info[DIS] as [cartX, cartY, cartZ, index] 
+	 * Set atom.info[DIS] as [cartX, cartY, cartZ, index]
 	 * 
 	 * @param a
 	 * @param t
@@ -2046,13 +2060,14 @@ public class Variables {
 	}
 
 	/**
-	 * Calculates the description used to render a ROT or MAG arrow -- Branton Campbell
+	 * Calculates the description used to render a ROT or MAG arrow -- Branton
+	 * Campbell
 	 * 
-	 * @param xyz       is the vector input.
+	 * @param xyz  is the vector input.
 	 * @param info is the [X-angle, Y-angle, Length] output.
 	 */
 	public void setArrowInfo(Atom a, int type, double[] t) {
-		double[] info = a.info[type];		
+		double[] info = a.info[type];
 		double[] xyz = a.get(type);
 		MathUtil.set3(xyz, t);
 		MathUtil.mat3mul(sBasisCart, t, tempvec);
@@ -2068,7 +2083,7 @@ public class Variables {
 //		for (int i = 0; i < 3; i++)
 //			xyz[i] /= d;
 //
-		// BH: added / d in asin only. Why normalize this? 
+		// BH: added / d in asin only. Why normalize this?
 		info[0] = -Math.asin(xyz[1] / d); // X rotation
 		info[1] = Math.atan2(xyz[0], xyz[2]); // Y rotation
 		info[2] = d; // Length
@@ -2100,11 +2115,11 @@ public class Variables {
 //		if ((Math.sqrt(lensq) < 0.000001) || (det < 0.000001) || true) // "true" temporarily bypasses the ellipoidal
 		// analysis.
 //		{
-			double avgrad = Math.sqrt(Math.abs(trc) / 3.0);
-			double widths[] = new double[] { avgrad, avgrad, avgrad };
-			double rotangle = 0;
-			double rotaxis[] = new double[] { 0, 0, 1};
-			rotangle = 0;
+		double avgrad = Math.sqrt(Math.abs(trc) / 3.0);
+		double widths[] = new double[] { avgrad, avgrad, avgrad };
+		double rotangle = 0;
+		double rotaxis[] = new double[] { 0, 0, 1 };
+		rotangle = 0;
 //		} else {
 //			Matrix jamat = new Matrix(tempmat2);
 //			EigenvalueDecomposition E = new EigenvalueDecomposition(jamat, true);
@@ -2133,7 +2148,6 @@ public class Variables {
 		info[5] = rotaxis[2];
 		info[6] = rotangle % (2 * Math.PI) - Math.PI;
 	}
-
 
 	/**
 	 * Uses two xyz points to a calculate a bond. -- Branton Campbell
@@ -2201,24 +2215,32 @@ public class Variables {
 
 		double[][] info0 = atoms[a0].info;
 		double[][] info1 = atoms[a1].info;
-		boolean ok = (info[Variables.L_2] > 0 && info[Variables.L_2] < halfMaxBondLength
-				&& info0[OCC][0] > minBondOcc && info1[OCC][0] > minBondOcc);
+		boolean ok = (info[Variables.L_2] > 0 && info[Variables.L_2] < halfMaxBondLength && info0[OCC][0] > minBondOcc
+				&& info1[OCC][0] > minBondOcc);
 		setCylinderInfo(info0[DIS], info1[DIS], info, -1);
 		return ok;
 	}
 
 	/**
-	 * Pack size is sum of total of JPanel component heights.
-	 * (Prior to this it is set to the full page height.
+	 * Pack size is sum of total of JPanel component heights. (Prior to this it is
+	 * set to the full page height.
 	 */
 	public void setPackedSize() {
-		JComponent p= sliderPanel;
+		JComponent p = sliderPanel;
 		int h = 0;
 		for (int i = 0; i < p.getComponentCount(); i++) {
-			h += p.getComponent(i).getHeight();  
+			h += p.getComponent(i).getHeight();
 		}
 		sliderPanel.setPreferredSize(new Dimension(sliderPanel.getWidth(), h));
 		sliderPanel.setSize(new Dimension(sliderPanel.getWidth(), h));
+	}
+
+	public void keyTyped(KeyEvent e) {
+		gui.keyTyped(e);
+	}
+
+	public void resetSliders() {
+		gui.resetSliders();
 	}
 
 }

@@ -1664,7 +1664,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	public void keyReleased(KeyEvent e) {
 	}
 
-	private void resetControls() {
+	@Override
+	public void reset() {
 		hOTxt.setText("0");
 		kOTxt.setText("0");
 		lOTxt.setText("0");
@@ -1686,6 +1687,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		colorBox.setSelected(false);
 		variables.resetSliders();
 		needsRecalc = true;
+		updateDisplay();
 	}
 
 	@Override
@@ -1737,22 +1739,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		switch (e.getKeyChar()) {
 		case 'r':
 		case 'R':
-			resetControls();
+			reset();
 			break;
-		case 'z':
-		case 'Z':
-			variables.zeroSliders();
-			variables.isChanged = true;
-			break;
-		case 'i':
-		case 'I':
-			variables.resetSliders();
-			variables.isChanged = true;
-			break;
-		case 's':
-		case 'S':
-			variables.toggleIrrepSliders();
-			variables.isChanged = true;
+		default:
+			variables.keyTyped(e);
 			break;
 		}
 	}
@@ -2028,6 +2018,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	@Override
 	protected void applyView() {
 		updateDisplay();
+	}
+
+	@Override
+	public void centerImage() {
+		// n/a
 	}
 
 }

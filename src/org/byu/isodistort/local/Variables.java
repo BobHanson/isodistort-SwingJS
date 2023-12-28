@@ -220,13 +220,13 @@ public class Variables {
 	 */
 	public double[][] sCrystalAxisBasisCart = new double[3][3];
 	/**
-	 * Array of vertices of strained window-centered parent cell. [edge number][x,
+	 * Array of Cartesian vertices of strained window-centered parent cell. [edge number][x,
 	 * y, z]
 	 * 
 	 */
-	public double[][] parentCellVertices = new double[8][3];
+	public double[][] parentCellCartesianVertices = new double[8][3];
 	/**
-	 * Array of vertices of strained window-centered super cell. [edge number][x, y,
+	 * Array of Cartesian vertices of strained window-centered super cell. [edge number][x, y,
 	 * z]
 	 * 
 	 */
@@ -346,22 +346,6 @@ public class Variables {
 		return (modes[STRAIN] == null ? new double[0] : modes[STRAIN].sliderValsTM[0]);
 	}
 
-	public double[] get(int mode, int i) {
-		return atoms[i].vector1[mode];
-	}
-
-	public double getInitialOccupancy(int i) {
-		return atoms[i].vector0[OCC][0];
-	}
-
-	public double getOccupancy(int i) {
-		return atoms[i].vector1[OCC][0];
-	}
-
-	public String getAtomTypeSymbol(int i) {
-		return atomTypeSymbol[atoms[i].t];
-	}
-
 	public void getColors(int t, double[] rgb) {
 		Color c = getDefaultModeColor(t);
 		rgb[0] = c.getRed() / 255.0;
@@ -370,7 +354,9 @@ public class Variables {
 	}
 
 	/**
-	 * calculates the parent atom colors
+	 * calculates the parent atom colors and associated slideres
+	 * 
+	 * @param simpleColor true if subtypes are not differentiated with shading
 	 */
 	public void setColors(boolean simpleColor) {
 		gui.setColors(simpleColor);
@@ -474,8 +460,8 @@ public class Variables {
 			for (int iy = 0; iy < 2; iy++) {
 				for (int iz = 0; iz < 2; iz++) {
 					for (int i = 0; i < 3; i++) {
-						parentCellVertices[ix + 2 * iy + 4 * iz][i] = ix * pBasisCart[i][0] + iy * pBasisCart[i][1]
-								+ iz * pBasisCart[i][2] + pOriginCart[i];
+						parentCellCartesianVertices[ix + 2 * iy + 4 * iz][i] = ix * pBasisCart[i][0]
+								+ iy * pBasisCart[i][1] + iz * pBasisCart[i][2] + pOriginCart[i];
 						superCellCartesianVertices[ix + 2 * iy + 4 * iz][i] = ix * sBasisCart[i][0]
 								+ iy * sBasisCart[i][1] + iz * sBasisCart[i][2];
 					}
@@ -541,7 +527,7 @@ public class Variables {
 		// Place the center of the supercell at the origin
 		for (int j = 0; j < 8; j++) {
 			for (int i = 0; i < 3; i++) {
-				parentCellVertices[j][i] -= sCenterCart[i];
+				parentCellCartesianVertices[j][i] -= sCenterCart[i];
 				superCellCartesianVertices[j][i] -= sCenterCart[i];
 			}
 		}
@@ -561,21 +547,34 @@ public class Variables {
 		int index;
 
 		/**
-		 * atomType, subAtomType, and atomNumber in the subtype; zero based, so one less
-		 * than what we see in atom and bond lists.
-		 * 
+		 * zero-based atomType index "t"
 		 * 
 		 */
-		public int t, s, a;
+		public int type;
 
 		/**
-		 * the initial parameter vector, by mode type
+		 * zero-based subAtomType index "s"
+		 * 
+		 */
+		public int subType;
+
+		/**
+		 * 
+		 * zero-based index within the subType
+		 * 
+		 */
+		int subTypeIndex;
+
+		/**
+		 * the initial parameter vector, by mode type; may be of length 1, 3, or 6;
+		 * fractional, untransformed values
 		 * 
 		 */
 		final double[][] vector0 = new double[MODE_COUNT][];
 
 		/**
-		 * the final paramater vector, by mode type; may be of length 1, 3, or 6
+		 * the final paramater vector, by mode type; may be of length 1, 3, or 6;
+		 * fractional, untransformed values
 		 * 
 		 */
 		final double[][] vector1 = new double[MODE_COUNT][];
@@ -590,7 +589,8 @@ public class Variables {
 		final double[][][] modes = new double[MODE_COUNT][][];
 
 		/**
-		 * info holds a vector of information intrinsic to each mode.
+		 * info holds a vector of information intrinsic to each mode
+		 * transformed into Cartesian coordinates.
 		 * 
 		 * 
 		 * DIS: [cx, cy, cz, index] Cartesian coordinates plus index (for bspt)
@@ -605,7 +605,9 @@ public class Variables {
 		 * 
 		 * 
 		 */
-		public final double[][] info = new double[MODE_COUNT][];
+		final double[][] info = new double[MODE_COUNT][];
+
+		private String sym;
 
 		/**
 		 * 
@@ -614,20 +616,60 @@ public class Variables {
 		 * @param s
 		 * @param a
 		 * @param coord
+		 * @param elementSymbol 
 		 * 
 		 */
-		private Atom(int index, int t, int s, int a, double[] coord) {
+		private Atom(int index, int t, int s, int a, double[] coord, String elementSymbol) {
 			this.index = index;
-			this.t = t;
-			this.s = s;
-			this.a = a;
+			this.type = t;
+			this.subType = s;
+			this.subTypeIndex = a;
+			this.sym = elementSymbol;
 			vector0[DIS] = coord;
+		}
+
+		public double[] getFinalFractionalCoord() {
+			return vector1[DIS];
+		}
+		
+		public double[] get(int mode) {
+			return vector1[mode];
+		}
+
+		public double getInitialOccupancy() {
+			return vector0[OCC][0];
+		}
+
+		public double getOccupancy() {
+			return vector1[OCC][0];
+		}
+
+		public double[] getMagneticMoment() {
+			return get(MAG);
+		}
+		/**
+		 * Get the transformed Cartesian coordinate. The return value
+		 * includes a fourth index value that is used after binary partition tree
+		 * sorting to return the atom value. 
+		 * 
+		 * Care should be taken to not
+		 * transform this value with a Matrix object (which is 4x4)
+		 * 
+		 * @return the FOUR-vector [cx, cy, cz, index]
+		 */
+		public double[] getCartesianCoord() {
+			return info[DIS];
+		}
+
+		public String getAtomTypeSymbol() {
+			return sym;
 		}
 
 		@Override
 		public String toString() {
-			return "[Atom " + index + " " + t + "," + s + "," + a + "]";
+			return "[Atom " + index + " " + type + "," + subType + "," + subTypeIndex + "]";
 		}
+
 	}
 
 	public class Bond {
@@ -1156,7 +1198,7 @@ public class Variables {
 					if (bsPrimitive != null) {
 						numPrimitiveSubAtoms[t][s]++;
 					}
-					Atom atom = atoms[ia] = new Atom(ia, t, s, a, coord);
+					Atom atom = atoms[ia] = new Atom(ia, t, s, a, coord, atomTypeSymbol[t]);
 					if (haveBonds)
 						atomMap.put(getKeyTSA(t + 1, s + 1, a + 1), atom);
 					ia++;
@@ -1358,7 +1400,7 @@ public class Variables {
 			// initialize the atom mode[] arrays now that we have the perType information.
 			for (int ia = numAtoms; --ia >= 0;) {
 				Atom a = atoms[ia];
-				a.modes[mode] = (perType[a.t] == 0 ? null : new double[perType[a.t]][]);
+				a.modes[mode] = (perType[a.type] == 0 ? null : new double[perType[a.type]][]);
 			}
 			return n;
 		}
@@ -1963,16 +2005,15 @@ public class Variables {
 	}
 
 	public void setAtomInfo() {
-
 		boolean getBspt = (app.bondsUseBSPT && bspt == null);
 		if (getBspt) {
 			bspt = new Bspt();
 		}
-
 		double[] t = new double[3];
 		double[] te = new double[6];
 		for (int ia = 0, n = numAtoms; ia < n; ia++) {
-			double[][] info = atoms[ia].info;
+			Atom a = atoms[ia];
+			double[][] info = a.info;
 			if (info[OCC] == null) {
 				info[OCC] = new double[1];
 				info[DIS] = new double[] { 0, 0, 0, ia };
@@ -1980,33 +2021,119 @@ public class Variables {
 				info[MAG] = new double[3];
 				info[ELL] = new double[7];
 			}
-			info[OCC][0] = getOccupancy(ia);
-
-			MathUtil.set3(get(DIS, ia), t);
-			MathUtil.mat3mul(sBasisCart, t, tempvec);
-			MathUtil.vecaddN(tempvec, -1, sCenterCart, info[DIS]);
-
+			info[OCC][0] = a.getOccupancy();
+			double[] coord = setDisplacementInfo(a, t);
 			if (getBspt) {
-				bspt.addTuple(info[DIS]);
+				bspt.addTuple(coord);
 			}
-
-			MathUtil.set3(get(MAG, ia), t);
-			MathUtil.mat3mul(sBasisCart, t, tempvec);
-			MathUtil.calculateArrow(tempvec, info[MAG]);
-
-			MathUtil.set3(get(ROT, ia), t);
-			MathUtil.mat3mul(sBasisCart, t, tempvec);
-			MathUtil.calculateArrow(tempvec, info[ROT]);
-
-			MathUtil.copyN(get(ELL, ia), te);
-			MathUtil.voigt2matrix(te, tempmat, 0);
-			MathUtil.mat3product(sBasisCart, tempmat, tempmat2);
-			MathUtil.mat3copy(tempmat2, tempmat);
-			MathUtil.mat3product(tempmat, sBasisCartInverse, tempmat2);
-			MathUtil.calculateEllipsoid(tempmat2, info[ELL]);
-			// ellipsoidInfo array filled
+			setArrowInfo(a, MAG, t);
+			setArrowInfo(a, ROT, t);
+			setEllipsoidInfo(a, te);
 		}
 	}
+
+	/**
+	 * Set atom.info[DIS] as [cartX, cartY, cartZ, index] 
+	 * 
+	 * @param a
+	 * @param t
+	 * @return [cartX, cartY, cartZ, index]
+	 */
+	private double[] setDisplacementInfo(Atom a, double[] t) {
+		MathUtil.mat3mul(sBasisCart, a.get(DIS), tempvec);
+		MathUtil.vecaddN(tempvec, -1, sCenterCart, a.info[DIS]);
+		return a.info[DIS];
+	}
+
+	/**
+	 * Calculates the description used to render a ROT or MAG arrow -- Branton Campbell
+	 * 
+	 * @param xyz       is the vector input.
+	 * @param info is the [X-angle, Y-angle, Length] output.
+	 */
+	public void setArrowInfo(Atom a, int type, double[] t) {
+		double[] info = a.info[type];		
+		double[] xyz = a.get(type);
+		MathUtil.set3(xyz, t);
+		MathUtil.mat3mul(sBasisCart, t, tempvec);
+		double lensq = MathUtil.lenSq3(xyz);
+		if (lensq < 0.000000000001) {
+			info[0] = info[1] = info[2] = 0;
+			return;
+		}
+		double d = Math.sqrt(lensq);
+
+// BH Q! scaling the input array??	
+//
+//		for (int i = 0; i < 3; i++)
+//			xyz[i] /= d;
+//
+		// BH: added / d in asin only. Why normalize this? 
+		info[0] = -Math.asin(xyz[1] / d); // X rotation
+		info[1] = Math.atan2(xyz[0], xyz[2]); // Y rotation
+		info[2] = d; // Length
+	}
+
+	/**
+	 * Calculates the description used to render an ellipsoid -- Branton Campbell
+	 * 
+	 * Currently only for isotropic ellipsoids.
+	 * 
+	 * @param mat       is the real-symmetric matrix input.
+	 * @param ellipsoid is the [widthx, widthy, widthz, rotaxisx, rotaxisy,
+	 *                  rotaxisz, angle] output.
+	 */
+	public void setEllipsoidInfo(Atom a, double[] te) {
+
+		MathUtil.copyN(a.get(ELL), te);
+		MathUtil.voigt2matrix(te, tempmat, 0);
+		MathUtil.mat3product(sBasisCart, tempmat, tempmat2);
+		MathUtil.mat3copy(tempmat2, tempmat);
+		MathUtil.mat3product(tempmat, sBasisCartInverse, tempmat2);
+		double[] info = a.info[ELL];
+		double trc = MathUtil.mat3trace(tempmat2);
+//		det = matdeterminant(tempmat2);
+//		for (int i = 0; i < 3; i++)
+//			for (int j = 0; j < 3; j++)
+//				lensq += tempmat2[i][j]* tempmat2[i][j];
+//
+//		if ((Math.sqrt(lensq) < 0.000001) || (det < 0.000001) || true) // "true" temporarily bypasses the ellipoidal
+		// analysis.
+//		{
+			double avgrad = Math.sqrt(Math.abs(trc) / 3.0);
+			double widths[] = new double[] { avgrad, avgrad, avgrad };
+			double rotangle = 0;
+			double rotaxis[] = new double[] { 0, 0, 1};
+			rotangle = 0;
+//		} else {
+//			Matrix jamat = new Matrix(tempmat2);
+//			EigenvalueDecomposition E = new EigenvalueDecomposition(jamat, true);
+//			Matrix D = E.getD();
+//			Matrix V = E.getV();
+//			NV = V.getArray();
+//			ND = D.getArray();
+//
+//			widths[0] = Math.sqrt((ND[0][0]));
+//			widths[1] = Math.sqrt((ND[1][1]));
+//			widths[2] = Math.sqrt((ND[2][2]));
+//			rotangle = Math.acos(.5 * (NV[0][0] + NV[1][1] + NV[2][2] - 1));
+//			rotaxis[0] = (NV[2][1] - NV[1][2]) / (2 * Math.sin(rotangle));
+//			rotaxis[1] = (NV[0][2] - NV[2][0]) / (2 * Math.sin(rotangle));
+//			rotaxis[2] = (NV[1][0] - NV[0][1]) / (2 * Math.sin(rotangle));
+//		}
+//	System.out.println(ND[0][0]+" "+ND[0][1]+" "+ND[0][2]+" "+ND[1][0]+" "+ND[1][1]+" "+ND[1][2]+" "+ND[2][0]+" "+ND[2][1]+" "+ND[2][2]);
+//	System.out.println(NV[0][0]+" "+NV[0][1]+" "+NV[0][2]+" "+NV[1][0]+" "+NV[1][1]+" "+NV[1][2]+" "+NV[2][0]+" "+NV[2][1]+" "+NV[2][2]);
+//	System.out.println("lensq="+lensq+", det="+det+", w0="+widths[0]+", w1="+widths[1]+", w2="+widths[2]+", r0="+rotaxis[0]+", r1="+rotaxis[1]+", r2="+rotaxis[2]);
+
+		info[0] = widths[0];
+		info[1] = widths[1];
+		info[2] = widths[2];
+		info[3] = rotaxis[0];
+		info[4] = rotaxis[1];
+		info[5] = rotaxis[2];
+		info[6] = rotangle % (2 * Math.PI) - Math.PI;
+	}
+
 
 	/**
 	 * Uses two xyz points to a calculate a bond. -- Branton Campbell
@@ -2014,7 +2141,7 @@ public class Variables {
 	 * @param bond return [x, y, z, theta, phi, len, okflag(1 or 0)]
 	 * @return true if OK
 	 */
-	public boolean setBondInfo(double[] atom1, double[] atom2, double[] bond, double lensq) {
+	public boolean setCylinderInfo(double[] atom1, double[] atom2, double[] bond, double lensq) {
 		MathUtil.vecaddN(atom2, -1, atom1, tempvec);
 		if (lensq < 0) {
 			lensq = MathUtil.lenSq3(tempvec);
@@ -2065,6 +2192,21 @@ public class Variables {
 		return ab;
 	}
 
+	public boolean recalcBond(int b) {
+		// calculate bondInfo(x-cen, y-cen, z-cen, thetaX, thetaY,
+		// length)
+		double[] info = bondInfo[b];
+		int a0 = (int) info[6];
+		int a1 = (int) info[7];
+
+		double[][] info0 = atoms[a0].info;
+		double[][] info1 = atoms[a1].info;
+		boolean ok = (info[Variables.L_2] > 0 && info[Variables.L_2] < halfMaxBondLength
+				&& info0[OCC][0] > minBondOcc && info1[OCC][0] > minBondOcc);
+		setCylinderInfo(info0[DIS], info1[DIS], info, -1);
+		return ok;
+	}
+
 	/**
 	 * Pack size is sum of total of JPanel component heights.
 	 * (Prior to this it is set to the full page height.
@@ -2078,4 +2220,5 @@ public class Variables {
 		sliderPanel.setPreferredSize(new Dimension(sliderPanel.getWidth(), h));
 		sliderPanel.setSize(new Dimension(sliderPanel.getWidth(), h));
 	}
+
 }

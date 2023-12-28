@@ -34,7 +34,6 @@ class Mode {
 	final static int MODE_COUNT = 7;
 
 
-	@SuppressWarnings("unused")
 	/**
 	 * DISP, IRREP, ....
 	 */
@@ -198,8 +197,8 @@ class Mode {
 		for (int ia = 0, n = v.numAtoms; ia < n; ia++) {
 			Atom a = v.atoms[ia];
 			MathUtil.vecfill(delta, 0);
-			int t = a.t;
-			int s = a.s;
+			int t = a.type;
+			int s = a.subType;
 			if (isActive()) {
 				// accumulate distortion deltas
 				for (int m = 0; m < modesPerType[t]; m++) {

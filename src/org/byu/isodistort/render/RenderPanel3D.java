@@ -15,7 +15,6 @@ import java.awt.image.DataBufferInt;
 import javax.swing.JPanel;
 
 import org.byu.isodistort.IsoDistortApp;
-import org.byu.isodistort.local.Matrix;
 
 /**
  * Provides an applet interface to the {@link Renderer}. It also implements
@@ -75,7 +74,7 @@ public class RenderPanel3D extends JPanel {
 	 */
 	protected double frameRate = 20;
 
-	private Matrix matrix[] = new Matrix[10]; // THE MATRIX STACK
+	private Matrix3D matrix[] = new Matrix3D[10]; // THE MATRIX STACK
 
 	private int top = 0; // MATRIX STACK POINTER
 	
@@ -184,7 +183,7 @@ public class RenderPanel3D extends JPanel {
 	 * 
 	 * @return the top matrix on the stack
 	 */
-	private Matrix m() {
+	private Matrix3D m() {
 		return matrix[top];
 	}
 
@@ -316,7 +315,7 @@ public class RenderPanel3D extends JPanel {
 		renderer = new Renderer();
 		world = renderer.getWorld(); // GET ROOT OF GEOMETRY
 		for (int i = 0; i < matrix.length; i++)
-			matrix[i] = new Matrix();
+			matrix[i] = new Matrix3D();
 		identity();
 	}
 

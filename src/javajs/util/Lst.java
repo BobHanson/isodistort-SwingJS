@@ -34,7 +34,6 @@ import java.util.ArrayList;
  * 
  * @param <V>
  */
-@SuppressWarnings("serial")
 public class Lst<V> extends ArrayList<V> {
 
   public Lst() {

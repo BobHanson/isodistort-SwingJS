@@ -57,7 +57,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".8_2023.12.26";
+	final static String minorVersion = ".8_2023.12.27";
 
 	
 	/**
@@ -81,11 +81,11 @@ public abstract class IsoApp {
 	final static protected int APP_ISODISTORT = 0;
 	final static protected int APP_ISODIFFRACT = 1;
 
-	public final static int DIS = Mode.DIS; // displacive
-	public final static int OCC = Mode.OCC; // occupancy (aka "scalar")
-	public final static int MAG = Mode.MAG; // magnetic
-	public final static int ROT = Mode.ROT; // rotational
-	public final static int ELL = Mode.ELL; // ellipsoidal
+	protected final static int DIS = Mode.DIS; // displacive
+	protected final static int OCC = Mode.OCC; // occupancy (aka "scalar")
+	protected final static int MAG = Mode.MAG; // magnetic
+	protected final static int ROT = Mode.ROT; // rotational
+	protected final static int ELL = Mode.ELL; // ellipsoidal
 
 	/**
 	 * when saving data across switches between IsoDistort and IsoDiffract

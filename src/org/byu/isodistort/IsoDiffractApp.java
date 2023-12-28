@@ -51,8 +51,8 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.event.MouseEvent;
 import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -69,7 +69,7 @@ import javax.swing.JToggleButton;
 import org.byu.isodistort.local.Elements;
 import org.byu.isodistort.local.IsoApp;
 import org.byu.isodistort.local.MathUtil;
-import org.byu.isodistort.local.Variables;
+import org.byu.isodistort.local.Variables.Atom;
 
 public class IsoDiffractApp extends IsoApp implements KeyListener {
 
@@ -704,16 +704,17 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			thermal = Math.exp(-0.5 * uiso * d * d);
 
 			for (int ia = 0, n = variables.numAtoms; ia < n; ia++) {
-				MathUtil.set3(variables.get(Variables.DIS, ia), supxyz);
+				Atom a = variables.getAtom(ia);
+				MathUtil.set3(a.getFinalFractionalCoord(), supxyz);
 				if (supxyz[0] >= 0 && supxyz[0] < 1 && supxyz[1] >= 0 && supxyz[1] < 1 && supxyz[2] >= 0
 						&& supxyz[2] < 1) {
 					// just [atomicNumber, 0] for xray
-					atomScatFac = Elements.getScatteringFactor(variables.getAtomTypeSymbol(ia), isXray);
+					atomScatFac = Elements.getScatteringFactor(a.getAtomTypeSymbol(), isXray);
 					phase = 2 * (Math.PI) * MathUtil.dot3(crystalPeakHKL[p], supxyz);
-					double occ = variables.getOccupancy(ia);
+					double occ = a.getOccupancy();
 					scatNR = occ * atomScatFac[0];
 					scatNI = occ * atomScatFac[1];
-					occ = variables.getInitialOccupancy(ia);
+					occ = a.getInitialOccupancy();
 					zzzNR += occ * atomScatFac[0];
 					zzzNI += occ * atomScatFac[1];
 					pppNR += scatNR * Math.cos(phase) - scatNI * Math.sin(phase);
@@ -721,13 +722,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 //	        				System.out.format("t:%d,s:%d,a:%d, pos:(%.2f,%.2f,%.2f), scatNR/NI:%.3f/%.3f, phase:%.3f%n", t, s, a, supxyz[0], supxyz[1], supxyz[2], scatNR, scatNI, phase);
 					// remember that magnetic mode vectors (magnetons/Angstrom) were predefined to
 					// transform this way.
-					MathUtil.mat3mul(variables.sBasisCart, variables.get(Variables.MAG, ia), mucart);
+					MathUtil.mat3mul(variables.sBasisCart, a.getMagneticMoment(), mucart);
 					if (isXray) {
 						scatM = 0.0;
 						for (int i = 0; i < 3; i++)
 							zzzM[i] += 0;
 					} else {
-						scatM = variables.getOccupancy(ia) * 5.4;
+						scatM = a.getOccupancy() * 5.4;
 						for (int i = 0; i < 3; i++)
 							zzzM[i] += scatM * mucart[i];
 					}

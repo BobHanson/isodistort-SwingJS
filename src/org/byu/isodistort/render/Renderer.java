@@ -4,7 +4,6 @@
 package org.byu.isodistort.render;
 
 import org.byu.isodistort.local.MathUtil;
-import org.byu.isodistort.local.Matrix;
 
 /**
  * Provides the computational functionality to render geometric objects in
@@ -255,7 +254,7 @@ class Renderer {
 	 * @param phi   vertical angle (radians)
 	 */
 	synchronized void setCamera(double t, double p) {
-		Matrix.identity(camera);
+		Matrix3D.identity(camera);
 		theta = t;
 		phi = p;
 		computeCamera();
@@ -310,14 +309,14 @@ class Renderer {
 	 * 
 	 * @return the matrix that defines the camera transformation
 	 */
-	Matrix getCamera() {
+	Matrix3D getCamera() {
 		return camera;
 	}
 
 	/**
 	 * Sets the camera matrix directly. Matrix needs to be 4x4.
 	 */
-	void setCamera(Matrix m) {
+	void setCamera(Matrix3D m) {
 		camera.copy(m);
 	}
 
@@ -442,16 +441,16 @@ class Renderer {
 		
 //		long t = System.currentTimeMillis();
 			clearScreen(); // BLANK OUT RESULTS FROM PREVIOUS FRAME
-		long t1 = System.currentTimeMillis();
+		//long t1 = System.currentTimeMillis();
 			renderWorld(); // RENDER EVERYTHING IN SCENE
 			
-		long t2 = System.currentTimeMillis();
+		//long t2 = System.currentTimeMillis();
 		
 		//report("R:" + (t2-t1));
 		//System.out.println("RT ntri=" + ntri + " " + (t1 - t0) + " " + (t1 - t) + " " + (t2 - t1));
+		//t0 = t2;
 
 		ntri = 0;
-		t0 = t2;
 //			if (isOutline)
 //				convertToOutline();
 //			
@@ -523,7 +522,7 @@ class Renderer {
 //		return dr * dr + dg * dg + db * db;
 //	}
 
-	private void report(String string) {
+	void report(String string) {
 		/**
 		 * @j2sNative
 		 * 
@@ -673,7 +672,7 @@ class Renderer {
 			double vz = MathUtil.dot3(T, cameraUp);
 			double vy = Math.sqrt(1 - vz * vz);
 
-			Matrix.identity(camtmp);
+			Matrix3D.identity(camtmp);
 
 			double crossUT[] = new double[3];
 			double dotTU = MathUtil.dot3(T, cameraUp);
@@ -693,13 +692,13 @@ class Renderer {
 			if (theta == 0 && phi == 0 && sigma == 0)
 				return;
 
-			Matrix.identity(camtmp);
+			Matrix3D.identity(camtmp);
 			camtmp.rotateZ(sigma);
 			camera.postMultiply(camtmp);
-			Matrix.identity(camtmp);
+			Matrix3D.identity(camtmp);
 			camtmp.rotateY(theta);
 			camera.postMultiply(camtmp);
-			Matrix.identity(camtmp);
+			Matrix3D.identity(camtmp);
 			camtmp.rotateX(phi);
 			camera.postMultiply(camtmp);
 			clearAngles();
@@ -753,7 +752,7 @@ class Renderer {
 
 //RENDER ONE OBJECT FOR THIS FRAME
 
-	private void render(Geometry s, Matrix camera) {
+	private void render(Geometry s, Matrix3D camera) {
 		if (!s.isEnabled())
 			return;
 		if (s.child != null) {
@@ -983,7 +982,7 @@ class Renderer {
 		return;
 	}
 
-	private void transformVertex(Matrix matrix, double v[], int i) {
+	private void transformVertex(Matrix3D matrix, double v[], int i) {
 
 		matrix.rotTrans(v[0], v[1], v[2], ti);
 		matrix.rotTrans(v[0], v[1], v[2], t1[i]);
@@ -1689,14 +1688,14 @@ class Renderer {
 //PIXEL BOUNDS FOR DAMAGED IMAGE
 	private int zbuffer[] = null; // THE ZBUFFER
 	private Geometry gzbuffer[] = null; // THE GEOMETRY ZBUFFER
-	private Matrix camera = new Matrix(); // THE CAMERA MATRIX
-	private Matrix camtmp = new Matrix(); // CAMERA TEMP MATRIX
-	private Matrix matrix = new Matrix(); // TEMP MATRIX
+	private Matrix3D camera = new Matrix3D(); // THE CAMERA MATRIX
+	private Matrix3D camtmp = new Matrix3D(); // CAMERA TEMP MATRIX
+	private Matrix3D matrix = new Matrix3D(); // TEMP MATRIX
 	private int nt = 0; // NUM. OF TRANSPARENT OBJECTS
 	private Geometry tS[] = null; // LIST OF TRANSPARENT OBJECTS
 	private boolean renderT = false; // IS THIS TRANSP RENDER PASS?
 	private double normal[] = new double[3]; // VERTEX NORMAL
-	private Matrix normat = new Matrix(); // NORMAL MATRIX XFORM
+	private Matrix3D normat = new Matrix3D(); // NORMAL MATRIX XFORM
 	private double transparency; // TRANSPARENCY FOR CURRENT OBJECT
 	private final static int NB = 14; // PRECISION FOR FIXED PT PIXEL OPS
 	//private int NBPower = (int) Math.pow(2, this.NB);

@@ -1,7 +1,7 @@
 //
 //Copyright 2001 Ken Perlin
 
-package org.byu.isodistort.local;
+package org.byu.isodistort.render;
 
 //----- SIMPLE CLASS TO HANDLE BASIC 3D MATRIX OPERATIONS -----
 
@@ -11,7 +11,7 @@ package org.byu.isodistort.local;
  * @author Ken Perlin 2001
  */
 
-public class Matrix {
+/*public*/ class Matrix3D {
 
 	String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
@@ -24,12 +24,12 @@ public class Matrix {
 	private double mMatrix[] = new double[16];
 	private double tmp[] = new double[16];
 	private double tmp2[] = new double[16];
-	public double scaleX = 1.0, scaleY = 1.0, scaleZ = 1.0;
+	/*public*/ double scaleX = 1.0, scaleY = 1.0, scaleZ = 1.0;
 
 	/**
 	 * Default constructor.
 	 */
-	public Matrix() {
+	Matrix3D() {
 	}
 
 
@@ -40,7 +40,7 @@ public class Matrix {
 	 * @param j column index
 	 * @return value at specified location
 	 */
-	public final double get(int i, int j) {
+	/*public*/ final double get(int i, int j) {
 		return mMatrix[(i << 2) + j];
 	}
 
@@ -51,7 +51,7 @@ public class Matrix {
 	 * @param j column index
 	 * @param d the new value
 	 */
-	public final void set(int i, int j, double d) {
+	/*public*/ final void set(int i, int j, double d) {
 		mMatrix[(i << 2) + j] = d;
 	}
 
@@ -61,7 +61,7 @@ public class Matrix {
 	 * @return the actual matrix array of 16 elements
 	 * @see #get
 	 */
-	public final double[] getUnsafe() {
+	/*public*/ final double[] getUnsafe() {
 		return mMatrix;
 	}
 
@@ -70,14 +70,14 @@ public class Matrix {
 	 * 
 	 * @param m the matrix to be modified
 	 */
-	public static final void identity(Matrix m) {
+	/*public*/ static final void identity(Matrix3D m) {
 	System.arraycopy(identity, 0, m.mMatrix, 0, 16);
 	}
 
 	/**
 	 * Sets the object matrix to the identity matrix.
 	 */
-	public final void identity() {
+	/*public*/ final void identity() {
 		System.arraycopy(identity, 0, mMatrix, 0, 16);
 	}
 
@@ -95,7 +95,7 @@ public class Matrix {
 	 * 
 	 * @param src original matrix to be copied
 	 */
-	public final void copy(Matrix src) {
+	/*public*/ final void copy(Matrix3D src) {
 		System.arraycopy(src.mMatrix, 0, mMatrix, 0, 16);
 	}
 
@@ -120,7 +120,7 @@ public class Matrix {
 	 * @param mb the multiplier matrix
 	 */
 
-	public final void preMultiply(Matrix mb) {
+	/*public*/ final void preMultiply(Matrix3D mb) {
 		preMultiply(mb.mMatrix);
 	}
 
@@ -145,7 +145,7 @@ public class Matrix {
 	 * 
 	 * @param mb the multiplier matrix
 	 */
-	public final void postMultiply(Matrix mb) {
+	/*public*/ final void postMultiply(Matrix3D mb) {
 		postMultiply(mb.mMatrix);
 	}
 
@@ -158,7 +158,7 @@ public class Matrix {
 	 * @param z amount of translation along the z axis
 	 */
 
-	public final void translate(double x, double y, double z) {
+	/*public*/ final void translate(double x, double y, double z) {
 		makeTranslationMatrix(tmp2, x, y, z);
 		preMultiply(tmp2);
 	}
@@ -168,7 +168,7 @@ public class Matrix {
 	 * 
 	 * @param theta angle of rotation in radians
 	 */
-	public final void rotateX(double theta) {
+	/*public*/ final void rotateX(double theta) {
 		makeRotationMatrix(tmp2, 1, 2, theta);
 		preMultiply(tmp2);
 	}
@@ -178,7 +178,7 @@ public class Matrix {
 	 * 
 	 * @param theta angle of rotation in radians
 	 */
-	public final void rotateY(double theta) {
+	/*public*/ final void rotateY(double theta) {
 		makeRotationMatrix(tmp2, 2, 0, theta);
 		preMultiply(tmp2);
 	}
@@ -188,7 +188,7 @@ public class Matrix {
 	 * 
 	 * @param theta angle of rotation in radians
 	 */
-	public final void rotateZ(double theta) {
+	/*public*/ final void rotateZ(double theta) {
 		makeRotationMatrix(tmp2, 0, 1, theta);
 		preMultiply(tmp2);
 	}
@@ -201,7 +201,7 @@ public class Matrix {
 	 * @param y     2nd coord of rotation axis
 	 * @param z     3rd coord of rotation axis
 	 */
-	public final void rotate(double theta, double x, double y, double z) {
+	/*public*/ final void rotate(double theta, double x, double y, double z) {
 		double unY = Math.atan2(y, x);
 		double unX = Math.atan2(Math.sqrt(x * x + y * y), z);
 		rotateZ(unY);
@@ -218,7 +218,7 @@ public class Matrix {
 	 * @param y scale factor along the y axis
 	 * @param z scale factor along the z axis
 	 */
-	public final void scale(double x, double y, double z) {
+	/*public*/ final void scale(double x, double y, double z) {
 		scaleX = x;
 		scaleY = y;
 		scaleZ = z;
@@ -226,7 +226,7 @@ public class Matrix {
 		preMultiply(tmp2);
 	}
 
-	public String getScale() {
+	/*public*/ String getScale() {
 		return "" + scaleX + ", " + scaleY + ", " + scaleZ;
 	}
 
@@ -261,7 +261,7 @@ public class Matrix {
 	 * @param z
 	 * @param v return vector
 	 */
-	public void rotTrans(double x, double y, double z, double v[]) {
+	/*public*/ void rotTrans(double x, double y, double z, double v[]) {
 		double[] m = mMatrix;
 		v[0] = m[0] * x + m[1] * y + m[2] * z + m[3];
 		v[1] = m[4] * x + m[5] * y + m[6] * z + m[7];
@@ -276,7 +276,7 @@ public class Matrix {
 	 * @param z
 	 * @param v
 	 */
-	public void rotate(double x, double y, double z, double v[]) {
+	/*public*/ void rotate(double x, double y, double z, double v[]) {
 		double[] m = mMatrix;
 		v[0] = m[0] * x + m[1] * y + m[2] * z;
 		v[1] = m[4] * x + m[5] * y + m[6] * z;
@@ -290,7 +290,7 @@ public class Matrix {
 	 * @param m matrix to be translated to text
 	 * @return a textual representation of the matrix
 	 */
-	static public String stringify(Matrix mm) {
+	static /*public*/ String stringify(Matrix3D mm) {
 		double m[] = mm.mMatrix;
 		String s = "{";
 		for (int i = 0; i < 4; i++) {
@@ -322,7 +322,7 @@ public class Matrix {
 //  Constructor takes an array of 16 elements to populate the 4x4 matrix.
 //  @param a 4x4 quaternion values
 //*/
-//public Matrix(double a[])
+///*public*/ Matrix(double a[])
 //{
 //  if (a.length == 4) { // quaternion
 //     double Nq = a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
@@ -355,7 +355,7 @@ public class Matrix {
 //	 * @return a copy of the matrix array (16 elements).
 //	 * @see #getUnsafe
 //	 */
-//	public final double[] get() {
+//	/*public*/ final double[] get() {
 //		double m[] = new double[16];
 //		System.arraycopy(mMatrix, 0, m, 0, 16);
 //		return m;
@@ -368,7 +368,7 @@ public class Matrix {
 //	 * 
 //	 * @param msrc original matrix to be inverted
 //	 */
-//	public final void invert(Matrix msrc) {
+//	/*public*/ final void invert(Matrix msrc) {
 //		double src[] = msrc.mMatrix;
 //		double dst[] = mMatrix;
 //

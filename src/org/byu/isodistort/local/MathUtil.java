@@ -3,8 +3,6 @@
 
 package org.byu.isodistort.local;
 
-import org.byu.isodistort.local.Variables.Atom;
-
 /**
  * Provides functionality to manipulate vectors.
  */

@@ -3,7 +3,6 @@
 
 package org.byu.isodistort.render;
 
-import org.byu.isodistort.local.Matrix;
 import org.byu.isodistort.local.MathUtil;
 
 //A VERY SIMPLE 3D RENDERER BUILT IN JAVA 1.0 - KEN PERLIN
@@ -74,7 +73,7 @@ public class Geometry {
 	 * The transform matrix of the Geometry (used to keep track of translations,
 	 * rotations, and scaling transformations).
 	 */
-	Matrix matrix = new Matrix();
+	Matrix3D matrix = new Matrix3D();
 
 	/**
 	 * The global transform matrix used to record modifications to the shape's
@@ -84,7 +83,7 @@ public class Geometry {
 	 * @see #superquadric
 	 * @see #addNoise
 	 */
-	public Matrix globalMatrix = new Matrix();
+	public Matrix3D globalMatrix = new Matrix3D();
 
 	/**
 	 * Index of the faces that specifies the order and vertices that define
@@ -167,8 +166,8 @@ public class Geometry {
 	 * Constructor sets up the local and global transformation matrices.
 	 */
 	public Geometry() {
-		Matrix.identity(matrix);
-		Matrix.identity(globalMatrix);
+		Matrix3D.identity(matrix);
+		Matrix3D.identity(globalMatrix);
 	}
 
 	/**
@@ -319,7 +318,7 @@ public class Geometry {
 	 * 
 	 * @param m the new matrix for the shape
 	 */
-	void setMatrix(Matrix m) {
+	void setMatrix(Matrix3D m) {
 		matrix.copy(m);
 	}
 
@@ -460,7 +459,7 @@ public class Geometry {
 		return this;
 	}
 
-	private Matrix m = new Matrix();
+	private Matrix3D m = new Matrix3D();
 
 // CYLINDER
 	/**
@@ -477,12 +476,12 @@ public class Geometry {
 		add().disk(k);
 		add().disk(k);
 
-		Matrix.identity(m);
+		Matrix3D.identity(m);
 		m.scale(1, -1, -1);
 		m.translate(0, 0, 1);
 		child[1].setMatrix(m);
 
-		Matrix.identity(m);
+		Matrix3D.identity(m);
 		m.translate(0, 0, 1);
 		child[2].setMatrix(m);
 
@@ -564,22 +563,22 @@ public class Geometry {
 		add().disk(k);
 		add().tube(k, 0);
 
-		Matrix.identity(m);
+		Matrix3D.identity(m);
 		m.scale(1, 1, 1);
 		m.translate(0, 0, -recenter);
 		child[0].setMatrix(m);// main tube
 
-		Matrix.identity(m);
+		Matrix3D.identity(m);
 		m.scale(1, 1 * reverse, 1 * reverse);
 		m.translate(0, 0, -(1 + recenter) * reverse);
 		child[1].setMatrix(m);// base cap
 
-		Matrix.identity(m);
+		Matrix3D.identity(m);
 		m.scale(tiprad, tiprad * reverse, 1 * reverse);
 		m.translate(0, 0, (1 - recenter) * reverse);
 		child[2].setMatrix(m);// tip cap
 
-		Matrix.identity(m);
+		Matrix3D.identity(m);
 		m.scale(tiprad, tiprad, tiplen);
 		m.translate(0, 0, (1 + tiplen - recenter) / tiplen);
 		child[3].setMatrix(m);// tip

@@ -24,6 +24,7 @@
  */
 package org.byu.isodistort.local;
 
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -38,6 +39,7 @@ import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.KeyStroke;
 
 
 /**
@@ -79,14 +81,14 @@ public class MenuActions {
 		String id;
 		String label;
 		String tip;
-		private int mnemonic;
+		private int shortcut;
 
-		public IsoAction(String id, String label, String tip, int mnemonic) {
+		public IsoAction(String id, String label, String tip, int shortcut) {
 			super(label);
 			this.id	= id;
 			this.label = label;
 			this.tip = tip;
-			this.mnemonic = 0;// mnemonic;
+			this.shortcut = shortcut;
 		}
 
 	}
@@ -479,7 +481,7 @@ public class MenuActions {
 
 
 		actions.put("Set.zero",
-				new IsoAction("setZero", "Set Variables to 0", "Set the sliders to their 0 'parent' positions.", 'z') {
+				new IsoAction("setZero", "Set Variables to 0", "Set the sliders to their 0 'parent' positions.", KeyEvent.VK_V) {
 					@Override
 					public void actionPerformed(ActionEvent e) {	
 						app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 'z', 0));
@@ -487,7 +489,7 @@ public class MenuActions {
 				});
 
 		actions.put("Set.resetView",
-				new IsoAction("setResetView", "Reset View", "Reset the view and sliders to their original settings.", 'i') {
+				new IsoAction("setResetView", "Reset View", "Reset the view and sliders to their original settings.", KeyEvent.VK_R) {
 					@Override
 					public void actionPerformed(ActionEvent e) {	
 						app.reset();		
@@ -495,14 +497,14 @@ public class MenuActions {
 				});
 
 		actions.put("Set.resetVariables",
-				new IsoAction("setResetVariables", "Reset Variables", "Reset the sliders to their original 'child' positions.", 'i') {
+				new IsoAction("setResetVariables", "Reset Variables", "Reset the sliders to their original 'child' positions.", KeyEvent.VK_I) {
 					@Override
 					public void actionPerformed(ActionEvent e) {	
 						app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 'i', 0));					}
 				});
 
 		actions.put("Set.toggle",
-				new IsoAction("setToggle", "Toggle Irrep Sliders", "Toggle Irrep sliders between full off and full on.", 's') {
+				new IsoAction("setToggle", "Toggle Irrep Sliders", "Toggle Irrep sliders between full off and full on.", KeyEvent.VK_S) {
 					@Override
 					public void actionPerformed(ActionEvent e) {	
 						app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 's', 0));
@@ -553,12 +555,14 @@ public class MenuActions {
 			int pt = menuID.lastIndexOf(".");
 			String parentName = menuID.substring(0, pt + 1);
 			JMenu parentMenu = (JMenu) menuMap.get(parentName);
-			JMenuItem thisItem = new JMenuItem(action.label, action.mnemonic);
+			JMenuItem thisItem = new JMenuItem(action.label);
 			add(menuID, thisItem, null, parentMenu, action);
 		}
 		return (menuBar == null ? menu : menuBar);
 	}
 
+	private static final int SHORTCUT = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
+			
 	private void add(String menuID, JMenuItem item, JMenuBar menuBar, JMenu menu, IsoAction action) {
 		item.setName(menuID);
 		if (action != null) {
@@ -572,6 +576,9 @@ public class MenuActions {
 				});
 			} else {
 				item.setAction(action);
+				if (action.shortcut != 0) {
+					item.setAccelerator(KeyStroke.getKeyStroke(action.shortcut, SHORTCUT, true));
+				}
 			}
 		}
 		if (menuID.equals("Help.") && menuBar != null) {

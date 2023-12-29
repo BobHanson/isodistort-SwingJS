@@ -208,9 +208,9 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			atomObjects.add();
 			Atom a = variables.atoms[ia];
 			Material m = subMaterial[a.type][a.subType];
-			atomObjects.child(ia).add().ball(ballRes).setMaterial(m);
-			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m);
-			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m);
+			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m); // MAG - 2
+			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m); // ROT - 2
+			atomObjects.child(ia).add().ball(ballRes).setMaterial(m);        // ELL - 2
 		}
 	}
 
@@ -325,9 +325,9 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 					double[][] info = variables.getAtomInfo(i);
 					Geometry a = atomObjects.child(i);
 					renderScaledAtom(a, info[DIS], info[OCC][0] * variables.atomMaxRadius);
-					renderEllipsoid(a.child(0), info[ELL], 1 / Math.sqrt(variables.defaultUiso));
-					renderArrow(a.child(1), info[MAG], momentMultiplier, variables.angstromsPerMagneton);
-					renderArrow(a.child(2), info[ROT], rotationMultiplier, variables.angstromsPerRadian);
+					renderArrow(a.child(MAG - 2), info[MAG], momentMultiplier, variables.angstromsPerMagneton);
+					renderEllipsoid(a.child(ELL - 2), info[ELL], 1 / Math.sqrt(variables.defaultUiso));
+					renderArrow(a.child(ROT - 2), info[ROT], rotationMultiplier, variables.angstromsPerRadian);
 				}
 			}
 			double r;
@@ -699,58 +699,57 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		switch (e.getKeyChar()) {
 		case 'r':
 		case 'R':
-			rp.clearAngles();
-			animPhase = Math.PI / 2;
-			animAmp = 1;
-			variables.resetSliders();
-			variables.readSliders();
-			variables.recalcDistortion();
-			showAtoms = showAtoms0;
-			aBox.setSelected(showAtoms);
-			showBonds = showBonds0;
-			bBox.setSelected(showBonds);
-			showCells = showCells0;
-			cBox.setSelected(showCells);
-			showAxes = showAxes0;
-			axesBox.setSelected(showAxes);
-			animBox.setSelected(false);
-			spinBox.setSelected(false);
-			colorBox.setSelected(false);
-			nButton.setSelected(true);
-			uView.setText("0");
-			vView.setText("0");
-			wView.setText("1");
-			superHKL.setSelected(true);
-
-			rp.resetView();
-			variables.selectAllSubtypes(false);
-			centerImage();
-			break;
-		case 'z':
-		case 'Z':
-			variables.zeroSliders();
-			break;
-		case 'i':
-		case 'I':
-			variables.resetSliders();
-			break;
-		case 's':
-		case 'S':
-			variables.toggleIrrepSliders();
+			reset();
 			break;
 		case 'n':
 		case 'N':
-			rp.invert();
+			// BH Q: Why would one ever want to do this?
+			rp.reversePanningAction();
+			updateDisplay();
 			break;
 		case 'c':
 		case 'C':
 			centerImage();
+			updateDisplay();
 			break;
+			default:
+				variables.keyTyped(e);
+				break;
 		}
+	}
+
+	@Override
+	public void reset() {
+		rp.clearAngles();
+		animPhase = Math.PI / 2;
+		animAmp = 1;
+		variables.resetSliders();
+		variables.readSliders();
+		variables.recalcDistortion();
+		showAtoms = showAtoms0;
+		aBox.setSelected(showAtoms);
+		showBonds = showBonds0;
+		bBox.setSelected(showBonds);
+		showCells = showCells0;
+		cBox.setSelected(showCells);
+		showAxes = showAxes0;
+		axesBox.setSelected(showAxes);
+		animBox.setSelected(false);
+		spinBox.setSelected(false);
+		colorBox.setSelected(false);
+		nButton.setSelected(true);
+		uView.setText("0");
+		vView.setText("0");
+		wView.setText("1");
+		superHKL.setSelected(true);
+		rp.resetView();
+		variables.selectAllSubtypes(false);
+		centerImage();
 		updateDisplay();
 	}
 
-	private void centerImage() {
+	@Override
+	public void centerImage() {
 		rp.clearOffsets();
 		rp.push();
 		{

@@ -57,7 +57,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".8_2023.12.27";
+	final static String minorVersion = ".9_2023.12.28";
 
 	
 	/**
@@ -279,6 +279,17 @@ public abstract class IsoApp {
 	 * Something has changed.
 	 */
 	abstract public void updateDisplay();
+
+	/**
+	 * Center structure in window.
+	 */
+	abstract public void centerImage();
+
+	/**
+	 * Reset View.
+	 */
+	abstract public void reset();
+
 
 	/**
 	 * The "Apply View" action.
@@ -945,5 +956,6 @@ public abstract class IsoApp {
 	public boolean isStatusVisible() {
 		return statusPanel.isVisible();
 	}
+
 
 }

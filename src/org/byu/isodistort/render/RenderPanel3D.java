@@ -658,7 +658,7 @@ public class RenderPanel3D extends JPanel {
 		return new Material(renderer);
 	}
 
-	public void invert() {
+	public void reversePanningAction() {
 		invert = -invert;
 	}
 

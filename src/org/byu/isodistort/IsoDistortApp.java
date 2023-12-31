@@ -622,7 +622,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		/**
 		 * variables for viewer computation
 		 */
-		double xV = 0, yV = 0, zV = 0, tX, tY;
 		/**
 		 * Temporary 3x3 matrix
 		 */
@@ -665,11 +664,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		double l2 = MathUtil.lenSq3(viewDir);
 		if (l2 > 0.000000000001) {
 			MathUtil.scale3(viewDir, 1 / Math.sqrt(l2));
-			xV = viewDir[0];
-			yV = viewDir[1];
-			zV = viewDir[2];
-			tX = Math.asin(yV);
-			tY = (Math.abs(Math.cos(tX)) < 0.000001 ? 0
+			double xV = viewDir[0];
+			double yV = viewDir[1];
+			double zV = viewDir[2];
+			double tX = Math.asin(yV);
+			double tY = (Math.abs(Math.cos(tX)) < 0.000001 ? 0
 					: Math.abs(zV) < 0.000001 ? -Math.PI / 2 * (xV / Math.abs(xV)) : -Math.atan2(xV, zV));
 			rp.clearAngles();
 			rp.setCamera(tY, tX);

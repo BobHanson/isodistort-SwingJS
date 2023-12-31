@@ -5,9 +5,9 @@ import java.util.Random;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JSlider;
 
 import org.byu.isodistort.local.Variables.Atom;
+import org.byu.isodistort.local.Variables.VariableGUI.IsoSlider;
 
 /**
  * A class to hold the arrays relating to individual types of symmetry modes,
@@ -71,14 +71,9 @@ class Mode {
 	double[][] maxAmpTM;
 	int[][] irrepTM;
 	String[][] nameTM;
-	JSlider[][] sliderTM;
-	JLabel[][] sliderLabelsTM;
-	double[][] sliderValsTM;
-
-	/**
-	 * name of the box on the HTML page; for example, m003001 for DIS t=1,m=1
-	 */
-	String[][] htmlNameTM;
+	IsoSlider[][] sliderTM;
+	JLabel[][] sliderLabelTM;
+	double[][] sliderValTM;
 
 	private double[][] savedSliderValues;
 
@@ -145,7 +140,6 @@ class Mode {
 		this.count = count;
 		this.modesPerType = perType;
 
-		htmlNameTM = new String[numTypes][];
 		nameTM = new String[numTypes][];
 		initAmpTM = new double[numTypes][];
 		maxAmpTM = new double[numTypes][];
@@ -192,7 +186,7 @@ class Mode {
 	 * @param tempmat
 	 */
 	void calcDistortion(Variables v, double[][][] max, double[] tempvec, double[][] tempmat) {
-		double[] irrepVals = (v.modes[IRREP] == null ? null : v.modes[IRREP].sliderValsTM[0]);
+		double[] irrepVals = (v.modes[IRREP] == null ? null : v.modes[IRREP].sliderValTM[0]);
 		double superVal = v.superSliderVal;
 		for (int ia = 0, n = v.numAtoms; ia < n; ia++) {
 			Atom a = v.atoms[ia];
@@ -202,7 +196,7 @@ class Mode {
 			if (isActive()) {
 				// accumulate distortion deltas
 				for (int m = 0; m < modesPerType[t]; m++) {
-					double d = irrepVals[irrepTM[t][m]] * sliderValsTM[t][m] * superVal;
+					double d = irrepVals[irrepTM[t][m]] * sliderValTM[t][m] * superVal;
 					MathUtil.vecaddN(delta, d, a.modes[type][m], delta);
 				}
 			}
@@ -259,7 +253,7 @@ class Mode {
 		}
 		for (int t = 0; t < numTypes; t++) {
 			for (int m = 0; m < modesPerType[t]; m++) {
-				savedSliderValues[t][m] = sliderValsTM[t][m];
+				savedSliderValues[t][m] = sliderValTM[t][m];
 			}
 		}
 	}
@@ -278,9 +272,9 @@ class Mode {
 				String name = nameTM[t][m];
 				boolean isGM1 = (name.startsWith("GM1") && !name.startsWith("GM1-"));
 				if (isGM1 == isGM) {
-					sliderValsTM[t][m] = (2 * rval.nextFloat() - 1) * maxAmpTM[t][m];
+					sliderValTM[t][m] = (2 * rval.nextFloat() - 1) * maxAmpTM[t][m];
 				} else if (isGM) {
-					sliderValsTM[t][m] = 0;
+					sliderValTM[t][m] = 0;
 				}
 			}
 		}
@@ -295,7 +289,7 @@ class Mode {
 			return;
 		for (int t = 0; t < numTypes; t++) {
 			for (int m = 0; m < modesPerType[t]; m++) {
-				sliderValsTM[t][m] = savedSliderValues[t][m];
+				sliderValTM[t][m] = savedSliderValues[t][m];
 			}
 		}
 	}
@@ -310,8 +304,8 @@ class Mode {
 			Color c = colorT[t];
 			typePanels[t].setBackground(c);
 			for (int m = 0; m < modesPerType[t]; m++) {
-				sliderLabelsTM[t][m].setBackground(c);
-				sliderTM[t][m].setBackground(c);
+				sliderLabelTM[t][m].setBackground(c);
+//				sliderTM[t][m].setBackground(c);
 			}
 		}
 	}
@@ -378,9 +372,24 @@ class Mode {
 		int n = (isAtomic ? numTypes : 1);
 		for (int t = 0; t < n; t++) {
 			for (int m = 0; m < modesPerType[t]; m++) {
-				sliderValsTM[t][m] = maxAmpTM[t][m] * (sliderTM[t][m].getValue() / sliderMaxVal);
-				double d = sliderValsTM[t][m] * (isIrrep ? 1 : irreps.sliderValsTM[0][irrepTM[t][m]]) * superSliderVal;
-				sliderLabelsTM[t][m].setText(MathUtil.varToString(d, prec, -8) + "  " + nameTM[t][m]);
+				double sval = sliderTM[t][m].getValue();
+				double f = sval / sliderMaxVal;
+				double max = maxAmpTM[t][m];
+				sliderValTM[t][m] = max * f;
+				double val = sliderValTM[t][m];
+				double irval = (isIrrep ? 1 : irreps.sliderValTM[0][irrepTM[t][m]]);
+				double d = val * irval * superSliderVal;
+				sliderLabelTM[t][m].setText(MathUtil.varToString(d, prec, -8) + "  " + nameTM[t][m]);
+				if (!isIrrep) {
+//					System.out.println("mode " + type + " " + sliderTM[t][m].getName() 
+//							+ " d=" + d
+//							+ " f=" + f
+//							+ " sval=" + sval
+//							+ " val=" + val
+//							+ " irval=" + irval
+//							);
+					sliderTM[t][m].setPointer(d / max);
+				}
 			}
 		}
 	}
@@ -406,6 +415,9 @@ class Mode {
 	 */
 	void setColors(int[] atomTypeUnique, int numUniques) {
 		float brightness;
+		if (colorT == null) {
+			colorT = new Color[numTypes];
+		}
 		switch (type) {
 		default:
 		case DIS:
@@ -430,9 +442,6 @@ class Mode {
 			colorT[0] = Color.LIGHT_GRAY;
 			return;
 		}
-		if (colorT == null) {
-			colorT = new Color[numTypes];
-		}
 		boolean simpleColor = (atomTypeUnique != null);
 		for (int t = 0; t < numTypes; t++) {
 			float k = (simpleColor ? 1f * atomTypeUnique[t] / numUniques : 1f * t / numTypes);
@@ -448,8 +457,8 @@ class Mode {
 	 * @return the Voigt strain tensor plus Identity
 	 */
 	double[][] getVoigtStrainTensor(double superSliderVal, Mode irreps) {
-		double[] irrepVals = irreps.sliderValsTM[0];
-		double[] mySliderVals = sliderValsTM[0];
+		double[] irrepVals = irreps.sliderValTM[0];
+		double[] mySliderVals = sliderValTM[0];
 		int[] myIrreps = irrepTM[0];
 		double[] v = new double[6];
 		for (int n = 0; n < 6; n++) {

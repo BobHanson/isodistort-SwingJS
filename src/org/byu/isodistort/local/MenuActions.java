@@ -471,6 +471,22 @@ public class MenuActions {
 					}
 				});
 
+		actions.put("Help.isotropy",
+				new IsoAction("helpIsotropy", "About ISOTROPY", null, 0) {
+					@Override
+					public void actionPerformed(ActionEvent e) {	
+						FileUtil.openURL(app, "https://isotest.byu.edu/iso/isotropy.php");
+					}
+				});
+
+		actions.put("Help.swingjs",
+				new IsoAction("helpSwingjs", "About java2script/SwingJS", null, 0) {
+					@Override
+					public void actionPerformed(ActionEvent e) {	
+						FileUtil.openURL(app, "https://github.com/BobHanson/java2script");
+					}
+				});
+
 		actions.put("Set.center",
 				new IsoAction("setCenter", "Center Structure", "Center the strucure in the window.", 0) {
 					@Override
@@ -481,7 +497,7 @@ public class MenuActions {
 
 
 		actions.put("Set.zero",
-				new IsoAction("setZero", "Set Variables to 0", "Set the sliders to their 0 'parent' positions.", KeyEvent.VK_V) {
+				new IsoAction("setZero", "Set Variables to 0", "Set the sliders to their 0 'parent' positions.", KeyEvent.VK_Z) {
 					@Override
 					public void actionPerformed(ActionEvent e) {	
 						app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 'z', 0));
@@ -499,8 +515,9 @@ public class MenuActions {
 		actions.put("Set.resetVariables",
 				new IsoAction("setResetVariables", "Reset Variables", "Reset the sliders to their original 'child' positions.", KeyEvent.VK_I) {
 					@Override
-					public void actionPerformed(ActionEvent e) {	
-						app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 'i', 0));					}
+					public void actionPerformed(ActionEvent e) {
+						app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 'i', 0));
+					}
 				});
 
 		actions.put("Set.toggle",

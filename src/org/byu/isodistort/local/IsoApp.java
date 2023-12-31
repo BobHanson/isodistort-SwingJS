@@ -57,7 +57,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".9_2023.12.28";
+	final static String minorVersion = ".9_2023.12.30";
 
 	
 	/**
@@ -569,6 +569,7 @@ public abstract class IsoApp {
 			JFrame frame = me.frame;
 			dispose();
 			app.start(frame, args, variables, isDrop);
+			app.actions = actions.setApp(app);
 			if (isDrop) {
 				clearSettingsForFileDrop();
 			} else {
@@ -576,7 +577,6 @@ public abstract class IsoApp {
 				//app.droppedFile = droppedFile;
 				app.document = document;
 				app.formData = formData;
-				app.actions = actions.setApp(app);
 				app.distortionFileData = distortionFileData;
 				app.variables.setValuesFrom(variables);
 				app.setControlsFrom((IsoApp) appSettings[app.appType]);
@@ -694,6 +694,8 @@ public abstract class IsoApp {
 			frame.addComponentListener(componentListener);
 			frame.addWindowListener(windowListener);
 			addStatus("Time to load: " + (System.currentTimeMillis() - t) + " ms");
+			if (isDrop)
+				updateDisplay();
 		} catch (Throwable e) {
 			JOptionPane.showMessageDialog(frame, "Error reading input data " + e.getMessage());
 			e.printStackTrace();

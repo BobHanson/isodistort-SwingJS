@@ -450,48 +450,66 @@ public class MathUtil {
 		}
 	}
 
-	private final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
-
-	static void recalculateLattice(double[] lattice, double[][] pBasisCart) {
-		double[][] pBasisCartTranspose = new double[3][3];
-		MathUtil.mat3transpose(pBasisCart, pBasisCartTranspose);
-		lattice[A] = Math.sqrt(MathUtil.dot3(pBasisCartTranspose[A], pBasisCartTranspose[A]));
-		lattice[B] = Math.sqrt(MathUtil.dot3(pBasisCartTranspose[B], pBasisCartTranspose[B]));
-		lattice[C] = Math.sqrt(MathUtil.dot3(pBasisCartTranspose[C], pBasisCartTranspose[C]));
-		lattice[ALPHA] = Math.acos(
-				MathUtil.dot3(pBasisCartTranspose[B], pBasisCartTranspose[C]) / Math.max(lattice[B] * lattice[C], 0.001));
-		lattice[BETA] = Math.acos(
-				MathUtil.dot3(pBasisCartTranspose[A], pBasisCartTranspose[C]) / Math.max(lattice[A] * lattice[C], 0.001));
-		lattice[GAMMA] = Math.acos(
-				MathUtil.dot3(pBasisCartTranspose[A], pBasisCartTranspose[B]) / Math.max(lattice[A] * lattice[B], 0.001));
-		
-
-	}
-
-	private static final String ZEROES = "000000000000";
-	private static final String BLANKS = "            ";
-
-	public static String varToString(double val, int n, int w) {
+	/**
+	 * Round to the specified number of decimal places, right-filling with zeros if
+	 * necessary, and then also left- or right-align within the given width with
+	 * spaces, if necessary.
+	 * 
+	 * 
+	 * @param val
+	 * @param nDec number of post-decimal values
+	 * @param w    width; 0 for no spaces, positive for right-alignment, negative
+	 *             for left-alignment, from -12 to 12
+	 * @return aligned and rounded value
+	 */
+	public static String varToString(double val, int nDec, int w) {
 		// rounding
 		boolean leftAlign = (w < 0);
-		w = Math.abs(w);		
-		double incr = 0.5;
-		for (int j = n; j > 0; j--)
-			incr /= 10;
-		val = (Math.abs(val) <= 0.00001 ? 0 : val + incr * (val / Math.abs(val)));
+		w = Math.min(Math.abs(w), 12);		
+		val = Math.round (val / decimalScale[nDec]) * decimalScale[nDec];
 		String s = Double.toString(val);
-		int n1 = s.indexOf('.');
-		int n2 = s.length() - n1 - 1;
-		if (n > n2) {
-			s += ZEROES.substring(0, n - n2);
-		} else if (n2 > n) {
-			s = s.substring(0, n1 + n + 1);	
+		// ---0.234; len = 5, nInt = 2, nFrac = 3
+		int nInt = s.indexOf('.') + 1;  // includes decimal point
+		int nFrac = s.length() - nInt;
+		if (nDec > nFrac) {
+			// right-pad with zeros
+			s += "000000000000".substring(0, nDec - nFrac);
+		} else if (nFrac > nDec) {
+			// 0.12345678 rounded already
+			s = s.substring(0, nInt + nDec);	
 		}		
 		if (w > s.length()) {
-			String b = BLANKS.substring(0, w - s.length());
+			String b = "            ".substring(0, w - s.length());
 			s = (leftAlign ? s + b : b + s);
 		}
 		return s;
+	}
+
+	final static double[] decimalScale = { //
+			1., //
+			0.1, //
+			0.01, //
+			0.001, //
+			0.0001, //
+			0.00001, //
+			0.000001, //
+			0.0000001, //
+			0.00000001, //
+			0.000000001, //
+			0.0000000001, //
+			0.00000000001, //
+			0.000000000001, //
+			0.0000000000001, //
+			0.00000000000001, //
+			0.000000000000001, //
+	};
+
+
+	static {
+		for (int n = 0; n < 6; n++) {
+			System.out.println(">" + varToString(-0.12345678, n, -8) + "<");
+		}
+		System.out.println("XI");
 	}
 
 	public static void copy3(double[] src, double[] dest) {

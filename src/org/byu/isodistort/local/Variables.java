@@ -3,6 +3,7 @@ package org.byu.isodistort.local;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
 import java.util.BitSet;
@@ -37,6 +38,28 @@ public class Variables {
 	private final static int MODE_COUNT = Mode.MODE_COUNT;
 
 	public final static int RX = 3, RY = 4, L_2 = 5;
+
+	/**
+	 * BH added -- allows showing of zero-value and IRREP-adjusted slider pointers
+	 */
+	final static boolean showSliderPointers = true;
+	/**
+	 * Maximum slider bar value. The slider bar only takes integer values. So the
+	 * sliderMax is the number of notches and therefore the precision of the slider
+	 * bar. More notches make for more precise slider movements but slow the
+	 * rendering a lot since it renders at every notch
+	 * 
+	 * BH: changed from 100 to 1000 for precision in pointer positions. 
+	 * Does not seem to negatively impact rendering, as repaint() automatically
+	 * buffers.
+	 * 
+	 */
+	final static int sliderMax = 1000;
+	/**
+	 * double version of sliderMax
+	 */
+	final static double sliderMaxVal = sliderMax;
+
 
 	private IsoApp app;
 
@@ -308,7 +331,7 @@ public class Variables {
 	}
 
 	public void setAnimationAmplitude(double animAmp) {
-		gui.superSlider.setValue((int) Math.round(animAmp * gui.sliderMaxVal));
+		gui.superSlider.setValue((int) Math.round(animAmp * sliderMaxVal));
 	}
 
 	public boolean isSubTypeSelected(int t, int s) {
@@ -344,7 +367,7 @@ public class Variables {
 	}
 
 	public double[] getStrainmodeSliderValues() {
-		return (modes[STRAIN] == null ? new double[0] : modes[STRAIN].sliderValsTM[0]);
+		return (modes[STRAIN] == null ? new double[0] : modes[STRAIN].sliderValTM[0]);
 	}
 
 	public void getColors(int t, double[] rgb) {
@@ -433,12 +456,12 @@ public class Variables {
 				: modes[STRAIN].getVoigtStrainTensor(superSliderVal, modes[IRREP]));
 		MathUtil.mat3product(pStrainPlusIdentity, pBasisCart0, pBasisCart);
 		MathUtil.mat3product(pBasisCart, TmatInverseTranspose, sBasisCart);
-		MathUtil.recalculateLattice(pLatt1, pBasisCart);
+		recalculateLattice(pBasisCart, pLatt1);
 
 		// calculate the strained parent and supercell lattice parameters [a, b, c,
 		// alpha, beta, gamma]
 
-		MathUtil.recalculateLattice(sLatt1, sBasisCart);
+		recalculateLattice(sBasisCart, sLatt1);
 		MathUtil.mat3inverse(sBasisCart, sBasisCartInverse);
 
 		// calculate the parent cell origin in strained cartesian Angtstrom coords
@@ -459,6 +482,22 @@ public class Variables {
 		}
 		recenterLattice();
 		gui.setLattLabels(pLatt1, sLatt1);
+	}
+
+	private final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
+
+	private static void recalculateLattice(double[][] cartBasis, double[] lattice) {
+		double[][] cartTranspose = new double[3][3];
+		MathUtil.mat3transpose(cartBasis, cartTranspose);
+		lattice[A] = Math.sqrt(MathUtil.dot3(cartTranspose[A], cartTranspose[A]));
+		lattice[B] = Math.sqrt(MathUtil.dot3(cartTranspose[B], cartTranspose[B]));
+		lattice[C] = Math.sqrt(MathUtil.dot3(cartTranspose[C], cartTranspose[C]));
+		lattice[ALPHA] = Math.acos(
+				MathUtil.dot3(cartTranspose[B], cartTranspose[C]) / Math.max(lattice[B] * lattice[C], 0.001));
+		lattice[BETA] = Math.acos(
+				MathUtil.dot3(cartTranspose[A], cartTranspose[C]) / Math.max(lattice[A] * lattice[C], 0.001));
+		lattice[GAMMA] = Math.acos(
+				MathUtil.dot3(cartTranspose[A], cartTranspose[B]) / Math.max(lattice[A] * lattice[B], 0.001));
 	}
 
 	private void calculateDistortions() {
@@ -823,7 +862,7 @@ public class Variables {
 		 * @param nAtomsRead
 		 * @param bsPrimitive
 		 */
-		void getAtomsOccMagOld(int mode, int nAtomsRead, BitSet bsPrimitive) {
+		void getAtomsOccMag10Line(int mode, int nAtomsRead, BitSet bsPrimitive) {
 			int ncol = modes[mode].columnCount;
 			int offset = (mode == OCC ? 6 : 7);
 			for (int pt = 0, ia = 0, iread = 0; iread < nAtomsRead; iread++, pt += 10) {
@@ -1144,8 +1183,8 @@ public class Variables {
 
 			if (ncol == 10) {
 				// old format t s a x y z occ mx my mz
-				getAtomsOccMagOld(OCC, numAtomsRead, bsPrimitive);
-				getAtomsOccMagOld(MAG, numAtomsRead, bsPrimitive);
+				getAtomsOccMag10Line(OCC, numAtomsRead, bsPrimitive);
+				getAtomsOccMag10Line(MAG, numAtomsRead, bsPrimitive);
 			} else {
 				getAtomTSAn("atomocclist", OCC, 1.0, numAtomsRead, bsPrimitive);
 				getAtomTSAn("atommaglist", MAG, 0.0, numAtomsRead, bsPrimitive);
@@ -1376,6 +1415,19 @@ public class Variables {
 		private int getAtomModeNumbers(String key, int mode, int[] perType, int ncol, int[][] firstAtomOfType) {
 			int nData = vt.setData(key);
 			// Run through the data once and determine the number of modes
+
+//      !scalarmodelist  			
+//		    1    1   0.00030   2.82843    3 GM1+[Sr:b:occ]A1g(a) 
+//		    1    2   0.00021   2.00000    8 M4+[Sr:b:occ]A1g(a) 
+//		    1    3   0.00022   2.82843    8 M4+[Sr:b:occ]A1g(b) 
+//		    2    1   0.00040   2.82843    3 GM1+[Ti:a:occ]A1g(a) 
+//		    2    2   0.00017   2.82843    7 M1+[Ti:a:occ]A1g(a) 
+//		    3    1   0.00050   4.89898    3 GM1+[O:d:occ]A1g(a) 
+//		    3    2   0.00070   3.46410    4 GM3+[O:d:occ]A1g(a) 
+//		    3    3   0.00018   2.82843    7 M1+[O:d:occ]A1g(a) 
+			
+			// will result in [3, 2, 3]
+			
 			if (nData == 0)
 				return 0;
 			int n = 0;
@@ -1411,8 +1463,10 @@ public class Variables {
 		 */
 		private void getAtomModeData(Mode mode, int[][] firstAtomOfType, int[][] numSubTypeAtomsRead,
 				BitSet bsPrimitive) {
-			// input mode array [atom type][mode number of that type][atom
-			// number of that type][column data]
+
+//          t    m   initAmp   maxAmp  irrep  name
+//		    1    1   0.00030   2.82843    3 GM1+[Sr:b:occ]A1g(a) 
+
 			int type = mode.type;
 			int ncol = mode.columnCount;
 			int[] modeTracker = new int[numTypes];
@@ -1494,7 +1548,7 @@ public class Variables {
 		return -1;
 	}
 
-	private class VariableGUI implements ChangeListener {
+    class VariableGUI {
 
 		private final static int subTypeWidth = 170;
 		private final static int barheight = 22;
@@ -1552,19 +1606,6 @@ public class Variables {
 		 */
 		private JPanel typeDataPanels[];
 
-		/**
-		 * Maximum slider bar value. The slider bar only takes integer values. So the
-		 * sliderMax is the number of notches and therefore the precision of the slider
-		 * bar. More notches make for more precise slider movements but slow the
-		 * rendering a lot since it renders at every notch
-		 * 
-		 */
-		private int sliderMax = 100;
-		/**
-		 * double version of sliderMax
-		 */
-		private double sliderMaxVal = sliderMax;
-
 		private int sliderWidth;
 		private int sliderPanelWidth;
 
@@ -1601,7 +1642,7 @@ public class Variables {
 		}
 
 		void setColors(boolean simpleColor) {
-			for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
+			for (int i = 0; i < MODE_COUNT; i++) {
 				if (isModeActive(modes[i])) {
 					modes[i].setColors(simpleColor ? null : atomTypeUnique, numUniques);
 				}
@@ -1652,7 +1693,7 @@ public class Variables {
 		void readSliders() {
 			superSliderVal = superSlider.getValue() / sliderMaxVal;
 			superSliderLabel.setText(MathUtil.varToString(superSliderVal, 2, -6) + " child");
-			for (int i = 0; i < MODE_COUNT; i++) {
+			for (int i = MODE_COUNT; --i >= 0;) {
 				if (isModeActive(modes[i]))
 					modes[i].readSlider(superSliderVal, sliderMaxVal, modes[IRREP]);
 			}
@@ -1694,7 +1735,7 @@ public class Variables {
 			superSliderLabel.setForeground(Color.BLACK);
 			superSliderLabel.setHorizontalAlignment(JLabel.CENTER);
 			superSliderLabel.setVerticalAlignment(JLabel.CENTER);
-			superSlider = newSlider("child", 0, sliderMax, sliderMax, Color.WHITE);
+			superSlider = new IsoSlider("child", 0, 1, 1, Color.WHITE);
 
 			masterSliderPanel.add(Box.createHorizontalGlue());
 			masterSliderPanel.add(new JLabel("parent "));
@@ -1749,7 +1790,7 @@ public class Variables {
 				tp.setPreferredSize(new Dimension(sliderPanelWidth, (numSubRows[t] + 1) * barheight));
 				sliderPanel.add(tp);
 				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
-					initModeGUI(modes[i], t, sliderPanel);
+					initModeGUI(modes[i], t);
 				}
 
 			}
@@ -1778,7 +1819,7 @@ public class Variables {
 			for (int n = 0; n < 6; n++)
 				strainDataPanel.add(sLattLabel[n]);
 			sliderPanel.add(strainDataPanel);
-			initNonAtomGUI(modes[STRAIN], c);
+			initModeGUI(modes[STRAIN], 0);
 
 			c = Color.LIGHT_GRAY;
 			JLabel irrepTitle = newLabel("Single-Irrep Master Amplitudes", sliderPanelWidth, Color.LIGHT_GRAY,
@@ -1788,7 +1829,7 @@ public class Variables {
 			irrepTitlePanel.setBackground(c);
 			irrepTitlePanel.add(irrepTitle);
 			sliderPanel.add(irrepTitlePanel);
-			initNonAtomGUI(modes[IRREP], c);
+			initModeGUI(modes[IRREP], 0);
 		}
 
 		/**
@@ -1848,15 +1889,89 @@ public class Variables {
 			return b;
 		}
 
-		private JSlider newSlider(String name, int min, int max, int val, Color c) {
-			JSlider s = new JSlider(JSlider.HORIZONTAL, min, max, val);
-			s.setName(name);
-			s.setPreferredSize(new Dimension(sliderWidth, barheight));
-			if (c != null)
-				s.setBackground(c);
-			s.addChangeListener(this);
-			s.setFocusable(false);
-			return s;
+		final Font pointerFont = new Font(Font.SANS_SERIF, Font.PLAIN, 8);
+		
+		class IsoSlider extends JSlider implements ChangeListener {
+
+			private int min; // 0 or -SliderMax
+			
+			private double initAmp, maxAmp;
+			
+			JLabel pointer, pointer0, pointer1;
+			public IsoSlider(String name, int min, double initAmp, double maxAmp, Color c) {
+				super(JSlider.HORIZONTAL, min, sliderMax,(int) (initAmp / maxAmp * sliderMax));
+				setName(name);
+				setPreferredSize(new Dimension(sliderWidth, barheight));
+				if (min != 0 && showSliderPointers) {
+					this.min = min;
+					this.initAmp = initAmp;
+					this.maxAmp = maxAmp;
+					// Note that JavaDoc with @j2sNative inserts JavaScript. 
+					boolean isJS = (/** @j2sNative 1 ? true : */false);
+					// In JavaScript this will be (1 ? true : false) -- evaluating to true,  
+					// while in Java it will read (false). Cool, huh??
+					if (isJS) {
+						// This check is required because for overlapping components
+						// JavaScript paints them first to last CREATED, 
+						// while Java paints them last to first PAINTED.
+						// This is not something that can be fixed in SwingJS.
+
+						pointer1 = getPointer(Color.BLACK);
+						pointer0 = getPointer(Color.ORANGE);
+						pointer = getPointer(Color.WHITE);						
+					} else {
+						pointer = getPointer(Color.WHITE);
+						pointer0 = getPointer(Color.ORANGE);
+						pointer1 = getPointer(Color.BLACK);
+					}
+				}
+				if (c != null)
+					setBackground(c);
+				addChangeListener(this);
+				setFocusable(false);
+			}
+
+			private JLabel getPointer(Color c) {
+				JLabel p = new JLabel("\u25B2");
+				p.setFont(pointerFont);
+				p.setBorder(new EmptyBorder(-2, -2, 0, -2));
+				p.setForeground(c);
+				add(p);
+				return p;
+			}
+
+			public void setPointer(double d) {
+				if (pointer == null)
+					return;
+				// slight adjustments for JavaScript Look and Feel
+				// maybe for MacOS as well?
+				double w = getWidth() - (/** @j2sNative 1 ? 20 : */
+				15);
+				int off = (/** @j2sNative 1 ? 8 : */6);
+				int x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
+				pointer.setBounds(x + off, 12, 6, 8);
+				x = (int) (0.5 * w);
+				pointer0.setBounds(x + off, 12, 6, 8);
+				d = initAmp / maxAmp;
+				x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
+				pointer1.setBounds(x + off, 12, 6, 8);
+//				pointer.repaint();
+			}
+
+			/**
+			 * Listens for moving slider bars. called when a slider bar is moved.
+			 * 
+			 * 
+			 */
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				if (isAdjusting)
+					return;
+				isChanged = true;
+				app.updateDisplay();
+//				sliderPanel.repaint();
+			}
+
 		}
 
 		/**
@@ -1864,78 +1979,54 @@ public class Variables {
 		 * 
 		 * @param mode
 		 * @param t
-		 * @param sliderPanel
 		 * 
 		 */
-		private void initModeGUI(Mode mode, int t, JPanel sliderPanel) {
+		private void initModeGUI(Mode mode, int t) {
 			if (!isModeActive(mode))
 				return;
 			if (t == 0) {
+				int numTypes = mode.numTypes;
 				mode.typePanels = new JPanel[numTypes];
-				mode.sliderTM = new JSlider[numTypes][];
-				mode.sliderLabelsTM = new JLabel[numTypes][];
-				mode.sliderValsTM = new double[numTypes][];
+				mode.sliderTM = new IsoSlider[numTypes][];
+				mode.sliderLabelTM = new JLabel[numTypes][];
+				mode.sliderValTM = new double[numTypes][];
 			}
 			Color c = (mode.colorT == null ? Color.PINK : mode.colorT[t]);
+			int min = (mode.type == IRREP ? 0 : -sliderMax);
 			int nModes = mode.modesPerType[t];
-			mode.sliderTM[t] = new JSlider[nModes];
-			mode.sliderLabelsTM[t] = new JLabel[nModes];
-			mode.sliderValsTM[t] = new double[nModes];
-			mode.typePanels[t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
-			mode.typePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, mode.modesPerType[t] * barheight));
-			mode.typePanels[t].setBackground(c);
+			mode.sliderTM[t] = new IsoSlider[nModes];
+			mode.sliderLabelTM[t] = new JLabel[nModes];
+			mode.sliderValTM[t] = new double[nModes];
+			JPanel tp = mode.typePanels[t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
+			tp.setPreferredSize(new Dimension(sliderPanelWidth, mode.modesPerType[t] * barheight));
+			tp.setBackground(c);
 			for (int m = 0; m < nModes; m++) {
-				mode.sliderLabelsTM[t][m] = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
-				mode.sliderTM[t][m] = newSlider("mode[" + mode.type + "]" + t + "_" + m, -(int) sliderMax,
-						(int) sliderMax, (int) ((mode.initAmpTM[t][m] / mode.maxAmpTM[t][m]) * sliderMax), c);
-				mode.typePanels[t].add(mode.sliderTM[t][m]);
-				mode.typePanels[t].add(mode.sliderLabelsTM[t][m]);
+				mode.sliderTM[t][m] = new IsoSlider(getInputName(mode.type, t, m), min,
+						mode.initAmpTM[t][m], mode.maxAmpTM[t][m], c);
+				mode.sliderLabelTM[t][m] = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
+				tp.add(mode.sliderTM[t][m]);
+				tp.add(mode.sliderLabelTM[t][m]);
 			}
-			if (sliderPanel != null)
-				sliderPanel.add(mode.typePanels[t]);
-
+			sliderPanel.add(tp);
 		}
 
-		/**
-		 * Set up the strain and irreducible representation panels.
-		 * 
-		 * @param mode
-		 * @param c
-		 * 
-		 */
-		private void initNonAtomGUI(Mode mode, Color c) {
-			if (mode == null)
-				return;
-			initModeGUI(mode, 0, null);
-			int min = (mode.type == STRAIN ? -(int) sliderMax : 0);
-			mode.typePanels[0] = new JPanel(new GridLayout(mode.count, 2, 0, 0));
-			mode.typePanels[0].setPreferredSize(new Dimension(sliderPanelWidth, mode.count * barheight));
-			mode.typePanels[0].setBackground(c);
-			mode.sliderTM = new JSlider[1][mode.count];
-			mode.sliderLabelsTM[0] = new JLabel[mode.count];
-			mode.sliderValsTM[0] = new double[mode.count];
-			for (int m = 0; m < mode.count; m++) {
-				mode.sliderLabelsTM[0][m] = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
-				mode.sliderTM[0][m] = newSlider("mode[" + mode.type + "]" + m, min, (int) sliderMax,
-						(int) ((mode.initAmpTM[0][m] / mode.maxAmpTM[0][m]) * sliderMax), c);
-				mode.typePanels[0].add(mode.sliderTM[0][m]);
-				mode.typePanels[0].add(mode.sliderLabelsTM[0][m]);
-				sliderPanel.add(mode.typePanels[0]);
-			}
-		}
-
-		/**
-		 * Listens for moving slider bars. called when a slider bar is moved.
-		 * 
-		 * 
-		 */
-		@Override
-		public void stateChanged(ChangeEvent e) {
-			if (isAdjusting)
-				return;
-			isChanged = true;
-			app.updateDisplay();
-		}
+//		/**
+//		 * Set up the strain and irreducible representation panels.
+//		 * 
+//		 * @param mode
+//		 * @param c
+//		 * 
+//		 */
+//		private void initNonAtomGUI(Mode mode, Color c) {
+//			if (!isModeActive(mode))
+//				return;
+//			int min = (mode.type == STRAIN ? -(int) sliderMax : 0);
+//			int nModes = mode.count;
+//			mode.sliderTM = new JSlider[1][nModes];
+//			initModeGUI(mode, 0, null);
+//			addTypeModes(sliderPanel, mode, 0, c, min);
+//		}
+//
 
 		void setLattLabels(double[] pLatt, double[] sLatt) {
 			// set the parent and supercell lattice parameter labels
@@ -1956,9 +2047,9 @@ public class Variables {
 		 * 
 		 */
 		void setSubTypeText(int t, int s, double[] max) {
-			subTypeLabels[t][s].setText(" " + subTypeName[t][s] + "  [" + MathUtil.varToString(max[DIS], 2, -4) + ", "
-					+ MathUtil.varToString(max[OCC], 2, -4) + ", " + MathUtil.varToString(max[MAG], 2, -4) + ", "
-					+ MathUtil.varToString(max[ROT], 2, -4) + "]");
+			subTypeLabels[t][s].setText(" " + subTypeName[t][s] + "  [" + MathUtil.varToString(max[DIS], 2, 0) + ", "
+					+ MathUtil.varToString(max[OCC], 2, 0) + ", " + MathUtil.varToString(max[MAG], 2, 0) + ", "
+					+ MathUtil.varToString(max[ROT], 2, 0) + "]");
 		}
 
 		public void keyTyped(KeyEvent e) {
@@ -1991,20 +2082,84 @@ public class Variables {
 
 		// working here
 
-		Object val;
-		if (isModeActive(modes[STRAIN])) {
-			val = mapFormData.get("strain1");
-			if (val != null)
-				mapFormData.put("strain1", modes[STRAIN].sliderValsTM[0][0]);
-			val = mapFormData.get("strain2");
-			if (val != null)
-				mapFormData.put("strain2", modes[STRAIN].sliderValsTM[0][1]);
+		for (int mode = 0; mode < MODE_ATOMIC_COUNT; mode++) {
+			if (isModeActive(modes[mode])) {
+				double[][] vals = modes[mode].sliderValTM;
+				for (int t = vals.length; --t >= 0;) {
+					for (int m = vals[t].length; --m >= 0;) {
+						String name = getInputName(mode, t, m);
+						setFormValue(name, vals[t][m], mapFormData, document);
+					}
+				}
+			}
 		}
-		// now what about mode00t00m ? Need examples.
-
-		// also change in document?
-
+		if (isModeActive(modes[STRAIN])) {
+			double[] vals = modes[STRAIN].sliderValTM[0];
+			for (int m = vals.length; --m >= 0;) {
+				String name = getInputName(STRAIN, 0, m);
+				setFormValue(name, vals[m], mapFormData, document);
+			}
+		}
 	}
+
+	/**
+	 * Set the form value as currently specified. 
+	 * 
+	 * @param name
+	 * @param val
+	 * @param mapFormData
+	 * @param document
+	 */
+    private void setFormValue(String name, double val, Map<String, Object> mapFormData, Object document) {
+    	String err = null;
+		if (mapFormData.containsValue(name)) {
+			String s = MathUtil.varToString(val, 5, 0);
+			mapFormData.put(name, s);
+			/**
+			 * @j2sNative
+			 *   var d = document.getElementsByTagName(name)[0];
+			 *   if (d) {
+			 *     d.value = s;
+			 *   } else {
+			 *     err= "Variable " + name + " was not found in the document";
+			 *   }
+			 */
+		} else {
+			err = "Variable " + name + " was not found in form data";
+		}
+		if (err != null)
+			app.addStatus(err);
+	}
+
+	static String getInputName(int type, int t, int m) {
+		String sm = "000" + (m + 1);
+		String st = "000" + (t + 1);
+		String name = "";
+		switch (type) {
+		case DIS:
+			name = "mode";
+			break;
+		case OCC:
+			name = "scalar";
+			break;
+		case MAG:
+			name = "magmode";
+			break;
+		case ROT:
+			name = "rotmode";
+			break;
+		case ELL:
+			name = "ellipmode"; // BH guessing here
+			break;
+		case STRAIN:
+			return "strain" + m;
+		case IRREP:
+			return "irrep" + m;
+		}
+		name += st.substring(st.length() - 3) +  sm.substring(sm.length() - 3);
+		return name;
+	}
+
 
 	public boolean isModeActive(Mode mode) {
 		return (mode != null && mode.isActive());

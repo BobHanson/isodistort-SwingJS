@@ -471,16 +471,33 @@ public class MenuActions {
 					}
 				});
 
-		actions.put("Help.isotropy",
-				new IsoAction("helpIsotropy", "About ISOTROPY", null, 0) {
+		actions.put("Help.isodistortHome",
+				new IsoAction("helpIsodistortHome", "ISODISTORT Home Page", "Show the ISODISTORT Home Page", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {	
-						FileUtil.openURL(app, "https://isotest.byu.edu/iso/isotropy.php");
+						FileUtil.openURL(app, "https://iso.byu.edu/iso/isodistort.php");
+					}
+				});
+		
+		actions.put("Help.isodistortHelp",
+				new IsoAction("helpIsodistortHelp", "ISODISTORT Help", "Show the ISODISTORT Help page", 0) {
+					@Override
+					public void actionPerformed(ActionEvent e) {	
+						FileUtil.openURL(app, "https://stokes.byu.edu/iso/isodistorthelp.php");
 					}
 				});
 
+		
+		actions.put("Help.isotropyHome",
+				new IsoAction("helpIsotropyHome", "ISOTROPY Software Suite Home Page", "Show the ISOTROPY home page", 0) {
+					@Override
+					public void actionPerformed(ActionEvent e) {	
+						FileUtil.openURL(app, "https://iso.byu.edu/iso/isotropy.php");
+					}
+				});
+		
 		actions.put("Help.swingjs",
-				new IsoAction("helpSwingjs", "About java2script/SwingJS", null, 0) {
+				new IsoAction("helpSwingjs", "About java2script/SwingJS", "Go to the java2script/SwingJS GitHub page", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {	
 						FileUtil.openURL(app, "https://github.com/BobHanson/java2script");

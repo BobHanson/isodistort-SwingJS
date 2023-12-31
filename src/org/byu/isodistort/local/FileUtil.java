@@ -10,6 +10,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
@@ -278,5 +280,26 @@ public class FileUtil {
 			}
 			return null;
 		}
+
+	public static void openURL(IsoApp app, String surl) {
+		try {
+			/**
+			 * @j2sNative
+			 * 
+			 * 			window.open(surl, "_blank");
+			 */
+			{
+				Class<?> c = Class.forName("java.awt.Desktop");
+				Method getDesktop = c.getMethod("getDesktop", new Class[] {});
+				Object deskTop = getDesktop.invoke(null, new Object[] {});
+				Method browse = c.getMethod("browse", new Class[] { URI.class });
+				Object arguments[] = { new URI(surl) };
+				browse.invoke(deskTop, arguments);
+			}
+		} catch (Throwable e) {
+			app.addStatus("FileUtil.openURL could not open url " + surl + ": " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
 
 }

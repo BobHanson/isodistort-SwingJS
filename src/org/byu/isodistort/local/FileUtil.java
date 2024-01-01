@@ -27,6 +27,7 @@ public class FileUtil {
 	public final static int FILE_TYPE_UNKNOWN = 0;
 	public final static int FILE_TYPE_DISTORTION = 1;
 	public final static int FILE_TYPE_ISOVIZ = 2;
+	public final static int FILE_TYPE_CIF = 3;
 
 	private static JFileChooser fc;
 

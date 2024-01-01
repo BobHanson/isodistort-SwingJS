@@ -252,7 +252,8 @@ public abstract class IsoApp {
 	
 	/**
 	 * the settings for perspective and sliders used to pass information
-	 * between IsoDistort and IsoDiffract
+	 * between IsoDistort and IsoDiffract; they are reinitialized upon 
+	 * initial file loading or a file drop
 	 * 
 	 */
 	private IsoApp[] appSettings = new IsoApp[2];
@@ -547,13 +548,13 @@ public abstract class IsoApp {
 
 			int appType = isIsoDistort ? APP_ISODISTORT : APP_ISODIFFRACT;
 			new Thread(() -> {
-				openApplication(appType, data, true);
+				openApplication(appType, data, null, true);
 			}, "isodistort_file_dropper").start();
 		}
 
 	}
 
-	private void openApplication(int appType, Object data, boolean isDrop) {
+	private void openApplication(int appType, Object data, Map<String, Object> mapFormData, boolean isDrop) {
 		if (data == null)
 			return;
 		if (!prepareToSwapOut())
@@ -572,6 +573,7 @@ public abstract class IsoApp {
 			app.actions = actions.setApp(app);
 			if (isDrop) {
 				clearSettingsForFileDrop();
+				app.formData = mapFormData;
 			} else {
 				app.appSettings = appSettings;
 				//app.droppedFile = droppedFile;
@@ -741,7 +743,7 @@ public abstract class IsoApp {
 			}
 			if (source == openOther) {
 				preserveAppData();
-				openApplication(appType == APP_ISODISTORT ? APP_ISODIFFRACT : APP_ISODISTORT, isovisData, false);
+				openApplication(appType == APP_ISODISTORT ? APP_ISODIFFRACT : APP_ISODISTORT, isovisData, null, false);
 				return;
 			}
 		}
@@ -774,8 +776,19 @@ public abstract class IsoApp {
 		});
 	}
 
+	public Map<String, Object> getFormData() {
+		return ensureMapData(null, true);
+	}
+	
 	private Map<String, Object> ensureMapData(Object formData, boolean asClone) {
+		if (formData == null)
+			formData = this.formData;
 		Map<String, Object> mapData = ServerUtil.json2Map(formData, asClone);
+		if (mapData == null) {
+			// if all we have is an isoviz file, how can we update it?
+			sayNotPossible("no form data to process; open a DISTORTION file first.");
+			return null;
+		}
 		this.formData = mapData;
 		return mapData;
 	}
@@ -792,8 +805,31 @@ public abstract class IsoApp {
 		sayNotPossible("yet");
 	}
 
-	public void saveCIF() {
-		sayNotPossible("yet");
+	public void saveCIF(Map<String, Object> values) {
+		Map<String, Object> map = getFormData();
+		if (map == null)
+			return;
+		if (values == null) {
+			IsoDialog.openCIFDialog(this, map);
+		} else {
+			// after dialog
+			String sliderSetting = (String) values.remove("slidersetting");
+			map.putAll(values);
+			setFormData(map, sliderSetting);	
+			setServerFormOriginType(map, "structurefile");
+			setStatus("...fetching CIF file from iso.byu...");
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_CIF, map, new Consumer<byte[]>() {
+				@Override
+				public void accept(byte[] b) {
+					if (b == null) {
+						addStatus("upload failed");
+						return;
+					}		
+					FileUtil.saveDataFile(frame, b, "cif", false);
+				}
+			}, 20);
+		}
+
 	}
 
 	public void viewPrimaryOrderParameters() {
@@ -878,7 +914,7 @@ public abstract class IsoApp {
 			public void accept(byte[] data) {
 				setStatus("...opening ISODISTORT for " + data.length + " bytes of data...");
 				new Thread(() -> {
-					openApplication(APP_ISODISTORT, data, true);
+					openApplication(APP_ISODISTORT, data, mapFormData, true);
 				}, "isodistort_from_server").start();
 				
 			}
@@ -891,14 +927,9 @@ public abstract class IsoApp {
 		boolean isSwitch = (formData == null);
 		if (isSwitch)
 			formData = this.formData;
-		//formData = ServerUtil.testFormData;
-		if (formData == null) {
-			// if all we have is an isoviz file, how can we update it?
-			sayNotPossible("no form data to process; open a DISTORTION file first.");
-			return;
-		}
-
 		Map<String, Object> mapData = ensureMapData(formData, isSwitch);
+		if (mapData == null)
+			return;
 		if (isSwitch)
 			variables.updateFormData(mapData, document);
 		setStatus("...fetching ISOVIZ file from iso.byu...");
@@ -957,6 +988,10 @@ public abstract class IsoApp {
 
 	public boolean isStatusVisible() {
 		return statusPanel.isVisible();
+	}
+
+	public void setFormData(Map<String, Object> formData, String sliderSetting) {
+		variables.setFormData(formData, sliderSetting);
 	}
 
 

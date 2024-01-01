@@ -546,7 +546,7 @@ public class Variables {
 		double[] tempvec = new double[3];
 		for (int i = numAtoms; --i >= 0;) {
 			Atom a = atoms[i];
-			MathUtil.mat3mul(sBasisCart, a.vector0[DIS], tempvec);
+			MathUtil.mat3mul(sBasisCart, a.vectorBest[DIS], tempvec);
 			MathUtil.rangeCheck(tempvec, minmax);
 		}
 		for (int i = 0; i < 3; i++)
@@ -598,7 +598,7 @@ public class Variables {
 		 * fractional, untransformed values
 		 * 
 		 */
-		final double[][] vector0 = new double[MODE_COUNT][];
+		final double[][] vectorBest = new double[MODE_COUNT][];
 
 		/**
 		 * the final paramater vector, by mode type; may be of length 1, 3, or 6;
@@ -653,7 +653,7 @@ public class Variables {
 			this.subType = s;
 			this.subTypeIndex = a;
 			this.sym = elementSymbol;
-			vector0[DIS] = coord;
+			vectorBest[DIS] = coord;
 		}
 
 		public double[] getFinalFractionalCoord() {
@@ -665,7 +665,7 @@ public class Variables {
 		}
 
 		public double getInitialOccupancy() {
-			return vector0[OCC][0];
+			return vectorBest[OCC][0];
 		}
 
 		public double getOccupancy() {
@@ -848,7 +848,7 @@ public class Variables {
 			for (int q = 0, ia = 0, iread = 0, n = numAtomsRead; iread < n; iread++, q += ncol) {
 				if (bsPrimitive != null && !bsPrimitive.get(iread))
 					continue;
-				double[] data = atoms[ia++].vector0[mode] = new double[ncol];
+				double[] data = atoms[ia++].vectorBest[mode] = new double[ncol];
 				for (int i = 0; i < ncol; i++)
 					data[i] = (isDefault ? def : vt.getDouble(q + i));
 			}
@@ -868,7 +868,7 @@ public class Variables {
 			for (int pt = 0, ia = 0, iread = 0; iread < nAtomsRead; iread++, pt += 10) {
 				if (bsPrimitive != null && !bsPrimitive.get(iread))
 					continue;
-				double[] data = atoms[ia++].vector0[mode] = new double[ncol];
+				double[] data = atoms[ia++].vectorBest[mode] = new double[ncol];
 				for (int i = 0; i < ncol; i++)
 					data[i] = vt.getDouble(pt + offset + i);
 			}
@@ -1194,7 +1194,7 @@ public class Variables {
 				// default to [0.04 0.04 0.04 0 0 0]
 				double[] def = new double[] { defaultUiso, defaultUiso, defaultUiso, 0, 0, 0 };
 				for (int ia = 0; ia < atoms.length; ia++)
-					atoms[ia].vector0[ELL] = def;
+					atoms[ia].vectorBest[ELL] = def;
 			}
 
 			if (bsPrimitive != null)
@@ -1464,7 +1464,7 @@ public class Variables {
 		private void getAtomModeData(Mode mode, int[][] firstAtomOfType, int[][] numSubTypeAtomsRead,
 				BitSet bsPrimitive) {
 
-//          t    m   initAmp   maxAmp  irrep  name
+//          t    m   calcAmp   maxAmp  irrep  name
 //		    1    1   0.00030   2.82843    3 GM1+[Sr:b:occ]A1g(a) 
 
 			int type = mode.type;
@@ -1477,7 +1477,7 @@ public class Variables {
 				int mt = modeTracker[atomType]++;
 				if (mt + 1 != vt.getInt(pt++))
 					parseError("The modes are not given in ascending order", 2);
-				mode.initAmpTM[atomType][mt] = vt.getDouble(pt++);
+				mode.calcAmpTM[atomType][mt] = vt.getDouble(pt++);
 				mode.maxAmpTM[atomType][mt] = vt.getDouble(pt++);
 				mode.irrepTM[atomType][mt] = vt.getInt(pt++) - 1;
 				mode.nameTM[atomType][mt] = vt.getString(pt++);
@@ -1509,7 +1509,7 @@ public class Variables {
 			for (int m = 0; m < n; m++) {
 				modes[STRAIN].nameTM[0][m] = vt.getString(ncol * m + 4);
 				modes[STRAIN].irrepTM[0][m] = vt.getInt(ncol * m + 3) - 1;
-				modes[STRAIN].initAmpTM[0][m] = vt.getDouble(ncol * m + 1);
+				modes[STRAIN].calcAmpTM[0][m] = vt.getDouble(ncol * m + 1);
 				modes[STRAIN].maxAmpTM[0][m] = vt.getDouble(ncol * m + 2);
 				getDoubleArray(null, modes[STRAIN].vector[m], ncol * m + 5, 6);
 			}
@@ -1895,16 +1895,16 @@ public class Variables {
 
 			private int min; // 0 or -SliderMax
 			
-			private double initAmp, maxAmp;
+			private double calcAmp, maxAmp;
 			
 			JLabel pointer, pointer0, pointer1;
-			public IsoSlider(String name, int min, double initAmp, double maxAmp, Color c) {
-				super(JSlider.HORIZONTAL, min, sliderMax,(int) (initAmp / maxAmp * sliderMax));
+			public IsoSlider(String name, int min, double calcAmp, double maxAmp, Color c) {
+				super(JSlider.HORIZONTAL, min, sliderMax,(int) (calcAmp / maxAmp * sliderMax));
 				setName(name);
 				setPreferredSize(new Dimension(sliderWidth, barheight));
 				if (min != 0 && showSliderPointers) {
 					this.min = min;
-					this.initAmp = initAmp;
+					this.calcAmp = calcAmp;
 					this.maxAmp = maxAmp;
 					// Note that JavaDoc with @j2sNative inserts JavaScript. 
 					boolean isJS = (/** @j2sNative 1 ? true : */false);
@@ -1952,7 +1952,7 @@ public class Variables {
 				pointer.setBounds(x + off, 12, 6, 8);
 				x = (int) (0.5 * w);
 				pointer0.setBounds(x + off, 12, 6, 8);
-				d = initAmp / maxAmp;
+				d = calcAmp / maxAmp;
 				x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
 				pointer1.setBounds(x + off, 12, 6, 8);
 //				pointer.repaint();
@@ -2002,7 +2002,7 @@ public class Variables {
 			tp.setBackground(c);
 			for (int m = 0; m < nModes; m++) {
 				mode.sliderTM[t][m] = new IsoSlider(getInputName(mode.type, t, m), min,
-						mode.initAmpTM[t][m], mode.maxAmpTM[t][m], c);
+						mode.calcAmpTM[t][m], mode.maxAmpTM[t][m], c);
 				mode.sliderLabelTM[t][m] = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
 				tp.add(mode.sliderTM[t][m]);
 				tp.add(mode.sliderLabelTM[t][m]);
@@ -2076,8 +2076,35 @@ public class Variables {
 				app.updateDisplay();
 		}
 
+
 	}
 
+	public void setFormData(Map<String, Object> mapFormData, String sliderSetting) {
+		boolean toZero = "parent".equals(sliderSetting);
+		boolean toBest = "child".equals(sliderSetting);
+		// otherwise current
+		for (int mode = 0; mode < MODE_ATOMIC_COUNT; mode++) {
+			if (isModeActive(modes[mode])) {
+				double[][] vals = modes[mode].sliderValTM;
+				for (int t = vals.length; --t >= 0;) {
+					for (int m = vals[t].length; --m >= 0;) {
+						String name = getInputName(mode, t, m);
+						double d = (toZero ? 0 : toBest ? modes[mode].calcAmpTM[t][m] : vals[t][m]);
+						setFormValue(name, d, mapFormData, null);
+					}
+				}
+			}
+		}
+		if (isModeActive(modes[STRAIN])) {
+			double[] vals = modes[STRAIN].sliderValTM[0];
+			for (int m = vals.length; --m >= 0;) {
+				String name = getInputName(STRAIN, 0, m);
+				double d = (toZero ? 0 : toBest ? modes[STRAIN].calcAmpTM[0][m] : vals[m]);
+				setFormValue(name, d, mapFormData, null);
+			}
+		}
+	}
+	
 	public void updateFormData(Map<String, Object> mapFormData, Object document) {
 
 		// working here
@@ -2112,18 +2139,20 @@ public class Variables {
 	 */
     private void setFormValue(String name, double val, Map<String, Object> mapFormData, Object document) {
     	String err = null;
-		if (mapFormData.containsValue(name)) {
+		if (mapFormData.containsKey(name)) {
 			String s = MathUtil.varToString(val, 5, 0);
 			mapFormData.put(name, s);
-			/**
-			 * @j2sNative
-			 *   var d = document.getElementsByTagName(name)[0];
-			 *   if (d) {
-			 *     d.value = s;
-			 *   } else {
-			 *     err= "Variable " + name + " was not found in the document";
-			 *   }
-			 */
+			if (document != null) {
+				/**
+				 * @j2sNative
+				 *   var d = document.getElementsByTagName(name)[0];
+				 *   if (d) {
+				 *     d.value = s;
+				 *   } else {
+				 *     err= "Variable " + name + " was not found in the document";
+				 *   }
+				 */
+			}
 		} else {
 			err = "Variable " + name + " was not found in form data";
 		}
@@ -2152,9 +2181,9 @@ public class Variables {
 			name = "ellipmode"; // BH guessing here
 			break;
 		case STRAIN:
-			return "strain" + m;
+			return "strain" + (m + 1);
 		case IRREP:
-			return "irrep" + m;
+			return "irrep" + (m + 1);
 		}
 		name += st.substring(st.length() - 3) +  sm.substring(sm.length() - 3);
 		return name;

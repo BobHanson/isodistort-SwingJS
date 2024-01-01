@@ -139,7 +139,9 @@ public class MenuActions {
 				new IsoAction("saveCIF", "Save CIF", "Save current configuration as CIF file.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						app.saveCIF();
+						new Thread(() ->{
+						app.saveCIF(null);
+						}).start();
 					}
 				});
 		
@@ -654,22 +656,4 @@ public class MenuActions {
 // these are buttons at the bottom of subgroup tree
 // Generate TOPAS.STR output for subgroup tree
 // Generate CIF output for subgroup tree
-
-// Number of decimal places in CIF file: 
-//Use alternate (possibly nonstandard) setting in CIF output (matrix S-1t)
-//Relative to parent subgroup
-//Basis vectors of subgroup lattice (rational numbers):
-//a' = 	a +	b +	c	
-//b' = 	a +	b +	c
-//c' = 	a +	b +	c
-//Origin of subgroup (either rational or decimal numbers):
-//τ' = 	a +	b +	c
-//
-//
-//Make CIF movie
-//minimum master amplitude:
-//maximum master amplitude:
-//number of frames:
-//variation of the master amplitude: linear sine-wave
-//fractional number of complete periods: 
 

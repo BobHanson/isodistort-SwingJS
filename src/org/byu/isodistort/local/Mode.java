@@ -67,7 +67,7 @@ class Mode {
 	/**
 	 * [atomtype][modefortype]
 	 */
-	double[][] initAmpTM;
+	double[][] calcAmpTM;
 	double[][] maxAmpTM;
 	int[][] irrepTM;
 	String[][] nameTM;
@@ -141,13 +141,13 @@ class Mode {
 		this.modesPerType = perType;
 
 		nameTM = new String[numTypes][];
-		initAmpTM = new double[numTypes][];
+		calcAmpTM = new double[numTypes][];
 		maxAmpTM = new double[numTypes][];
 		irrepTM = new int[numTypes][];
 		for (int t = 0; t < numTypes; t++) {
 			int nmodes = modesPerType[t];
 			nameTM[t] = new String[nmodes];
-			initAmpTM[t] = new double[nmodes];
+			calcAmpTM[t] = new double[nmodes];
 			maxAmpTM[t] = new double[nmodes];
 			irrepTM[t] = new int[nmodes];
 		}
@@ -160,7 +160,7 @@ class Mode {
 			break;
 		case IRREP:
 			for (int m = 0; m < count; m++) {
-				initAmpTM[0][m] = maxAmpTM[0][m] = 1;
+				calcAmpTM[0][m] = maxAmpTM[0][m] = 1;
 			}
 			break;
 		}
@@ -206,7 +206,7 @@ class Mode {
 			if (v1 == null) {
 				v1 = a.vector1[type] = new double[columnCount];
 			}
-			MathUtil.vecaddN(a.vector0[type], 1, delta, v1);
+			MathUtil.vecaddN(a.vectorBest[type], 1, delta, v1);
 
 			// next is just for the labels
 			switch (columnCount) {
@@ -353,7 +353,7 @@ class Mode {
 		default:
 			for (int t = 0; t < numTypes; t++) {
 				for (int m = 0; m < modesPerType[t]; m++)
-					sliderTM[t][m].setValue((int) (initAmpTM[t][m] / maxAmpTM[t][m] * sliderMax));
+					sliderTM[t][m].setValue((int) (calcAmpTM[t][m] / maxAmpTM[t][m] * sliderMax));
 			}
 			break;
 		}

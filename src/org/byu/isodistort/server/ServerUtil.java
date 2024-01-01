@@ -30,15 +30,16 @@ import javajs.util.JSJSONParser;
  * public static boolean fetch(IsoApp app, int type, Map<String, Object>
  * mapFormData, Consumer<byte[]> consumer, int delay)
  * 
- * This is the main method for initiating a transaction. All transactions are asynchronous, 
- * utilizing java.util.function.Consumer to effect a callback to the app.
+ * This is the main method for initiating a transaction. All transactions are
+ * asynchronous, utilizing java.util.function.Consumer to effect a callback to
+ * the app.
  * 
  * 
  * public static Map<String, Object> json2Map(Object formData, boolean asClone)
  * 
- * This method ensures that maps from JavaScrpt and Java, might be in the form of 
- * actual Java HashMap or LinkedHashMap are compatible with JavaScript's simple associative
- * array idea. 
+ * This method ensures that maps from JavaScrpt and Java, might be in the form
+ * of actual Java HashMap or LinkedHashMap are compatible with JavaScript's
+ * simple associative array idea.
  * 
  * 
  * 
@@ -51,6 +52,7 @@ public class ServerUtil {
 	private ServerUtil() {
 		// no instance; static only
 	}
+
 	// bh test platform "https://jmol.stolaf.edu/jmol/test/t.php";
 	final static String publicServerURL = "https://iso.byu.edu/iso/";
 	final static String testServerURL = "https://isotest.byu.edu/iso/";
@@ -59,7 +61,8 @@ public class ServerUtil {
 	 * Fetch a result from the server. This method handles all such requests.
 	 */
 
-	public static boolean fetch(IsoApp app, int type, Map<String, Object> mapFormData, Consumer<byte[]> consumer, int delay) {
+	public static boolean fetch(IsoApp app, int type, Map<String, Object> mapFormData, Consumer<byte[]> consumer,
+			int delay) {
 
 		boolean testing = false;
 
@@ -72,6 +75,7 @@ public class ServerUtil {
 			case FileUtil.FILE_TYPE_DISTORTION:
 				service = "isodistortuploadfile.php";
 				break;
+			case FileUtil.FILE_TYPE_CIF:
 			case FileUtil.FILE_TYPE_ISOVIZ:
 				service = "isodistortform.php";
 				break;
@@ -102,7 +106,7 @@ public class ServerUtil {
 				byte[] bytes = FileUtil.getLimitedStreamBytes(r.getContent(), Integer.MAX_VALUE, true);
 				// temporary fix for garbage in wyck line
 				cleanBytes(bytes);
-				//System.out.println(new String(bytes));
+				// System.out.println(new String(bytes));
 				app.addStatus("ServerUtil.fetch received " + bytes.length + " bytes");
 
 				if (bytes.length > 100 && bytes.length < 1000) {
@@ -127,7 +131,7 @@ public class ServerUtil {
 	}
 
 	private final static byte[] SET_TIMEOUT = "setTimeout".getBytes();
-	
+
 	private static void getTempFile(IsoApp app, int type, byte[] bytes, Consumer<byte[]> consumer, int delay) {
 
 // about 340 bytes:
@@ -141,12 +145,12 @@ public class ServerUtil {
 //		</FORM>
 //		</BODY>
 //		</HTML>
-		
+
 		if (!bytesContain(bytes, SET_TIMEOUT)) {
 			consumer.accept(bytes);
 			return;
 		}
-		String html = new String(bytes); 
+		String html = new String(bytes);
 		Map<String, Object> map = scrapeHTML(html);
 		String service = getHTMLAttr(html, "ACTION");
 		if (map == null || service == null) {
@@ -154,7 +158,7 @@ public class ServerUtil {
 		}
 		app.addStatus("ServerUtil.getTempFile " + map.get("filename") + " delay " + delay + " ms");
 		map.put("_service", service);
-		
+
 		Timer tempFileTimer = new Timer(1000, new ActionListener() {
 
 			/**
@@ -177,20 +181,20 @@ public class ServerUtil {
 		}
 		byte b0 = b[0];
 		int i0 = 0;
-		int i1 = nb - n;   
+		int i1 = nb - n;
 		// 012345678901
 		// ......abc...
-		//0......ababc..
-		// ....... ^ pt = 2, i0 = 
+		// 0......ababc..
+		// ....... ^ pt = 2, i0 =
 		for (int pt = 0, i = 0; i - pt <= i1; i++) {
 			if (bytes[i] == b[pt++]) {
 				if (pt == n)
 					return true;
-				if (i0 == 0 && bytes[i + 1] == b0){
+				if (i0 == 0 && bytes[i + 1] == b0) {
 					i0 = i + 1;
 				}
 				continue;
-			} 
+			}
 			if (i0 > 0) {
 				i = i0 - 1;
 				i0 = 0;
@@ -209,7 +213,8 @@ public class ServerUtil {
 	 */
 	@SuppressWarnings("unchecked")
 	public static Map<String, Object> json2Map(Object formData, boolean asClone) {
-
+		if (formData == null)
+			return null;
 		if (formData instanceof Map) {
 			return (Map<String, Object>) (asClone ? ((HashMap<String, Object>) formData).clone() : formData);
 		}
@@ -227,7 +232,7 @@ public class ServerUtil {
 	}
 
 	/**
-	 * A simple JSON producer. 
+	 * A simple JSON producer.
 	 * 
 	 * @param map
 	 * @return
@@ -257,9 +262,15 @@ public class ServerUtil {
 		html = getInnerHTML(html, "FORM");
 		if (html == null)
 			return null;
-		String[] inputs = html.replace("<input","<INPUT").split("<INPUT");
+		String[] inputs = html.replace("<input", "<INPUT").split("<INPUT");
+		if (inputs != null)
 		for (int i = 1; i < inputs.length; i++) {
 			addEntry(map, inputs[i]);
+		}
+		String[] selects = html.replace("select>", "SELECT>").split("SELECT");
+		if (selects != null)
+			for (int i = 1; i < selects.length; i += 2) {
+			addSelect(map, selects[i]);
 		}
 		return map;
 	}
@@ -290,6 +301,22 @@ public class ServerUtil {
 		map.put(name, value);
 	}
 
+	private static void addSelect(Map<String, Object> map, String line) {
+		line.replace("option",  "OPTION");
+		String[] values = line.split("<OPTION");
+		String value = null;
+		for (int i = 1; i < values.length; i++) {
+			String v = getHTMLAttr(values[i], "VALUE");
+			if (value == null || values[i].indexOf("SELECTED") >= 0) {
+				value = v;
+			}			
+		}
+		if (value == null)
+			return;
+		String name = getHTMLAttr(line, "NAME");
+		map.put(name, value);
+	}
+
 	private static String getHTMLAttr(String line, String attr) {
 		String key = attr + "=\"";
 		int pt = line.indexOf(key);
@@ -301,7 +328,6 @@ public class ServerUtil {
 		int pt1 = line.indexOf("\"", pt);
 		return (pt1 < 0 ? null : line.substring(pt, pt1).trim());
 	}
-
 
 //	public final static String testFormData = "{\r\n" + "  \"input\": \"displaydistort\",\r\n"
 //			+ "  \"spacegroup\": \"221 Pm-3m      Oh-1\",\r\n" + "  \"settingaxesm\": \"a(b)c               \",\r\n"
@@ -731,7 +757,6 @@ public class ServerUtil {
 			+ "</FORM><p>\r\n" + "</div>\r\n" + "<script src=\"swingjs/swingjs2.js\"></script>\r\n"
 			+ "<script src=\"isodistort.js\"></script>\r\n" + "</BODY>\r\n" + "</HTML>\r\n" + "";
 
-	
 	/**
 	 * @j2sIgnore
 	 * 
@@ -752,7 +777,7 @@ public class ServerUtil {
 //
 //		System.out.println(!bytesContain("abab".getBytes(), "abc".getBytes()));
 
-		//		Map<String, Object> map = scrapeHTML(htmlTest);
+		// Map<String, Object> map = scrapeHTML(htmlTest);
 //		System.out.println(toJSON(map));
 
 	}

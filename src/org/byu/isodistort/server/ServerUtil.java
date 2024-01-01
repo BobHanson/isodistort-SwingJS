@@ -72,9 +72,14 @@ public class ServerUtil {
 
 		if (service == null) {
 			switch (type) {
-			case FileUtil.FILE_TYPE_DISTORTION:
+			case FileUtil.FILE_TYPE_DISTORTION_UPLOAD:
 				service = "isodistortuploadfile.php";
 				break;
+			case FileUtil.FILE_TYPE_SUBGROUP_TREE:
+			case FileUtil.FILE_TYPE_PAGE_HTML:
+			case FileUtil.FILE_TYPE_DISTORTION_TXT:
+			case FileUtil.FILE_TYPE_FULLPROF_CPR:
+			case FileUtil.FILE_TYPE_TOPAS_STR:
 			case FileUtil.FILE_TYPE_CIF:
 			case FileUtil.FILE_TYPE_ISOVIZ:
 				service = "isodistortform.php";
@@ -205,51 +210,6 @@ public class ServerUtil {
 	}
 
 	/**
-	 * Conver the form data into a Map if it is a String, or just return it if it is
-	 * not.
-	 * 
-	 * @param formData
-	 * @return
-	 */
-	@SuppressWarnings("unchecked")
-	public static Map<String, Object> json2Map(Object formData, boolean asClone) {
-		if (formData == null)
-			return null;
-		if (formData instanceof Map) {
-			return (Map<String, Object>) (asClone ? ((HashMap<String, Object>) formData).clone() : formData);
-		}
-		if (!(formData instanceof String)) {
-			/**
-			 * must be JSON; just deal with it as a string
-			 * 
-			 * @j2sNative
-			 * 
-			 * 			formDataStr = JSON.stringify(formDataStr);
-			 * 
-			 */
-		}
-		return new JSJSONParser().parseMap(formData.toString(), false);
-	}
-
-	/**
-	 * A simple JSON producer.
-	 * 
-	 * @param map
-	 * @return
-	 */
-	public static String toJSON(Map<String, Object> map) {
-		StringBuffer sb = new StringBuffer();
-		sb.append("{\n");
-		String sep = "";
-		for (String key : map.keySet()) {
-			sb.append(sep).append(key + ":\"" + map.get(key) + "\"\n");
-			sep = ",";
-		}
-		sb.append("}");
-		return sb.toString();
-	}
-
-	/**
 	 * Extract all the INPUT data from the HTML page.
 	 * 
 	 * @param html
@@ -298,7 +258,7 @@ public class ServerUtil {
 		}
 		String value = getHTMLAttr(line, "VALUE");
 		String name = getHTMLAttr(line, "NAME");
-		map.put(name, value);
+		map.put(name, value.replace('\n', ' ').replace('\r', ' '));
 	}
 
 	private static void addSelect(Map<String, Object> map, String line) {
@@ -780,6 +740,87 @@ public class ServerUtil {
 		// Map<String, Object> map = scrapeHTML(htmlTest);
 //		System.out.println(toJSON(map));
 
+	}
+
+	/**
+	 * Conver the form data into a Map if it is a String, or just return it if it is
+	 * not.
+	 * 
+	 * @param formData
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public static Map<String, Object> json2Map(Object formData, boolean asClone) {
+		if (formData == null)
+			return null;
+		if (formData instanceof Map) {
+			return (Map<String, Object>) (asClone ? ((HashMap<String, Object>) formData).clone() : formData);
+		}
+		if (formData instanceof byte[]) {
+			formData = new String((byte[]) formData);
+		}
+		if (!(formData instanceof String)) {
+			/**
+			 * must be JSON; just deal with it as a string
+			 * 
+			 * @j2sNative
+			 * 
+			 * 			formDataStr = JSON.stringify(formDataStr);
+			 * 
+			 */
+		}
+		return new JSJSONParser().parseMap(formData.toString(), false);
+	}
+
+	/**
+	 * A simple JSON producer. All string values
+	 * 
+	 * @param map
+	 * @return
+	 */
+	public static String toJSON(Map<String, Object> map) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("{\n");
+		String sep = "";
+		for (String key : map.keySet()) {
+			String data = map.get(key).toString().replace('\n', ' ').replace('\r', ' ');		
+			sb.append(sep).append('"').append(key).append("\":\"").append(data).append("\"\n");
+			sep = ",";
+		}
+		sb.append("}");
+		return sb.toString();
+	}
+
+	static boolean alerted;
+	
+	/**
+	 * Select the desired radio button, then press the submit button.
+	 * 
+	 * @param document
+	 * @param originType
+	 */
+	public static void gotoIsoPage(String originType) {
+		@SuppressWarnings("unused")
+		boolean haveAlerted = alerted;
+		alerted = true;
+			/**
+			 * @j2sNative
+			 *   
+haveAlerted || alert("This will open a new tab in your browser.");
+$("input[name='origintype']").each(function(a,b) { 
+  if (b.value == originType) { 
+    b.checked=true;
+    $($("input[type='submit']")[0]).click();
+    return false;
+  }
+});
+			 *   
+			 */
+		
+	}
+
+	public static String setIsoBase(String html) {
+		return html.replace("<HEAD>",  "<HEAD><base href=" + publicServerURL + ">");
 	}
 
 }

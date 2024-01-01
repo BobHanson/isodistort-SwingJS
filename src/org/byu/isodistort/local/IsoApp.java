@@ -57,8 +57,9 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".9_2023.12.30";
+	final static String minorVersion = ".9_2024.01.01";
 
+	static boolean isJS = (/** @j2sNative true || */false);
 	
 	/**
 	 * 
@@ -74,7 +75,7 @@ public abstract class IsoApp {
 	/**
 	 * the datafile to use for startup
 	 */
-	protected String whichdatafile = "data/test28.txt";//"data/ZrP2O7-sg205-sg61-distort.isoviz";////"data/test28.txt";
+	protected String whichDataFile = "data/data.isoviz";//"data/ZrP2O7-sg205-sg61-distort.isoviz";////"data/test28.txt";
 
 
 	
@@ -329,6 +330,7 @@ public abstract class IsoApp {
 
 	private void clearSettingsForFileDrop() {
 		appSettings = new IsoApp[2];
+		whichDataFile = null;
 	}
 
 	/**
@@ -507,11 +509,12 @@ public abstract class IsoApp {
 			// Fall through //
 		case 1:
 			isovisData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
+			whichDataFile = null;
 			break;
 		default:
 			String path = getClass().getName();
 			path = path.substring(0, path.lastIndexOf('.') + 1).replace('.', '/');
-			isovisData = FileUtil.readFileData(this, path + whichdatafile);
+			isovisData = FileUtil.readFileData(this, path + whichDataFile);
 		}
 		return isovisData;
 	}
@@ -527,7 +530,10 @@ public abstract class IsoApp {
 		if (data == null)
 			return;
 		switch (FileUtil.getIsoFileTypeFromContents(data)) {
-		case FileUtil.FILE_TYPE_DISTORTION:
+		case FileUtil.FILE_TYPE_FORMDATA_JSON:
+			sendFormDataToServer(ensureMapData(new String(data), true));
+			return;
+		case FileUtil.FILE_TYPE_DISTORTION_TXT:
 			distortionFileToISOVIZ(f.getName(), data);
 			return; 
 		case FileUtil.FILE_TYPE_ISOVIZ:
@@ -550,6 +556,10 @@ public abstract class IsoApp {
 			new Thread(() -> {
 				openApplication(appType, data, null, true);
 			}, "isodistort_file_dropper").start();
+			return;
+		default:
+			sayNotPossible("File type was not recognized.");
+			return;
 		}
 
 	}
@@ -579,6 +589,7 @@ public abstract class IsoApp {
 				//app.droppedFile = droppedFile;
 				app.document = document;
 				app.formData = formData;
+				app.whichDataFile = whichDataFile;
 				app.distortionFileData = distortionFileData;
 				app.variables.setValuesFrom(variables);
 				app.setControlsFrom((IsoApp) appSettings[app.appType]);
@@ -761,105 +772,6 @@ public abstract class IsoApp {
 		app.start(new JFrame(type), args, null, false);
 	}
 
-	/**
-	 * If we have form data, clone it, adjust its values, and pass the clone to
-	 * the server with a request to construct a new ISOVIZ file
-	 */
-	public void saveCurrent() {
-		createIsovizFromFormData(null, new Consumer<byte[]>() {
-
-			@Override
-			public void accept(byte[] data) {
-				FileUtil.saveDataFile(frame, data, "isoviz", false);
-			}
-
-		});
-	}
-
-	public Map<String, Object> getFormData() {
-		return ensureMapData(null, true);
-	}
-	
-	private Map<String, Object> ensureMapData(Object formData, boolean asClone) {
-		if (formData == null)
-			formData = this.formData;
-		Map<String, Object> mapData = ServerUtil.json2Map(formData, asClone);
-		if (mapData == null) {
-			// if all we have is an isoviz file, how can we update it?
-			sayNotPossible("no form data to process; open a DISTORTION file first.");
-			return null;
-		}
-		this.formData = mapData;
-		return mapData;
-	}
-
-	private void sayNotPossible(String msg) {
-		JOptionPane.showMessageDialog(frame, "This feature is not available " + msg);
-	}
-
-	public void saveOriginal() {
-		FileUtil.saveDataFile(frame, isovisData, "isoviz", false);
-	}
-
-	public void saveDistortion() {
-		sayNotPossible("yet");
-	}
-
-	public void saveCIF(Map<String, Object> values) {
-		Map<String, Object> map = getFormData();
-		if (map == null)
-			return;
-		if (values == null) {
-			IsoDialog.openCIFDialog(this, map);
-		} else {
-			// after dialog
-			String sliderSetting = (String) values.remove("slidersetting");
-			map.putAll(values);
-			setFormData(map, sliderSetting);	
-			setServerFormOriginType(map, "structurefile");
-			setStatus("...fetching CIF file from iso.byu...");
-			ServerUtil.fetch(this, FileUtil.FILE_TYPE_CIF, map, new Consumer<byte[]>() {
-				@Override
-				public void accept(byte[] b) {
-					if (b == null) {
-						addStatus("upload failed");
-						return;
-					}		
-					FileUtil.saveDataFile(frame, b, "cif", false);
-				}
-			}, 20);
-		}
-
-	}
-
-	public void viewPrimaryOrderParameters() {
-		sayNotPossible("yet");
-	}
-
-	public void viewModeDetails() {
-		sayNotPossible("yet");
-	}
-
-	public void viewCompleteModeDetails() {
-		sayNotPossible("yet");
-	}
-
-	public void saveTOPASstr() {
-		sayNotPossible("yet");
-	}
-
-	public void saveFULLPROFcpr() {
-		sayNotPossible("yet");
-	}
-
-	public void saveIRMatrices() {
-		sayNotPossible("yet");
-	}
-
-	public void viewSubgroupTree() {
-		sayNotPossible("yet");
-	}
-
 	//<P><FORM ACTION="isodistortuploadfile.php" METHOD="POST"  
 	//enctype="multipart/form-data">
 	//Import an ISODISTORT distortion file:
@@ -888,7 +800,7 @@ public abstract class IsoApp {
 		if (fileName != null)
 			mapFormData.put("fileName", fileName);
 		setStatus("...uploading " + data.length + " bytes of distortion file data to iso.byu...");
-		ServerUtil.fetch(this, FileUtil.FILE_TYPE_DISTORTION, mapFormData, new Consumer<byte[]>() {
+		ServerUtil.fetch(this, FileUtil.FILE_TYPE_DISTORTION_UPLOAD, mapFormData, new Consumer<byte[]>() {
 			@Override
 			public void accept(byte[] b) {
 				if (b == null) {
@@ -896,19 +808,19 @@ public abstract class IsoApp {
 					return;
 				}		
 				distortionFileData = b;
-				extractHTMLPageFormAndSendToServer(new String(b));
+				sendFormDataToServer(ServerUtil.scrapeHTML(new String(b)));
 			}
 
 		}, 1);
 	}
 
-	protected void extractHTMLPageFormAndSendToServer(String html) {
-		Map<String, Object> mapFormData = setServerFormOriginType(ServerUtil.scrapeHTML(html), "isovizdistortion");
+	protected void sendFormDataToServer(Map<String, Object> formData) {
+		Map<String, Object> mapFormData = setServerFormOriginType(formData, "isovizdistortion");
 		if (mapFormData == null) {
-			JOptionPane.showMessageDialog(frame, "The server was not able to read the data necessary to create ISOVIS file data. " + html);
+			JOptionPane.showMessageDialog(frame, "The server was not able to read the data necessary to create ISOVIS file data. ");
 			return;
 		} 
-		this.createIsovizFromFormData(mapFormData, new Consumer<byte[]>() {
+		createIsovizFromFormData(mapFormData, new Consumer<byte[]>() {
 
 			@Override
 			public void accept(byte[] data) {
@@ -934,23 +846,7 @@ public abstract class IsoApp {
 			variables.updateFormData(mapData, document);
 		setStatus("...fetching ISOVIZ file from iso.byu...");
 		ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, mapData, consumer, 20);
-	}
-
-
-	
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="isovizdistortion" CHECKED> Save interactive distortion
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="isovizdiffraction"> Save interactive diffraction // BH NO LONGER NECESSSARY
-
-	//	<INPUT TYPE="radio" NAME="origintype" VALUE="structurefile"> CIF file
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="distortionfile"> Distortion file
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="domains"> Domains
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="primary"> Primary order parameters
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="modesdetails"> Modes details
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="completemodesdetails"> Complete modes details
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="topas"> TOPAS.STR
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="fullprof"> FULLPROF.pcr
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="irreps"> IR matrices
-//	<INPUT TYPE="radio" NAME="origintype" VALUE="tree"> Subgroup tree
+	}	
 
 	/**
 	 * "Press" the radio button for the page
@@ -992,6 +888,236 @@ public abstract class IsoApp {
 
 	public void setFormData(Map<String, Object> formData, String sliderSetting) {
 		variables.setFormData(formData, sliderSetting);
+	}
+
+	private void sayNotPossible(String msg) {
+		JOptionPane.showMessageDialog(frame, "This feature is not available " + msg);
+	}
+
+	/**
+	 * If we have form data, clone it, adjust its values, and pass the clone to
+	 * the server with a request to construct a new ISOVIZ file
+	 */
+	public void saveCurrent() {
+		createIsovizFromFormData(null, new Consumer<byte[]>() {
+
+			@Override
+			public void accept(byte[] data) {
+				FileUtil.saveDataFile(frame, data, "isoviz", false);
+			}
+
+		});
+	}
+
+	private Map<String, Object> ensureMapData(Object formData, boolean asClone) {
+		if (formData == null) {
+			formData = this.formData;
+			if (formData == null && whichDataFile != null) {
+				String path = getClass().getName();
+				path = path.substring(0, path.lastIndexOf('.') + 1).replace('.', '/');
+				formData = FileUtil.readFileData(this, path + whichDataFile.replace("txt", "json").replace("isoviz", "json"));
+			}
+		}
+		Map<String, Object> mapData = ServerUtil.json2Map(formData, asClone);
+		if (mapData == null) {
+			// if all we have is an isoviz file, how can we update it?
+			sayNotPossible("no form data to process; open a DISTORTION file first.");
+			return null;
+		}
+		this.formData = mapData;
+		return mapData;
+	}
+
+	private void updateFormData(Map<String, Object> map, Map<String, Object> values, String originType) {
+		String sliderSetting = "current";
+		if (values != null) {
+			sliderSetting = (String) values.remove("slidersetting");
+			map.putAll(values);
+		}
+		setFormData(map, sliderSetting);
+		setServerFormOriginType(map, originType);
+	}
+
+	public void saveOriginal() {
+		FileUtil.saveDataFile(frame, isovisData, "isoviz", false);
+	}
+
+	public void setPreferences(Map<String, Object> values) {
+		Map<String, Object> map = ensureMapData(null, true);
+		if (map == null) {
+			map = variables.getPreferences();
+		}
+		if (values == null) {
+			IsoDialog.openPreferencesDialog(this, map);
+		} else {
+			// after dialog
+			map.putAll(values);
+			variables.setPreferences(map);
+		}
+	}
+
+	public void saveFormData(Map<String, Object> values) {
+		Map<String, Object> map = ensureMapData(null, true);
+		if (map == null)
+			return;
+		if (values == null) {
+			IsoDialog.openFormDialog(this, map);
+		} else {
+			// after dialog
+			String sliderSetting = (String) values.remove("slidersetting");
+			map.putAll(values);
+			setFormData(map, sliderSetting);	
+			FileUtil.saveDataFile(frame, ServerUtil.toJSON(map), "json", false);
+		}
+	}
+
+	public void saveTOPAS(Map<String, Object> values) {
+		Map<String, Object> map = ensureMapData(null, true);
+		if (map == null)
+			return;
+		if (values == null) {
+			IsoDialog.openTOPASDialog(this, map);
+		} else {
+			// after dialog
+			updateFormData(map, values, "topas");
+			setStatus("...fetching TOPAS.STR file from iso.byu...");
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_TOPAS_STR, map, new Consumer<byte[]>() {
+				@Override
+				public void accept(byte[] b) {
+					if (b == null) {
+						addStatus("upload failed");
+						return;
+					}		
+					FileUtil.saveDataFile(frame, b, "STR", false);
+				}
+			}, 20);
+		}
+
+	}
+
+	public void saveDistortionFile(Map<String, Object> values) {
+		Map<String, Object> map = ensureMapData(null, true);
+		if (map == null)
+			return;
+		if (values == null) {
+			IsoDialog.openDistortionDialog(this, map);
+		} else {
+			// after dialog
+			updateFormData(map, values, "distortionfile");
+			setStatus("...fetching DISTORTION file from iso.byu...");
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_DISTORTION_TXT, map, new Consumer<byte[]>() {
+				@Override
+				public void accept(byte[] b) {
+					if (b == null) {
+						addStatus("upload failed");
+						return;
+					}		
+					FileUtil.saveDataFile(frame, b, "iso.txt", false);
+				}
+			}, 20);
+		}
+	}
+
+	public void saveFULLPROF(Map<String, Object> values) {
+		Map<String, Object> map = ensureMapData(null, true);
+		if (map == null)
+			return;
+		if (values == null) {
+			IsoDialog.openFULLPROFDialog(this, map);
+		} else {
+			// after dialog
+			updateFormData(map, values, "fullprof");
+			setStatus("...fetching FULLPROF file from iso.byu...");
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_FULLPROF_CPR, map, new Consumer<byte[]>() {
+				@Override
+				public void accept(byte[] b) {
+					if (b == null) {
+						addStatus("upload failed");
+						return;
+					}		
+					FileUtil.saveDataFile(frame, b, "cpr", false);
+				}
+			}, 20);
+		}
+
+	}
+
+	public void saveCIF(Map<String, Object> values) {
+		Map<String, Object> map = ensureMapData(null, true);
+		if (map == null)
+			return;
+		if (values == null) {
+			IsoDialog.openCIFDialog(this, map);
+		} else {
+			// after dialog
+			updateFormData(map, values, "structurefile");
+			setStatus("...fetching CIF file from iso.byu...");
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_CIF, map, new Consumer<byte[]>() {
+				@Override
+				public void accept(byte[] b) {
+					if (b == null) {
+						addStatus("upload failed");
+						return;
+					}		
+					FileUtil.saveDataFile(frame, b, "cif", false);
+				}
+			}, 20);
+		}
+	}
+
+	public void viewSubgroupTree(Map<String, Object> values) {
+		Map<String, Object> map = ensureMapData(null, true);
+		if (map == null)
+			return;
+		if (values == null) {
+			IsoDialog.openSubgroupTreeDialog(this, map);
+		} else {
+			// after dialog
+			updateFormData(map, values, "tree");
+			setStatus("...fetching subgroup tree from iso.byu...");
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_SUBGROUP_TREE, map, new Consumer<byte[]>() {
+				@Override
+				public void accept(byte[] b) {
+					if (b == null) {
+						addStatus("server transfer failed");
+						return;
+					}
+					displayPage(map);
+				}
+			}, 20);
+		}
+	}
+	
+	public void viewPage(String originType, boolean orDownload) {
+		Map<String, Object> map = ensureMapData(null, true);
+		if (map == null)
+			return;
+		updateFormData(map, null, originType);
+		if (isJS) {
+			if (document != null) {
+				ServerUtil.gotoIsoPage(originType);
+			} else if (!orDownload) {
+				sayNotPossible("The document has changed.");
+				return;
+			}
+		} else if (!orDownload) {
+			sayNotPossible("Not implemented in Java.");
+			return;
+		}
+		displayPage(map);
+	}
+
+	private void displayPage(Map<String, Object> map) {
+		IsoApp me = this;
+		ServerUtil.fetch(this, FileUtil.FILE_TYPE_PAGE_HTML, map, new Consumer<byte[]>() {
+
+			@Override
+			public void accept(byte[] b) {
+				String html = ServerUtil.setIsoBase(new String(b));
+				FileUtil.showHTML(me, html);
+			}
+
+		}, 10);
 	}
 
 

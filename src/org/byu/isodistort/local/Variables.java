@@ -2130,7 +2130,7 @@ public class Variables {
 	}
 
 	/**
-	 * Set the form value as currently specified. 
+	 * Set the form value as currently specified. Also sets the value in the document if we are online in JavaScript
 	 * 
 	 * @param name
 	 * @param val
@@ -2145,7 +2145,7 @@ public class Variables {
 			if (document != null) {
 				/**
 				 * @j2sNative
-				 *   var d = document.getElementsByTagName(name)[0];
+				 *   var d = document.getElementsByName(name)[0];
 				 *   if (d) {
 				 *     d.value = s;
 				 *   } else {
@@ -2425,6 +2425,43 @@ public class Variables {
 
 	public void resetSliders() {
 		gui.resetSliders();
+	}
+
+	public Map<String, Object> getPreferences() {
+		Map<String, Object> prefs = new HashMap<>();
+		prefs.put("atomicradius", "" + atomMaxRadius);
+		prefs.put("bondlength", "" + (halfMaxBondLength * 2));
+		prefs.put("supercellxmin", "0.0");
+		prefs.put("supercellymin", "0.0");
+		prefs.put("supercellzmin", "0.0");
+		prefs.put("supercellxmax", "1.0");
+		prefs.put("supercellymax", "1.0");
+		prefs.put("supercellzmax", "1.0");
+		prefs.put("modeamplitude", "1.0");
+		prefs.put("strainamplitude", "0.1");
+		return prefs;
+	}
+
+	public void setPreferences(Map<String, Object> map) {
+		boolean changed = false;
+		try {
+			double r = atomMaxRadius, l = halfMaxBondLength;
+			if (map.containsKey("atomicradius")) {
+				r = Double.parseDouble("" + map.get("atomicradius"));
+				changed = (r != atomMaxRadius);
+				atomMaxRadius = r;
+			}
+			if (map.containsKey("bondlength")) {
+				l = Double.parseDouble("" + map.get("bondlength")) / 2;
+				changed |= (l != halfMaxBondLength);
+				halfMaxBondLength = l;
+			}
+			if (changed)
+				isChanged = true;
+			app.updateDisplay();
+		} catch (Exception e) {
+			// ignore
+		}
 	}
 
 }

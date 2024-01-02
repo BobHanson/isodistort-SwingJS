@@ -240,7 +240,7 @@ public class IsoDistortApplet extends RenderApplet {
 
 	private boolean isAdjusting = false;
 	
-	public void updateDisplay() {
+	public synchronized void updateDisplay() {
 		if (isAdjusting)
 			return;
 		isAdjusting = true;

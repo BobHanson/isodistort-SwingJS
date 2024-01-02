@@ -39,6 +39,12 @@ import org.byu.isodistort.render.RenderPanel3D;
 public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	/**
+	 * the rendering panel (center)
+	 * 
+	 */
+	private RenderPanel3D rp;
+
+	/**
 	 * initial value for indicating time required from loading to rendering.
 	 */
 	public long t0 = System.currentTimeMillis();
@@ -63,7 +69,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	private double animAmp = 1;
 
 	/**
-	 * 
+	 * no shading in slider panel
 	 */
 	private boolean isSimpleColor;
 	
@@ -72,7 +78,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	/**
 	 * Cell-edge tube parameters
 	 */
-	private final static int numBondSides = 6, numCellSides = 6, numArrowSides = 8, ballRes = 2;
+	private final static int numBondSides = 6, numCellSides = 6, numArrowSides = 8;//, ballRes = 8;
 
 	/**
 	 * Decimal multiplier to make bond radius and cell radius fractions of atom
@@ -95,10 +101,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * Which type of view direction: superHKL, superUVW, parentHKL, parentUVW
 	 */
 	private int viewType;
-	/**
-	 * Longest diagonal of super cell.
-	 */
-	private double scdSize;
 
 	/**
 	 * A geometry for rendering a part of the crystal. Each geometry can hold one or
@@ -163,8 +165,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 */
 	private JTextField uView, vView, wView;
 	
-	private RenderPanel3D rp;
-
 	public IsoDistortApp() {
 		super(APP_ISODISTORT);
 	}
@@ -183,15 +183,13 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		bondObjects = world.add();
 		cellObjects = world.add();
 		axisObjects = world.add();
-		initAtoms();
+		double modelRadius = initFieldOfView();
+		initAtoms(modelRadius);
 		initBonds();
 		initCells();
 		initAxes();
 		buildControls();
-		recalcABC();
 		recalcMaterials();
-		rp.initializeSettings(// persepeciveScalar,
-				scdSize);
 	}
 
 	@Override
@@ -200,7 +198,10 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		needsRecalc = true;
 	}
 
-	private void initAtoms() {
+	private void initAtoms(double modelRadius) {
+		// Adjustable resolution based on field of view
+		int res = (int) Math.min(8, Math.max(2,  50 / modelRadius));
+		addStatus("atom shape resolution set to " + res);
 		showAtoms = showAtoms0;
 		int n = variables.numAtoms;
 		atomObjects.clear(0);
@@ -210,7 +211,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			Material m = subMaterial[a.type][a.subType];
 			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m); // MAG - 2
 			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m); // ROT - 2
-			atomObjects.child(ia).add().ball(ballRes).setMaterial(m);        // ELL - 2
+			atomObjects.child(ia).add().ball(res).setMaterial(m);        // ELL - 2
 		}
 	}
 
@@ -263,6 +264,40 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		axisObjects.add().arrow(numArrowSides).setMaterial(yAxisMaterial);
 		axisObjects.add().arrow(numArrowSides).setMaterial(zAxisMaterial);
 	}
+
+	/**
+	 * Done once, only during initialization.
+	 */
+	private double initFieldOfView() {
+		variables.readSliders();
+		variables.recalcDistortion();
+		variables.setAtomInfo();
+
+		// Calculate the maximum distance from applet center (used to determine FOV).
+		double d2 = 0;
+		double[][] sVertices = variables.superCellCartesianVertices;
+		double[][] pVertices = variables.parentCellCartesianVertices;
+		for (int j = 0; j < 8; j++) {
+			d2 = MathUtil.maxlen2(sVertices[j], d2);
+			d2 = MathUtil.maxlen2(pVertices[j], d2);
+		}
+		for (int i = 0, n = variables.numAtoms; i < n; i++) {
+			d2 = MathUtil.maxlen2(variables.atoms[i].getCartesianCoord(), d2);
+		}
+//		for (int axis = 0; axis < 3; axis++) {
+//			d2 = MathUtil.maxlen2(paxesends[axis], d2);
+//			d2 = MathUtil.maxlen2(saxesends[axis], d2);
+//		}
+
+		// the 4 here takes care of axes
+		double radius = Math.sqrt(d2) + 4 * variables.atomMaxRadius;
+		// this includes the width of atoms that might be at the extremes of the
+		// longest cell diagonal.
+
+		rp.initializeSettings(radius);
+		return radius;
+	}
+
 
 	/**
 	 * initMaterials instantiates an array of colors for the atoms. These methods
@@ -332,7 +367,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			}
 			double r;
 			if (showBonds) {
-				r = variables.atomMaxRadius * bondMultiplier;
+				r = Math.max(variables.atomMaxRadius * bondMultiplier, 0.05);
 				for (int b = bsBondsEnabled.nextSetBit(0); b >= 0; b = bsBondsEnabled.nextSetBit(b + 1)) {
 					transformCylinder(r, variables.bondInfo[b], bondObjects.child(b));
 				}
@@ -368,6 +403,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	}
 
 	private void renderScaledAtom(Geometry child, double[] xyz, double r) {
+		
+		
 		rp.push();
 		{
 			rp.translate(xyz);
@@ -431,7 +468,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	private void recalcABC() {
 		variables.readSliders();
 		variables.recalcDistortion();
-
 		enableRendering();
 
 		if (showAtoms || showBonds) {
@@ -467,7 +503,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				variables.setCylinderInfo(vertices[buildCell[(pt++) % 24]], vertices[buildCell[(pt++) % 24]], cellInfo[c], -1);
 			}
 		}
-
+		
 		double[][] paxesbegs = new double[3][3];
 		double[][] paxesends = new double[3][3];
 		double[][] saxesbegs = new double[3][3];
@@ -499,25 +535,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			variables.setCylinderInfo(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3], -1);
 		}
 
-		// Calculate the maximum distance from applet center (used to determine FOV).
-		double d2 = 0;
-		double[][] sVertices = variables.superCellCartesianVertices;
-		double[][] pVertices = variables.parentCellCartesianVertices;
-		for (int j = 0; j < 8; j++) {
-			d2 = MathUtil.maxlen2(sVertices[j], d2);
-			d2 = MathUtil.maxlen2(pVertices[j], d2);
-		}
-		for (int i = 0, n = variables.numAtoms; i < n; i++) {
-			d2 = MathUtil.maxlen2(variables.atoms[i].getCartesianCoord(), d2);
-		}
-		for (int axis = 0; axis < 3; axis++) {
-			d2 = MathUtil.maxlen2(paxesends[axis], d2);
-			d2 = MathUtil.maxlen2(saxesends[axis], d2);
-		}
 
-		scdSize = Math.sqrt(d2) + 2 * rmax;
-		// this includes the width of atoms that might be at the extremes of the
-		// longest cell diagonal.
 	}
 
 	public void checkBonding() {
@@ -622,7 +640,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		/**
 		 * variables for viewer computation
 		 */
-		double xV = 0, yV = 0, zV = 0, tX, tY;
 		/**
 		 * Temporary 3x3 matrix
 		 */
@@ -665,11 +682,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		double l2 = MathUtil.lenSq3(viewDir);
 		if (l2 > 0.000000000001) {
 			MathUtil.scale3(viewDir, 1 / Math.sqrt(l2));
-			xV = viewDir[0];
-			yV = viewDir[1];
-			zV = viewDir[2];
-			tX = Math.asin(yV);
-			tY = (Math.abs(Math.cos(tX)) < 0.000001 ? 0
+			double xV = viewDir[0];
+			double yV = viewDir[1];
+			double zV = viewDir[2];
+			double tX = Math.asin(yV);
+			double tY = (Math.abs(Math.cos(tX)) < 0.000001 ? 0
 					: Math.abs(zV) < 0.000001 ? -Math.PI / 2 * (xV / Math.abs(xV)) : -Math.atan2(xV, zV));
 			rp.clearAngles();
 			rp.setCamera(tY, tX);
@@ -802,7 +819,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	}
 
-	private void updateViewOptions() {
+	protected void updateViewOptions() {
 		showAtoms = aBox.isSelected();
 		showBonds = bBox.isSelected();
 		showCells = cBox.isSelected();

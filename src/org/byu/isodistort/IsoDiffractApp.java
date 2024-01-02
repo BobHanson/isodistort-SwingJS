@@ -404,7 +404,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	}
 
 	@Override
-	public void updateDisplay() {
+	public synchronized void updateDisplay() {
 		if (isAdjusting)
 			return;
 		if (needsRecalc || variables.isChanged) {
@@ -581,7 +581,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 						&& (peakColor[p] < currentcolor)) {
 					currentpeak = p;
 					currentcolor = peakColor[p];
-					valuestring = MathUtil.varToString(powderPeakY[p], 2, -2);
+					valuestring = MathUtil.varToString(powderPeakY[p], 2, 0);
 					switch (powderPatternType) {
 					case POWDER_PATTERN_TYPE_2THETA:
 						specifictext = "2\u0398 = " + valuestring + " Degrees";
@@ -611,10 +611,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				hkls[n] = crystalPeakHKL[currentpeak][n];
 			MathUtil.mat3mul(variables.Tmat, hkls, hklp);
 
-			mouseovertext = "Parent HKL = (" + MathUtil.varToString(hklp[0], 2, -2) + ", "
-					+ MathUtil.varToString(hklp[1], 2, -2) + ", " + MathUtil.varToString(hklp[2], 2, -2)
-					+ ")       Super HKL = (" + MathUtil.varToString(hkls[0], 2, -2) + ", "
-					+ MathUtil.varToString(hkls[1], 2, -2) + ", " + MathUtil.varToString(hkls[2], 2, -2) + ")     "
+			mouseovertext = "Parent HKL = (" + MathUtil.varToString(hklp[0], 2, 0) + ", "
+					+ MathUtil.varToString(hklp[1], 2, 0) + ", " + MathUtil.varToString(hklp[2], 2, 0)
+					+ ")       Super HKL = (" + MathUtil.varToString(hkls[0], 2, 0) + ", "
+					+ MathUtil.varToString(hkls[1], 2, 0) + ", " + MathUtil.varToString(hkls[2], 2, 0) + ")     "
 					+ specifictext;
 			isMouseOver = true;
 		} else {
@@ -2003,9 +2003,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			needsRecalc = true;
 		}
 		if (setTextBoxes && !isAdjusting) {
-			minTxt.setText(MathUtil.varToString(powderXMin, 2, -5));
-			maxTxt.setText(MathUtil.varToString(powderXMax, 2, -5));
-			fwhmTxt.setText(MathUtil.varToString(powderResolution, 3, -5));
+			minTxt.setText(MathUtil.varToString(powderXMin, 2, 0));
+			maxTxt.setText(MathUtil.varToString(powderXMax, 2, 0));
+			fwhmTxt.setText(MathUtil.varToString(powderResolution, 3, 0));
 		}
 		updateDisplay();
 	}

@@ -10,6 +10,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
@@ -22,9 +24,16 @@ import javax.swing.filechooser.FileFilter;
 
 public class FileUtil {
 
-	public final static int FILE_TYPE_UNKNOWN = 0;
-	public final static int FILE_TYPE_DISTORTION = 1;
-	public final static int FILE_TYPE_ISOVIZ = 2;
+	public final static int FILE_TYPE_UNKNOWN        = 0;
+	public final static int FILE_TYPE_DISTORTION_UPLOAD = 1;
+	public final static int FILE_TYPE_ISOVIZ         = 2;
+	public final static int FILE_TYPE_FORMDATA_JSON  = 3;
+	public final static int FILE_TYPE_DISTORTION_TXT = 4;
+	public final static int FILE_TYPE_FULLPROF_CPR   = 5;
+	public final static int FILE_TYPE_CIF            = 6;
+	public final static int FILE_TYPE_TOPAS_STR      = 7;
+	public final static int FILE_TYPE_PAGE_HTML      = 8;
+	public static final int FILE_TYPE_SUBGROUP_TREE  = 9;
 
 	private static JFileChooser fc;
 
@@ -48,7 +57,7 @@ public class FileUtil {
 		if (fileType == null)
 			return ext;
 		String test = (fileType.endsWith("*") ? fileType.substring(0, fileType.length() - 1) : null);
-		boolean isOK = (test == null ? fileType.equals(ext) : ext.startsWith(test));
+		boolean isOK = (test == null ? fileType.equalsIgnoreCase(ext) : ext.startsWith(test));
 		return (isOK ? ext : null);
 	}
 
@@ -229,6 +238,9 @@ public class FileUtil {
 			case -1:
 				i = n;
 				break;
+			case '{':
+				if (pt == 0)
+					return FILE_TYPE_FORMDATA_JSON;
 			case '\n':
 			case '\r':
 				pt = i + 1;
@@ -237,7 +249,7 @@ public class FileUtil {
 				if (i == pt) {
 					String tag = new String(data, i + 1, 20);
 					if (tag.equals("begin distortionFile")) {
-						type = FILE_TYPE_DISTORTION;
+						type = FILE_TYPE_DISTORTION_TXT;
 					} else if (tag.startsWith("isoversion")) {
 						type = FILE_TYPE_ISOVIZ;
 					}
@@ -264,8 +276,7 @@ public class FileUtil {
 					bis = new BufferedInputStream((InputStream) app.getClass().getResource("/" + path).getContent());
 				}
 				byte[] bytes = getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
-				System.out.println(
-						"FileUtil.readFileData " + (System.currentTimeMillis() - t) + " ms for " + bytes.length + " bytes");
+				app.addStatus("FileUtil.readFileData " + (System.currentTimeMillis() - t) + " ms for " + bytes.length + " bytes");
 				return bytes;
 	
 	//			// String concatenation (200K+ lines) was 600000+ ms (over 10 minutes) to read 8 MB
@@ -278,5 +289,44 @@ public class FileUtil {
 			}
 			return null;
 		}
+
+	public static void openURL(IsoApp app, String surl) {
+		try {
+			/**
+			 * @j2sNative
+			 * 
+			 * 			window.open(surl, "_blank");
+			 */
+			{
+				Class<?> c = Class.forName("java.awt.Desktop");
+				Method getDesktop = c.getMethod("getDesktop", new Class[] {});
+				Object deskTop = getDesktop.invoke(null, new Object[] {});
+				Method browse = c.getMethod("browse", new Class[] { URI.class });
+				Object arguments[] = { new URI(surl) };
+				browse.invoke(deskTop, arguments);
+			}
+		} catch (Throwable e) {
+			app.addStatus("FileUtil.openURL could not open url " + surl + ": " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	public static void showHTML(IsoApp app, String html) {
+		/**
+		 * @j2sNative
+		 * 
+		 * 	  window.open(URL.createObjectURL(new Blob(html, { type: "text/html" })));
+		 */
+		{
+			try {
+				File f = File.createTempFile("isodistort", ".html");
+				write(null, f, html, true);
+				openURL(app, "file://" + f.getAbsolutePath().replace('\\', '/'));				
+			} catch (IOException e) {
+				app.addStatus("temp file creation failed: " + e.getMessage());
+				e.printStackTrace();
+			}
+		}
+	}
 
 }

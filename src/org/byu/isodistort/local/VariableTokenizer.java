@@ -165,6 +165,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 	 *                  values only; DEBUG_HIGH (2) full report for each byte parsed
 	 */
 	public VariableTokenizer(Object data, String ignore, int verbosity) {
+		//ignore = null;
 		if (data instanceof String) {
 			bytes = ((String) data).getBytes();
 		} else if (data instanceof byte[]) {
@@ -409,26 +410,8 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 				continue;
 			dval = dval * 10 + (b - '0');
 		}
-		return (dval == 0 ? 0 : sign * dval * decimalScale[tens]);
+		return (dval == 0 ? 0 : sign * dval * MathUtil.decimalScale[tens]);
 	}
-
-	private final static double[] decimalScale = { 1., //
-			0.1, //
-			0.01, //
-			0.001, //
-			0.0001, //
-			0.00001, //
-			0.000001, //
-			0.0000001, //
-			0.00000001, //
-			0.000000001, //
-			0.0000000001, //
-			0.00000000001, //
-			0.000000000001, //
-			0.0000000000001, //
-			0.00000000000001, //
-			0.000000000000001, //
-	};
 
 	private final static int STATE_NONE = 0;
 	private final static int STATE_COMMENT = 1;

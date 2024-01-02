@@ -1332,7 +1332,11 @@ public class Variables {
 		private void parseBonds(boolean skipBondList) {
 			if (isDiffraction)
 				return;
-			halfMaxBondLength = getOneDouble("maxbondlength", 2.5) / 2;
+			double d = getOneDouble("maxbondlength", 2.5);
+			// figure 1 minimum for a real number, not one that was adjusted
+			if (d < 0.5)
+				d *= 10;
+			halfMaxBondLength = d / 2;
 			// find minimum atomic occupancy for which bonds should be displayed
 			minBondOcc = getOneDouble("minbondocc", 0.5);
 			if (skipBondList)
@@ -2079,7 +2083,7 @@ public class Variables {
 
 	}
 
-	public void setFormData(Map<String, Object> mapFormData, String sliderSetting) {
+	public void setModeFormData(Map<String, Object> mapFormData, String sliderSetting) {
 		boolean toZero = "parent".equals(sliderSetting);
 		boolean toBest = "child".equals(sliderSetting);
 		// otherwise current
@@ -2090,7 +2094,7 @@ public class Variables {
 					for (int m = vals[t].length; --m >= 0;) {
 						String name = getInputName(mode, t, m);
 						double d = (toZero ? 0 : toBest ? modes[mode].calcAmpTM[t][m] : vals[t][m]);
-						setFormValue(name, d, mapFormData, null);
+						setModeFormValue(name, d, mapFormData, null);
 					}
 				}
 			}
@@ -2100,12 +2104,12 @@ public class Variables {
 			for (int m = vals.length; --m >= 0;) {
 				String name = getInputName(STRAIN, 0, m);
 				double d = (toZero ? 0 : toBest ? modes[STRAIN].calcAmpTM[0][m] : vals[m]);
-				setFormValue(name, d, mapFormData, null);
+				setModeFormValue(name, d, mapFormData, null);
 			}
 		}
 	}
 	
-	public void updateFormData(Map<String, Object> mapFormData, Object document) {
+	public void updateModeFormData(Map<String, Object> mapFormData, Object document) {
 
 		// working here
 
@@ -2115,7 +2119,7 @@ public class Variables {
 				for (int t = vals.length; --t >= 0;) {
 					for (int m = vals[t].length; --m >= 0;) {
 						String name = getInputName(mode, t, m);
-						setFormValue(name, vals[t][m], mapFormData, document);
+						setModeFormValue(name, vals[t][m], mapFormData, document);
 					}
 				}
 			}
@@ -2124,20 +2128,21 @@ public class Variables {
 			double[] vals = modes[STRAIN].sliderValTM[0];
 			for (int m = vals.length; --m >= 0;) {
 				String name = getInputName(STRAIN, 0, m);
-				setFormValue(name, vals[m], mapFormData, document);
+				setModeFormValue(name, vals[m], mapFormData, document);
 			}
 		}
 	}
 
 	/**
-	 * Set the form value as currently specified. Also sets the value in the document if we are online in JavaScript
+	 * Set the form value as currently specified. Also sets the value in the document if we are online in JavaScript.
+	 * Note that this method is only for text fields.
 	 * 
 	 * @param name
 	 * @param val
 	 * @param mapFormData
 	 * @param document
 	 */
-    private void setFormValue(String name, double val, Map<String, Object> mapFormData, Object document) {
+    private void setModeFormValue(String name, double val, Map<String, Object> mapFormData, Object document) {
     	String err = null;
 		if (mapFormData.containsKey(name)) {
 			String s = MathUtil.varToString(val, 5, 0);
@@ -2427,40 +2432,79 @@ public class Variables {
 		gui.resetSliders();
 	}
 
+	/**
+	 * Local only; there was no formData object.
+	 * 
+	 * @return prefs map
+	 */
 	public Map<String, Object> getPreferences() {
 		Map<String, Object> prefs = new HashMap<>();
 		prefs.put("atomicradius", "" + atomMaxRadius);
 		prefs.put("bondlength", "" + (halfMaxBondLength * 2));
-		prefs.put("supercellxmin", "0.0");
-		prefs.put("supercellymin", "0.0");
-		prefs.put("supercellzmin", "0.0");
-		prefs.put("supercellxmax", "1.0");
-		prefs.put("supercellymax", "1.0");
-		prefs.put("supercellzmax", "1.0");
-		prefs.put("modeamplitude", "1.0");
-		prefs.put("strainamplitude", "0.1");
+		for (int i = 0; i < serverParams.length;i++) {
+			prefs.put(serverParams[i], Double.valueOf(serverParams[++i]));		
+		}
+		prefs.put("LOCAL", "true");
 		return prefs;
 	}
 
-	public void setPreferences(Map<String, Object> map) {
+	private static String[] serverParams = {
+			"supercellxmin", "0.0",
+			"supercellymin", "0.0",
+			"supercellzmin", "0.0",
+			"supercellxmax", "1.0",
+			"supercellymax", "1.0",
+			"supercellzmax", "1.0",
+			"modeamplitude", "1.0",
+			"strainamplitude", "0.1",			
+	};
+	
+	/**
+	 * Map could be a full page formData map, or it could be just the preferences
+	 * map.
+	 * 
+	 * @param prefs
+	 * @param values
+	 */
+	public boolean setPreferences(Map<String, Object> prefs, Map<String, Object> values) {
 		boolean changed = false;
 		try {
 			double r = atomMaxRadius, l = halfMaxBondLength;
-			if (map.containsKey("atomicradius")) {
-				r = Double.parseDouble("" + map.get("atomicradius"));
+			boolean isLocal = (prefs.remove("LOCAL") != null);
+			Object o = values.remove("atomicradius");
+			if (o != null) {
+				r = (o instanceof Double? ((Double) o).doubleValue() : Double.parseDouble(o.toString()));
 				changed = (r != atomMaxRadius);
 				atomMaxRadius = r;
+				prefs.put("atomicradius", o);
 			}
-			if (map.containsKey("bondlength")) {
-				l = Double.parseDouble("" + map.get("bondlength")) / 2;
+			o = values.remove("bondlength");
+			if (o != null) {
+				l = (o instanceof Double? ((Double) o).doubleValue() : Double.parseDouble(o.toString())) / 2;
 				changed |= (l != halfMaxBondLength);
 				halfMaxBondLength = l;
+				prefs.put("bondlength", o);
 			}
-			if (changed)
+			if (changed) {
 				isChanged = true;
-			app.updateDisplay();
+				changed = false;
+			}
+			for (int i = 0; i < serverParams.length; i += 2) {
+				String key = serverParams[i];
+				Object v = values.get(key);
+				Object vp = prefs.get(key);
+				if (vp instanceof String)
+					vp = Double.valueOf((String) vp);
+				if (v != null && !v.equals(vp)) {
+					prefs.put(key, v);
+					changed = true;
+				}
+			}
+			if (isChanged && (isLocal || !changed))
+				app.updateDisplay();
+			return changed && !isLocal;
 		} catch (Exception e) {
-			// ignore
+			return false;
 		}
 	}
 

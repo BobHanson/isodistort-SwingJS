@@ -23,6 +23,7 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
@@ -78,16 +79,16 @@ public abstract class IsoDialog extends JDialog {
 
 		static void openDisDialog(IsoApp app, Map<String, Object> formData) {
 			if (distortionDialog == null) {
-				distortionDialog = new DistortionDialog(app, formData, () -> {
-					app.saveFormData(distortionDialog.getValues());
-				});
+				distortionDialog = new DistortionDialog(app, formData);
 			}
-			distortionDialog.setApp(app);
+			distortionDialog.setApp(app, () -> {
+				app.saveFormData(distortionDialog.getValues());
+			});
 			distortionDialog.setVisible(true);
 		}
 
-		DistortionDialog(IsoApp app, Map<String, Object> formData, Runnable okCallback) {
-			super(app, formData, null, "Save DISTORTION txt", okCallback);
+		DistortionDialog(IsoApp app, Map<String, Object> formData) {
+			super(app, formData, null, "Save DISTORTION txt");
 		}
 
 	}
@@ -96,16 +97,16 @@ public abstract class IsoDialog extends JDialog {
 
 		static void openFPDialog(IsoApp app, Map<String, Object> formData) {
 			if (fullProfDialog == null) {
-				fullProfDialog = new FULLPROFDialog(app, formData, () -> {
-					app.saveFormData(fullProfDialog.getValues());
-				});
+				fullProfDialog = new FULLPROFDialog(app, formData);
 			}
-			fullProfDialog.setApp(app);
+			fullProfDialog.setApp(app, () -> {
+				app.saveFormData(fullProfDialog.getValues());
+			});
 			fullProfDialog.setVisible(true);
 		}
 
-		FULLPROFDialog(IsoApp app, Map<String, Object> formData, Runnable okCallback) {
-			super(app, formData, null, "Save FULLPROF cpr", okCallback);
+		FULLPROFDialog(IsoApp app, Map<String, Object> formData) {
+			super(app, formData, null, "Save FULLPROF cpr");
 		}
 
 	}
@@ -114,20 +115,20 @@ public abstract class IsoDialog extends JDialog {
 
 		static void openDialog(IsoApp app, Map<String, Object> formData) {
 			if (formDialog == null) {
-				formDialog = new FormDialog(app, formData, () -> {
-					app.saveFormData(formDialog.getValues());
-				});
+				formDialog = new FormDialog(app, formData);
 			}
-			formDialog.setApp(app);
+			formDialog.setApp(app, () -> {
+				app.saveFormData(formDialog.getValues());
+			});
 			formDialog.setVisible(true);
 		}
 
-		FormDialog(IsoApp app, Map<String, Object> formData, Runnable okCallback) {
-			this(app, formData, generic, "Save Form Data", okCallback);
+		FormDialog(IsoApp app, Map<String, Object> formData) {
+			this(app, formData, generic, "Save Form Data");
 		}
 
-		FormDialog(IsoApp app, Map<String, Object> formData, String[] args, String title, Runnable okCallback) {
-			super(app, formData, (args == null ? generic : args), title, true, okCallback);
+		FormDialog(IsoApp app, Map<String, Object> formData, String[] args, String title) {
+			super(app, formData, (args == null ? generic : args), title, true);
 			init();
 		}
 
@@ -143,16 +144,16 @@ public abstract class IsoDialog extends JDialog {
 
 		static void openDialog(IsoApp app, Map<String, Object> formData) {
 			if (cifDialog == null) {
-				cifDialog = new CIFDialog(app, formData, () -> {
-					app.saveCIF(cifDialog.getValues());
-				});
+				cifDialog = new CIFDialog(app, formData);
 			}
-			cifDialog.setApp(app);
+			cifDialog.setApp(app, () -> {
+				app.saveCIF(cifDialog.getValues());
+			});
 			cifDialog.setVisible(true);
 		}
 
-		CIFDialog(IsoApp app, Map<String, Object> formData, Runnable okCallback) {
-			super(app, formData, cif, "Save CIF", true, okCallback);
+		CIFDialog(IsoApp app, Map<String, Object> formData) {
+			super(app, formData, cif, "Save CIF", true);
 			init();
 		}
 
@@ -235,16 +236,16 @@ public abstract class IsoDialog extends JDialog {
 
 		static void openDialog(IsoApp app, Map<String, Object> formData) {
 			if (treeDialog == null) {
-				treeDialog = new TreeDialog(app, formData, () -> {
-					app.viewSubgroupTree(treeDialog.getValues());
-				});
+				treeDialog = new TreeDialog(app, formData);
 			}
-			treeDialog.setApp(app);
+			treeDialog.setApp(app, () -> {
+				app.viewSubgroupTree(treeDialog.getValues());
+			});
 			treeDialog.setVisible(true);
 		}
 
-		TreeDialog(IsoApp app, Map<String, Object> formData, Runnable okCallback) {
-			super(app, formData, tree, "Open Subgroup Tree", true, okCallback);
+		TreeDialog(IsoApp app, Map<String, Object> formData) {
+			super(app, formData, tree, "Open Subgroup Tree", true);
 			init();
 		}
 
@@ -338,22 +339,22 @@ public abstract class IsoDialog extends JDialog {
 
 		static void openDialog(IsoApp app, Map<String, Object> formData) {
 			if (prefsDialog == null) {
-				prefsDialog = new PrefsDialog(app, formData, () -> {
-					app.setPreferences(prefsDialog.getValues());
-				});
+				prefsDialog = new PrefsDialog(app, formData);
 			}
-			prefsDialog.setApp(app);
+			prefsDialog.setApp(app, () -> {
+				app.setPreferences(prefsDialog.getValues());
+			});
 			prefsDialog.setVisible(true);
 		}
 
-		PrefsDialog(IsoApp app, Map<String, Object> formData, Runnable okCallback) {
-			super(app, formData, prefs, "Save Preferences", true, okCallback);
+		PrefsDialog(IsoApp app, Map<String, Object> formData) {
+			super(app, formData, prefs, "Save Preferences", true);
 			init();
 		}
 
 		private static String[] prefs = { "500", "500", //
 				"label", "\n<b>Local ISODISTORT values", //
-				"label", "\nMaxium atom radius (Angstroms)", //
+				"label", "\nNominal atom radius (Angstroms)", //
 				"datomicradius", //
 				"label", "\nMaxium bond length (Angstroms)", //
 				"dbondlength", //
@@ -373,16 +374,16 @@ public abstract class IsoDialog extends JDialog {
 
 		static void openDialog(IsoApp app, Map<String, Object> formData) {
 			if (topasDialog == null) {
-				topasDialog = new TOPASDialog(app, formData, () -> {
-					app.saveTOPAS(topasDialog.getValues());
-				});
+				topasDialog = new TOPASDialog(app, formData);
 			}
-			topasDialog.setApp(app);
+			topasDialog.setApp(app, () -> {
+				app.saveTOPAS(topasDialog.getValues());
+			});
 			topasDialog.setVisible(true);
 		}
 
-		TOPASDialog(IsoApp app, Map<String, Object> formData, Runnable okCallback) {
-			super(app, formData, topas, "Save TOPAS", true, okCallback);
+		TOPASDialog(IsoApp app, Map<String, Object> formData) {
+			super(app, formData, topas, "Save TOPAS", true);
 			init();
 		}
 
@@ -401,13 +402,11 @@ public abstract class IsoDialog extends JDialog {
 
 	protected Runnable callback;
 
-	IsoDialog(IsoApp app, Map<String, Object> formData, String[] args, String title, boolean isModal,
-			Runnable okCallback) {
+	IsoDialog(IsoApp app, Map<String, Object> formData, String[] args, String title, boolean isModal) {
 		super(app.frame, title);
 		this.app = app;
 		this.formData = formData;
 		this.args = args;
-		this.callback = okCallback;
 		setModal(isModal);
 	}
 
@@ -436,7 +435,7 @@ public abstract class IsoDialog extends JDialog {
 		Map<String, Object> formData = this.formData;
 		JPanel p = null, rp = null;
 		JCheckBox cb = null;
-		Stack<Box> estack = new Stack();
+		Stack<Box> estack = new Stack<>();
 		boolean cbEnabled = true;
 		// [0] and [1] are width and height
 		for (int i = 2; i < page.length; i++) {
@@ -602,6 +601,9 @@ public abstract class IsoDialog extends JDialog {
 	}
 
 	protected void okAction() {
+		if (getValues() == null) {
+			return;
+		}
 		setVisible(false);
 		callback.run();
 	}
@@ -610,19 +612,25 @@ public abstract class IsoDialog extends JDialog {
 		setVisible(false);
 	}
 
-	void setApp(IsoApp app) {
+	void setApp(IsoApp app, Runnable okCallback) {
 		this.app = app;
+		this.values = null;
+		this.callback = okCallback;
 	}
 
 	private List<Object> objects = new ArrayList<>();
+	private Map<String, Object> values;
 
 	Map<String, Object> getValues() throws RuntimeException {
+		if (this.values != null)
+			return this.values;
 		Map<String, Object> map = new HashMap<>();
 		for (int i = 0, n = objects.size(); i < n; i++) {
 			String key = (String) objects.get(i);
 			JComponent c = (JComponent) objects.get(++i);
 			Object value = null;
-			switch (key.charAt(0)) {
+			char ch = key.charAt(0);
+			switch (ch) {
 			case 'e':
 			case 'l':
 			case 'g':
@@ -639,25 +647,39 @@ public abstract class IsoDialog extends JDialog {
 				value = ((JComboBox<?>) c).getSelectedItem();
 				break;
 			case 'i':
-				value = validateInt(((JTextField) c).getText());
-				break;
 			case 'f':
-				value = validateFractionalOrInt(((JTextField) c).getText());
-				break;
 			case 'F':
-				value = validateFractionalOrDouble(((JTextField) c).getText());
-				break;
 			case 'd':
-				value = validateDouble(((JTextField) c).getText());
+				try {
+					switch (ch) {
+					case 'i':
+						value = validateInt(((JTextField) c).getText());
+						break;
+					case 'f':
+						value = validateFractionalOrInt(((JTextField) c).getText());
+						break;
+					case 'F':
+						value = validateFractionalOrDouble(((JTextField) c).getText());
+						break;
+					case 'd':
+						value = validateDouble(((JTextField) c).getText());
+						break;
+					}
+				} catch (Exception e) {
+					c.setBackground(new Color(0xFFA0A0));
+					JOptionPane.showMessageDialog(this, "Error on input: " + e);
+					return null;
+				}
+				c.setBackground(Color.white);
 				break;
 			}
 			if (value != null)
 				map.put(key.substring(1), value);
 		}
-		return map;
+		return values = map;
 	}
 
-	Object validateInt(String text) {
+	Object validateInt(String text) throws RuntimeException  {
 		try {
 			return Integer.parseInt(text.toString().trim());
 		} catch (Exception e) {
@@ -665,7 +687,7 @@ public abstract class IsoDialog extends JDialog {
 		}
 	}
 
-	Object validateDouble(String text) {
+	Object validateDouble(String text) throws RuntimeException {
 		try {
 			return Double.parseDouble(text.toString().trim());
 		} catch (Exception e) {
@@ -673,7 +695,7 @@ public abstract class IsoDialog extends JDialog {
 		}
 	}
 
-	Object validateFractionalOrDouble(String s) {
+	Object validateFractionalOrDouble(String s) throws RuntimeException  {
 		int pt = s.indexOf("/");
 		if (pt > 1) {
 			return validateFractionalOrInt(s);
@@ -681,7 +703,7 @@ public abstract class IsoDialog extends JDialog {
 		return validateDouble(s);
 	}
 
-	Object validateFractionalOrInt(String s) {
+	Object validateFractionalOrInt(String s) throws RuntimeException  {
 		int pt = s.indexOf("/");
 		if (pt > 1) {
 			return validateInt(s.substring(0, pt)) + "/" + validateInt(s.substring(0, pt + 1));

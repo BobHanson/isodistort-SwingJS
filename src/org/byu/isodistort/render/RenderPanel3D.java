@@ -697,13 +697,9 @@ public class RenderPanel3D extends JPanel {
 		return bi; 
 	}
 
-	public void initializeSettings(
-			//double perspectivescaler, 
-			double scdSize) {
+	public void initializeSettings(double scdSize) {
 		double fl = 10;
-		double fov = 2 
-				//* perspectivescaler 
-				* scdSize / fl;
+		double fov = 2 	* scdSize / fl;
 		fov0 = fov;
 		setBgColor(1, 1, 1);// background color: white
 		setFOV(fov);// field of view

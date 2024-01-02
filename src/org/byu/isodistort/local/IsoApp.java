@@ -75,7 +75,10 @@ public abstract class IsoApp {
 	/**
 	 * the datafile to use for startup
 	 */
-	protected String whichDataFile = "data/data.isoviz";//"data/ZrP2O7-sg205-sg61-distort.isoviz";////"data/test28.txt";
+	protected String whichDataFile = //"data/test22.txt";
+									"data/data.isoviz";
+									//"data/ZrP2O7-sg205-sg61-distort.isoviz";
+									//"data/test28.txt";
 
 
 	
@@ -531,7 +534,7 @@ public abstract class IsoApp {
 			return;
 		switch (FileUtil.getIsoFileTypeFromContents(data)) {
 		case FileUtil.FILE_TYPE_FORMDATA_JSON:
-			sendFormDataToServer(ensureMapData(new String(data), true));
+			sendFormDataToServer(ensureMapData(new String(data), true, false));
 			return;
 		case FileUtil.FILE_TYPE_DISTORTION_TXT:
 			distortionFileToISOVIZ(f.getName(), data);
@@ -826,7 +829,7 @@ public abstract class IsoApp {
 			public void accept(byte[] data) {
 				setStatus("...opening ISODISTORT for " + data.length + " bytes of data...");
 				new Thread(() -> {
-					openApplication(APP_ISODISTORT, data, mapFormData, true);
+					openApplication(appType, data, mapFormData, true);
 				}, "isodistort_from_server").start();
 				
 			}
@@ -839,11 +842,11 @@ public abstract class IsoApp {
 		boolean isSwitch = (formData == null);
 		if (isSwitch)
 			formData = this.formData;
-		Map<String, Object> mapData = ensureMapData(formData, isSwitch);
+		Map<String, Object> mapData = ensureMapData(formData, isSwitch, false);
 		if (mapData == null)
 			return;
 		if (isSwitch)
-			variables.updateFormData(mapData, document);
+			variables.updateModeFormData(mapData, document);
 		setStatus("...fetching ISOVIZ file from iso.byu...");
 		ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, mapData, consumer, 20);
 	}	
@@ -887,7 +890,7 @@ public abstract class IsoApp {
 	}
 
 	public void setFormData(Map<String, Object> formData, String sliderSetting) {
-		variables.setFormData(formData, sliderSetting);
+		variables.setModeFormData(formData, sliderSetting);
 	}
 
 	private void sayNotPossible(String msg) {
@@ -909,7 +912,7 @@ public abstract class IsoApp {
 		});
 	}
 
-	private Map<String, Object> ensureMapData(Object formData, boolean asClone) {
+	private Map<String, Object> ensureMapData(Object formData, boolean asClone, boolean silent) {
 		if (formData == null) {
 			formData = this.formData;
 			if (formData == null && whichDataFile != null) {
@@ -921,7 +924,8 @@ public abstract class IsoApp {
 		Map<String, Object> mapData = ServerUtil.json2Map(formData, asClone);
 		if (mapData == null) {
 			// if all we have is an isoviz file, how can we update it?
-			sayNotPossible("no form data to process; open a DISTORTION file first.");
+			if (!silent)
+				sayNotPossible("no form data to process; open a DISTORTION file first.");
 			return null;
 		}
 		this.formData = mapData;
@@ -943,7 +947,7 @@ public abstract class IsoApp {
 	}
 
 	public void setPreferences(Map<String, Object> values) {
-		Map<String, Object> map = ensureMapData(null, true);
+		Map<String, Object> map = ensureMapData(null, true, true);
 		if (map == null) {
 			map = variables.getPreferences();
 		}
@@ -951,13 +955,15 @@ public abstract class IsoApp {
 			IsoDialog.openPreferencesDialog(this, map);
 		} else {
 			// after dialog
-			map.putAll(values);
-			variables.setPreferences(map);
+			if (variables.setPreferences(map, values)) {
+				// we have a non-local change that needs servicing
+				sendFormDataToServer(map);
+			};
 		}
 	}
 
 	public void saveFormData(Map<String, Object> values) {
-		Map<String, Object> map = ensureMapData(null, true);
+		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
 		if (values == null) {
@@ -972,7 +978,7 @@ public abstract class IsoApp {
 	}
 
 	public void saveTOPAS(Map<String, Object> values) {
-		Map<String, Object> map = ensureMapData(null, true);
+		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
 		if (values == null) {
@@ -996,7 +1002,7 @@ public abstract class IsoApp {
 	}
 
 	public void saveDistortionFile(Map<String, Object> values) {
-		Map<String, Object> map = ensureMapData(null, true);
+		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
 		if (values == null) {
@@ -1019,7 +1025,7 @@ public abstract class IsoApp {
 	}
 
 	public void saveFULLPROF(Map<String, Object> values) {
-		Map<String, Object> map = ensureMapData(null, true);
+		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
 		if (values == null) {
@@ -1043,7 +1049,7 @@ public abstract class IsoApp {
 	}
 
 	public void saveCIF(Map<String, Object> values) {
-		Map<String, Object> map = ensureMapData(null, true);
+		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
 		if (values == null) {
@@ -1066,7 +1072,7 @@ public abstract class IsoApp {
 	}
 
 	public void viewSubgroupTree(Map<String, Object> values) {
-		Map<String, Object> map = ensureMapData(null, true);
+		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
 		if (values == null) {
@@ -1089,7 +1095,7 @@ public abstract class IsoApp {
 	}
 	
 	public void viewPage(String originType, boolean orDownload) {
-		Map<String, Object> map = ensureMapData(null, true);
+		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
 		updateFormData(map, null, originType);

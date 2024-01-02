@@ -165,6 +165,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 	 *                  values only; DEBUG_HIGH (2) full report for each byte parsed
 	 */
 	public VariableTokenizer(Object data, String ignore, int verbosity) {
+		//ignore = null;
 		if (data instanceof String) {
 			bytes = ((String) data).getBytes();
 		} else if (data instanceof byte[]) {

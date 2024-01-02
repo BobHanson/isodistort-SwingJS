@@ -49,9 +49,8 @@ public class Variables {
 	 * bar. More notches make for more precise slider movements but slow the
 	 * rendering a lot since it renders at every notch
 	 * 
-	 * BH: changed from 100 to 1000 for precision in pointer positions. 
-	 * Does not seem to negatively impact rendering, as repaint() automatically
-	 * buffers.
+	 * BH: changed from 100 to 1000 for precision in pointer positions. Does not
+	 * seem to negatively impact rendering, as repaint() automatically buffers.
 	 * 
 	 */
 	final static int sliderMax = 1000;
@@ -59,7 +58,6 @@ public class Variables {
 	 * double version of sliderMax
 	 */
 	final static double sliderMaxVal = sliderMax;
-
 
 	private IsoApp app;
 
@@ -158,28 +156,9 @@ public class Variables {
 	 */
 	public boolean needSimpleColor;
 
-	/**
-	 * Original unstrained supercell lattice parameters
-	 */
-	public double[] sLatt0 = new double[6];
-	/**
-	 * Strained supercell parameters
-	 */
-	public double[] sLatt1 = new double[6];
-	/**
-	 * Original unstrained parent cell parameters
-	 */
-	public double[] pLatt0 = new double[6];
-	/**
-	 * Strained parent cell parameters
-	 */
-	public double[] pLatt1 = new double[6];
-	/**
-	 * Parent cell origin relative to supercell origin on the unitless superlattice
-	 * basis. [x, y, z]
-	 * 
-	 */
-	public double[] pOriginUnitless = new double[3];
+	public Cell superCell = new Cell();
+	public Cell parentCell = new Cell();
+
 	/**
 	 * Row matrix of parent basis vectors on the unitless superlattice basis [basis
 	 * vector][x,y,z]
@@ -187,79 +166,13 @@ public class Variables {
 	 */
 	public double[][] Tmat = new double[3][3];
 	/**
-	 * Transpose of Tmat: sBasisCart.Tmat^t = pBasisCart
+	 * Transpose of Tmat: superCell.basisCart * Tmat^t = parentCell.basisCart
 	 */
 	public double[][] TmatTranspose = new double[3][3];
 	/**
-	 * InverseTranspose of Tmat: pBasisCart.Tmat^t*i = sBasisCart
+	 * InverseTranspose of Tmat: parentCell.basisCart * Tmat^t*i = superCell.basisCart
 	 */
 	public double[][] TmatInverseTranspose = new double[3][3];
-	/**
-	 * Strained parent cell origin relative to strained supercell origin in
-	 * cartesian Angstrom coords. [x, y, z]
-	 * 
-	 */
-	public double[] pOriginCart = new double[3];
-	/**
-	 * Center of supercell in strained cartesian Angstrom coords. [x, y, z]
-	 */
-	public double[] sCenterCart = new double[3];
-	/**
-	 * Matrix of unstrained super basis vectors in cartesian Angstrom coords [basis
-	 * vector][x,y,z] Transforms unitless unstrained direct-lattice supercell coords
-	 * into cartesian Angstrom coords [basis vector][x,y,z]
-	 * 
-	 */
-	public double[][] sBasisCart0 = new double[3][3];
-	/**
-	 * Matrix of strained super basis vectors in cartesian Angstrom coords [basis
-	 * vector][x,y,z] Transforms unitless strained direct-lattice supercell coords
-	 * into cartesian Angstrom coords [basis vector][x,y,z]
-	 * 
-	 */
-	public double[][] sBasisCart = new double[3][3];
-	/**
-	 * Inverse of sBasisCart in Inverse-Angstrom units [basis vector][x,y,z]
-	 */
-	public double[][] sBasisCartInverse = new double[3][3];
-	/**
-	 * Matrix of unstrained parent basis vectors in cartesian Angstrom coords [basis
-	 * vector][x,y,z] Transforms unitless unstrained direct-lattice parentcell
-	 * coords into cartesian Angstrom coords [basis vector][x,y,z]
-	 * 
-	 */
-	public double[][] pBasisCart0 = new double[3][3];
-	/**
-	 * Matrix of strained parent basis vectors in cartesian Angstrom coords [basis
-	 * vector][x,y,z] Transforms unitless strained direct-lattice parentcell coords
-	 * into cartesian Angstrom coords [basis vector][x,y,z]
-	 * 
-	 */
-	public double[][] pBasisCart = new double[3][3];
-	/**
-	 * Matrix of strained super-cell crystal-axis basis vectors in unitless coords
-	 * [basis vector][x,y,z] Transforms unitless strained direct-lattice supercell
-	 * crystalaxis coords into cartesian coords [basis vector][x,y,z]
-	 * 
-	 */
-	public double[][] sCrystalAxisBasisCart = new double[3][3];
-	/**
-	 * Array of Cartesian vertices of strained window-centered parent cell. [edge
-	 * number][x, y, z]
-	 * 
-	 */
-	public double[][] parentCellCartesianVertices = new double[8][3];
-	/**
-	 * Array of Cartesian vertices of strained window-centered super cell. [edge
-	 * number][x, y, z]
-	 * 
-	 */
-	public double[][] superCellCartesianVertices = new double[8][3];
-
-	/**
-	 * Is the parent expressed in a rhombohedral setting?
-	 */
-	public boolean isRhombParentSetting;
 
 	/**
 	 * 
@@ -338,10 +251,6 @@ public class Variables {
 		return gui.subTypeBoxes[t][s].isSelected();
 	}
 
-	public void setSubtypeSelected(int t, int s, boolean b) {
-		gui.subTypeBoxes[t][s].setSelected(b);
-	}
-
 	public Atom getAtom(int ia) {
 		return atoms[ia];
 	}
@@ -350,10 +259,10 @@ public class Variables {
 		return atoms[a].info;
 	}
 
-	public void selectAllSubtypes(boolean b) {
+	public void clearSubtypeSelection() {
 		for (int t = 0; t < numTypes; t++)
 			for (int s = 0; s < numSubTypes[t]; s++)
-				setSubtypeSelected(t, s, b);
+				gui.subTypeBoxes[t][s].setSelected(false);
 	}
 
 	public double getSetSuperSliderValue(double newVal) {
@@ -454,50 +363,24 @@ public class Variables {
 		double[][] pStrainPlusIdentity = (modes[STRAIN] == null
 				? MathUtil.voigt2matrix(new double[6], new double[3][3], 1)
 				: modes[STRAIN].getVoigtStrainTensor(superSliderVal, modes[IRREP]));
-		MathUtil.mat3product(pStrainPlusIdentity, pBasisCart0, pBasisCart);
-		MathUtil.mat3product(pBasisCart, TmatInverseTranspose, sBasisCart);
-		recalculateLattice(pBasisCart, pLatt1);
+		MathUtil.mat3product(pStrainPlusIdentity, parentCell.basisCart0, parentCell.basisCart);
+		MathUtil.mat3product(parentCell.basisCart, TmatInverseTranspose, superCell.basisCart);
+		parentCell.recalculateStrainedLattice();
 
 		// calculate the strained parent and supercell lattice parameters [a, b, c,
 		// alpha, beta, gamma]
 
-		recalculateLattice(sBasisCart, sLatt1);
-		MathUtil.mat3inverse(sBasisCart, sBasisCartInverse);
+		superCell.recalculateStrainedLattice();
+		MathUtil.mat3inverse(superCell.basisCart, superCell.basisCartInverse);
 
 		// calculate the parent cell origin in strained cartesian Angtstrom coords
-		MathUtil.mat3mul(sBasisCart, pOriginUnitless, pOriginCart);
+		MathUtil.mat3mul(superCell.basisCart, parentCell.originUnitless, parentCell.originCart);
 
 		// calculate the 8 cell vertices in strained cartesian Angstrom coordinates
-		for (int ix = 0; ix < 2; ix++) {
-			for (int iy = 0; iy < 2; iy++) {
-				for (int iz = 0; iz < 2; iz++) {
-					for (int i = 0; i < 3; i++) {
-						parentCellCartesianVertices[ix + 2 * iy + 4 * iz][i] = ix * pBasisCart[i][0]
-								+ iy * pBasisCart[i][1] + iz * pBasisCart[i][2] + pOriginCart[i];
-						superCellCartesianVertices[ix + 2 * iy + 4 * iz][i] = ix * sBasisCart[i][0]
-								+ iy * sBasisCart[i][1] + iz * sBasisCart[i][2];
-					}
-				}
-			}
-		}
+		parentCell.setStrainedVertices();
+		superCell.setStrainedVertices();
 		recenterLattice();
-		gui.setLattLabels(pLatt1, sLatt1);
-	}
-
-	private final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
-
-	private static void recalculateLattice(double[][] cartBasis, double[] lattice) {
-		double[][] cartTranspose = new double[3][3];
-		MathUtil.mat3transpose(cartBasis, cartTranspose);
-		lattice[A] = Math.sqrt(MathUtil.dot3(cartTranspose[A], cartTranspose[A]));
-		lattice[B] = Math.sqrt(MathUtil.dot3(cartTranspose[B], cartTranspose[B]));
-		lattice[C] = Math.sqrt(MathUtil.dot3(cartTranspose[C], cartTranspose[C]));
-		lattice[ALPHA] = Math.acos(
-				MathUtil.dot3(cartTranspose[B], cartTranspose[C]) / Math.max(lattice[B] * lattice[C], 0.001));
-		lattice[BETA] = Math.acos(
-				MathUtil.dot3(cartTranspose[A], cartTranspose[C]) / Math.max(lattice[A] * lattice[C], 0.001));
-		lattice[GAMMA] = Math.acos(
-				MathUtil.dot3(cartTranspose[A], cartTranspose[B]) / Math.max(lattice[A] * lattice[B], 0.001));
+		gui.setLattLabels(parentCell.latt1, superCell.latt1);
 	}
 
 	private void calculateDistortions() {
@@ -541,24 +424,19 @@ public class Variables {
 		MathUtil.set3(minmax[0], 1E6, 1e6, 1e6);
 		MathUtil.set3(minmax[1], -1E6, -1e6, -1e6);
 		for (int i = 8; --i >= 0;) {
-			MathUtil.rangeCheck(superCellCartesianVertices[i], minmax);
+			MathUtil.rangeCheck(superCell.cartesianVertices[i], minmax);
 		}
 		double[] tempvec = new double[3];
 		for (int i = numAtoms; --i >= 0;) {
 			Atom a = atoms[i];
-			MathUtil.mat3mul(sBasisCart, a.vectorBest[DIS], tempvec);
+			MathUtil.mat3mul(superCell.basisCart, a.vectorBest[DIS], tempvec);
 			MathUtil.rangeCheck(tempvec, minmax);
 		}
 		for (int i = 0; i < 3; i++)
-			sCenterCart[i] = (minmax[0][i] + minmax[1][i]) / 2;
+			superCell.centerCart[i] = (minmax[0][i] + minmax[1][i]) / 2;
 
-		// Place the center of the supercell at the origin
-		for (int j = 0; j < 8; j++) {
-			for (int i = 0; i < 3; i++) {
-				parentCellCartesianVertices[j][i] -= sCenterCart[i];
-				superCellCartesianVertices[j][i] -= sCenterCart[i];
-			}
-		}
+		superCell.setRelativeTo(superCell.centerCart);
+		parentCell.setRelativeTo(superCell.centerCart);
 	}
 
 	/*
@@ -710,6 +588,180 @@ public class Variables {
 		Bond(int a, int b) {
 			ab[0] = a;
 			ab[1] = b;
+		}
+	}
+
+	public static class Cell {
+
+		public JLabel title;
+
+		JLabel[] labels = new JLabel[6];
+
+		/**
+		 * Original unstrained cell parameters [A, B, C, ALPHA, BETA, GAMMA]
+		 */
+		public double[] latt0 = new double[6];
+
+		/**
+		 * Strained cell parameters
+		 */
+		public double[] latt1 = new double[6];
+		/**
+		 * cell origin relative to supercell origin on the unitless superlattice
+		 * basis. [x, y, z]
+		 * 
+		 */
+		public double[] originUnitless = new double[3];
+
+		/**
+		 * Strained cell origin relative to strained supercell origin in
+		 * cartesian Angstrom coords. [x, y, z]
+		 * 
+		 */
+		public double[] originCart = new double[3];
+		/**
+		 * Center of cell in strained cartesian Angstrom coords. [x, y, z]
+		 */
+		public double[] centerCart = new double[3];
+		/**
+		 * Matrix of unstrained basis vectors in cartesian Angstrom coords [basis
+		 * vector][x,y,z] Transforms unitless unstrained direct-lattice supercell coords
+		 * into cartesian Angstrom coords [basis vector][x,y,z]
+		 * 
+		 */
+		public double[][] basisCart0 = new double[3][3];
+		/**
+		 * Matrix of strained basis vectors in cartesian Angstrom coords [basis
+		 * vector][x,y,z] Transforms unitless strained direct-lattice supercell coords
+		 * into cartesian Angstrom coords [basis vector][x,y,z]
+		 * 
+		 */
+		public double[][] basisCart = new double[3][3];
+		/**
+		 * Inverse of basisCart in Inverse-Angstrom units [basis vector][x,y,z]
+		 */
+		public double[][] basisCartInverse = new double[3][3];
+		/**
+		 * Array of Cartesian vertices of strained window-centered cell. [edge
+		 * number][x, y, z]
+		 * 
+		 */
+		public double[][] cartesianVertices = new double[8][3];
+		
+		Cell() {
+
+		}
+
+		void setLabelText(double[] values) {
+			// set the parent and supercell lattice parameter labels
+			for (int n = 0; n < 3; n++) {
+				labels[n].setText(MathUtil.varToString(values[n], 2, -5));
+				labels[n + 3].setText(MathUtil.varToString((180 / Math.PI) * values[n + 3], 2, -5));
+			}
+		}
+
+		private final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
+
+
+		void setRhombohedral(boolean isRhomb) {
+			if (isRhomb) {
+				double temp1 = latt0[A] * Math.sin(latt0[GAMMA] / 2);
+				double temp2 = Math.sqrt(1 / temp1 / temp1 - 4.0 / 3.0);
+				basisCart0[0][0] = temp1 * (1);
+				basisCart0[0][1] = temp1 * (-1);
+				basisCart0[0][2] = temp1 * (0);
+				basisCart0[1][0] = temp1 * (1 / Math.sqrt(3));
+				basisCart0[1][1] = temp1 * (1 / Math.sqrt(3));
+				basisCart0[1][2] = temp1 * (-2 / Math.sqrt(3));
+				basisCart0[2][0] = temp1 * temp2;
+				basisCart0[2][1] = temp1 * temp2;
+				basisCart0[2][2] = temp1 * temp2;
+			} else {
+				// defined column by column
+				double d = Math.cos(latt0[BETA]);
+				double temp1 = (Math.cos(latt0[ALPHA]) - d * Math.cos(latt0[GAMMA])) / Math.sin(latt0[GAMMA]);
+				d = 1 - d * d - temp1 * temp1;
+				double temp2 = Math.sqrt(d < 0 ? 0 : d);
+				basisCart0[0][0] = latt0[A];
+				basisCart0[1][0] = 0;
+				basisCart0[2][0] = 0;
+				basisCart0[0][1] = latt0[B] * Math.cos(latt0[GAMMA]);
+				basisCart0[1][1] = latt0[B] * Math.sin(latt0[GAMMA]);
+				basisCart0[2][1] = 0;
+				basisCart0[0][2] = latt0[C] * Math.cos(latt0[BETA]);
+				basisCart0[1][2] = latt0[C] * temp1;
+				basisCart0[2][2] = latt0[C] * temp2;
+			}
+		}
+
+		public void setStrainedVertices() {
+			for (int ix = 0; ix < 2; ix++) {
+				for (int iy = 0; iy < 2; iy++) {
+					for (int iz = 0; iz < 2; iz++) {
+						for (int i = 0; i < 3; i++) {
+							cartesianVertices[ix + 2 * iy + 4 * iz][i] 
+								= originCart[i]
+								+ ix * basisCart[i][0] 
+								+ iy * basisCart[i][1]
+								+ iz * basisCart[i][2]; 
+						}
+					}
+				}
+			}
+		}
+
+		/**
+		 * Place the center of the cell at the origin.
+		 */
+		public void setRelativeTo(double[] c) {
+			for (int j = 0; j < 8; j++) {
+				for (int i = 0; i < 3; i++) {
+					cartesianVertices[j][i] -= c[i];
+				}
+			}
+		}
+
+		public double[][] getReciprocal(double[][] reciprocal, double[][] tempmat) {
+			MathUtil.mat3inverse(basisCart, tempmat);
+			MathUtil.mat3transpose(tempmat, reciprocal);
+			return reciprocal;
+		}
+
+		public double addRange(double d2) {
+			for (int j = 0; j < 8; j++) {
+				d2 = MathUtil.maxlen2(cartesianVertices[j], d2);
+			}
+			return d2;
+		}
+
+		/**
+		 * Calc the strained or unstrained metric tensor along with the lattice-to-cartesian matrix.
+		 * 
+		 * @param isStrained
+		 * @param metric
+		 * @param tempmat
+		 * @param slatt2cart 
+		 */
+		public void setMetricTensor(boolean isStrained, double[][] slatt2cart, double[][] metric, double[][] tempmat) {
+			double[][] cart = (isStrained ? basisCart : basisCart0);
+			// Determine the unstrained metric tensor
+			MathUtil.mat3inverse(cart, tempmat);
+			MathUtil.mat3transpose(tempmat, slatt2cart);// B* = Transpose(Inverse(B))
+			MathUtil.mat3product(tempmat, slatt2cart, metric); // G* = Transpose(B*).(B*)
+		}
+
+		public void recalculateStrainedLattice() {
+			double[][] t = new double[3][3];
+			MathUtil.mat3transpose(basisCart, t);
+			latt1[A] = Math.sqrt(MathUtil.dot3(t[A], t[A]));
+			latt1[B] = Math.sqrt(MathUtil.dot3(t[B], t[B]));
+			latt1[C] = Math.sqrt(MathUtil.dot3(t[C], t[C]));
+			latt1[ALPHA] = Math
+					.acos(MathUtil.dot3(t[B], t[C]) / Math.max(latt1[B] * latt1[C], 0.001));
+			latt1[BETA] = Math
+					.acos(MathUtil.dot3(t[A], t[C]) / Math.max(latt1[A] * latt1[C], 0.001));
+			latt1[GAMMA] = Math
+					.acos(MathUtil.dot3(t[A], t[B]) / Math.max(latt1[A] * latt1[B], 0.001));
 		}
 	}
 
@@ -1041,8 +1093,8 @@ public class Variables {
 		}
 
 		private void parseCrystalSettings() {
-			getDoubleArray("parentcell", pLatt0, 0, 6);
-			getDoubleArray("parentorigin", pOriginUnitless, 0, 3);
+			getDoubleArray("parentcell", parentCell.latt0, 0, 6);
+			getDoubleArray("parentorigin", parentCell.originUnitless, 0, 3);
 			checkSize("parentbasis", 9);
 			for (int pt = 0, j = 0; j < 3; j++) {
 				for (int i = 0; i < 3; i++, pt++) {
@@ -1051,41 +1103,10 @@ public class Variables {
 			}
 			MathUtil.mat3transpose(Tmat, TmatTranspose);
 			MathUtil.mat3inverse(TmatTranspose, TmatInverseTranspose);
-			isRhombParentSetting = getOneBoolean("rhombparentsetting", false);
-
-			// Calculate pBasisCart0
-			if (isRhombParentSetting) {
-				// defined row by row
-				double temp1 = Math.sin(pLatt0[5] / 2);
-				double temp2 = Math.sqrt(1 / temp1 / temp1 - 4.0 / 3.0);
-				pBasisCart0[0][0] = pLatt0[0] * temp1 * (1);
-				pBasisCart0[0][1] = pLatt0[0] * temp1 * (-1);
-				pBasisCart0[0][2] = pLatt0[0] * temp1 * (0);
-				pBasisCart0[1][0] = pLatt0[0] * temp1 * (1 / Math.sqrt(3));
-				pBasisCart0[1][1] = pLatt0[0] * temp1 * (1 / Math.sqrt(3));
-				pBasisCart0[1][2] = pLatt0[0] * temp1 * (-2 / Math.sqrt(3));
-				pBasisCart0[2][0] = pLatt0[0] * temp1 * temp2;
-				pBasisCart0[2][1] = pLatt0[0] * temp1 * temp2;
-				pBasisCart0[2][2] = pLatt0[0] * temp1 * temp2;
-			} else {
-				// defined column by column
-				double d = Math.cos(pLatt0[4]);
-				double temp1 = (Math.cos(pLatt0[3]) - d * Math.cos(pLatt0[5])) / Math.sin(pLatt0[5]);
-				d = 1 - d * d - temp1 * temp1;
-				double temp2 = Math.sqrt(d < 0 ? 0 : d);
-				pBasisCart0[0][0] = pLatt0[0];
-				pBasisCart0[1][0] = 0;
-				pBasisCart0[2][0] = 0;
-				pBasisCart0[0][1] = pLatt0[1] * Math.cos(pLatt0[5]);
-				pBasisCart0[1][1] = pLatt0[1] * Math.sin(pLatt0[5]);
-				pBasisCart0[2][1] = 0;
-				pBasisCart0[0][2] = pLatt0[2] * Math.cos(pLatt0[4]);
-				pBasisCart0[1][2] = pLatt0[2] * temp1;
-				pBasisCart0[2][2] = pLatt0[2] * temp2;
-			}
-
+			boolean isRhombParentSetting = getOneBoolean("rhombparentsetting", false);
+			parentCell.setRhombohedral(isRhombParentSetting);
 			// calculate the unstrained parent basis in cartesian Angstrom coords
-			MathUtil.mat3product(pBasisCart0, TmatInverseTranspose, sBasisCart0);
+			MathUtil.mat3product(parentCell.basisCart0, TmatInverseTranspose, superCell.basisCart0);
 
 		}
 
@@ -1429,9 +1450,9 @@ public class Variables {
 //		    3    1   0.00050   4.89898    3 GM1+[O:d:occ]A1g(a) 
 //		    3    2   0.00070   3.46410    4 GM3+[O:d:occ]A1g(a) 
 //		    3    3   0.00018   2.82843    7 M1+[O:d:occ]A1g(a) 
-			
+
 			// will result in [3, 2, 3]
-			
+
 			if (nData == 0)
 				return 0;
 			int n = 0;
@@ -1552,7 +1573,7 @@ public class Variables {
 		return -1;
 	}
 
-    class VariableGUI {
+	class VariableGUI {
 
 		private final static int subTypeWidth = 170;
 		private final static int barheight = 22;
@@ -1570,18 +1591,18 @@ public class Variables {
 		 */
 		private JLabel superSliderLabel;
 
-		/**
-		 * Array of labels for supercell lattice parameters
-		 */
-		private JLabel[] sLattLabel = new JLabel[6];
-		/**
-		 * Array of labels for parent lattice parameters
-		 */
-		private JLabel[] pLattLabel = new JLabel[6];
-		/**
-		 * names for parent and super cell parameter titles
-		 */
-		private JLabel parentLabel, superLabel;
+//		/**
+//		 * Array of labels for supercell lattice parameters
+//		 */
+//		private JLabel[] superCell.labels = new JLabel[6];
+//		/**
+//		 * Array of labels for parent lattice parameters
+//		 */
+//		private JLabel[] parentCell.labels = new JLabel[6];
+//		/**
+//		 * names for parent and super cell parameter titles
+//		 */
+//		private JLabel parentLabel, superLabel;
 		/**
 		 * Array of labels for atom types
 		 */
@@ -1807,21 +1828,17 @@ public class Variables {
 			sliderPanel.add(strainTitlePanel);
 
 			// strainDataPanel
-			for (int n = 0; n < 6; n++) {
-				sLattLabel[n] = newLabel("", lattWidth, c, JLabel.LEFT);
-				pLattLabel[n] = newLabel("", lattWidth, c, JLabel.LEFT);
-			}
-			parentLabel = newLabel("  Pcell", lattWidth, c, JLabel.LEFT);
-			superLabel = newLabel("  Scell", lattWidth, c, JLabel.LEFT);
+			initCell(superCell, c);
+			initCell(parentCell, c);
 			JPanel strainDataPanel = new JPanel(new GridLayout(2, 6, 0, 0));
 			strainDataPanel.setPreferredSize(new Dimension(sliderPanelWidth, 2 * barheight));
 			strainDataPanel.setBackground(c);
-			strainDataPanel.add(parentLabel);
+			strainDataPanel.add(parentCell.title);
 			for (int n = 0; n < 6; n++)
-				strainDataPanel.add(pLattLabel[n]);
-			strainDataPanel.add(superLabel);
+				strainDataPanel.add(parentCell.labels[n]);
+			strainDataPanel.add(superCell.title);
 			for (int n = 0; n < 6; n++)
-				strainDataPanel.add(sLattLabel[n]);
+				strainDataPanel.add(superCell.labels[n]);
 			sliderPanel.add(strainDataPanel);
 			initModeGUI(modes[STRAIN], 0);
 
@@ -1834,6 +1851,14 @@ public class Variables {
 			irrepTitlePanel.add(irrepTitle);
 			sliderPanel.add(irrepTitlePanel);
 			initModeGUI(modes[IRREP], 0);
+		}
+
+		private void initCell(Cell cell, Color c) {
+			for (int n = 0; n < 6; n++) {
+				cell.labels[n] = newLabel("", lattWidth, c, JLabel.LEFT);
+				cell.labels[n] = newLabel("", lattWidth, c, JLabel.LEFT);
+			}
+			cell.title = newLabel("  Pcell", lattWidth, c, JLabel.LEFT);
 		}
 
 		/**
@@ -1894,35 +1919,37 @@ public class Variables {
 		}
 
 		final Font pointerFont = new Font(Font.SANS_SERIF, Font.PLAIN, 8);
-		
+
 		class IsoSlider extends JSlider implements ChangeListener {
 
 			private int min; // 0 or -SliderMax
-			
+
 			private double calcAmp, maxAmp;
-			
+
 			JLabel pointer, pointer0, pointer1;
+
 			public IsoSlider(String name, int min, double calcAmp, double maxAmp, Color c) {
-				super(JSlider.HORIZONTAL, min, sliderMax,(int) (calcAmp / maxAmp * sliderMax));
+				super(JSlider.HORIZONTAL, min, sliderMax, (int) (calcAmp / maxAmp * sliderMax));
 				setName(name);
 				setPreferredSize(new Dimension(sliderWidth, barheight));
 				if (min != 0 && showSliderPointers) {
 					this.min = min;
 					this.calcAmp = calcAmp;
 					this.maxAmp = maxAmp;
-					// Note that JavaDoc with @j2sNative inserts JavaScript. 
-					boolean isJS = (/** @j2sNative 1 ? true : */false);
-					// In JavaScript this will be (1 ? true : false) -- evaluating to true,  
+					// Note that JavaDoc with @j2sNative inserts JavaScript.
+					boolean isJS = (/** @j2sNative 1 ? true : */
+					false);
+					// In JavaScript this will be (1 ? true : false) -- evaluating to true,
 					// while in Java it will read (false). Cool, huh??
 					if (isJS) {
 						// This check is required because for overlapping components
-						// JavaScript paints them first to last CREATED, 
+						// JavaScript paints them first to last CREATED,
 						// while Java paints them last to first PAINTED.
 						// This is not something that can be fixed in SwingJS.
 
 						pointer1 = getPointer(Color.BLACK);
 						pointer0 = getPointer(Color.ORANGE);
-						pointer = getPointer(Color.WHITE);						
+						pointer = getPointer(Color.WHITE);
 					} else {
 						pointer = getPointer(Color.WHITE);
 						pointer0 = getPointer(Color.ORANGE);
@@ -1951,7 +1978,8 @@ public class Variables {
 				// maybe for MacOS as well?
 				double w = getWidth() - (/** @j2sNative 1 ? 20 : */
 				15);
-				int off = (/** @j2sNative 1 ? 8 : */6);
+				int off = (/** @j2sNative 1 ? 8 : */
+				6);
 				int x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
 				pointer.setBounds(x + off, 12, 6, 8);
 				x = (int) (0.5 * w);
@@ -2005,8 +2033,8 @@ public class Variables {
 			tp.setPreferredSize(new Dimension(sliderPanelWidth, mode.modesPerType[t] * barheight));
 			tp.setBackground(c);
 			for (int m = 0; m < nModes; m++) {
-				mode.sliderTM[t][m] = new IsoSlider(getInputName(mode.type, t, m), min,
-						mode.calcAmpTM[t][m], mode.maxAmpTM[t][m], c);
+				mode.sliderTM[t][m] = new IsoSlider(getInputName(mode.type, t, m), min, mode.calcAmpTM[t][m],
+						mode.maxAmpTM[t][m], c);
 				mode.sliderLabelTM[t][m] = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
 				tp.add(mode.sliderTM[t][m]);
 				tp.add(mode.sliderLabelTM[t][m]);
@@ -2033,13 +2061,8 @@ public class Variables {
 //
 
 		void setLattLabels(double[] pLatt, double[] sLatt) {
-			// set the parent and supercell lattice parameter labels
-			for (int n = 0; n < 3; n++) {
-				pLattLabel[n].setText(MathUtil.varToString(pLatt[n], 2, -5));
-				pLattLabel[n + 3].setText(MathUtil.varToString((180 / Math.PI) * pLatt[n + 3], 2, -5));
-				sLattLabel[n].setText(MathUtil.varToString(sLatt[n], 2, -5));
-				sLattLabel[n + 3].setText(MathUtil.varToString((180 / Math.PI) * sLatt[n + 3], 2, -5));
-			}
+			parentCell.setLabelText(pLatt);
+			superCell.setLabelText(sLatt);
 		}
 
 		/**
@@ -2076,10 +2099,9 @@ public class Variables {
 				break;
 			}
 			isAdjusting = false;
-			if (isChanged) 
+			if (isChanged)
 				app.updateDisplay();
 		}
-
 
 	}
 
@@ -2108,7 +2130,7 @@ public class Variables {
 			}
 		}
 	}
-	
+
 	public void updateModeFormData(Map<String, Object> mapFormData, Object document) {
 
 		// working here
@@ -2134,28 +2156,25 @@ public class Variables {
 	}
 
 	/**
-	 * Set the form value as currently specified. Also sets the value in the document if we are online in JavaScript.
-	 * Note that this method is only for text fields.
+	 * Set the form value as currently specified. Also sets the value in the
+	 * document if we are online in JavaScript. Note that this method is only for
+	 * text fields.
 	 * 
 	 * @param name
 	 * @param val
 	 * @param mapFormData
 	 * @param document
 	 */
-    private void setModeFormValue(String name, double val, Map<String, Object> mapFormData, Object document) {
-    	String err = null;
+	private void setModeFormValue(String name, double val, Map<String, Object> mapFormData, Object document) {
+		String err = null;
 		if (mapFormData.containsKey(name)) {
 			String s = MathUtil.varToString(val, 5, 0);
 			mapFormData.put(name, s);
 			if (document != null) {
 				/**
-				 * @j2sNative
-				 *   var d = document.getElementsByName(name)[0];
-				 *   if (d) {
-				 *     d.value = s;
-				 *   } else {
-				 *     err= "Variable " + name + " was not found in the document";
-				 *   }
+				 * @j2sNative var d = document.getElementsByName(name)[0]; if (d) { d.value = s;
+				 *            } else { err= "Variable " + name + " was not found in the
+				 *            document"; }
 				 */
 			}
 		} else {
@@ -2190,10 +2209,9 @@ public class Variables {
 		case IRREP:
 			return "irrep" + (m + 1);
 		}
-		name += st.substring(st.length() - 3) +  sm.substring(sm.length() - 3);
+		name += st.substring(st.length() - 3) + sm.substring(sm.length() - 3);
 		return name;
 	}
-
 
 	public boolean isModeActive(Mode mode) {
 		return (mode != null && mode.isActive());
@@ -2243,8 +2261,8 @@ public class Variables {
 	 * @return [cartX, cartY, cartZ, index]
 	 */
 	private double[] setDisplacementInfo(Atom a, double[] t) {
-		MathUtil.mat3mul(sBasisCart, a.get(DIS), tempvec);
-		MathUtil.vecaddN(tempvec, -1, sCenterCart, a.info[DIS]);
+		MathUtil.mat3mul(superCell.basisCart, a.get(DIS), tempvec);
+		MathUtil.vecaddN(tempvec, -1, superCell.centerCart, a.info[DIS]);
 		return a.info[DIS];
 	}
 
@@ -2259,7 +2277,7 @@ public class Variables {
 		double[] info = a.info[type];
 		double[] xyz = a.get(type);
 		MathUtil.set3(xyz, t);
-		MathUtil.mat3mul(sBasisCart, t, tempvec);
+		MathUtil.mat3mul(superCell.basisCart, t, tempvec);
 		double lensq = MathUtil.lenSq3(xyz);
 		if (lensq < 0.000000000001) {
 			info[0] = info[1] = info[2] = 0;
@@ -2291,9 +2309,9 @@ public class Variables {
 
 		MathUtil.copyN(a.get(ELL), te);
 		MathUtil.voigt2matrix(te, tempmat, 0);
-		MathUtil.mat3product(sBasisCart, tempmat, tempmat2);
+		MathUtil.mat3product(superCell.basisCart, tempmat, tempmat2);
 		MathUtil.mat3copy(tempmat2, tempmat);
-		MathUtil.mat3product(tempmat, sBasisCartInverse, tempmat2);
+		MathUtil.mat3product(tempmat, superCell.basisCartInverse, tempmat2);
 		double[] info = a.info[ELL];
 		double trc = MathUtil.mat3trace(tempmat2);
 //		det = matdeterminant(tempmat2);
@@ -2441,24 +2459,17 @@ public class Variables {
 		Map<String, Object> prefs = new HashMap<>();
 		prefs.put("atomicradius", "" + atomMaxRadius);
 		prefs.put("bondlength", "" + (halfMaxBondLength * 2));
-		for (int i = 0; i < serverParams.length;i++) {
-			prefs.put(serverParams[i], Double.valueOf(serverParams[++i]));		
+		for (int i = 0; i < serverParams.length; i++) {
+			prefs.put(serverParams[i], Double.valueOf(serverParams[++i]));
 		}
 		prefs.put("LOCAL", "true");
 		return prefs;
 	}
 
-	private static String[] serverParams = {
-			"supercellxmin", "0.0",
-			"supercellymin", "0.0",
-			"supercellzmin", "0.0",
-			"supercellxmax", "1.0",
-			"supercellymax", "1.0",
-			"supercellzmax", "1.0",
-			"modeamplitude", "1.0",
-			"strainamplitude", "0.1",			
-	};
-	
+	private static String[] serverParams = { "supercellxmin", "0.0", "supercellymin", "0.0", "supercellzmin", "0.0",
+			"supercellxmax", "1.0", "supercellymax", "1.0", "supercellzmax", "1.0", "modeamplitude", "1.0",
+			"strainamplitude", "0.1", };
+
 	/**
 	 * Map could be a full page formData map, or it could be just the preferences
 	 * map.
@@ -2473,14 +2484,14 @@ public class Variables {
 			boolean isLocal = (prefs.remove("LOCAL") != null);
 			Object o = values.remove("atomicradius");
 			if (o != null) {
-				r = (o instanceof Double? ((Double) o).doubleValue() : Double.parseDouble(o.toString()));
+				r = (o instanceof Double ? ((Double) o).doubleValue() : Double.parseDouble(o.toString()));
 				changed = (r != atomMaxRadius);
 				atomMaxRadius = r;
 				prefs.put("atomicradius", o);
 			}
 			o = values.remove("bondlength");
 			if (o != null) {
-				l = (o instanceof Double? ((Double) o).doubleValue() : Double.parseDouble(o.toString())) / 2;
+				l = (o instanceof Double ? ((Double) o).doubleValue() : Double.parseDouble(o.toString())) / 2;
 				changed |= (l != halfMaxBondLength);
 				halfMaxBondLength = l;
 				prefs.put("bondlength", o);

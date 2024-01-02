@@ -643,16 +643,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		double[][] rotmat = new double[3][3];// Rotates cartesian q-space so as to place axes1 along +x and axes2 in +y
 												// hemi-plane
 
-		// Determine the unstrained metric tensor
-		MathUtil.mat3inverse(variables.sBasisCart0, tempmat);
-		MathUtil.mat3transpose(tempmat, slatt2cart);// B* = Transpose(Inverse(B))
-		MathUtil.mat3product(tempmat, slatt2cart, metric0); // G* = Transpose(B*).(B*)
-
-		// Determine the new metric tensor
-		MathUtil.mat3inverse(variables.sBasisCart, tempmat);
-		MathUtil.mat3transpose(tempmat, slatt2cart);// B* = Transpose(Inverse(B))
-		MathUtil.mat3product(tempmat, slatt2cart, metric); // G* = Transpose(B*).(B*)
-
+		variables.superCell.setMetricTensor(false, metric0, slatt2cart, tempmat);
+		variables.superCell.setMetricTensor(true, metric, slatt2cart, tempmat);
+		
 		// Create an orthonormal rotation matrix that moves axis 1 to the +x direction,
 		// while keeping axis 2 in the +y quadrant. First transform both axes into
 		// cartesian
@@ -698,7 +691,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				zzzM[i] = 0;
 				pppM[i] = 0;
 			}
-			MathUtil.mat3mul(variables.sBasisCart, crystalPeakHKL[p], qhat);
+			MathUtil.mat3mul(variables.superCell.basisCart, crystalPeakHKL[p], qhat);
 			MathUtil.norm3(qhat);
 			double d = 2 * Math.PI * peakDInv[p];
 			thermal = Math.exp(-0.5 * uiso * d * d);
@@ -722,7 +715,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 //	        				System.out.format("t:%d,s:%d,a:%d, pos:(%.2f,%.2f,%.2f), scatNR/NI:%.3f/%.3f, phase:%.3f%n", t, s, a, supxyz[0], supxyz[1], supxyz[2], scatNR, scatNI, phase);
 					// remember that magnetic mode vectors (magnetons/Angstrom) were predefined to
 					// transform this way.
-					MathUtil.mat3mul(variables.sBasisCart, a.getMagneticMoment(), mucart);
+					MathUtil.mat3mul(variables.superCell.basisCart, a.getMagneticMoment(), mucart);
 					if (isXray) {
 						scatM = 0.0;
 						for (int i = 0; i < 3; i++)

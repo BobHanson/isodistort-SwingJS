@@ -53,12 +53,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * flag to indicate that colors may need adjusting
 	 */
 	private boolean isTaintedMaterial;
-	
+
 	/**
 	 * flag to indicate animation is in progress
 	 */
 	protected boolean isAnimationRunning;
-
 
 	/**
 	 * true if the animate checkbox is checked
@@ -72,13 +71,12 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * no shading in slider panel
 	 */
 	private boolean isSimpleColor;
-	
-	
+
 	// variables that the user may want to adjust
 	/**
 	 * Cell-edge tube parameters
 	 */
-	private final static int numBondSides = 6, numCellSides = 6, numArrowSides = 8;//, ballRes = 8;
+	private final static int numBondSides = 6, numCellSides = 6, numArrowSides = 8;// , ballRes = 8;
 
 	/**
 	 * Decimal multiplier to make bond radius and cell radius fractions of atom
@@ -113,7 +111,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 // Global variables that pertain to atom, cell and bond properties	
 
 	/**
-	 * a BitSet indictating true (bit==1) for bond enabled; false (bit==0) for disabled
+	 * a BitSet indictating true (bit==1) for bond enabled; false (bit==0) for
+	 * disabled
 	 */
 	private BitSet bsBondsEnabled;
 
@@ -136,7 +135,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * Materials for coloring bonds and cells.
 	 * 
 	 */
-	private static Material bondMaterial, parentCellMaterial, superCellMaterial, xAxisMaterial, yAxisMaterial, zAxisMaterial;
+	private static Material bondMaterial, parentCellMaterial, superCellMaterial, xAxisMaterial, yAxisMaterial,
+			zAxisMaterial;
 
 	/**
 	 * Array of materials for coloring atoms[type][subtype][regular,highlighted]
@@ -164,7 +164,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * 
 	 */
 	private JTextField uView, vView, wView;
-	
+
 	public IsoDistortApp() {
 		super(APP_ISODISTORT);
 	}
@@ -200,7 +200,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	private void initAtoms(double modelRadius) {
 		// Adjustable resolution based on field of view
-		int res = (int) Math.min(8, Math.max(2,  50 / modelRadius));
+		int res = (int) Math.min(8, Math.max(2, 50 / modelRadius));
 		addStatus("atom shape resolution set to " + res);
 		showAtoms = showAtoms0;
 		int n = variables.numAtoms;
@@ -211,7 +211,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			Material m = subMaterial[a.type][a.subType];
 			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m); // MAG - 2
 			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m); // ROT - 2
-			atomObjects.child(ia).add().ball(res).setMaterial(m);        // ELL - 2
+			atomObjects.child(ia).add().ball(res).setMaterial(m); // ELL - 2
 		}
 	}
 
@@ -231,7 +231,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	}
 
 	/**
-	 * For dynamic addition of bonds by variables using the Binary 
+	 * For dynamic addition of bonds by variables using the Binary
 	 */
 	public void addBondObject(String name) {
 		bondObjects.add().tube(numBondSides).setMaterial(bondMaterial).setName(name);
@@ -274,16 +274,12 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		variables.setAtomInfo();
 
 		// Calculate the maximum distance from applet center (used to determine FOV).
-		double d2 = 0;
-		double[][] sVertices = variables.superCellCartesianVertices;
-		double[][] pVertices = variables.parentCellCartesianVertices;
-		for (int j = 0; j < 8; j++) {
-			d2 = MathUtil.maxlen2(sVertices[j], d2);
-			d2 = MathUtil.maxlen2(pVertices[j], d2);
-		}
+		double d2 = variables.parentCell.addRange(variables.superCell.addRange(0.0));
+		
 		for (int i = 0, n = variables.numAtoms; i < n; i++) {
 			d2 = MathUtil.maxlen2(variables.atoms[i].getCartesianCoord(), d2);
 		}
+// BH: this does not have to be so exact. Just adding 2 * variables.atomMaxRadius for this.
 //		for (int axis = 0; axis < 3; axis++) {
 //			d2 = MathUtil.maxlen2(paxesends[axis], d2);
 //			d2 = MathUtil.maxlen2(saxesends[axis], d2);
@@ -297,7 +293,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		rp.initializeSettings(radius);
 		return radius;
 	}
-
 
 	/**
 	 * initMaterials instantiates an array of colors for the atoms. These methods
@@ -403,8 +398,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	}
 
 	private void renderScaledAtom(Geometry child, double[] xyz, double r) {
-		
-		
+
 		rp.push();
 		{
 			rp.translate(xyz);
@@ -446,8 +440,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		rp.pop();
 	}
 
-	private final static int[] buildCell = new int[] { 
-			0, 1, //
+	private final static int[] buildCell = new int[] { 0, 1, //
 			2, 3, //
 			4, 5, //
 			6, 7, //
@@ -476,7 +469,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 		if (showBonds) {
 			// calculate the new bondInfo in bond format
-			//long t = System.currentTimeMillis();
+			// long t = System.currentTimeMillis();
 
 			if (bondsUseBSPT) {
 				checkBonding();
@@ -487,7 +480,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 					bsBondsEnabled.set(b, ok);
 				}
 			}
-			//System.out.println("IsoDistortApp bonds enabled=" + bsBondsEnabled.cardinality() + " t=" + (System.currentTimeMillis() - t));
+			// System.out.println("IsoDistortApp bonds enabled=" +
+			// bsBondsEnabled.cardinality() + " t=" + (System.currentTimeMillis() - t));
 
 		}
 
@@ -499,11 +493,13 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		 */
 		if (showCells) {
 			for (int pt = 0, c = 0; c < 24; c++) {
-				double[][] vertices = (c < 12 ? variables.parentCellCartesianVertices : variables.superCellCartesianVertices);
-				variables.setCylinderInfo(vertices[buildCell[(pt++) % 24]], vertices[buildCell[(pt++) % 24]], cellInfo[c], -1);
+				double[][] vertices = (c < 12 ? variables.parentCell.cartesianVertices
+						: variables.superCell.cartesianVertices);
+				variables.setCylinderInfo(vertices[buildCell[(pt++) % 24]], vertices[buildCell[(pt++) % 24]],
+						cellInfo[c], -1);
 			}
 		}
-		
+
 		double[][] paxesbegs = new double[3][3];
 		double[][] paxesends = new double[3][3];
 		double[][] saxesbegs = new double[3][3];
@@ -512,10 +508,10 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 		// calculate the parent and supercell coordinate axes in bond format
 
-		double[] pOrigin = variables.pOriginCart;
-		double[] sCenter = variables.sCenterCart;
-		double[][] sBasisCart = variables.sBasisCart;
-		double[][] pBasisCart = variables.pBasisCart;
+		double[] pOrigin = variables.parentCell.originCart;
+		double[] sCenter = variables.superCell.centerCart;
+		double[][] sBasisCart = variables.superCell.basisCart;
+		double[][] pBasisCart = variables.parentCell.basisCart;
 		double rmax = variables.atomMaxRadius;
 		for (int axis = 0; axis < 3; axis++) {
 			for (int i = 0; i < 3; i++) {
@@ -534,7 +530,6 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			MathUtil.vecaddN(extent, 4.0 * rmax, t3, saxesends[axis]);
 			variables.setCylinderInfo(saxesbegs[axis], saxesends[axis], axesInfo[axis + 3], -1);
 		}
-
 
 	}
 
@@ -562,9 +557,9 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 				// of that array.
 				int a2 = (int) iterator.next()[3];
 				Atom b = variables.getAtom(a2);
-				double d2;; 
-				if (a2 <= a1 || (d2 = iterator.foundDistance2()) < 0.000000000001 
-						|| d2 > r2
+				double d2;
+				;
+				if (a2 <= a1 || (d2 = iterator.foundDistance2()) < 0.000000000001 || d2 > r2
 						|| b.getOccupancy() < minBondOcc)
 					continue;
 				String key12 = key1 + a2;
@@ -606,17 +601,12 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		for (int t = 0; t < variables.numTypes; t++) {
 			variables.getColors(t, rgb);
 			for (int s = 0; s < variables.numSubTypes[t]; s++) {
-				// 1 means selected
-				if (!variables.isSubTypeSelected(t, s))
+				if (!variables.isSubTypeSelected(t, s)) {
+					// makes the atom color same as above type color
 					subMaterial[t][s].setColor(rgb[0], rgb[1], rgb[2], 0.3, 0.3, 0.3, 1, .0001, .0001, .0001);
-				// makes the atom
-				// color same as
-				// above type
-				// color
-				else {
-					double k = (double) 0.1 + 0.8 * s / variables.numSubTypes[t];
-					// subMaterial[t][s].setColor(rgb[0], rgb[1], rgb[2], k, k, k, 1, k, k, k);
+				} else {
 					// graduated color scheme
+					double k = (double) 0.1 + 0.8 * s / variables.numSubTypes[t];
 					subMaterial[t][s].setColor(0, 0, 0, k, k, k, 1, k, k, k);
 				}
 			}
@@ -648,34 +638,29 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		 * Array of vectors defining recip parent cell basis. [vector number][x, y, z]
 		 * 
 		 */
-		double[][] recipparentCell = new double[3][3];
+		double[][] recipparentCell = variables.parentCell.getReciprocal(new double[3][3], tempmat);
 		/**
 		 * Array of vectors defining recip super cell basis. [vector number][x, y, z]
 		 * 
 		 */
-		double[][] recipsuperCell = new double[3][3];
+		double[][] recipsuperCell = variables.superCell.getReciprocal(new double[3][3], tempmat);
 
 		viewIndices[0] = Double.parseDouble(uView.getText());
 		viewIndices[1] = Double.parseDouble(vView.getText());
 		viewIndices[2] = Double.parseDouble(wView.getText());
-
-		MathUtil.mat3inverse(variables.sBasisCart, tempmat);
-		MathUtil.mat3transpose(tempmat, recipsuperCell);
-		MathUtil.mat3inverse(variables.pBasisCart, tempmat);
-		MathUtil.mat3transpose(tempmat, recipparentCell);
 
 		switch (viewType) {
 		case VIEW_TYPE_SUPER_HKL:
 			MathUtil.mat3transpose(recipsuperCell, tempmat);
 			break;
 		case VIEW_TYPE_SUPER_UVW:
-			MathUtil.mat3transpose(variables.sBasisCart, tempmat);
+			MathUtil.mat3transpose(variables.superCell.basisCart, tempmat);
 			break;
 		case VIEW_TYPE_PARENT_HKL:
 			MathUtil.mat3transpose(recipparentCell, tempmat);
 			break;
 		case VIEW_TYPE_PARENT_UVW:
-			MathUtil.mat3transpose(variables.pBasisCart, tempmat);
+			MathUtil.mat3transpose(variables.parentCell.basisCart, tempmat);
 			break;
 		}
 		MathUtil.mat3mul(tempmat, viewIndices, viewDir);
@@ -729,20 +714,19 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			centerImage();
 			updateDisplay();
 			break;
-			default:
-				variables.keyTyped(e);
-				break;
+		default:
+			variables.keyTyped(e);
+			break;
 		}
 	}
 
 	@Override
 	public void reset() {
 		rp.clearAngles();
+		rp.resetView();
+		centerImage();
 		animPhase = Math.PI / 2;
 		animAmp = 1;
-		variables.resetSliders();
-		variables.readSliders();
-		variables.recalcDistortion();
 		showAtoms = showAtoms0;
 		aBox.setSelected(showAtoms);
 		showBonds = showBonds0;
@@ -759,9 +743,10 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		vView.setText("0");
 		wView.setText("1");
 		superHKL.setSelected(true);
-		rp.resetView();
-		variables.selectAllSubtypes(false);
-		centerImage();
+		variables.resetSliders();
+		variables.readSliders();
+		variables.recalcDistortion();
+		variables.clearSubtypeSelection();
 		updateDisplay();
 	}
 

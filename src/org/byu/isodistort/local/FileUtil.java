@@ -13,7 +13,9 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import javax.imageio.ImageIO;
@@ -183,6 +185,76 @@ public class FileUtil {
 
 	}
 
+	public static class HTMLScraper {
+	
+		private final String html;
+	
+		private final Map<String, Object> map = new LinkedHashMap<>();
+	
+		HTMLScraper(String html) {
+			// <FORM...> ...... </FORM>
+			this.html = getInnerHTML(html, "FORM");
+		}
+	
+		Map<String, Object> scrape() {
+			if (html == null)
+				return null;
+			String[] inputs = html.replace("<input", "<INPUT").split("<INPUT");
+			if (inputs != null)
+			for (int i = 1; i < inputs.length; i++) {
+				addEntry(inputs[i]);
+			}
+			String[] selects = html.replace("select>", "SELECT>").split("SELECT");
+			if (selects != null)
+				for (int i = 1; i < selects.length; i += 2) {
+				addSelect(selects[i]);
+			}
+			return map;
+		}
+	
+		private static String getInnerHTML(String html, String tag) {
+			String[] parts = html.split(tag.toUpperCase());
+			return (parts.length > 2 ? parts[1] : null);
+		}
+	
+		private void addEntry(String line) {
+			String type = getHTMLAttr(line, "TYPE");
+			if (type == null)
+				return;
+			switch (type) {
+			case "radio":
+			case "checkbox":
+				if (line.indexOf("CHECKED") < 0)
+					return;
+				break;
+			case "text":
+			case "hidden":
+				break;
+			default:
+				return;
+			}
+			String value = getHTMLAttr(line, "VALUE");
+			String name = getHTMLAttr(line, "NAME");
+			map.put(name, value.replace('\n', ' ').replace('\r', ' '));
+		}
+	
+		private void addSelect(String line) {
+			line.replace("option",  "OPTION");
+			String[] values = line.split("<OPTION");
+			String value = null;
+			for (int i = 1; i < values.length; i++) {
+				String v = getHTMLAttr(values[i], "VALUE");
+				if (value == null || values[i].indexOf("SELECTED") >= 0) {
+					value = v;
+				}			
+			}
+			if (value == null)
+				return;
+			String name = getHTMLAttr(line, "NAME");
+			map.put(name, value);
+		}
+	}
+
 	public static String toString(BufferedInputStream bis, boolean doClose) throws IOException {
 
 		return new String(getLimitedStreamBytes(bis, 0, doClose));
@@ -327,6 +399,28 @@ public class FileUtil {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	/**
+	 * Extract all the INPUT data from the HTML page.
+	 * 
+	 * @param html
+	 * @return
+	 */
+	public static Map<String, Object> scrapeHTML(String html) {
+		return new FileUtil.HTMLScraper(html).scrape();
+	}
+
+	public static String getHTMLAttr(String line, String attr) {
+		String key = attr + "=\"";
+		int pt = line.indexOf(key);
+		if (pt < 0)
+			pt = line.indexOf(key.toLowerCase());
+	
+		if (pt < 0 || (pt = pt + key.length()) > line.length())
+			return null;
+		int pt1 = line.indexOf("\"", pt);
+		return (pt1 < 0 ? null : line.substring(pt, pt1).trim());
 	}
 
 }

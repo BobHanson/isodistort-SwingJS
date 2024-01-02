@@ -181,7 +181,7 @@ public class MenuActions {
 		actions.put("View.domains", new IsoAction("viewDomains", "Domains", "View domains for this distortion.", 0) {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				app.viewPage("domains", true);
+				app.viewPage("domains");
 			}
 
 		});
@@ -190,7 +190,7 @@ public class MenuActions {
 				"View a list of the primary order parameters.", 0) {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				app.viewPage("primary", true);
+				app.viewPage("primary");
 			}
 		});
 
@@ -198,7 +198,7 @@ public class MenuActions {
 				"View a detailed description of the symmetry modes.", 0) {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				app.viewPage("modesdetails", true);
+				app.viewPage("modesdetails");
 			}
 		});
 
@@ -206,7 +206,7 @@ public class MenuActions {
 				"View the complete listing of symmetry mode details.", 0) {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				app.viewPage("completemodesdetails", true);
+				app.viewPage("completemodesdetails");
 			}
 		});
 
@@ -214,7 +214,7 @@ public class MenuActions {
 				"View the full list of irreducible representation matrices.", 0) {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				app.viewPage("irreps", true);
+				app.viewPage("irreps");
 			}
 		});
 		

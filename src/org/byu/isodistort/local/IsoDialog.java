@@ -1,6 +1,5 @@
 package org.byu.isodistort.local;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -27,16 +26,80 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
+/**
+ * The IsoDialog sets up asynchronous modal dialogs that offer options for
+ * saving files, viewing ISODISTORT web pages, and setting preferences.
+ * 
+ * Each dialog is a singleton instance of its class so that choices made are
+ * returned to later if viewed again.
+ * 
+ * In all cases, the goal is to replace form data input values that will be
+ * passed to isodistortform.php.
+ * 
+ * The layout of the dialog is set by a simple coding of a String array. Strings
+ * are sequential keys / value sets. Keys are of two types -- data and non-data.
+ * 
+ * Data Keys
+ * 
+ * Data keys are of the form "x...", where x is a single character specifying
+ * the type of component used:
+ * 
+ * c... JCheckBox
+ * 
+ * r... JRadioButton; next two elements are value and text
+ * 
+ * b... JComboBox; next element is comma-separated list of allowed values
+ * 
+ * i... JTextField Integer
+ * 
+ * d... JTextField Double
+ * 
+ * f... JTextField a/b fraction or Integer
+ * 
+ * F... JTextField a/b fraction or Double
+ * 
+ * The rest of the key is the name of the data element in the form data.
+ * 
+ * For example, the first element of the CIF basis matrix is "fbasist11".
+ * 
+ * Non-Data Keys
+ * 
+ * Keys also include the following four non-data strings, along with their
+ * associated values. They are recognized by their first character: 'l', 'g', or
+ * 'e'.
+ * 
+ * "label", [text]
+ * 
+ * If starting with "\n" then, this starts a new JPanel; starting with "\n<b>"
+ * starts a new Jpanel with bold, slightly larger text.
+ * 
+ * "grid", [#rows], [#cols]
+ * 
+ * Indicates a GridLayout panel. The next (#rows)x(#cols) elements go in this
+ * grid
+ * 
+ * "enable" and "endenable"
+ * 
+ * These surround a JPanel that will be visualized based on a the state of a
+ * checkbox, which should be immediately prior to "enable".
+ * 
+ * It's a little funky, but actually very easy to adapt to future needs, I
+ * think, and much clearer than a huge block of Swing library calls.
+ * 
+ * @author Bob Hanson
+ *
+ */
 public abstract class IsoDialog extends JDialog {
 
 	private static CIFDialog cifDialog;
-	private static TOPASDialog topasDialog;
+	private static DistortionDialog distortionDialog;
 	private static FormDialog formDialog;
 	private static FULLPROFDialog fullProfDialog;
-	private static DistortionDialog distortionDialog;
 	private static PrefsDialog prefsDialog;
+	private static TOPASDialog topasDialog;
 	private static TreeDialog treeDialog;
 
 	protected IsoApp app;
@@ -45,34 +108,105 @@ public abstract class IsoDialog extends JDialog {
 
 	private String[] args;
 
-	// private Map<String, JTextField> textFields;
-
-	public static void openSubgroupTreeDialog(IsoApp app, Map<String, Object> formData) {
-		TreeDialog.openDialog(app, formData);
-	}
-
 	public static void openCIFDialog(IsoApp app, Map<String, Object> formData) {
 		CIFDialog.openDialog(app, formData);
 	}
 
-	public static void openTOPASDialog(IsoApp app, Map<String, Object> formData) {
-		TOPASDialog.openDialog(app, formData);
-	}
+	private static class CIFDialog extends IsoDialog {
 
-	public static void openPreferencesDialog(IsoApp app, Map<String, Object> formData) {
-		PrefsDialog.openDialog(app, formData);
-	}
+		static void openDialog(IsoApp app, Map<String, Object> formData) {
+			if (cifDialog == null) {
+				cifDialog = new CIFDialog(app, formData);
+			}
+			cifDialog.setApp(app, () -> {
+				app.saveCIF(cifDialog.getValues());
+			});
+			cifDialog.setVisible(true);
+		}
 
-	public static void openFormDialog(IsoApp app, Map<String, Object> formData) {
-		FormDialog.openDialog(app, formData);
+		CIFDialog(IsoApp app, Map<String, Object> formData) {
+			super(app, formData, cif, "Save CIF", true);
+			init();
+		}
+
+		private static String[] cif = { //
+				"label", "\nCoordinates:", //
+				"rslidersetting", "current", "current", //
+				"rslidersetting", "parent", "parent", //
+				"rslidersetting", "child", "child", //
+
+				"label", "\nNumber of decimal places in CIF file:", //
+				"bcifdec", " 5, 6, 7, 8, 9,10,11,12,13,14,15,16", //
+
+				"label", "\n", "cnonstandardsetting", //
+				"enable", //e1, //
+				"label", "Use alternate (possibly nonstandard) setting in CIF output (matrix S\u207b\u00b9)", //
+				"label", "\n             with respect to:", //
+				"rsettingwrt", "parent", "parent", //
+				"rsettingwrt", "subgroup", "subgroup", //
+				"label", "\n      Basis vectors of subgroup lattice (rational numbers):", //
+				"grid", "3", "8", //
+
+				"label", " ", //
+				"label", "  a'    =", //
+				"fbasist11", //
+				"label", "  a     +", //
+				"fbasist12", //
+				"label", "  b     +", //
+				"fbasist13", //
+				"label", "  c", //
+
+				"label", " ", //
+				"label", "  b'    =", //
+				"fbasist21", //
+				"label", "  a     +", //
+				"fbasist22", //
+				"label", "  b     +", //
+				"fbasist23", //
+				"label", "  c", //
+
+				"label", " ", //
+				"label", "  c'    =", //
+				"fbasist31", //
+				"label", "  a     +", //
+				"fbasist32", //
+				"label", "  b     +", //
+				"fbasist33", //
+				"label", "  c", //
+
+				"label", "\n      Origin of subgroup (either rational or decimal numbers):", //
+				"grid", "1", "8", //
+				"label", " ", "Forigint1", //
+				"label", "  a     +", //
+				"Forigint2", //
+				"label", "  b     +", //
+				"Forigint3", //
+				"label", "  c", //
+				// end of grid
+				"endenable", //e1, //
+				"label", "\n", //
+				"ccifmovie", //
+				"label", "Make CIF movie", //
+				"enable", //e1,  //
+				"grid", "5", "2", //
+				"label", "        minimum amplitude:", //
+				"dampmincifmovie", //
+				"label", "        maximum amplitude:", //
+				"dampmaxcifmovie", //
+				"label", "        number of frames:", //
+				"inframescifmovie", //
+				"label", "        fractional # of periods:", //
+				"fperiodscifmovie", //
+				"label", "        amplitude variation:", //
+				"rvarcifmovie", "linear", "linear", //
+				"rvarcifmovie", "sine", "sine-wave", //
+				"endenable", //e1, //
+			};
+
 	}
 
 	public static void openDistortionDialog(IsoApp app, Map<String, Object> formData) {
 		DistortionDialog.openDisDialog(app, formData);
-	}
-
-	public static void openFULLPROFDialog(IsoApp app, Map<String, Object> formData) {
-		FULLPROFDialog.openFPDialog(app, formData);
 	}
 
 	private static class DistortionDialog extends FormDialog {
@@ -82,7 +216,7 @@ public abstract class IsoDialog extends JDialog {
 				distortionDialog = new DistortionDialog(app, formData);
 			}
 			distortionDialog.setApp(app, () -> {
-				app.saveFormData(distortionDialog.getValues());
+				app.saveDistortionFile(distortionDialog.getValues());
 			});
 			distortionDialog.setVisible(true);
 		}
@@ -93,22 +227,12 @@ public abstract class IsoDialog extends JDialog {
 
 	}
 
-	private static class FULLPROFDialog extends FormDialog {
+	public static void openFULLPROFDialog(IsoApp app, Map<String, Object> formData) {
+		FULLPROFDialog.openFPDialog(app, formData);
+	}
 
-		static void openFPDialog(IsoApp app, Map<String, Object> formData) {
-			if (fullProfDialog == null) {
-				fullProfDialog = new FULLPROFDialog(app, formData);
-			}
-			fullProfDialog.setApp(app, () -> {
-				app.saveFormData(fullProfDialog.getValues());
-			});
-			fullProfDialog.setVisible(true);
-		}
-
-		FULLPROFDialog(IsoApp app, Map<String, Object> formData) {
-			super(app, formData, null, "Save FULLPROF cpr");
-		}
-
+	public static void openFormDialog(IsoApp app, Map<String, Object> formData) {
+		FormDialog.openDialog(app, formData);
 	}
 
 	private static class FormDialog extends IsoDialog {
@@ -132,7 +256,8 @@ public abstract class IsoDialog extends JDialog {
 			init();
 		}
 
-		private static String[] generic = { "500", "150", "label", "\nCoordinates:", //
+		private static String[] generic = { 
+				"label", "\nCoordinates:", //
 				"rslidersetting", "current", "current", //
 				"rslidersetting", "parent", "parent", //
 				"rslidersetting", "child", "child", //
@@ -140,96 +265,65 @@ public abstract class IsoDialog extends JDialog {
 
 	}
 
-	private static class CIFDialog extends IsoDialog {
+	private static class FULLPROFDialog extends FormDialog {
 
-		static void openDialog(IsoApp app, Map<String, Object> formData) {
-			if (cifDialog == null) {
-				cifDialog = new CIFDialog(app, formData);
+		static void openFPDialog(IsoApp app, Map<String, Object> formData) {
+			if (fullProfDialog == null) {
+				fullProfDialog = new FULLPROFDialog(app, formData);
 			}
-			cifDialog.setApp(app, () -> {
-				app.saveCIF(cifDialog.getValues());
+			fullProfDialog.setApp(app, () -> {
+				app.saveFULLPROF(fullProfDialog.getValues());
 			});
-			cifDialog.setVisible(true);
+			fullProfDialog.setVisible(true);
 		}
 
-		CIFDialog(IsoApp app, Map<String, Object> formData) {
-			super(app, formData, cif, "Save CIF", true);
+		FULLPROFDialog(IsoApp app, Map<String, Object> formData) {
+			super(app, formData, null, "Save FULLPROF cpr");
+		}
+
+	}
+
+	public static void openPreferencesDialog(IsoApp app, Map<String, Object> formData) {
+		PrefsDialog.openDialog(app, formData);
+	}
+
+	private static class PrefsDialog extends IsoDialog {
+
+		static void openDialog(IsoApp app, Map<String, Object> formData) {
+			if (prefsDialog == null) {
+				prefsDialog = new PrefsDialog(app, formData);
+			}
+			prefsDialog.setApp(app, () -> {
+				app.setPreferences(prefsDialog.getValues());
+			});
+			prefsDialog.setVisible(true);
+		}
+
+		PrefsDialog(IsoApp app, Map<String, Object> formData) {
+			super(app, formData, prefs, "Save Preferences", true);
 			init();
 		}
 
-		private static String[] cif = { //
-				"rslidersetting", "current", "current", //
-				"rslidersetting", "parent", "parent", //
-				"rslidersetting", "child", "child", //
+		private static String[] prefs = { //
+				"label", "\n<b>Local ISODISTORT values", //
+				"label", "\nNominal atom radius (Angstroms)", //
+				"datomicradius", //
+				"label", "\nMaxium bond length (Angstroms)", //
+				"dbondlength", //
+				"label", "\n<b>Server ISODISTORT values", //
+				"label", "\nViewing range:", //
+				"label", "\nxmin", "dsupercellxmin", "label", "xmax", "dsupercellxmax", //
+				"label", "\nymin", "dsupercellymin", "label", "ymax", "dsupercellymax", //
+				"label", "\nzmin", "dsupercellzmin", "label", "zmax", "dsupercellzmax", //
+				"label", "\n<b>Server ISODISTORT/ISODIFFRACT values", //
+				"label", "\nMaximum displacement per mode:", "dmodeamplitude", "label", "Angstroms", //
+				"label", "\nMaximum strain per mode:", "dstrainamplitude", //
+		};
 
-				"label", "\nNumber of decimal places in CIF file:", //
-				"scifdec", " 5, 6, 7, 8, 9,10,11,12,13,14,15,16", //
+	}
 
-				"label", "\n", "cnonstandardsetting", //
-				"enable", "e1", //
-				"label", "Use alternate (possibly nonstandard) setting in CIF output (matrix S\u207b\u00b9)", //
-				"label", "\n             with respect to:", //
-				"rsettingwrt", "parent", "parent", //
-				"rsettingwrt", "subgroup", "subgroup", //
-				"label", "\n      Basis vectors of subgroup lattice (rational numbers):", //
-				"grid", "3", "8", //
-
-				"label", " ", //
-				"label", "  a'    =", //
-				"fbasist11", //
-				"label", "  a     +", //
-				"fbasist12", //
-				"label", "  b     +", //
-				"fbasist13", //
-				"label", "  c", //
-
-				"label", " ", //
-				"label", "  b'    =", //
-				"fbasist21", //
-				"label", "  a     +", //
-				"fbasist22", //
-				"label", "  b     +", //
-				"fbasist23", //
-				"label", "  c", //
-
-				"label", " ", //
-				"label", "  c'    =", //
-				"fbasist31", //
-				"label", "  a     +", //
-				"fbasist32", //
-				"label", "  b     +", //
-				"fbasist33", //
-				"label", "  c", //
-
-				"label", "\n      Origin of subgroup (either rational or decimal numbers):", //
-				"grid", "1", "8", //
-				"label", " ", "Forigint1", //
-				"label", "  a     +", //
-				"Forigint2", //
-				"label", "  b     +", //
-				"Forigint3", //
-				"label", "  c", //
-				// end of grid
-				"endenable", "e1", //
-				"label", "\n", //
-				"ccifmovie", //
-				"label", "Make CIF movie:", //
-				"enable", "e1",  //
-				"grid", "5", "2", //
-				"label", "        minimum amplitude:", //
-				"dampmincifmovie", //
-				"label", "        maximum amplitude:", //
-				"dampmaxcifmovie", //
-				"label", "        number of frames:", //
-				"inframescifmovie", //
-				"label", "        fractional # of periods:", //
-				"fperiodscifmovie", //
-				"label", "        amplitude variation:", //
-				"rvarcifmovie", "linear", "linear", //
-				"rvarcifmovie", "sine", "sine-wave", //
-				"endenable", "e1", //
-			};
-
+	public static void openSubgroupTreeDialog(IsoApp app, Map<String, Object> formData) {
+		TreeDialog.openDialog(app, formData);
 	}
 
 	private static class TreeDialog extends IsoDialog {
@@ -250,25 +344,25 @@ public abstract class IsoDialog extends JDialog {
 		}
 
 		private static String[] tree = { //
-				"500", "700", //
 				"label", "\nCoordinates:", //
 				"rslidersetting", "current", "current", //
 				"rslidersetting", "parent", "parent", //
 				"rslidersetting", "child", "child", //
 				"label", "\n", //
 				"ctreetopas", "label", "Generate TOPAS.STR output for subgroup tree", //
-				"enable", "e1", //
-				"label", "\nRemember to add the appropriate peak shape line when passing this into an input file", //
+				"enable", //e1, //
+				"label", "\nRemember to add the appropriate peak shape line ",
+				"label", "\nwhen adding this to a TOPAS input file", //
 				"label", "\n", "ctopasstrain", "label", "Include strain modes in TOPAS.STR", //
-				"endenable", "e1", //
+				"endenable", //e1, //
 				"label", "\n",//
 				"ctreecif", "label", "Generate CIF output for subgroup tree", //
-				"enable", "e1", //
+				"enable", //e1, //
 				"label", "\nNumber of decimal places in CIF file:", //
-				"scifdec", " 5, 6, 7, 8, 9,10,11,12,13,14,15,16", //
+				"bcifdec", " 5, 6, 7, 8, 9,10,11,12,13,14,15,16", //
 
 				"label", "\n", "cnonstandardsetting", //
-				"enable", "e2", //
+				"enable", //e2, //
 				"label", "Use alternate (possibly nonstandard) setting in CIF output (matrix S\u207b\u00b9)", //
 				"label", "\n             with respect to:", //
 				"rsettingwrt", "parent", "parent", //
@@ -312,62 +406,31 @@ public abstract class IsoDialog extends JDialog {
 				"Forigint3", //
 				"label", "  c", //
 				// end of grid
-				"endenable", "e2", // 
+				"endenable", //e2, // 
 				"label", "\n", //
 				"ccifmovie", //
-				"label", "Make CIF movie:", //
-				"enable", "e2", //
+				"label", "Make CIF movie", //
+				"enable", //e2, //
 				"grid", "5", "2", //
-				"label", "        minimum amplitude:", //
+				"label", "       minimum amplitude:", //
 				"dampmincifmovie", //
-				"label", "        maximum amplitude:", //
+				"label", "       maximum amplitude:", //
 				"dampmaxcifmovie", //
 				"label", "        number of frames:", //
 				"inframescifmovie", //
-				"label", "        fractional # of periods:", //
+				"label", " fractional # of periods:", //
 				"fperiodscifmovie", //
-				"label", "        amplitude variation:", //
+				"label", "     amplitude variation:", //
 				"rvarcifmovie", "linear", "linear", //
 				"rvarcifmovie", "sine", "sine-wave", //
-				"endenable", "e2",
-				"endenable", "e1",
+				"endenable", //e2,
+				"endenable", //e1,
 		};
 
 	}
 
-	private static class PrefsDialog extends IsoDialog {
-
-		static void openDialog(IsoApp app, Map<String, Object> formData) {
-			if (prefsDialog == null) {
-				prefsDialog = new PrefsDialog(app, formData);
-			}
-			prefsDialog.setApp(app, () -> {
-				app.setPreferences(prefsDialog.getValues());
-			});
-			prefsDialog.setVisible(true);
-		}
-
-		PrefsDialog(IsoApp app, Map<String, Object> formData) {
-			super(app, formData, prefs, "Save Preferences", true);
-			init();
-		}
-
-		private static String[] prefs = { "500", "500", //
-				"label", "\n<b>Local ISODISTORT values", //
-				"label", "\nNominal atom radius (Angstroms)", //
-				"datomicradius", //
-				"label", "\nMaxium bond length (Angstroms)", //
-				"dbondlength", //
-				"label", "\n<b>Server ISODISTORT values", //
-				"label", "\nViewing range:", //
-				"label", "\nxmin", "dsupercellxmin", "label", "xmax", "dsupercellxmax", //
-				"label", "\nymin", "dsupercellymin", "label", "ymax", "dsupercellymax", //
-				"label", "\nzmin", "dsupercellzmin", "label", "zmax", "dsupercellzmax", //
-				"label", "\n<b>Server ISODISTORT/ISODIFFRACT values", //
-				"label", "\nMaximum displacement per mode:", "dmodeamplitude", "label", "Angstroms", //
-				"label", "\nMaximum strain per mode:", "dstrainamplitude", //
-		};
-
+	public static void openTOPASDialog(IsoApp app, Map<String, Object> formData) {
+		TOPASDialog.openDialog(app, formData);
 	}
 
 	private static class TOPASDialog extends IsoDialog {
@@ -388,13 +451,13 @@ public abstract class IsoDialog extends JDialog {
 		}
 
 		private static String[] topas = { //
-				"500", "200", //
 				"label", "\nCoordinates:", //
 				"rslidersetting", "current", "current", //
 				"rslidersetting", "parent", "parent", //
 				"rslidersetting", "child", "child", //
 
-				"label", "\nRemember to add the appropriate peak shape line when passing this into an input file", //
+				"label", "\nRemember to add the appropriate peak shape line ",
+				"label", "\nwhen passing this into an input file", //
 				"label", "\n", "ctopasstrain", "label", "Include strain modes in TOPAS.STR", //
 		};
 
@@ -413,32 +476,27 @@ public abstract class IsoDialog extends JDialog {
 	protected void init() {
 		createGUI();
 		pack();
-		setLocationRelativeTo(app.frame);
+		setLocation(100, 100);
+//		setLocationRelativeTo(app.frame);
 	}
 
 	protected void createGUI() {
-		int width = Integer.parseInt(args[0]);
-		int height = Integer.parseInt(args[1]);
-		setSize(width, height);
-		setPreferredSize(new Dimension(width, height));
-		setMaximumSize(new Dimension(width, height));
-		setLayout(new BorderLayout());
+		setLayout(new BoxLayout(getContentPane(), BoxLayout.PAGE_AXIS));
 		addCenterPanel(args);
 		addLowerPanel();
 	}
 
 	private void addCenterPanel(String[] page) {
-		Box box = new Box(BoxLayout.PAGE_AXIS);
 		ButtonGroup group = null;
 		String groupName = null;
 		Object radioValue = null;
 		Map<String, Object> formData = this.formData;
 		JPanel p = null, rp = null;
 		JCheckBox cb = null;
-		Stack<Box> estack = new Stack<>();
+		Stack<JComponent> estack = new Stack<>();
+		JComponent box = (JComponent) getContentPane();
 		boolean cbEnabled = true;
-		// [0] and [1] are width and height
-		for (int i = 2; i < page.length; i++) {
+		for (int i = 0; i < page.length; i++) {
 			String item = page[i];
 			String key = (item == "label" ? null : item.substring(1));
 			Object v = (key == null ? null : formData.get(key));
@@ -448,34 +506,33 @@ public abstract class IsoDialog extends JDialog {
 				int rows = Integer.parseInt(page[++i]);
 				int cols = Integer.parseInt(page[++i]);
 				JPanel pad = new JPanel();
-				pad.setBorder(new EmptyBorder(0, 50, 0, 50));
+				pad.setLayout(new BoxLayout(pad, BoxLayout.PAGE_AXIS));
+//				pad.setBorder(new EmptyBorder(0, 20, 0, 20));
 				p = new JPanel(new GridLayout(rows, cols, 0, 0));
 				pad.add(p);
 				box.add(pad);
-				box.add(Box.createVerticalGlue());
 				break;
 			case 'e':
-				@SuppressWarnings("unused") 
-				String tag = page[++i];
 				if (item.equals("enable")) {
-					Box savedBox = box;
+					JComponent savedBox = box;
 					estack.push(box);
 					box = new Box(BoxLayout.PAGE_AXIS);
 					box.setVisible(cbEnabled);
 					savedBox.add(box);
 					JCheckBox c = cb;
-					Box thisBox = box;
+					JComponent thisBox = box;
 					cb.addActionListener(new ActionListener() {
 
 						@Override
 						public void actionPerformed(ActionEvent e) {
 							thisBox.setVisible(c.isSelected());
+							pack();
 						}
 
 					});
 					cb = null;
 				} else {
-					box.add(Box.createVerticalGlue());
+					box.add(new JLabel());
 					box = estack.pop();
 				}
 				break;
@@ -504,14 +561,15 @@ public abstract class IsoDialog extends JDialog {
 					group = new ButtonGroup();
 					groupName = key;
 					radioValue = null;
+					JPanel pad1 = new JPanel();
+					pad1.setLayout(new BoxLayout(pad1, BoxLayout.PAGE_AXIS));
 					rp = new JPanel(new FlowLayout(FlowLayout.LEFT));
-					p.add(rp);
+					pad1.add(rp);
+					p.add(pad1);
 				}
 				String val = page[++i];
 				String rtext = page[++i];
 				JRadioButton r = new JRadioButton();
-				r.setPreferredSize(new Dimension(20, 20));
-				r.setMaximumSize(new Dimension(20, 20));
 				r.setSize(20, 20);
 				group.add(r);
 				r.setName(val);
@@ -534,16 +592,14 @@ public abstract class IsoDialog extends JDialog {
 				cb = new JCheckBox("");
 				cbEnabled = "true".equals(v);
 				cb.setSelected(cbEnabled);
-				cb.setPreferredSize(new Dimension(20, 20));
-				cb.setMaximumSize(new Dimension(20, 20));
 				cb.setSize(20, 20);
 				p.add(cb);
 				cb.setName(key);
 				objects.add(item);
 				objects.add(cb);
 				break;
-			case 's':
-				// "sxxx", "5,6,7,8,9,10,11,12,13,14,15,16",//
+			case 'b':
+				// "bXXX", "5,6,7,8,9,10,11,12,13,14,15,16",//
 				JComboBox<String> jc = new JComboBox<>(page[++i].split(","));
 				if (v != null)
 					jc.setSelectedItem(v);
@@ -555,28 +611,38 @@ public abstract class IsoDialog extends JDialog {
 			case 'f':
 			case 'F':
 			case 'd':
-				JTextField t = new JTextField(5);
-				t.setPreferredSize(new Dimension(30, 20));
-				t.setMaximumSize(new Dimension(30, 20));
+				JPanel pad2 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+				JTextField t = new JTextField();
+				t.setHorizontalAlignment(SwingConstants.RIGHT);
+				t.setPreferredSize(new Dimension(50, 20));
+				t.setMaximumSize(new Dimension(50, 20));
+				t.setMinimumSize(new Dimension(50, 20));
+				t.setSize(new Dimension(30, 20));
 				if (v != null) {
 					t.setText(v.toString());
 				}
-				p.add(t);
+				pad2.add(t);
+				p.add(pad2);
 				objects.add(item);
 				objects.add(t);
 				break;
 			}
 		}
-		box.add(Box.createVerticalGlue());
-		add(box, BorderLayout.CENTER);
 	}
 
 	private void addLowerPanel() {
-		JPanel p = new JPanel(new FlowLayout());
+		JPanel p = new JPanel();
+		p.setLayout(new FlowLayout());
+//        p.setLayout(new BoxLayout(p, BoxLayout.X_AXIS));
+        p.setPreferredSize(new Dimension(500, 40));
+        p.setMaximumSize(new Dimension(500, 40));
+        p.setBorder(new EmptyBorder(2,0,0,0));
 		p.setBackground(Color.DARK_GRAY);
-		JButton b;
-		b = new JButton("OK");
-		b.setPreferredSize(new Dimension(80, 20));
+		JButton b = new JButton("OK");
+		b.setAlignmentY(CENTER_ALIGNMENT);
+		// need both of these
+//		b.setPreferredSize(new Dimension(80, 20));
+		b.setMaximumSize(new Dimension(80, 20));
 		b.addActionListener(new ActionListener() {
 
 			@Override
@@ -587,7 +653,9 @@ public abstract class IsoDialog extends JDialog {
 		});
 		p.add(b);
 		b = new JButton("Cancel");
-		b.setPreferredSize(new Dimension(80, 20));
+//		b.setPreferredSize(new Dimension(80, 20));
+		b.setMaximumSize(new Dimension(80, 20));
+		b.setAlignmentY(CENTER_ALIGNMENT);
 		b.addActionListener(new ActionListener() {
 
 			@Override
@@ -597,7 +665,7 @@ public abstract class IsoDialog extends JDialog {
 
 		});
 		p.add(b);
-		add(p, BorderLayout.SOUTH);
+		add(p);
 	}
 
 	protected void okAction() {

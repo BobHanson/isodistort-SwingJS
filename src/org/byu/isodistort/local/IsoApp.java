@@ -57,7 +57,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".9_2024.01.01";
+	final static String minorVersion = ".9_2024.01.02";
 
 	static boolean isJS = (/** @j2sNative true || */false);
 	
@@ -811,7 +811,7 @@ public abstract class IsoApp {
 					return;
 				}		
 				distortionFileData = b;
-				sendFormDataToServer(ServerUtil.scrapeHTML(new String(b)));
+				sendFormDataToServer(FileUtil.scrapeHTML(new String(b)));
 			}
 
 		}, 1);
@@ -1080,51 +1080,16 @@ public abstract class IsoApp {
 		} else {
 			// after dialog
 			updateFormData(map, values, "tree");
-			setStatus("...fetching subgroup tree from iso.byu...");
-			ServerUtil.fetch(this, FileUtil.FILE_TYPE_SUBGROUP_TREE, map, new Consumer<byte[]>() {
-				@Override
-				public void accept(byte[] b) {
-					if (b == null) {
-						addStatus("server transfer failed");
-						return;
-					}
-					displayPage(map);
-				}
-			}, 20);
+			ServerUtil.displayIsoPage(this, map);
 		}
 	}
 	
-	public void viewPage(String originType, boolean orDownload) {
+	public void viewPage(String originType) {
 		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
 		updateFormData(map, null, originType);
-		if (isJS) {
-			if (document != null) {
-				ServerUtil.gotoIsoPage(originType);
-			} else if (!orDownload) {
-				sayNotPossible("The document has changed.");
-				return;
-			}
-		} else if (!orDownload) {
-			sayNotPossible("Not implemented in Java.");
-			return;
-		}
-		displayPage(map);
+		ServerUtil.displayIsoPage(this, map);
 	}
-
-	private void displayPage(Map<String, Object> map) {
-		IsoApp me = this;
-		ServerUtil.fetch(this, FileUtil.FILE_TYPE_PAGE_HTML, map, new Consumer<byte[]>() {
-
-			@Override
-			public void accept(byte[] b) {
-				String html = ServerUtil.setIsoBase(new String(b));
-				FileUtil.showHTML(me, html);
-			}
-
-		}, 10);
-	}
-
 
 }

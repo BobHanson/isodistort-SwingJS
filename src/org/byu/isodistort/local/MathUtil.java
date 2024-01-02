@@ -505,13 +505,13 @@ public class MathUtil {
 	};
 
 
-	static {
-		for (int n = 0; n < 6; n++) {
-			System.out.println(">" + varToString(-0.12345678, n, -8) + "<");
-		}
-		System.out.println("XI");
-	}
-
+//	static {
+//		for (int n = 0; n < 6; n++) {
+//			System.out.println(">" + varToString(-0.12345678, n, -8) + "<");
+//		}
+//		System.out.println("XI");
+//	}
+//
 	public static void copy3(double[] src, double[] dest) {
 		dest[0] = src[0];
 		dest[1] = src[1];

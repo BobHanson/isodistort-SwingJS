@@ -356,16 +356,6 @@ public class Variables {
 		app.updateDisplay();
 	}
 
-	/**
-	 * recalcDistortion recalculates the positions and occupancies based on current
-	 * slider values.
-	 * 
-	 */
-	public void recalcDistortion() {
-		calculateStrain();
-		calculateDistortions();
-	}
-
 	public void saveModeValues() {
 		modes[DIS].saveMode();
 		modes[OCC].saveMode();
@@ -391,12 +381,11 @@ public class Variables {
 	}
 
 	/**
-	 * Naively calculate strained parent-cell basis vectors in cartesian Angstrom
-	 * coords.
-	 * 
+	 * recalcDistortion recalculates the positions and occupancies based on current
+	 * slider values.
 	 * 
 	 */
-	private void calculateStrain() {
+	public void recalcDistortion() {
 
 		// Calculate strained parent and supercell basis vectors in cartesian Angstrom
 		// coordinates.
@@ -412,9 +401,6 @@ public class Variables {
 		childCell.setStrainedVertices();
 		childCell.setLatticeParameterLabels();
 		recenterLattice();
-	}
-
-	private void calculateDistortions() {
 
 		// pass an array to the modes that tracks the
 		// max values that will be used in the labels
@@ -442,8 +428,11 @@ public class Variables {
 
 	}
 
+	/**
+	 * Calculate the center of the supercell in strained cartesian Angstrom coords.
+	 * 
+	 */
 	private void recenterLattice() {
-//      Calculate the center of the supercell in strained cartesian Angstrom coords (sOriginCart).
 		double[][] minmax = new double[2][3];
 		MathUtil.set3(minmax[0], 1E6, 1e6, 1e6);
 		MathUtil.set3(minmax[1], -1E6, -1e6, -1e6);

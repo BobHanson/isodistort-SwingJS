@@ -263,6 +263,7 @@ public class MenuActions {
 				new IsoAction("setCenter", "Recenter Structure", "Center the strucure in the window.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
+						// IsoDistortApp only
 						app.centerImage();
 					}
 				});

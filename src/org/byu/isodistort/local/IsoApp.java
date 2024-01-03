@@ -57,21 +57,10 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".9_2024.01.02";
+	final static String minorVersion = ".9_2024.01.03";
 
 	static boolean isJS = (/** @j2sNative true || */false);
 	
-	/**
-	 * 
-	 * set TRUE to ignore the bonds in the bondlist and instead
-	 * use the binary space partition tree to find the bonds on the fly
-	 * 
-	 * Looks like the real-time BSPT adds about 30 ms to rendering time during 
-	 * slider action for the 6000-bonds file ZrP2O7-sg205-sg61-distort.isoviz  
-	 */
-	public boolean bondsUseBSPT = true;
-	
-
 	/**
 	 * the datafile to use for startup
 	 */
@@ -610,7 +599,7 @@ public abstract class IsoApp {
 		 	Dimension d = new Dimension(controlStatusPanel.getWidth() - 5, controlPanelHeight);
 			controlPanel.setPreferredSize(d);
 			statusPanel.setPreferredSize(d);
-			variables.setPackedSize();
+			variables.setPackedHeight(sliderPanel);
 	 }
 
 

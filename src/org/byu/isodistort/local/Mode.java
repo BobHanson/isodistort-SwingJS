@@ -214,25 +214,15 @@ class Mode {
 				max[t][s][type] += v1[0] / numSubAtoms[t][s];
 				break;
 			case 3: // DIS, MAG, ROT
-				MathUtil.mat3mul(v.sBasisCart, v1, tempvec);
-				double d = MathUtil.len3(tempvec);
+				double d = MathUtil.len3(v.childCell.toTempCartesian(v1));
 				if (d > max[t][s][type])
 					max[t][s][type] = d;
 				break;
 			case 6: // ELL
-				MathUtil.voigt2matrix(v1, tempmat, 0);
-				MathUtil.mat3product(v.sBasisCart, tempmat, tempmat);
-				MathUtil.mat3product(tempmat, v.sBasisCartInverse, tempmat);
-				// ellipsoid in cartesian coords
-				d = 0;
-				for (int i = 0; i < 3; i++) {
-					for (int j = 0; j < 3; j++) {
-						d += tempmat[i][j] * tempmat[i][j];
-					}
-				}
+				d = v.childCell.getIsotropicParameter(v1);
 				if (d > max[t][s][ELL])
 					max[t][s][ELL] = d;
-
+				break;
 			}
 
 		}

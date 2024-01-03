@@ -638,42 +638,33 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * 
 	 */
 	private void recalcStrainstuff() {
-		double[][] tempmat = new double[3][3];
 		double[][] slatt2cart = new double[3][3]; // transforms superHKL to XYZ cartesian
 		double[][] rotmat = new double[3][3];// Rotates cartesian q-space so as to place axes1 along +x and axes2 in +y
 												// hemi-plane
 
-		// Determine the unstrained metric tensor
-		MathUtil.mat3inverse(variables.sBasisCart0, tempmat);
-		MathUtil.mat3transpose(tempmat, slatt2cart);// B* = Transpose(Inverse(B))
-		MathUtil.mat3product(tempmat, slatt2cart, metric0); // G* = Transpose(B*).(B*)
-
-		// Determine the new metric tensor
-		MathUtil.mat3inverse(variables.sBasisCart, tempmat);
-		MathUtil.mat3transpose(tempmat, slatt2cart);// B* = Transpose(Inverse(B))
-		MathUtil.mat3product(tempmat, slatt2cart, metric); // G* = Transpose(B*).(B*)
-
+		variables.childCell.setMetricTensor(false, slatt2cart, metric0);
+		variables.childCell.setMetricTensor(true, slatt2cart, metric);
+		
 		// Create an orthonormal rotation matrix that moves axis 1 to the +x direction,
 		// while keeping axis 2 in the +y quadrant. First transform both axes into
 		// cartesian
 		// coords. Then take 1.cross.2 to get axis 3, and 3.cross.1 to get the new axis
 		// 2.
 		// Normalize all three and place them in the rows of the transformation matrix.
-		MathUtil.mat3mul(slatt2cart, crystalHkldirections[0], tempmat[0]);
-		MathUtil.mat3mul(slatt2cart, crystalHkldirections[1], tempmat[1]);
-		MathUtil.cross3(tempmat[0], tempmat[1], tempmat[2]);
-		MathUtil.cross3(tempmat[2], tempmat[0], tempmat[1]);
-		MathUtil.norm3(tempmat[0]);
-		MathUtil.norm3(tempmat[1]);
-		MathUtil.norm3(tempmat[2]);
-		MathUtil.mat3copy(tempmat, rotmat);
+		MathUtil.mat3mul(slatt2cart, crystalHkldirections[0], rotmat[0]);
+		MathUtil.mat3mul(slatt2cart, crystalHkldirections[1], rotmat[1]);
+		MathUtil.cross3(rotmat[0], rotmat[1], rotmat[2]);
+		MathUtil.cross3(rotmat[2], rotmat[0], rotmat[1]);
+		MathUtil.norm3(rotmat[0]);
+		MathUtil.norm3(rotmat[1]);
+		MathUtil.norm3(rotmat[2]);
 
 		// Combine the rotation and the cartesian conversion to get the overall superHKL
 		// to cartesian transformation.
-		MathUtil.mat3product(rotmat, slatt2cart, slatt2rotcart);
+		MathUtil.mat3product(rotmat, slatt2cart, slatt2rotcart, tempmat);
 
 		// Invert to get the overall cartesian to superHKL tranformation.
-		MathUtil.mat3inverse(slatt2rotcart, rotcart2slatt);
+		MathUtil.mat3inverse(slatt2rotcart, rotcart2slatt, tempvec, tempmat);
 
 	}
 
@@ -684,7 +675,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	public void recalcIntensities() {
 		double zzzNR, zzzNI, pppNR, pppNI, scatNR, scatNI, scatM;
 		double[] zzzM = new double[3], pppM = new double[3];
-		double[] qhat = new double[3], mucart = new double[3], supxyz = new double[3];
+		double[] qhat = new double[3], supxyz = new double[3];
 		double phase, thermal;
 		double[] atomScatFac = new double[2];
 		double Intensity000; // The total scattering factor of the unit cell
@@ -698,7 +689,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				zzzM[i] = 0;
 				pppM[i] = 0;
 			}
-			MathUtil.mat3mul(variables.sBasisCart, crystalPeakHKL[p], qhat);
+			MathUtil.set3(variables.childCell.toTempCartesian(crystalPeakHKL[p]), qhat);
 			MathUtil.norm3(qhat);
 			double d = 2 * Math.PI * peakDInv[p];
 			thermal = Math.exp(-0.5 * uiso * d * d);
@@ -722,11 +713,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 //	        				System.out.format("t:%d,s:%d,a:%d, pos:(%.2f,%.2f,%.2f), scatNR/NI:%.3f/%.3f, phase:%.3f%n", t, s, a, supxyz[0], supxyz[1], supxyz[2], scatNR, scatNI, phase);
 					// remember that magnetic mode vectors (magnetons/Angstrom) were predefined to
 					// transform this way.
-					MathUtil.mat3mul(variables.sBasisCart, a.getMagneticMoment(), mucart);
+					// mucart is temporary only
+					double[] mucart = variables.childCell.toTempCartesian(a.getMagneticMoment());
 					if (isXray) {
 						scatM = 0.0;
-						for (int i = 0; i < 3; i++)
-							zzzM[i] += 0;
+//						for (int i = 0; i < 3; i++)
+//							zzzM[i] += 0;
 					} else {
 						scatM = a.getOccupancy() * 5.4;
 						for (int i = 0; i < 3; i++)
@@ -827,6 +819,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	}
 
+	private double[][] tempmat = new double[3][3];
+	private double[] tempvec0 = new double[3], tempvec = new double[3];
+	
 	/**
 	 * Creates the list of single-crystal peaks and their types Called by init() and
 	 * run().
@@ -836,7 +831,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		double[] hklH = new double[3], hklV = new double[3], hklO = new double[3];
 		double[] superhkl = new double[3], superhklcart = new double[3];
 		double tempscalar, tempmin, tempmax, mag, inplanetest;
-		double[] tempvec0 = new double[3], tempvec = new double[3], uvw = new double[3];
+		double[] uvw = new double[3];
 		double[][] limits = new double[8][3]; // HKL search limits
 		double[][] slatt2platt = new double[3][3]; // transforms superHKL to parentHKL
 		double[][] platt2slatt = new double[3][3]; // transforms parentHKL to superHKL
@@ -848,7 +843,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		int tempint, count;
 
 		MathUtil.mat3copy(variables.Tmat, slatt2platt);
-		MathUtil.mat3inverse(slatt2platt, platt2slatt);
+		MathUtil.mat3inverse(slatt2platt, platt2slatt, tempvec, tempmat);
 
 		hklO[0] = Double.parseDouble(hOTxt.getText());
 		hklO[1] = Double.parseDouble(kOTxt.getText());
@@ -885,35 +880,35 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// Find out the superHKL range covered within the Qrange specified.
 		MathUtil.set3(tempvec0, crystalDInvRange, 0, 0);
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.add3(tempvec, crystalHklCenter, limits[0]);
+		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[0]);
 
 		MathUtil.set3(tempvec0, -crystalDInvRange, 0, 0);
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.add3(tempvec, crystalHklCenter, limits[1]);
+		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[1]);
 
 		MathUtil.set3(tempvec0, 0, crystalDInvRange, 0);
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.add3(tempvec, crystalHklCenter, limits[2]);
+		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[2]);
 
 		MathUtil.set3(tempvec0, 0, -crystalDInvRange, 0);
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.add3(tempvec, crystalHklCenter, limits[3]);
+		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[3]);
 
 		MathUtil.set3(tempvec0, crystalDInvRange, crystalDInvRange, 0);
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.add3(tempvec, crystalHklCenter, limits[4]);
+		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[4]);
 
 		MathUtil.set3(tempvec0, -crystalDInvRange, crystalDInvRange, 0);
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.add3(tempvec, crystalHklCenter, limits[5]);
+		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[5]);
 
 		MathUtil.set3(tempvec0, crystalDInvRange, -crystalDInvRange, 0);
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.add3(tempvec, crystalHklCenter, limits[6]);
+		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[6]);
 
 		MathUtil.set3(tempvec0, -crystalDInvRange, -crystalDInvRange, 0);
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.add3(tempvec, crystalHklCenter, limits[7]);
+		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[7]);
 
 		for (int ii = 0; ii < 3; ii++) {
 			tempmin = 1000;
@@ -1111,7 +1106,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// end loop
 		// if we made it to the end of the loop, add peak to the end of the list
 
-		double[] tempvec = new double[3];
 		MathUtil.cross3(metric0[1], metric0[0], tempvec); // BH m1 x m0
 		double metricdet = MathUtil.dot3(tempvec, metric0[2]); // Calculate the metric determinant
 		int limH = (int) Math.ceil(powderDinvmax

@@ -7,13 +7,13 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * The VariableTokenizer class reads an ISOVIZ file as a monolithic byte array
- * and then reads through that as a state machine, creating a map of keys and
- * just marking start and stop signals for data items. The data items are not
- * parsed until a request is made for a value. Then they are parsed as int,
- * double, boolean, String, or BitSet 1/0 values.
+ * The IsoTokenizer class reads an ISOVIZ file or a distortion file as a
+ * monolithic byte array and then reads through that as a state machine,
+ * creating a map of keys and just marking start and stop signals for data
+ * items. The data items are not parsed until a request is made for a value.
+ * Then they are parsed as int, double, boolean, String, or BitSet 1/0 values.
  * 
- * VariableTokenizer extends TreeMap. This means that it inherits all the fields
+ * IsoTokenizer extends TreeMap. This means that it inherits all the fields
  * of TreeMap, such as getKeySet(), and it collects and delivers keys entries in
  * sequential order based on their addition. In this way, it can be used to read
  * and then later write entries in order.
@@ -35,7 +35,7 @@ import java.util.TreeMap;
  * Comments start with a '#' and end with a new-line character (\n or \r), and
  * are treated as whitespace.
  * 
- * VariableTokenizer.readBlocks() scans the byte array for keys, values, and
+ * IsoTokenizer.readBlocks() scans the byte array for keys, values, and
  * whitespace. For each key that it finds that has values, it creates an entry
  * in the blockData map. This integer array has length (nvalues * 2 + 1) and
  * takes the form:
@@ -93,7 +93,7 @@ import java.util.TreeMap;
  * The following nine public methods are available:
  * 
  * 
- * VariableTokenizer(Object data, int verbosity)
+ * IsoTokenizer(Object data, int verbosity)
  * 
  * void dispose()
  * 
@@ -118,7 +118,7 @@ import java.util.TreeMap;
  * @author Bob Hanson
  *
  */
-public class VariableTokenizer extends TreeMap<String, int[]> {
+public class IsoTokenizer extends TreeMap<String, int[]> {
 
 	/**
 	 * the file data
@@ -164,7 +164,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 	 * @param verbosity QUIET (0) no reporting; DEBUG_LOW (1) key and number of
 	 *                  values only; DEBUG_HIGH (2) full report for each byte parsed
 	 */
-	public VariableTokenizer(Object data, String ignore, int verbosity) {
+	public IsoTokenizer(Object data, String ignore, int verbosity) {
 		//ignore = null;
 		if (data instanceof String) {
 			bytes = ((String) data).getBytes();
@@ -597,7 +597,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 	private static void dumpMap(byte[] bytes, Map<String, int[]> map) {
 		// String s = new String(bytes);
 		// System.out.println("String was \n" + s + "<");
-		System.out.println("------VariableTokenizer.dumpMap------");
+		System.out.println("------IsoTokenizer.dumpMap------");
 		for (String s1 : map.keySet()) {
 			int[] data = map.get(s1);
 			for (int i = 1, p = 0; p < data[0]; p++) {
@@ -632,7 +632,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 				"      12\r\n" + 
 				"!end modesFile\r\n" + 
 				"";
-		VariableTokenizer vt = new VariableTokenizer(s, null, DEBUG_LOW);
+		IsoTokenizer vt = new IsoTokenizer(s, null, DEBUG_LOW);
 		dumpMap(vt.bytes, vt);
 
 	}
@@ -643,7 +643,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 	 */
 	static void testViz() {
 		String s = "!test1 0 0.0 2.5 -3.2 4.0001 1234567 123456.7890123456 123456789.01234567890123 3.56000000 #3 adf4\n 5 \n\n\n#!test2 testing  \n\n!test3 OK";
-		VariableTokenizer vt = new VariableTokenizer(s, null, QUIET);// DEBUG_HIGH);
+		IsoTokenizer vt = new IsoTokenizer(s, null, QUIET);// DEBUG_HIGH);
 		dumpMap(vt.bytes, vt);
 		int nData = vt.setData("test1");
 		for (int i = 0; i < nData; i++) {
@@ -657,7 +657,7 @@ public class VariableTokenizer extends TreeMap<String, int[]> {
 	 *  
 	 * @param vt
 	 */
-	private static void parseSpeedTest(VariableTokenizer vt) {
+	private static void parseSpeedTest(IsoTokenizer vt) {
 		long t = System.currentTimeMillis();
 
 		for (int i = 0; i < 1000000; i++)

@@ -190,9 +190,12 @@ public class FileUtil {
 		private final String html;
 	
 		private final Map<String, Object> map = new LinkedHashMap<>();
+
+		private IsoApp app;
 	
-		HTMLScraper(String html) {
+		HTMLScraper(IsoApp app, String html) {
 			// <FORM...> ...... </FORM>
+			this.app = app;
 			this.html = getInnerHTML(html, "FORM");
 		}
 	
@@ -212,9 +215,13 @@ public class FileUtil {
 			return map;
 		}
 	
-		private static String getInnerHTML(String html, String tag) {
+		private String getInnerHTML(String html, String tag) {
+			System.out.println(html);
 			String[] parts = html.split(tag.toUpperCase());
-			return (parts.length > 2 ? parts[1] : null);
+			if (parts.length == 2) {
+				app.addStatus("FileUtil.getInnerHTML for </" + tag + "> not found!");
+			}
+			return (parts.length > 1 ? parts[1] : null);
 		}
 	
 		private void addEntry(String line) {
@@ -405,10 +412,11 @@ public class FileUtil {
 	 * Extract all the INPUT data from the HTML page.
 	 * 
 	 * @param html
+	 * @param app 
 	 * @return
 	 */
-	public static Map<String, Object> scrapeHTML(String html) {
-		return new FileUtil.HTMLScraper(html).scrape();
+	public static Map<String, Object> scrapeHTML(IsoApp app, String html) {
+		return new HTMLScraper(app, html).scrape();
 	}
 
 	public static String getHTMLAttr(String line, String attr) {

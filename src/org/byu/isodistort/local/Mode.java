@@ -3,11 +3,10 @@ package org.byu.isodistort.local;
 import java.awt.Color;
 import java.util.Random;
 
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 import org.byu.isodistort.local.Variables.Atom;
-import org.byu.isodistort.local.Variables.VariableGUI.IsoSlider;
+import org.byu.isodistort.local.Variables.SliderPanelGUI.IsoSlider;
 
 /**
  * A class to hold the arrays relating to individual types of symmetry modes,
@@ -71,11 +70,9 @@ class Mode {
 	double[][] maxAmpTM;
 	int[][] irrepTM;
 	String[][] nameTM;
-	IsoSlider[][] sliderTM;
-	JLabel[][] sliderLabelTM;
-	double[][] sliderValTM;
+	double[][] values;
 
-	private double[][] savedSliderValues;
+	private double[][] savedValues;
 
 	/**
 	 * strain and irrep only [mode][value]
@@ -159,7 +156,7 @@ class Mode {
 			vector = new double[count][6];
 			break;
 		case IRREP:
-			for (int m = 0; m < count; m++) {
+			for (int m = count; --m >= 0;) {
 				calcAmpTM[0][m] = maxAmpTM[0][m] = 1;
 			}
 			break;
@@ -186,8 +183,8 @@ class Mode {
 	 * @param tempmat
 	 */
 	void calcDistortion(Variables v, double[][][] max, double[] tempvec, double[][] tempmat) {
-		double[] irrepVals = (v.modes[IRREP] == null ? null : v.modes[IRREP].sliderValTM[0]);
-		double superVal = v.superSliderVal;
+		double[] irrepVals = (v.modes[IRREP] == null ? null : v.modes[IRREP].values[0]);
+		double f = v.superSliderFraction;
 		for (int ia = 0, n = v.numAtoms; ia < n; ia++) {
 			Atom a = v.atoms[ia];
 			MathUtil.vecfill(delta, 0);
@@ -195,8 +192,8 @@ class Mode {
 			int s = a.subType;
 			if (isActive()) {
 				// accumulate distortion deltas
-				for (int m = 0; m < modesPerType[t]; m++) {
-					double d = irrepVals[irrepTM[t][m]] * sliderValTM[t][m] * superVal;
+				for (int m = modesPerType[t]; --m >= 0;) {
+					double d = values[t][m] * irrepVals[irrepTM[t][m]] * f;
 					MathUtil.vecaddN(delta, d, a.modes[type][m], delta);
 				}
 			}
@@ -235,15 +232,15 @@ class Mode {
 	void saveMode() {
 		if (!isActive())
 			return;
-		if (savedSliderValues == null) {
-			savedSliderValues = new double[numTypes][];
+		if (savedValues == null) {
+			savedValues = new double[numTypes][];
 			for (int t = 0; t < numTypes; t++) {
-				savedSliderValues[t] = new double[modesPerType[t]];
+				savedValues[t] = new double[modesPerType[t]];
 			}
 		}
-		for (int t = 0; t < numTypes; t++) {
-			for (int m = 0; m < modesPerType[t]; m++) {
-				savedSliderValues[t][m] = sliderValTM[t][m];
+		for (int t = numTypes; --t >= 0;) {
+			for (int m = modesPerType[t]; --m >= 0;) {
+				savedValues[t][m] = values[t][m];
 			}
 		}
 	}
@@ -257,14 +254,14 @@ class Mode {
 	void randomizeModes(Random rval, boolean isGM) {
 		if (!isActive())
 			return;
-		for (int t = 0; t < numTypes; t++) {
-			for (int m = 0; m < modesPerType[t]; m++) {
+		for (int t = numTypes; --t >= 0;) {
+			for (int m = modesPerType[t]; --m >= 0;) {
 				String name = nameTM[t][m];
 				boolean isGM1 = (name.startsWith("GM1") && !name.startsWith("GM1-"));
 				if (isGM1 == isGM) {
-					sliderValTM[t][m] = (2 * rval.nextFloat() - 1) * maxAmpTM[t][m];
+					values[t][m] = (2 * rval.nextFloat() - 1) * maxAmpTM[t][m];
 				} else if (isGM) {
-					sliderValTM[t][m] = 0;
+					values[t][m] = 0;
 				}
 			}
 		}
@@ -277,9 +274,9 @@ class Mode {
 	void restoreMode() {
 		if (!isActive())
 			return;
-		for (int t = 0; t < numTypes; t++) {
-			for (int m = 0; m < modesPerType[t]; m++) {
-				sliderValTM[t][m] = savedSliderValues[t][m];
+		for (int t = numTypes; --t >= 0;) {
+			for (int m = modesPerType[t]; --m >= 0;) {
+				values[t][m] = savedValues[t][m];
 			}
 		}
 	}
@@ -290,13 +287,8 @@ class Mode {
 	void colorPanels() {
 		if (typePanels == null || !isActive())
 			return;
-		for (int t = 0; t < numTypes; t++) {
-			Color c = colorT[t];
-			typePanels[t].setBackground(c);
-			for (int m = 0; m < modesPerType[t]; m++) {
-				sliderLabelTM[t][m].setBackground(c);
-//				sliderTM[t][m].setBackground(c);
-			}
+		for (int t = numTypes; --t >= 0;) {
+			typePanels[t].setBackground(colorT[t]);
 		}
 	}
 
@@ -306,21 +298,13 @@ class Mode {
 	 * 
 	 * @param n
 	 */
-	void setSliders(int n) {
+	void setSliders(IsoSlider[][] sliders, int n) {
 		if (!isActive())
 			return;
-		switch (type) {
-		case STRAIN:
-		case IRREP:
-			for (int m = 0; m < count; m++)
-				sliderTM[0][m].setValue(n);
-			break;
-		default:
-			for (int t = 0; t < numTypes; t++) {
-				for (int m = 0; m < modesPerType[t]; m++)
-					sliderTM[t][m].setValue(n);
+		for (int t = numTypes; --t >= 0;) {
+			for (int m = modesPerType[t]; --m >= 0;) {
+				sliders[t][m].setValue(n);
 			}
-			break;
 		}
 	}
 
@@ -329,71 +313,33 @@ class Mode {
 	 * 
 	 * @param sliderMax
 	 */
-	void resetSliders(int sliderMax) {
+	void resetSliders(IsoSlider[][] sliders, int sliderMax) {
 		if (!isActive())
 			return;
-		switch (type) {
-		case STRAIN:
-			numTypes = count;
-			break;
-		case IRREP:
-			for (int m = 0; m < count; m++)
-				sliderTM[0][m].setValue(sliderMax);
-			break;
-		default:
-			for (int t = 0; t < numTypes; t++) {
-				for (int m = 0; m < modesPerType[t]; m++)
-					sliderTM[t][m].setValue((int) (calcAmpTM[t][m] / maxAmpTM[t][m] * sliderMax));
+		for (int t = numTypes; --t >= 0;) {
+			for (int m = modesPerType[t]; --m >= 0;) {
+				sliders[t][m].setValue((int) (calcAmpTM[t][m] / maxAmpTM[t][m] * sliderMax));
 			}
-			break;
 		}
 	}
 
 	/**
-	 * Iterate over types and modes, setting sliderValsTM and sliderLabelsTM.
+	 * Iterate over types and modes, reading and processing their associated slider
+	 * values.
 	 * 
-	 * @param superSliderVal TODO
-	 * @param sliderMaxVal
+	 * @param sliders
+	 * @param superSliderFraction
+	 * @param maxJSliderIntVal
+	 * @param irreps
 	 */
-	void readSlider(double superSliderVal, double sliderMaxVal, Mode irreps) {
-		boolean isAtomic = (type < MODE_ATOMIC_COUNT);
+	void readSliders(IsoSlider[][] sliders, double superSliderFraction, double maxJSliderIntVal, Mode irreps) {
 		boolean isIrrep = (type == IRREP);
-		int prec = (isAtomic ? 2 : 3);
-		int n = (isAtomic ? numTypes : 1);
-		for (int t = 0; t < n; t++) {
-			for (int m = 0; m < modesPerType[t]; m++) {
-				double sval = sliderTM[t][m].getValue();
-				double f = sval / sliderMaxVal;
+		boolean isAtomic = (type < MODE_ATOMIC_COUNT);
+		for (int t = 0, n = (isAtomic ? numTypes : 1); t < n; t++) {
+			for (int m = modesPerType[t]; --m >= 0;) {
 				double max = maxAmpTM[t][m];
-				sliderValTM[t][m] = max * f;
-				double val = sliderValTM[t][m];
-				double irval = (isIrrep ? 1 : irreps.sliderValTM[0][irrepTM[t][m]]);
-				double d = val * irval * superSliderVal;
-				sliderLabelTM[t][m].setText(MathUtil.varToString(d, prec, -8) + "  " + nameTM[t][m]);
-				if (!isIrrep) {
-//					System.out.println("mode " + type + " " + sliderTM[t][m].getName() 
-//							+ " d=" + d
-//							+ " f=" + f
-//							+ " sval=" + sval
-//							+ " val=" + val
-//							+ " irval=" + irval
-//							);
-					sliderTM[t][m].setPointer(d / max);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Set slider values when switching modes.
-	 * 
-	 * @param otherMode
-	 */
-	void setValues(Mode otherMode) {
-		int n = (type >= MODE_ATOMIC_COUNT ? 1 : numTypes);
-		for (int t = 0; t < n; t++) {
-			for (int m = 0; m < otherMode.modesPerType[t]; m++) {
-				sliderTM[t][m].setValue((int) otherMode.sliderTM[t][m].getValue());
+				double val = values[t][m] = max * sliders[t][m].getValue() / maxJSliderIntVal;
+				sliders[t][m].setLabelValue(val * (isIrrep ? 1 : irreps.values[0][irrepTM[t][m]]), max, nameTM[t][m]);
 			}
 		}
 	}
@@ -446,14 +392,14 @@ class Mode {
 	 * 
 	 * @return the Voigt strain tensor plus Identity
 	 */
-	double[][] getVoigtStrainTensor(double superSliderVal, Mode irreps) {
-		double[] irrepVals = irreps.sliderValTM[0];
-		double[] mySliderVals = sliderValTM[0];
+	double[][] getVoigtStrainTensor(double superSliderFraction, Mode irreps) {
+		double[] irrepVals = irreps.values[0];
+		double[] mySliderVals = values[0];
 		int[] myIrreps = irrepTM[0];
 		double[] v = new double[6];
-		for (int n = 0; n < 6; n++) {
-			for (int m = 0; m < count; m++) {
-				v[n] += vector[m][n] * irrepVals[myIrreps[m]] * mySliderVals[m] * superSliderVal;
+		for (int n = 6; --n >= 0;) {
+			for (int m = count; --m >= 0;) {
+				v[n] += vector[m][n] * irrepVals[myIrreps[m]] * mySliderVals[m] * superSliderFraction;
 			}
 		}
 		return MathUtil.voigt2matrix(v, new double[3][3], 1);

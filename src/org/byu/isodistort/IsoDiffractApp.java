@@ -1067,7 +1067,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		// Save the old strain slider values
 		variables.readSliders();
-		double masterTemp = variables.getSetSuperSliderValue(1);
+		double masterTemp = variables.getSetSuperSliderFraction(1);
 		int nStrains = variables.getStrainModesCount();
 		double[] strainVals = variables.getStrainmodeSliderValues();
 		double[] strainTemp = new double[nStrains];
@@ -1092,7 +1092,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		MathUtil.mat3copy(metric, randommetric2);
 
 		// restore the strains to their original values
-		variables.getSetSuperSliderValue(masterTemp);
+		variables.getSetSuperSliderFraction(masterTemp);
 		for (int m = 0; m < nStrains; m++)
 			strainVals[m] = strainTemp[m];
 		// use metric tensor to determine h,k,l ranges
@@ -1208,12 +1208,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		if (peakCount > powderMaxVisiblePeaks)
 			peakCount = powderMaxVisiblePeaks;
 
-		masterTemp = variables.getSetSuperSliderValue(0);
+		masterTemp = variables.getSetSuperSliderFraction(0);
 		boolean isXrayTemp = isXray;
 		isXray = true;
 		recalcPowder();
 		isXray = isXrayTemp;
-		variables.getSetSuperSliderValue(masterTemp);
+		variables.getSetSuperSliderFraction(masterTemp);
 
 		// Calculate the x-ray powder-pattern scale factor
 		setPowderScaleFactor();
@@ -1610,7 +1610,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		}
 
 		// Save old masterSliderVal and set it to 1.0
-		double masterTemp = variables.getSetSuperSliderValue(1);
+		double masterTemp = variables.getSetSuperSliderFraction(1);
 
 		// Calculate all peak intensities and set zero-intensity peaks to type 2.
 		// Save and zero all displacive, scalar and magnetic mode values
@@ -1631,7 +1631,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				peakColor[p] = 4;
 
 		// Restore all displacement and scalar mode values to their original values.
-		variables.getSetSuperSliderValue(masterTemp);
+		variables.getSetSuperSliderFraction(masterTemp);
 		variables.restoreModeValues();
 		variables.recalcDistortion();
 		recalcIntensities();

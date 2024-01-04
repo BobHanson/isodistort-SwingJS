@@ -206,6 +206,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			atomObjects.add();
 			Atom a = variables.atoms[ia];
 			Material m = subMaterial[a.type][a.subType];
+			// [MAG,ROT,ELL]
 			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m); // MAG - 2
 			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m); // ROT - 2
 			atomObjects.child(ia).add().ball(res).setMaterial(m); // ELL - 2
@@ -351,8 +352,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 					Geometry a = atomObjects.child(i);
 					renderScaledAtom(a, info[DIS], info[OCC][0] * variables.atomMaxRadius);
 					renderArrow(a.child(MAG - 2), info[MAG], momentMultiplier, variables.angstromsPerMagneton);
-					renderEllipsoid(a.child(ELL - 2), info[ELL], 1 / Math.sqrt(variables.defaultUiso));
 					renderArrow(a.child(ROT - 2), info[ROT], rotationMultiplier, variables.angstromsPerRadian);
+					renderEllipsoid(a.child(ELL - 2), info[ELL], 1 / Math.sqrt(variables.defaultUiso));
 				}
 			}
 			double r;
@@ -429,14 +430,9 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 			rp.rotateY(info[1]);// y-angle orientation of arrow number q
 			rp.rotateX(info[0]);// x-angle orientation of arrow number q
 			rp.scale(r, r, 0.62 + info[2] * scale);
-
-			// The factor
-			// of
-			// 0.62
-			// hides
-			// the zero-length moments
-			// just inside the surface
-			// of the spheres.
+			// BH TODO may be true for standard ball size, but...
+			// The factor of 0.62 hides the zero-length moments
+			// just inside the surface of the spheres.
 			rp.transform(child);
 		}
 		rp.pop();
@@ -535,8 +531,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 					// makes the atom color same as above type color
 					subMaterial[t][s].setColor(rgb[0], rgb[1], rgb[2], 0.3, 0.3, 0.3, 1, .0001, .0001, .0001);
 				} else {
-					// graduated color scheme
-					double k = (double) 0.1 + 0.8 * s / variables.numSubTypes[t];
+					// graduated color scheme // BH not quite so black
+					double k = (double) 0.2 + 0.3 * s / (variables.numSubTypes[t] - 1);
 					subMaterial[t][s].setColor(0, 0, 0, k, k, k, 1, k, k, k);
 				}
 			}

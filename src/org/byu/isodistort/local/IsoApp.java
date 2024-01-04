@@ -57,7 +57,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".9_2024.01.03";
+	final static String minorVersion = ".9_2024.01.04";
 
 	static boolean isJS = (/** @j2sNative true || */false);
 	
@@ -800,10 +800,10 @@ public abstract class IsoApp {
 					return;
 				}		
 				distortionFileData = b;
-				sendFormDataToServer(FileUtil.scrapeHTML(new String(b)));
+				sendFormDataToServer(FileUtil.scrapeHTML(IsoApp.this, new String(b)));
 			}
 
-		}, 1);
+		}, 5);
 	}
 
 	protected void sendFormDataToServer(Map<String, Object> formData) {

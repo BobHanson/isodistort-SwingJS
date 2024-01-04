@@ -33,9 +33,9 @@ import org.byu.isodistort.local.Bspt.CubeIterator;
  * 
  * Cell (inner static)
  * 
- * VariableParser (inner)
+ * IsoParser (inner)
  * 
- * VariableGUI (inner)
+ * SliderPanelGUI (inner)
  * 
  * 
  * @author Bob Hanson
@@ -74,11 +74,11 @@ public class Variables {
 	/**
 	 * double version of sliderMax
 	 */
-	final static double sliderMaxVal = sliderMax;
+	final static double maxJSliderIntVal = sliderMax;
 
 	private IsoApp app;
 
-	private VariableGUI gui;
+	private SliderPanelGUI gui;
 
 	public Atom[] atoms;
 
@@ -227,7 +227,7 @@ public class Variables {
 	/**
 	 * The master slider bar value.
 	 */
-	double superSliderVal;
+	double superSliderFraction;
 
 	/**
 	 * ignore events; we are adjusting and will update when done
@@ -268,9 +268,9 @@ public class Variables {
 	 */
 	public byte[] parse(Object data) {
 		long t = System.currentTimeMillis();
-		byte[] bytes = new VariableParser().parse(data);
+		byte[] bytes = new IsoParser().parse(data);
 		System.out.println("Variables parsed in " + (System.currentTimeMillis() - t) + " ms");
-		gui = new VariableGUI();
+		gui = new SliderPanelGUI();
 		return bytes;
 	}
 
@@ -285,7 +285,7 @@ public class Variables {
 	}
 
 	public void setAnimationAmplitude(double animAmp) {
-		gui.superSlider.setValue((int) Math.round(animAmp * sliderMaxVal));
+		gui.superSlider.setValue((int) Math.round(animAmp * maxJSliderIntVal));
 	}
 
 	public boolean isSubTypeSelected(int t, int s) {
@@ -306,9 +306,9 @@ public class Variables {
 				gui.subTypeBoxes[t][s].setSelected(false);
 	}
 
-	public double getSetSuperSliderValue(double newVal) {
-		double d = superSliderVal;
-		superSliderVal = newVal;
+	public double getSetSuperSliderFraction(double newVal) {
+		double d = superSliderFraction;
+		superSliderFraction = newVal;
 		return d;
 	}
 
@@ -317,7 +317,7 @@ public class Variables {
 	}
 
 	public double[] getStrainmodeSliderValues() {
-		return (modes[STRAIN] == null ? new double[0] : modes[STRAIN].sliderValTM[0]);
+		return (modes[STRAIN] == null ? new double[0] : modes[STRAIN].values[0]);
 	}
 
 	public void getColors(int t, double[] rgb) {
@@ -392,7 +392,7 @@ public class Variables {
 
 		double[][] pStrainPlusIdentity = (modes[STRAIN] == null
 				? MathUtil.voigt2matrix(new double[6], new double[3][3], 1)
-				: modes[STRAIN].getVoigtStrainTensor(superSliderVal, modes[IRREP]));
+				: modes[STRAIN].getVoigtStrainTensor(superSliderFraction, modes[IRREP]));
 		parentCell.setStrainedCartesianBasis(pStrainPlusIdentity);
 		parentCell.transformParentToChild(childCell, true);
 		parentCell.setStrainedCartesianOrigin(childCell.toTempCartesian(parentCell.originUnitless));
@@ -416,8 +416,8 @@ public class Variables {
 
 		modes[DIS].calcDistortion(this, max, tempvec, null);
 		modes[OCC].calcDistortion(this, max, null, null);
-		modes[ROT].calcDistortion(this, max, tempvec, null);
 		modes[MAG].calcDistortion(this, max, tempvec, null);
+		modes[ROT].calcDistortion(this, max, tempvec, null);
 		modes[ELL].calcDistortion(this, max, tempvec, tempmat);
 
 		for (int t = 0; t < numTypes; t++) {
@@ -470,7 +470,7 @@ public class Variables {
 		// otherwise current
 		for (int mode = 0; mode < MODE_ATOMIC_COUNT; mode++) {
 			if (isModeActive(modes[mode])) {
-				double[][] vals = modes[mode].sliderValTM;
+				double[][] vals = modes[mode].values;
 				for (int t = vals.length; --t >= 0;) {
 					for (int m = vals[t].length; --m >= 0;) {
 						String name = getInputName(mode, t, m);
@@ -481,7 +481,7 @@ public class Variables {
 			}
 		}
 		if (isModeActive(modes[STRAIN])) {
-			double[] vals = modes[STRAIN].sliderValTM[0];
+			double[] vals = modes[STRAIN].values[0];
 			for (int m = vals.length; --m >= 0;) {
 				String name = getInputName(STRAIN, 0, m);
 				double d = (toZero ? 0 : toBest ? modes[STRAIN].calcAmpTM[0][m] : vals[m]);
@@ -496,7 +496,7 @@ public class Variables {
 
 		for (int mode = 0; mode < MODE_ATOMIC_COUNT; mode++) {
 			if (isModeActive(modes[mode])) {
-				double[][] vals = modes[mode].sliderValTM;
+				double[][] vals = modes[mode].values;
 				for (int t = vals.length; --t >= 0;) {
 					for (int m = vals[t].length; --m >= 0;) {
 						String name = getInputName(mode, t, m);
@@ -506,7 +506,7 @@ public class Variables {
 			}
 		}
 		if (isModeActive(modes[STRAIN])) {
-			double[] vals = modes[STRAIN].sliderValTM[0];
+			double[] vals = modes[STRAIN].values[0];
 			for (int m = vals.length; --m >= 0;) {
 				String name = getInputName(STRAIN, 0, m);
 				setModeFormValue(name, vals[m], mapFormData, document);
@@ -1320,9 +1320,18 @@ public class Variables {
 
 	} // end of Cell
 
-	class VariableParser {
+	/**
+	 * The IsoParser class is an inner class of Variables that loads Variable and Mode data from 
+	 * an ISOVIZ file. It passes a byte array to IsoTokenizer. IsoTokenizer recognizes all data blocks;
+	 * IsoParser then directs IsoTokenizer to convert (ASCII) byte sequences to text and numbers as
+	 * needed.
+	 *   
+	 * @author Bob Hanson
+	 *
+	 */
+	class IsoParser {
 
-		private VariableTokenizer vt;
+		private IsoTokenizer vt;
 
 		/**
 		 * Used only for connecting bonds with atoms
@@ -1380,8 +1389,8 @@ public class Variables {
 			try {
 				boolean skipBondList = true;// (isDiffraction || app.bondsUseBSPT);
 				String ignore = (skipBondList ? ";bondlist;" : null);
-				vt = new VariableTokenizer(data, ignore,
-						isSwitch ? VariableTokenizer.QUIET : VariableTokenizer.DEBUG_LOW);
+				vt = new IsoTokenizer(data, ignore,
+						isSwitch ? IsoTokenizer.QUIET : IsoTokenizer.DEBUG_LOW);
 
 				isoversion = getOneString("isoversion", null);
 
@@ -1456,8 +1465,10 @@ public class Variables {
 				if (bsPrimitive != null && !bsPrimitive.get(iread))
 					continue;
 				double[] data = atoms[ia++].vectorBest[mode] = new double[ncol];
-				for (int i = 0; i < ncol; i++)
+				for (int i = 0; i < ncol; i++) {
 					data[i] = (isDefault ? def : vt.getDouble(q + i));
+					System.out.println("data i " + mode + " " + i + " " + data[i]);
+				}
 			}
 			return true;
 		}
@@ -1776,7 +1787,7 @@ public class Variables {
 			parseAtomicMode(DIS, "displacivemodelist", 3, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
 			parseAtomicMode(OCC, "scalarmodelist", 1, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
 			parseAtomicMode(MAG, "magneticmodelist", 3, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
-			parseAtomicMode(ROT, "magneticmodelist", 3, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
+			parseAtomicMode(ROT, "rotmodelist", 3, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
 			parseAtomicMode(ELL, "ellipmodelist", 3, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
 
 		}
@@ -2029,7 +2040,7 @@ public class Variables {
 		 * @param firstAtomOfType
 		 * @param numSubTypeAtomsRead
 		 * 
-		 * @param variableParser
+		 * @param isoParser
 		 * @param bsPrimitive
 		 * @param key
 		 * 
@@ -2108,9 +2119,18 @@ public class Variables {
 			}
 		}
 
-	} // end of VariableParser
+	} // end of IsoParser
 
-	class VariableGUI {
+	
+	/**
+	 * The SliderPanelGUI inner class of Variables creates all GUI elements for
+	 * IsoApp.sliderPanel and handles all synchronization of JSlider and JCheckbox
+	 * components with Variables and Mode values. 
+	 * 
+	 * @author Bob Hanson
+	 *
+	 */
+	class SliderPanelGUI {
 
 		private final static int subTypeWidth = 170;
 		private final static int barheight = 22;
@@ -2128,18 +2148,6 @@ public class Variables {
 		 */
 		private JLabel superSliderLabel;
 
-//		/**
-//		 * Array of labels for supercell lattice parameters
-//		 */
-//		private JLabel[] superCell.labels = new JLabel[6];
-//		/**
-//		 * Array of labels for parent lattice parameters
-//		 */
-//		private JLabel[] parentCell.labels = new JLabel[6];
-//		/**
-//		 * names for parent and super cell parameter titles
-//		 */
-//		private JLabel parentLabel, superLabel;
 		/**
 		 * Array of labels for atom types
 		 */
@@ -2153,6 +2161,11 @@ public class Variables {
 		 */
 		private JCheckBox[][] subTypeBoxes;
 
+		/** 
+		 * mode sliders and their labels and pointers
+		 */
+		IsoSlider[][][] sliderTM = new IsoSlider[MODE_COUNT][][];
+		
 		/**
 		 * Panel which holds master slider bar and it's label; added scrollPanel
 		 */
@@ -2214,20 +2227,20 @@ public class Variables {
 		void toggleIrrepSliders() {
 			irrepSlidersOn = !irrepSlidersOn;
 			int val = (irrepSlidersOn ? sliderMax : 0);
-			modes[IRREP].setSliders(val);
+			modes[IRREP].setSliders(sliderTM[IRREP], val);
 		}
 
 		void zeroSliders() {
 			superSlider.setValue(sliderMax);
 			for (int i = 0; i < MODE_COUNT; i++) {
-				modes[i].setSliders(0);
+				modes[i].setSliders(sliderTM[i], 0);
 			}
 		}
 
 		void resetSliders() {
 			superSlider.setValue(sliderMax);
 			for (int i = 0; i < MODE_COUNT; i++) {
-				modes[i].resetSliders(sliderMax);
+				modes[i].resetSliders(sliderTM[i], sliderMax);
 			}
 		}
 
@@ -2242,8 +2255,14 @@ public class Variables {
 
 			superSlider.setValue(v.gui.superSlider.getValue());
 			for (int i = 0; i < MODE_COUNT; i++) {
-				if (isModeActive(modes[i]))
-					modes[i].setValues(v.modes[i]);
+				if (isModeActive(modes[i])) {
+					int n = (i >= MODE_ATOMIC_COUNT ? 1 : numTypes);
+					for (int t = 0; t < n; t++) {
+						for (int m = 0; m < v.modes[i].modesPerType[t]; m++) {
+							sliderTM[i][t][m].setValue((int) v.gui.sliderTM[i][t][m].getValue());
+						}
+					}
+				}
 			}
 		}
 
@@ -2253,11 +2272,11 @@ public class Variables {
 		 * 
 		 */
 		void readSliders() {
-			superSliderVal = superSlider.getValue() / sliderMaxVal;
-			superSliderLabel.setText(MathUtil.varToString(superSliderVal, 2, -6) + " child");
+			superSliderFraction = superSlider.getValue() / maxJSliderIntVal;
+			superSliderLabel.setText(MathUtil.varToString(superSliderFraction, 2, -6) + " child");
 			for (int i = MODE_COUNT; --i >= 0;) {
 				if (isModeActive(modes[i]))
-					modes[i].readSlider(superSliderVal, sliderMaxVal, modes[IRREP]);
+					modes[i].readSliders(sliderTM[i], superSliderFraction, maxJSliderIntVal, modes[IRREP]);
 			}
 		}
 
@@ -2299,7 +2318,7 @@ public class Variables {
 			superSliderLabel.setForeground(Color.BLACK);
 			superSliderLabel.setHorizontalAlignment(JLabel.CENTER);
 			superSliderLabel.setVerticalAlignment(JLabel.CENTER);
-			superSlider = new IsoSlider("child", 0, 1, 1, Color.WHITE);
+			superSlider = new IsoSlider(-1, "child", 0, 1, 1, Color.WHITE);
 
 			masterSliderPanel.add(Box.createHorizontalGlue());
 			masterSliderPanel.add(new JLabel("parent "));
@@ -2462,16 +2481,24 @@ public class Variables {
 		class IsoSlider extends JSlider implements ChangeListener {
 
 			private int min; // 0 or -SliderMax
+			
+			private int type;
 
 			private double calcAmp, maxAmp;
+			
+			JLabel whitePointer, orangePointer, blackPointer;
 
-			JLabel pointer, pointer0, pointer1;
-
-			IsoSlider(String name, int min, double calcAmp, double maxAmp, Color c) {
+			JLabel sliderLabel;
+			
+			void setSliderLabel(String text) {
+				sliderLabel.setText(text);
+			}
+			
+			IsoSlider(int type, String name, int min, double calcAmp, double maxAmp, Color c) {
 				super(JSlider.HORIZONTAL, min, sliderMax, (int) (calcAmp / maxAmp * sliderMax));
 				setName(name);
 				setPreferredSize(new Dimension(sliderWidth, barheight));
-				if (min != 0 && showSliderPointers) {
+				if (type >= 0 && showSliderPointers) {
 					this.min = min;
 					this.calcAmp = calcAmp;
 					this.maxAmp = maxAmp;
@@ -2480,19 +2507,20 @@ public class Variables {
 					false);
 					// In JavaScript this will be (1 ? true : false) -- evaluating to true,
 					// while in Java it will read (false). Cool, huh??
-					if (isJS) {
+					if (isJS && min != 0) {
 						// This check is required because for overlapping components
 						// JavaScript paints them first to last CREATED,
 						// while Java paints them last to first PAINTED.
 						// This is not something that can be fixed in SwingJS.
-
-						pointer1 = getPointer(Color.BLACK);
-						pointer0 = getPointer(Color.ORANGE);
-						pointer = getPointer(Color.WHITE);
+						blackPointer = getPointer(Color.BLACK);
+						orangePointer = getPointer(Color.ORANGE);
+						whitePointer = getPointer(Color.WHITE);
 					} else {
-						pointer = getPointer(Color.WHITE);
-						pointer0 = getPointer(Color.ORANGE);
-						pointer1 = getPointer(Color.BLACK);
+						whitePointer = getPointer(Color.WHITE);
+						if (min != 0) {
+							orangePointer = getPointer(Color.ORANGE);
+							blackPointer = getPointer(Color.BLACK);
+						}
 					}
 				}
 				if (c != null)
@@ -2510,9 +2538,21 @@ public class Variables {
 				return p;
 			}
 
-			public void setPointer(double d) {
-				if (pointer == null)
+			/** from Mode.readSliders; 
+			 * 
+			 * @param val
+			 * @param max
+			 * @param name
+			 */
+			void setLabelValue(double val, double max, String name) {
+				double d = val * superSliderFraction;
+				int prec = (type < MODE_ATOMIC_COUNT ? 2 : 3);
+				setSliderLabel(MathUtil.varToString(d, prec, -8) + "  " + name);
+				if (whitePointer == null) {
 					return;
+				}
+				d /= max;
+
 				// slight adjustments for JavaScript Look and Feel
 				// maybe for MacOS as well?
 				double w = getWidth() - (/** @j2sNative 1 ? 20 : */
@@ -2520,12 +2560,14 @@ public class Variables {
 				int off = (/** @j2sNative 1 ? 8 : */
 				6);
 				int x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
-				pointer.setBounds(x + off, 12, 6, 8);
-				x = (int) (0.5 * w);
-				pointer0.setBounds(x + off, 12, 6, 8);
-				d = calcAmp / maxAmp;
-				x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
-				pointer1.setBounds(x + off, 12, 6, 8);
+				whitePointer.setBounds(x + off, 12, 6, 8);
+				if (orangePointer != null) {
+					x = (int) (0.5 * w);
+					orangePointer.setBounds(x + off, 12, 6, 8);
+					d = calcAmp / maxAmp;
+					x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
+					blackPointer.setBounds(x + off, 12, 6, 8);
+				}
 			}
 
 			/**
@@ -2555,49 +2597,30 @@ public class Variables {
 		private void initModeGUI(JPanel sliderPanel, Mode mode, int t) {
 			if (!isModeActive(mode))
 				return;
+			int type = mode.type;
 			if (t == 0) {
 				int numTypes = mode.numTypes;
 				mode.typePanels = new JPanel[numTypes];
-				mode.sliderTM = new IsoSlider[numTypes][];
-				mode.sliderLabelTM = new JLabel[numTypes][];
-				mode.sliderValTM = new double[numTypes][];
+				sliderTM[type] = new IsoSlider[numTypes][];
+				mode.values = new double[numTypes][];
 			}
 			Color c = (mode.colorT == null ? Color.PINK : mode.colorT[t]);
 			int min = (mode.type == IRREP ? 0 : -sliderMax);
 			int nModes = mode.modesPerType[t];
-			mode.sliderTM[t] = new IsoSlider[nModes];
-			mode.sliderLabelTM[t] = new JLabel[nModes];
-			mode.sliderValTM[t] = new double[nModes];
+			sliderTM[type][t] = new IsoSlider[nModes];
+			mode.values[t] = new double[nModes];
 			JPanel tp = mode.typePanels[t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
 			tp.setPreferredSize(new Dimension(sliderPanelWidth, mode.modesPerType[t] * barheight));
 			tp.setBackground(c);
 			for (int m = 0; m < nModes; m++) {
-				mode.sliderTM[t][m] = new IsoSlider(getInputName(mode.type, t, m), min, mode.calcAmpTM[t][m],
+				sliderTM[type][t][m] = new IsoSlider(mode.type, getInputName(mode.type, t, m), min, mode.calcAmpTM[t][m],
 						mode.maxAmpTM[t][m], c);
-				mode.sliderLabelTM[t][m] = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
-				tp.add(mode.sliderTM[t][m]);
-				tp.add(mode.sliderLabelTM[t][m]);
+				sliderTM[type][t][m].sliderLabel = newLabel("", sliderLabelWidth, c, JLabel.LEFT);
+				tp.add(sliderTM[type][t][m]);
+				tp.add(sliderTM[type][t][m].sliderLabel);
 			}
 			sliderPanel.add(tp);
 		}
-
-//		/**
-//		 * Set up the strain and irreducible representation panels.
-//		 * 
-//		 * @param mode
-//		 * @param c
-//		 * 
-//		 */
-//		private void initNonAtomGUI(Mode mode, Color c) {
-//			if (!isModeActive(mode))
-//				return;
-//			int min = (mode.type == STRAIN ? -(int) sliderMax : 0);
-//			int nModes = mode.count;
-//			mode.sliderTM = new JSlider[1][nModes];
-//			initModeGUI(mode, 0, null);
-//			addTypeModes(sliderPanel, mode, 0, c, min);
-//		}
-//
 
 		/**
 		 * Indicate max values (average for occupation) in the subtype label.

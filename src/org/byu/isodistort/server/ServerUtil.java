@@ -76,7 +76,7 @@ public class ServerUtil {
 	public static boolean fetch(IsoApp app, int type, Map<String, Object> mapFormData, Consumer<byte[]> consumer,
 			int delay) {
 
-		boolean testing = false;
+		boolean testing = true;
 
 		byte[] fileData = (byte[]) mapFormData.remove("toProcess");
 		String fileName = (String) mapFormData.remove("fileName");
@@ -115,7 +115,6 @@ public class ServerUtil {
 					String key = e.getKey();
 					String val = fixFormValue(key, e.getValue());
 					request.addFormPart(key, val);
-					// System.out.println(e.getKey() + " = " + e.getValue());
 				}
 				if (fileData != null)
 					request.addFilePart("toProcess", new ByteArrayInputStream(fileData), "text/plain",
@@ -125,9 +124,7 @@ public class ServerUtil {
 				byte[] bytes = FileUtil.getLimitedStreamBytes(r.getContent(), Integer.MAX_VALUE, true);
 				// temporary fix for garbage in wyck line
 				cleanBytes(bytes);
-				// System.out.println(new String(bytes));
 				app.addStatus("ServerUtil.fetch received " + bytes.length + " bytes");
-
 				if (bytes.length > 100 && bytes.length < 1000) {
 					ServerUtil.getTempFile(app, type, bytes, consumer, delay);
 				} else {
@@ -179,12 +176,13 @@ public class ServerUtil {
 //		</BODY>
 //		</HTML>
 
+		System.out.println(new String(bytes));
 		if (!bytesContain(bytes, SET_TIMEOUT)) {
 			consumer.accept(bytes);
 			return;
 		}
 		String html = new String(bytes);
-		Map<String, Object> map = FileUtil.scrapeHTML(html);
+		Map<String, Object> map = FileUtil.scrapeHTML(app, html);
 		String service = FileUtil.getHTMLAttr(html, "ACTION");
 		if (map == null || service == null) {
 			throw new RuntimeException("ServerUtil.getTempFile cannot process server html: " + html);
@@ -192,7 +190,7 @@ public class ServerUtil {
 		app.addStatus("ServerUtil.getTempFile " + map.get("filename") + " delay " + delay + " ms");
 		map.put("_service", service);
 
-		Timer tempFileTimer = new Timer(1000, new ActionListener() {
+		Timer tempFileTimer = new Timer(delay, new ActionListener() {
 
 			/**
 			 * this will go 1, 4, 16, 64, 256, then 512, 1024, 2048, etc. ms

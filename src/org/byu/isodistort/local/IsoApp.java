@@ -800,10 +800,10 @@ public abstract class IsoApp {
 					return;
 				}		
 				distortionFileData = b;
-				sendFormDataToServer(FileUtil.scrapeHTML(new String(b)));
+				sendFormDataToServer(FileUtil.scrapeHTML(IsoApp.this, new String(b)));
 			}
 
-		}, 1);
+		}, 5);
 	}
 
 	protected void sendFormDataToServer(Map<String, Object> formData) {

@@ -23,6 +23,7 @@ import javax.swing.filechooser.FileSystemView;
  * @author Bob Hanson
  */
 
+@SuppressWarnings("serial")
 public class AsyncFileChooser extends JFileChooser implements PropertyChangeListener {
 
 	private int optionSelected;

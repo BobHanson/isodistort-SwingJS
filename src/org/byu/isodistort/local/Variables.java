@@ -1467,7 +1467,6 @@ public class Variables {
 				double[] data = atoms[ia++].vectorBest[mode] = new double[ncol];
 				for (int i = 0; i < ncol; i++) {
 					data[i] = (isDefault ? def : vt.getDouble(q + i));
-					System.out.println("data i " + mode + " " + i + " " + data[i]);
 				}
 			}
 			return true;

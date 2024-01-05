@@ -2,6 +2,7 @@ package org.byu.isodistort.local;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
@@ -1095,6 +1096,10 @@ public abstract class IsoApp {
 			return;
 		updateFormData(map, null, originType);
 		ServerUtil.displayIsoPage(this, map);
+	}
+
+	public void setCursor(int c) {
+		frame.setCursor(c == 0 ? Cursor.getDefaultCursor() : Cursor.getPredefinedCursor(c));
 	}
 
 }

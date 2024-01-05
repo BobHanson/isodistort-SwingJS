@@ -395,11 +395,13 @@ public class FileUtil {
 		 * @j2sNative
 		 * 
 		 * 	  window.open(URL.createObjectURL(new Blob(html, { type: "text/html" })));
+		 *    return;
 		 */
 		{
 			try {
 				File f = File.createTempFile("isodistort", ".html");
 				write(null, f, html, true);
+				JOptionPane.showMessageDialog(app.frame, html.length() + " bytes received. Check your browser if it does not pop up immediately.");
 				openURL(app, "file://" + f.getAbsolutePath().replace('\\', '/'));				
 			} catch (IOException e) {
 				app.addStatus("temp file creation failed: " + e.getMessage());

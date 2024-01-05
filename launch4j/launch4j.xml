@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch4jConfig>
+  <dontWrapJar>false</dontWrapJar>
+  <headerType>gui</headerType>
+  <jar>..\dist\ISOViz.jar</jar>
+  <outfile>..\dist\ISOViz.exe</outfile>
+  <errTitle>ISOViz</errTitle>
+  <cmdLine></cmdLine>
+  <chdir>.</chdir>
+  <priority>normal</priority>
+  <downloadUrl></downloadUrl>
+  <supportUrl></supportUrl>
+  <stayAlive>false</stayAlive>
+  <restartOnCrash>false</restartOnCrash>
+  <manifest></manifest>
+  <icon></icon>
+  <jre>
+    <path>%JAVA_HOME%;%PATH%</path>
+    <requiresJdk>false</requiresJdk>
+    <requires64Bit>false</requires64Bit>
+    <minVersion></minVersion>
+    <maxVersion></maxVersion>
+  </jre>
+  <versionInfo>
+    <fileVersion>6.12.9.20230105</fileVersion>
+    <txtFileVersion>6.12.9</txtFileVersion>
+    <fileDescription>ISOViz</fileDescription>
+    <copyright>2024 Harold Stokes and Branton Campbell </copyright>
+    <productVersion>6.12.9.20230105</productVersion>
+    <txtProductVersion>6.12.9.20230105</txtProductVersion>
+    <productName>ISOViz</productName>
+    <companyName></companyName>
+    <internalName>ISOViz</internalName>
+    <originalFilename>ISOViz.exe</originalFilename>
+    <trademarks></trademarks>
+    <language>ENGLISH_US</language>
+  </versionInfo>
+</launch4jConfig>

@@ -705,6 +705,7 @@ public abstract class IsoApp {
 			frame.pack();
 			
 			updateDimensions();
+			addStatus("Java " + System.getProperty("java.version"));
 			
 			init();
 			frame.setVisible(true);

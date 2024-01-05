@@ -197,11 +197,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 	private void initAtoms(double modelRadius) {
 		// Adjustable resolution based on field of view
-		int res = (int) Math.min(8, Math.max(2, 50 / modelRadius));
-		addStatus("atom shape resolution set to " + res);
 		showAtoms = showAtoms0;
 		int n = variables.numAtoms;
 		atomObjects.clear(0);
+		int res =  (n < 200 ? 7 : (int) Math.min(8, Math.max(2, 50 / modelRadius)));
+		addStatus("atom shape resolution set to " + res);
 		for (int ia = 0; ia < n; ia++) {
 			atomObjects.add();
 			Atom a = variables.atoms[ia];

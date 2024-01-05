@@ -9,7 +9,7 @@ createIsoDistortApp = function(inputType, isoData, formData) {
 			  code: null,
 			  main: "org.byu.isodistort." + app,
 			  args: [ isoData, formData, document ],
-			  core: "NONE",//"_iso",			
+			  core: "_iso",//"NONE",//			
 			  width: +isoData.appletwidth,
 			  height: +isoData.appletwidth/1.6,
 			  readyFunction: null,

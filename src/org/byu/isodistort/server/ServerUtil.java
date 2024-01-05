@@ -269,7 +269,7 @@ public class ServerUtil {
 			 * 
 			 * @j2sNative
 			 * 
-			 * 			formDataStr = JSON.stringify(formDataStr);
+			 * 			formData = JSON.stringify(formData);
 			 * 
 			 */
 		}

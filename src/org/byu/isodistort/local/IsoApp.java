@@ -42,6 +42,7 @@ import javax.swing.JToggleButton;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 import javax.swing.border.Border;
+import javax.swing.border.EmptyBorder;
 import javax.swing.text.DefaultCaret;
 
 import org.byu.isodistort.IsoDiffractApp;
@@ -89,7 +90,7 @@ public abstract class IsoApp {
 	/**
 	 * a few common parameters for initializing the GUI
 	 */
-	private static final int padding = 4, controlPanelHeight = 75, roomForScrollBar = 15;
+	private static final int padding = 4, controlPanelHeight = 75, roomForScrollBar = 20;
 
 	/**
 	 * this app's type, either APP_ISODISTORT or APP_ISODIFFRACT
@@ -142,24 +143,39 @@ public abstract class IsoApp {
 	 */
 	private JScrollPane sliderScrollPane;
 
-	private class StatusPanel extends JTextArea {
+	private class StatusPanel extends JScrollPane {
 
-		StatusPanel() {
-			setEditable(false);
-			setMargin(new Insets(5,5,5,5));
-			setAutoscrolls(true);
-			((DefaultCaret)getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+		JTextArea area;
+		
+		StatusPanel(JTextArea area) {
+			super(area);
+			setBorder(new EmptyBorder(0,0,0,0));
+			setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+			this.area = area;
+			area.setAutoscrolls(false);
+			area.setEditable(false);
+			area.setMargin(new Insets(0,15,5,5));
+			((DefaultCaret)area.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 			setBackground(Color.LIGHT_GRAY);
+			area.setBackground(Color.LIGHT_GRAY);
+
 			setVisible(false);
+		}
+		
+		void setDimension(Dimension d) {
+			setPreferredSize(new Dimension(d.width - 2, d.height));
+			area.setPreferredSize(new Dimension(d.width - 10, 1000));
 		}
 		
 		void addText(String status) {
 			if (status == null) {
-				setText("");
+				area.setText("");
 			} else {
 				System.out.println(status);
-				String s = getText();
-				setText((s.length() == 0 ? "" : s + "\n") + status);
+				String s = area.getText();
+				area.setText((s.length() == 0 ? "" : s + "\n") + status);
+				area.setCaretPosition(0);
+				area.setCaretPosition(area.getDocument().getLength());
 			}
 		}
 
@@ -185,10 +201,8 @@ public abstract class IsoApp {
 		}
 	}
 	/**
-	 * Panel that swaps for control panel during server actions.
+	 * panel that swaps for control panel during server actions.
 	 * 
-	 * @author Bob Hanson
-	 *
 	 */
 	private StatusPanel statusPanel;
 
@@ -345,7 +359,6 @@ public abstract class IsoApp {
 
 	private JPanel controlStatusPanel;
 
-
 	private static int buttonID = 0;
 
 	protected JRadioButton newRadioButton(String label, boolean selected, ButtonGroup g) {
@@ -387,7 +400,7 @@ public abstract class IsoApp {
 		controlPanel = new JPanel();
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
-		statusPanel = new StatusPanel();
+		statusPanel = new StatusPanel(new JTextArea());
 		controlStatusPanel = new JPanel(new FlowLayout());
 		controlStatusPanel.setBackground(Color.WHITE);
 		controlStatusPanel.add(controlPanel);
@@ -563,13 +576,13 @@ public abstract class IsoApp {
 			return;
 		IsoApp me = this;
 		new Thread(() -> {
-			setStatus(null);
 			boolean isIsoDistort = (appType == APP_ISODISTORT);
 			IsoApp app = (isIsoDistort ? new IsoDistortApp() : new IsoDiffractApp());
 			if (args == null || args.length == 0)
 				args = new Object[1];
 			args[0] = data;
 			JFrame frame = me.frame;
+			String statusText = statusPanel.area.getText();
 			dispose();
 			app.start(frame, args, variables, isDrop);
 			app.actions = actions.setApp(app);
@@ -587,6 +600,7 @@ public abstract class IsoApp {
 				app.setControlsFrom((IsoApp) appSettings[app.appType]);
 			}
 			app.frameResized();
+			app.addStatus(statusText);
 		}, "isodistort_application").start();
 	}
 
@@ -598,7 +612,7 @@ public abstract class IsoApp {
 	 protected void frameResized() {
 		 	Dimension d = new Dimension(controlStatusPanel.getWidth() - 5, controlPanelHeight);
 			controlPanel.setPreferredSize(d);
-			statusPanel.setPreferredSize(d);
+ 			statusPanel.setDimension( new Dimension(controlStatusPanel.getWidth(), controlPanelHeight-5));
 			variables.setPackedHeight(sliderPanel);
 	 }
 
@@ -687,8 +701,9 @@ public abstract class IsoApp {
 			int sliderPanelHeight = sliderPaneHeight - padding;
 			sliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, sliderPanelHeight));
 			variables.initSliderPanel(sliderPanel);			
-			controlStatusPanel.setPreferredSize(new Dimension(controlStatusPanel.getWidth(), controlPanelHeight));
+			controlStatusPanel.setPreferredSize(new Dimension(frameContentPane.getWidth()- roomForScrollBar, controlPanelHeight));
 			frame.pack();
+			
 			updateDimensions();
 			
 			init();

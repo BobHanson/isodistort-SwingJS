@@ -39,7 +39,6 @@ import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
 
 /**
@@ -237,15 +236,7 @@ public class MenuActions {
 			}
 		});
 
-		actions.put("Set.toggle", new IsoAction("setToggle", "Toggle Irrep Sliders",
-				"Toggle Irrep sliders between full off and full on.", KeyEvent.VK_S) {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 's', 0));
-			}
-		});
-
-		actions.put("Set.zero", new IsoAction("setZero", "Set Variables to 0",
+		actions.put("Set.zero", new IsoAction("setZero", "Reset to Parent",
 				"Set the sliders to their 0 'parent' positions.", KeyEvent.VK_Z) {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -253,7 +244,7 @@ public class MenuActions {
 			}
 		});
 
-		actions.put("Set.resetVariables", new IsoAction("setResetVariables", "-Reset Variables",
+		actions.put("Set.resetVariables", new IsoAction("setResetVariables", "Reset to Child",
 				"Reset the sliders to their original 'child' positions.", KeyEvent.VK_I) {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -261,7 +252,15 @@ public class MenuActions {
 			}
 		});
 
-		actions.put("Set.resetView", new IsoAction("setResetView", "Reset View",
+		actions.put("Set.toggle", new IsoAction("setToggle", "Toggle Irrep Sliders",
+				"Toggle Irrep sliders between parent and child.", KeyEvent.VK_S) {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 's', 0));
+			}
+		});
+
+		actions.put("Set.resetView", new IsoAction("setResetView", "-Reset View",
 				"Reset the view and sliders to their original settings.", KeyEvent.VK_R) {
 			@Override
 			public void actionPerformed(ActionEvent e) {

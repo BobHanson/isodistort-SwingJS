@@ -15,10 +15,10 @@
   <manifest></manifest>
   <icon></icon>
   <jre>
-    <path>%JAVA_HOME%;%PATH%</path>
+    <path>c:\temp\byu\jre\bin</path>
     <requiresJdk>false</requiresJdk>
-    <requires64Bit>false</requires64Bit>
-    <minVersion></minVersion>
+    <requires64Bit>true</requires64Bit>
+    <minVersion>1.8</minVersion>
     <maxVersion></maxVersion>
   </jre>
   <versionInfo>

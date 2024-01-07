@@ -507,7 +507,6 @@ public abstract class IsoDialog extends JDialog {
 				int cols = Integer.parseInt(page[++i]);
 				JPanel pad = new JPanel();
 				pad.setLayout(new BoxLayout(pad, BoxLayout.PAGE_AXIS));
-//				pad.setBorder(new EmptyBorder(0, 20, 0, 20));
 				p = new JPanel(new GridLayout(rows, cols, 0, 0));
 				pad.add(p);
 				box.add(pad);

@@ -144,16 +144,16 @@ public class MenuActions {
 			}
 		});
 
-		actions.put("File.Save.saveFormData", new IsoAction("saveFormData", "ISODISTORT Form Data JSON",
-				"Save ISODISTORT form data in JSON format.", 0) {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				app.saveFormData(null);
-			}
-		});
-
+//		actions.put("File.Save.saveFormData", new IsoAction("saveFormData", "ISODISTORT Form Data JSON",
+//				"Save ISODISTORT form data in JSON format.", 0) {
+//			@Override
+//			public void actionPerformed(ActionEvent e) {
+//				app.saveFormData(null);
+//			}
+//		});
+//
 		actions.put("File.Save.saveCIF",
-				new IsoAction("saveCIF", "ISO-CIF File", "Save current configuration as CIF file.", 0) {
+				new IsoAction("saveCIF", "-ISO-CIF File", "Save current configuration as CIF file.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						new Thread(() -> {
@@ -177,6 +177,16 @@ public class MenuActions {
 			}
 
 		});
+		
+		actions.put("File.Save.saveImage",
+				new IsoAction("saveImage", "-Save Image", "Save current PNG image.", 0) {
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						app.saveImage();
+					}
+				});
+
+
 
 		actions.put("View.domains", new IsoAction("viewDomains", "Domains", "View domains for this distortion.", 0) {
 			@Override
@@ -361,8 +371,9 @@ public class MenuActions {
 	private static final int SHORTCUT = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
 
 	private void add(String menuID, JMenuItem item, JMenuBar menuBar, JMenu menu, IsoAction action) {
-		item.setName(menuID);
+		boolean isTopLevelMenuBarMenu = (menuBar != null && item instanceof JMenu && menuID.lastIndexOf(".", menuID.length() - 2) < 0);
 		boolean hasSpacer = (action != null && action.hasSpacer);
+		item.setName(menuID);
 		if (action != null) {
 			item.setText(action.label);
 			if (item instanceof JMenu) {
@@ -383,8 +394,11 @@ public class MenuActions {
 		if (menuID.equals("Help.") && menuBar != null) {
 			menuBar.add(Box.createHorizontalGlue());
 		}
-		if (menuBar != null && item instanceof JMenu && menuID.lastIndexOf(".", menuID.length() - 2) < 0) {
+		if (isTopLevelMenuBarMenu) {
 			// top-level JMenu has only a single "."
+			// adding some space for mouse to traverse to popup without closing it
+			// turned out not to be necessary
+			item.setText(item.getText());// + "    ");
 			menuBar.add(item);
 		} else {
 			if (hasSpacer)

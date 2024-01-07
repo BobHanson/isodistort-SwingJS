@@ -876,10 +876,7 @@ public class IsoDistortApplet extends RenderApplet {
 				vView.setText("0");
 				wView.setText("1");
 				superHKL.setSelected(true);
-
-				// resetViewDirection();
 				renderer.setCamera(0, 0);
-
 				setFOV(fov0);
 				for (int t = 0; t < rd.numTypes; t++)
 					for (int s = 0; s < rd.numSubTypes[t]; s++)

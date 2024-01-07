@@ -3,8 +3,6 @@ package org.byu.isodistort.local;
 import java.awt.Color;
 import java.util.Random;
 
-import javax.swing.JPanel;
-
 import org.byu.isodistort.local.Variables.Atom;
 import org.byu.isodistort.local.Variables.SliderPanelGUI.IsoSlider;
 
@@ -20,7 +18,7 @@ import org.byu.isodistort.local.Variables.SliderPanelGUI.IsoSlider;
  *
  */
 class Mode {
-	
+
 	final static int DIS = 0; // displacive
 	final static int OCC = 1; // occupancy (aka "scalar")
 	final static int MAG = 2; // magnetic
@@ -31,7 +29,6 @@ class Mode {
 	final static int STRAIN = 5;
 	final static int IRREP = 6; // irreducible representations
 	final static int MODE_COUNT = 7;
-
 
 	/**
 	 * DISP, IRREP, ....
@@ -52,11 +49,6 @@ class Mode {
 	 * [atomtype][mode]
 	 */
 	int[] modesPerType;
-
-	/**
-	 * GUI panels for each type, holding sliders for the type's relevant modes.
-	 */
-	JPanel[] typePanels;
 
 //	/**
 //	 * This [atomtype][mode][subtype][subatom][value]
@@ -86,7 +78,6 @@ class Mode {
 	public boolean isActive() {
 		return isActive && count > 0;
 	}
-
 
 	final private double[] delta;
 
@@ -173,7 +164,7 @@ class Mode {
 	 * 
 	 * Then attenuate the irrep[t][m] by the slider values
 	 * 
-	 * distortion = sum{modeCoefs[m] * irrep[t][m] * sliderValue * superSliderVal}
+	 * distortion = sum{modeCoefs[m] * irrep[t][m] * sliderValue * childFraction}
 	 * 
 	 * Finally, apply that distortion to the atom's parameter vector (coord,
 	 * occupation, magnetic moment, rotational displacement, etc.)
@@ -184,7 +175,7 @@ class Mode {
 	 */
 	void calcDistortion(Variables v, double[][][] max, double[] tempvec, double[][] tempmat) {
 		double[] irrepVals = (v.modes[IRREP] == null ? null : v.modes[IRREP].values[0]);
-		double f = v.superSliderFraction;
+		double f = v.getSetChildSliderFraction(Double.NaN);
 		for (int ia = 0, n = v.numAtoms; ia < n; ia++) {
 			Atom a = v.atoms[ia];
 			MathUtil.vecfill(delta, 0);
@@ -205,23 +196,33 @@ class Mode {
 			}
 			MathUtil.vecaddN(a.vectorBest[type], 1, delta, v1);
 
-			// next is just for the labels
-			switch (columnCount) {
-			case 1: // OCC
-				max[t][s][type] += v1[0] / numSubAtoms[t][s];
+			// max is just for the labels
+			double[] m = max[t][s];
+			double d;
+			switch (type) {
+			case DIS:
+				d = MathUtil.len3(v.childCell.toTempCartesian(delta));
+				if (d > m[type])
+					m[type] = d;
 				break;
-			case 3: // DIS, MAG, ROT
-				double d = MathUtil.len3(v.childCell.toTempCartesian(v1));
-				if (d > max[t][s][type])
-					max[t][s][type] = d;
+			case OCC:
+				m[type] += v1[0] / numSubAtoms[t][s];
 				break;
-			case 6: // ELL
+			case MAG:
+			case ROT:
+				d = MathUtil.len3(v.childCell.toTempCartesian(v1));
+				if (type == 0)
+					System.out.println(
+							"Mode " + ia + " " + t + " " + s + " " + v1[0] + " " + v1[1] + " " + v1[2] + " " + d);
+				if (d > m[type])
+					m[type] = d;
+				break;
+			case ELL:
 				d = v.childCell.getIsotropicParameter(v1);
-				if (d > max[t][s][ELL])
-					max[t][s][ELL] = d;
+				if (d > m[type])
+					m[type] = d;
 				break;
 			}
-
 		}
 	}
 
@@ -282,17 +283,6 @@ class Mode {
 	}
 
 	/**
-	 * Set the color of this mode's panels to their designated colors
-	 */
-	void colorPanels() {
-		if (typePanels == null || !isActive())
-			return;
-		for (int t = numTypes; --t >= 0;) {
-			typePanels[t].setBackground(colorT[t]);
-		}
-	}
-
-	/**
 	 * Set sliders to the given value -- used for Toggle IRREP and zeroing all
 	 * values.
 	 * 
@@ -328,11 +318,11 @@ class Mode {
 	 * values.
 	 * 
 	 * @param sliders
-	 * @param superSliderFraction
+	 * @param childFraction
 	 * @param maxJSliderIntVal
 	 * @param irreps
 	 */
-	void readSliders(IsoSlider[][] sliders, double superSliderFraction, double maxJSliderIntVal, Mode irreps) {
+	void readSliders(IsoSlider[][] sliders, double childFraction, double maxJSliderIntVal, Mode irreps) {
 		boolean isIrrep = (type == IRREP);
 		boolean isAtomic = (type < MODE_ATOMIC_COUNT);
 		for (int t = 0, n = (isAtomic ? numTypes : 1); t < n; t++) {
@@ -357,16 +347,16 @@ class Mode {
 		switch (type) {
 		default:
 		case DIS:
-			brightness = 0.95f;
-			break;
-		case OCC:
 			brightness = 0.80f;
 			break;
+		case OCC:
+			brightness = 0.70f;
+			break;
 		case MAG:
-			brightness = 0.65f;
+			brightness = 0.60f;
 			break;
 		case ROT:
-			brightness = 0.55f;
+			brightness = 0.50f;
 			break;
 		case ELL:
 			brightness = 0.40f;
@@ -375,7 +365,7 @@ class Mode {
 			colorT[0] = Color.DARK_GRAY;
 			return;
 		case IRREP:
-			colorT[0] = Color.LIGHT_GRAY;
+			colorT[0] = new Color(0xA0A0A0); // BH a bit darker than LIGHT_GRAY C0C0C0
 			return;
 		}
 		boolean simpleColor = (atomTypeUnique != null);
@@ -392,24 +382,22 @@ class Mode {
 	 * 
 	 * @return the Voigt strain tensor plus Identity
 	 */
-	double[][] getVoigtStrainTensor(double superSliderFraction, Mode irreps) {
+	double[][] getVoigtStrainTensor(double childFraction, Mode irreps) {
 		double[] irrepVals = irreps.values[0];
 		double[] mySliderVals = values[0];
 		int[] myIrreps = irrepTM[0];
 		double[] v = new double[6];
 		for (int n = 6; --n >= 0;) {
 			for (int m = count; --m >= 0;) {
-				v[n] += vector[m][n] * irrepVals[myIrreps[m]] * mySliderVals[m] * superSliderFraction;
+				v[n] += vector[m][n] * irrepVals[myIrreps[m]] * mySliderVals[m] * childFraction;
 			}
 		}
 		return MathUtil.voigt2matrix(v, new double[3][3], 1);
 	}
-	
+
 	@Override
 	public String toString() {
 		return "[Mode " + type + " count=" + count + "]";
 	}
 
-
 }
-

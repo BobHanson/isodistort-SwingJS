@@ -364,7 +364,7 @@ public class FileUtil {
 				
 			} catch (IOException exception) {
 				exception.printStackTrace();
-				System.out.println("Oops. File not found.");
+				System.out.println("Oops. File not found. " + path);
 			}
 			return null;
 		}

@@ -39,7 +39,7 @@ import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JSeparator;
+import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
 
 /**
@@ -402,7 +402,7 @@ public class MenuActions {
 			menuBar.add(item);
 		} else {
 			if (hasSpacer)
-				menu.add(new JSeparator());
+				menu.addSeparator();
 			menu.add(item);
 		}
 		item.setName(menuID);

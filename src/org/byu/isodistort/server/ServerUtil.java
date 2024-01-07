@@ -1,5 +1,6 @@
 package org.byu.isodistort.server;
 
+import java.awt.Cursor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.ByteArrayInputStream;
@@ -103,6 +104,7 @@ public class ServerUtil {
 
 		String url = (testing ? testServerURL : publicServerURL) + service;
 		app.addStatus("ServerUtil.fetch " + url + " " + mapFormData.get("origintype"));
+		app.setCursor(Cursor.WAIT_CURSOR);
 		new Thread(() -> {
 			try {
 				URI uri = new URI(url);
@@ -134,6 +136,8 @@ public class ServerUtil {
 				app.addStatus("ServerUtil connection failure: " + e);
 				e.printStackTrace();
 				consumer.accept(null);
+			} finally {				
+				app.setCursor(0);
 			}
 		}, "serverUtil_fetch").start();
 		return true;

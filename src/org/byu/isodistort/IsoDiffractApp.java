@@ -99,11 +99,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		public void paint(Graphics gr) {
 			super.paint(gr);
 			Dimension d = getSize();
-			if (app.drawWidth != d.width || app.drawHeight != d.height) {
+			if (app.needsRecalc || app.drawWidth != d.width || app.drawHeight != d.height) {
 				app.updateDimensions();
+				app.needsRecalc = true;
+				app.updateDisplay();
+				return;
 			}
-			// System.out.println("paint isodif " + getSize() + " " +
-			// getParent().getSize());
 			if (im == null || im.getWidth() != d.width || im.getHeight() != d.height)
 				im = (BufferedImage) createImage(d.width, d.height);
 			Graphics g = im.getGraphics();
@@ -351,13 +352,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	/**
 	 * Radio buttons
 	 */
-	JRadioButton parentButton, superButton, xrayButton, neutronButton, crystalButton, powderButton, bothButton, dButton,
+	JRadioButton parentButton, childButton, xrayButton, neutronButton, crystalButton, powderButton, bothButton, dButton,
 			qButton, tButton;
-	/**
-	 * Radio button groups -- only one element from a group can be selected
-	 */
-	ButtonGroup xnButtons, hklButtons, pscButtons, rangeButtons;
-
 	/**
 	 * Text fields for inputting viewing region
 	 */
@@ -405,7 +401,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	@Override
 	public synchronized void updateDisplay() {
-		if (isAdjusting)
+		if (isAdjusting || drawHeight < 20)
 			return;
 		if (needsRecalc || variables.isChanged) {
 			isAdjusting = true;
@@ -430,8 +426,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * 
 	 */
 	void render(Graphics g) {
+		if (isAdjusting || drawHeight < 20) {
+			needsRecalc = true;
+			variables.isChanged = true;
+			return;
+		}
 		g.setColor(Color.BLACK);
-		// System.out.println("IDpaint " + drawWidth + " " + drawHeight + " " +
 		// shortPowderHeight);
 		if (isBoth || !isPowder) {
 			g.fillRect(0, 0, drawWidth, drawHeight);
@@ -503,8 +503,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		double yrange = (drawHeight - scaleAreaHeight);
 		int ymin = (isBoth ? drawHeight - shortPowderHeight : 0);
 		double toXPix = 1.0 * drawWidth / powderXRange;
-		// System.out.println("drawpp pz " + powderZoom + " psf " + powderScaleFactor +
-		// " fy " + fy);
 		x0 = 0;
 		y0 = (int) Math.max(ymin, yrange * (1 - powderY[0] * fy));
 		for (int i = 1; i < powderXRange; i++) {
@@ -757,7 +755,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			// upside right.
 			crystalPeakXY[p][0] = x;
 			crystalPeakXY[p][1] = y;
-//			System.out.println("peak: "+p+", "+peaktypeList[p]+", supHKL: ("+peakhklList[p][0]+" "+peakhklList[p][1]+" "+peakhklList[p][2]+"), Cart: ("+tempvec[0]/dinvrange+" "+tempvec[1]/dinvrange+" "+tempvec[2]+"), Int: "+peakintList[p]);
 		}
 
 		// Update the dinverse list
@@ -805,7 +802,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				crystalTickXY2[1][m][3] = crystalAxesXYDirXYLen[0][3];
 				// if (z == 0) {
 				// } // No need for Z now, but might use later.
-//				System.out.println("Axis: "+n+", Tick: "+m+", supHKL: "+tickhklList[n][m][0]+" "+tickhklList[n][m][1]+" "+tickhklList[n][m][2]+", Cart: "+X+" "+Y+" "+Z);
 			}
 		}
 
@@ -1067,7 +1063,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		// Save the old strain slider values
 		variables.readSliders();
-		double masterTemp = variables.getSetSuperSliderFraction(1);
+		double childTemp = variables.getSetChildSliderFraction(1);
 		int nStrains = variables.getStrainModesCount();
 		double[] strainVals = variables.getStrainmodeSliderValues();
 		double[] strainTemp = new double[nStrains];
@@ -1092,7 +1088,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		MathUtil.mat3copy(metric, randommetric2);
 
 		// restore the strains to their original values
-		variables.getSetSuperSliderFraction(masterTemp);
+		variables.getSetChildSliderFraction(childTemp);
 		for (int m = 0; m < nStrains; m++)
 			strainVals[m] = strainTemp[m];
 		// use metric tensor to determine h,k,l ranges
@@ -1114,8 +1110,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				* Math.sqrt(Math.abs((metric0[0][0] * metric0[2][2] - metric0[0][2] * metric0[0][2]) / metricdet)));
 		int limL = (int) Math.ceil(powderDinvmax
 				* Math.sqrt(Math.abs((metric0[0][0] * metric0[1][1] - metric0[0][1] * metric0[0][1]) / metricdet)));
-//	    System.out.println("Limits = ("+limH+","+limK+","+limL+")");
-
 		double[][] tmat = variables.Tmat;
 		peakCount = 0;
 		double[] dinvlist0 = new double[maxPeaks];// unstrained list of dinverse values
@@ -1208,12 +1202,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		if (peakCount > powderMaxVisiblePeaks)
 			peakCount = powderMaxVisiblePeaks;
 
-		masterTemp = variables.getSetSuperSliderFraction(0);
+		childTemp = variables.getSetChildSliderFraction(0);
 		boolean isXrayTemp = isXray;
 		isXray = true;
 		recalcPowder();
 		isXray = isXrayTemp;
-		variables.getSetSuperSliderFraction(masterTemp);
+		variables.getSetChildSliderFraction(childTemp);
 
 		// Calculate the x-ray powder-pattern scale factor
 		setPowderScaleFactor();
@@ -1305,8 +1299,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	}
 
 	private void setPowderDinvMinMaxRes() {
-		// System.out.println("PDMMR " + powderPatternType + " " + powderXMax + " " +
-		// powderXMin);
 		switch (powderPatternType) {
 		case POWDER_PATTERN_TYPE_2THETA:
 			powderDinvmin = (2 / powderWavelength) * Math.sin((Math.PI / 180) * powderXMin / 2);
@@ -1609,8 +1601,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				peakColor[p] = 1;
 		}
 
-		// Save old masterSliderVal and set it to 1.0
-		double masterTemp = variables.getSetSuperSliderFraction(1);
+		// Save old childSliderVal and set it to 1.0
+		double childTemp = variables.getSetChildSliderFraction(1);
 
 		// Calculate all peak intensities and set zero-intensity peaks to type 2.
 		// Save and zero all displacive, scalar and magnetic mode values
@@ -1631,7 +1623,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				peakColor[p] = 4;
 
 		// Restore all displacement and scalar mode values to their original values.
-		variables.getSetSuperSliderFraction(masterTemp);
+		variables.getSetChildSliderFraction(childTemp);
 		variables.restoreModeValues();
 		variables.recalcDistortion();
 		recalcIntensities();
@@ -1709,7 +1701,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		xrayButton.setSelected(app.xrayButton.isSelected());
 		neutronButton.setSelected(app.neutronButton.isSelected());
 
-		superButton.setSelected(app.superButton.isSelected());
+		childButton.setSelected(app.childButton.isSelected());
 		parentButton.setSelected(app.parentButton.isSelected());
 
 		tButton.setSelected(app.tButton.isSelected());
@@ -1745,23 +1737,23 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * creates the components of the control panel
 	 */
 	private void buildControls() {
-		rangeButtons = new ButtonGroup();
-		tButton = newRadioButton("2\u0398", true, rangeButtons);
-		dButton = newRadioButton("d", false, rangeButtons);
-		qButton = newRadioButton("q", false, rangeButtons);
+		ButtonGroup g = new ButtonGroup();
+		tButton = newRadioButton("2\u0398", true, g);
+		dButton = newRadioButton("d", false, g);
+		qButton = newRadioButton("q", false, g);
 
-		hklButtons = new ButtonGroup();
-		parentButton = newRadioButton("Parent", true, hklButtons);
-		superButton = newRadioButton("Super", false, hklButtons);
+		g = new ButtonGroup();
+		parentButton = newRadioButton("Parent", true, g);
+		childButton = newRadioButton("Child", false, g);
 
-		pscButtons = new ButtonGroup();
-		crystalButton = newRadioButton("Crystal", true, pscButtons);
-		powderButton = newRadioButton("Powder", false, pscButtons);
-		bothButton = newRadioButton("Both", false, pscButtons);
+		g = new ButtonGroup();
+		crystalButton = newRadioButton("Crystal", true, g);
+		powderButton = newRadioButton("Powder", false, g);
+		bothButton = newRadioButton("Both", false, g);
 
-		xnButtons = new ButtonGroup();
-		xrayButton = newRadioButton("Xray", true, xnButtons);
-		neutronButton = newRadioButton("Neut", false, xnButtons);
+		g = new ButtonGroup();
+		xrayButton = newRadioButton("Xray", true, g);
+		neutronButton = newRadioButton("Neut", false, g);
 		neutronButton.setHorizontalAlignment(JRadioButton.LEFT);
 
 		colorBox = new JCheckBox("Color", false);
@@ -1813,7 +1805,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		topControlPanel.add(neutronButton);
 		topControlPanel.add(new JLabel("      "));
 		topControlPanel.add(parentButton);
-		topControlPanel.add(superButton);
+		topControlPanel.add(childButton);
 		topControlPanel.add(tButton);
 		topControlPanel.add(dButton);
 		topControlPanel.add(qButton);
@@ -1897,7 +1889,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		qrangeLabel.setVisible(!isPowder);
 
 		parentButton.setVisible(!isPowder && !isMouseOver);
-		superButton.setVisible(!isPowder && !isMouseOver);
+		childButton.setVisible(!isPowder && !isMouseOver);
 
 		// mouseOver-only
 
@@ -1918,10 +1910,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	@Override
 	protected BufferedImage getImage() {
 		return rp.im;
-	}
-
-	public static void main(String[] args) {
-		create("IsoDiffract", args);
 	}
 
 	@Override
@@ -1971,7 +1959,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		} else if (src == parentButton) {
 			hklType = 1;
 			needsRecalc = true;
-		} else if (src == superButton) {
+		} else if (src == childButton) {
 			hklType = 2;
 			needsRecalc = true;
 		} else if (src == xrayButton) {
@@ -2018,5 +2006,15 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	public void centerImage() {
 		// n/a
 	}
+
+	@Override
+	public void recalcCellColors() {
+		// na/a
+	}
+
+	public static void main(String[] args) {
+		create("IsoDiffract", args);
+	}
+
 
 }

@@ -260,8 +260,6 @@ public class RenderPanel3D extends JPanel {
 	 *          directions.
 	 */
 	public void translate(double v[]) {
-		if (v == null)
-			System.out.println("?????");
 		translate(v[0], v[1], v[2]);
 	}
 
@@ -360,37 +358,40 @@ public class RenderPanel3D extends JPanel {
 	 * the image raster int[] rgba data buffer
 	 */
 	public synchronized void updateForDisplay(boolean doPaint) {
-		if (doPaint) {
-			// write into the image data buffer
-			identity();
-			renderer.rotateView(theta, phi, sigma);
-			if (!spin)
-				theta = phi = sigma = 0;
-			renderer.render();
-//// BH this parameter is always 1 here
-//			if (renderer.meshLevelOfDetail > 1)
-//				renderer.meshLevelOfDetail--;
-			
-			repaint();
-		} else if (!isInSync()) {
-
-// no obvious effect on my screen
-//			long t = System.currentTimeMillis();
-//			if (t > lastt + 2000) {
-//				isAntialiased = (Math.random() > 0.5);
-//				lastt = t;
-//			}
-			// prior to rendering, check for a resize
-			int width = Math.max(1, getWidth()) * (isAntialiased ? 2 : 1);
-			int height = Math.max(1, getHeight() * (isAntialiased ? 2 : 1));
-			System.out.println("RenderPanel3D size " + width + "x" + height);
-			im = newBufferedImage(width, height);
-			int[] pixels = ((DataBufferInt) im.getRaster().getDataBuffer()).getData();
-			clearPixels(pixels);
-			renderer.reinit(width, height, pixels);
-			setBgColor(1, 1, 1);// background color: white
-
+		if (!isInSync()) {
+			resync();
 		}
+		if (doPaint) {
+			render();
+			repaint();
+		}
+	}
+
+	private void render() {
+		// write into the image data buffer
+		identity();
+		renderer.rotateView(theta, phi, sigma);
+		if (!spin)
+			theta = phi = sigma = 0;
+		renderer.render();
+	}
+
+	private void resync() {
+		// no obvious effect on my screen
+//	long t = System.currentTimeMillis();
+//	if (t > lastt + 2000) {
+//		isAntialiased = (Math.random() > 0.5);
+//		lastt = t;
+//	}
+		// prior to rendering, check for a resize
+		int width = Math.max(1, getWidth()) * (isAntialiased ? 2 : 1);
+		int height = Math.max(1, getHeight() * (isAntialiased ? 2 : 1));
+		im = newBufferedImage(width, height);
+		int[] pixels = ((DataBufferInt) im.getRaster().getDataBuffer()).getData();
+		clearPixels(pixels);
+		renderer.reinit(width, height, pixels);
+		setBgColor(1, 1, 1);// background color: white
+
 	}
 
 //	long ttime = 0;
@@ -412,16 +413,15 @@ public class RenderPanel3D extends JPanel {
 		// long t1 = System.currentTimeMillis();
 		// System.out.println("RP timer " + (t1 - ttime));
 		// ttime = t1;
-		super.paint(g);
 		if (!isInSync()) {
-			// don't paint if we are not ready.
+			updateForDisplay(true);
 			return;
 		}
+		super.paint(g);
 		int dw = im.getWidth();
 		int dh = im.getHeight();
 		int sw = isAntialiased ? dw << 1 : dw;
 		int sh = isAntialiased ? dh << 1 : dh;
-
 		if (isAntialiased) {
 			g.drawImage(im, 0, 0, dw, dh, 0, 0, sw, sh, null);
 		} else {
@@ -489,12 +489,7 @@ public class RenderPanel3D extends JPanel {
 	private class Adapter extends MouseAdapter {
 	@Override
 	public void mousePressed(MouseEvent e) {
-
 		app.setStatusVisible(false);
-
-		//System.out.println("RP mouseDown " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
-
-		// requestFocus is necessary for SwingJS if mouse has clicked on the page outside of applet
 		requestFocus();
 		int x = e.getX();
 		int y = e.getY();
@@ -511,8 +506,6 @@ public class RenderPanel3D extends JPanel {
 
 	@Override
 	public void mouseReleased(MouseEvent e) {
-		//System.out.println("RP mouseUP " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()));
-
 		renderer.setDragging(false);
 		if (isMouseZooming) {
 			isMouseZooming = false;
@@ -535,10 +528,6 @@ public class RenderPanel3D extends JPanel {
 
 			int x = e.getX();
 			int y = e.getY();
-
-//		System.out.println("RP mouseDrag " + e.getButton() + " " + e.getModifiers() + " " + e.getMouseModifiersText(e.getModifiers()) + " " + Integer.toHexString(e.getModifiersEx()) + " " + e.getModifiersExText(e.getModifiersEx()) 
-//		+ "" + e.isControlDown());
-
 			/**
 			 * LEFT-DRAG but not CTRL-LEFT-DRAG for rotation
 			 */

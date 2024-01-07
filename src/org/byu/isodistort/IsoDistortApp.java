@@ -63,7 +63,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	/**
 	 * flag to indicate that colors may need adjusting
 	 */
-	private boolean isTaintedMaterial;
+	private boolean iMaterialTainted;
 
 	/**
 	 * flag to indicate animation is in progress
@@ -107,14 +107,14 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 */
 	private boolean showBonds, showAtoms, showCells, showAxes;
 	/**
-	 * Which type of view direction: superHKL, superUVW, parentHKL, parentUVW
+	 * Which type of view direction: childHKL, childUVW, parentHKL, parentUVW
 	 */
 	private int viewType;
 
 	/**
 	 * A geometry for rendering a part of the crystal. Each geometry can hold one or
 	 * more shapes. spheres and atoms hold all the atoms; cells holds all 24
-	 * cylinders for the parent and super cell.
+	 * cylinders for the parent and child cell.
 	 * 
 	 */
 	private Geometry atomObjects, bondObjects, cellObjects, axisObjects;
@@ -127,12 +127,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 */
 	private BitSet bsBondsEnabled;
 
-	// Global variables that are related to material properties.
 	/**
 	 * Materials for coloring bonds and cells.
 	 * 
 	 */
-	private static Material bondMaterial, parentCellMaterial, superCellMaterial, xAxisMaterial, yAxisMaterial,
+	private Material bondMaterial, parentCellMaterial, childCellMaterial, xAxisMaterial, yAxisMaterial,
 			zAxisMaterial;
 
 	/**
@@ -146,16 +145,16 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 * 
 	 */
 	private JCheckBox aBox, bBox, cBox, spinBox, colorBox, animBox, axesBox;
+//	/**
+//	 * Buttons for mouse controls
+//	 * 
+//	 */
+//	private JRadioButton nButton, xButton, yButton, zButton, zoomButton;
 	/**
-	 * Buttons for mouse controls
+	 * Buttons to use child or parent cell for view vectors
 	 * 
 	 */
-	private JRadioButton nButton, xButton, yButton, zButton, zoomButton;
-	/**
-	 * Buttons to use super or parent cell for view vectors
-	 * 
-	 */
-	private JRadioButton superHKL, superUVW, parentHKL, parentUVW;
+	private JRadioButton childHKL, childUVW, parentHKL, parentUVW;
 	/**
 	 * Text fields for inputting viewing angles
 	 * 
@@ -243,7 +242,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		showCells = showCells0;
 		cellObjects.clear(0);
 		for (int c = 0; c < 24; c++) {
-			cellObjects.add().cylinder(numCellSides).setMaterial(c < 12 ? parentCellMaterial : superCellMaterial);
+			cellObjects.add().cylinder(numCellSides).setMaterial(c < 12 ? parentCellMaterial : childCellMaterial);
 		}
 	}
 
@@ -297,11 +296,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	 */
 	private void initMaterials() {
 		parentCellMaterial = rp.newMaterial();
-		superCellMaterial = rp.newMaterial();
+		childCellMaterial = rp.newMaterial();
 		// parent cell slightly red
 		parentCellMaterial.setColor(.8, .5, .5, 1.5, 1.5, 1.5, 20, .30, .30, .30);
-		// super cell slightly blue
-		superCellMaterial.setColor(.5, .5, .8, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+		// child cell slightly blue
+		childCellMaterial.setColor(.5, .5, .8, 1.5, 1.5, 1.5, 20, .30, .30, .30);
 
 		bondMaterial = rp.newMaterial();
 		bondMaterial.setColor(0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 20, 0.2, 0.2, 0.2);// bonds are black
@@ -323,13 +322,13 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		}
 	}
 
-	private static final int VIEW_TYPE_SUPER_HKL = 1;
-	private static final int VIEW_TYPE_SUPER_UVW = 2;
+	private static final int VIEW_TYPE_CHILD_HKL = 1;
+	private static final int VIEW_TYPE_CHILD_UVW = 2;
 	private static final int VIEW_TYPE_PARENT_HKL = 3;
 	private static final int VIEW_TYPE_PARENT_UVW = 4;
 
 	@Override
-	public void updateDisplay() {
+	public void updateDisplay() {		
 		if (isAdjusting)
 			return;
 		isAdjusting = true;
@@ -340,7 +339,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		if (rp == null)
 			return;
 		rp.updateForDisplay(false);
-		if (isTaintedMaterial) {
+		if (iMaterialTainted) {
 			recalcMaterials();
 		}
 		if (needsRecalc) {
@@ -444,7 +443,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	private void recalcABC() {
 		variables.readSliders();
 		variables.recalcDistortion();
-		enableRendering();
+		enableSelectedObjects();
 		if (showAtoms || showBonds) {
 			variables.setAtomInfo();
 		}
@@ -502,7 +501,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		}
 	}
 
-	private void enableRendering() {
+	private void enableSelectedObjects() {
 		atomObjects.setEnabled(showAtoms);
 		cellObjects.setEnabled(showCells);
 		bondObjects.setEnabled(showBonds);
@@ -515,25 +514,35 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 	private void recalcMaterials() {
 		variables.setColors(isSimpleColor);
 		variables.recolorPanels();
-		enableRendering();
+		enableSelectedObjects();
 		if (showAtoms)
-			recalcAtomMaterials();
-		isTaintedMaterial = false;
+			recalcAtomColors();
+		iMaterialTainted = false;
 	}
 
-	private void recalcAtomMaterials() {
-		// Reset the atom colors.
+	@Override
+	public void recalcCellColors() {
+		double c = variables.getSetChildSliderFraction(Double.NaN);
+		double p = 1 - c;
+		// f = f/.8;
+		// parent cell slightly red
+		parentCellMaterial.setColor(.8 + .2 * c, .5 + 0.5*  c, .5 + 0.5 * c, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+		// child cell slightly blue
+		childCellMaterial.setColor(.5 + 0.6 * p, .5 + 0.5 * p, .8 + 0.2 * p, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+	}
+
+	private void recalcAtomColors() {
 		double[] rgb = new double[3];
-		for (int t = 0; t < variables.numTypes; t++) {
+		for (int t = variables.numTypes; --t >= 0;) {
 			variables.getColors(t, rgb);
-			for (int s = 0; s < variables.numSubTypes[t]; s++) {
-				if (!variables.isSubTypeSelected(t, s)) {
-					// makes the atom color same as above type color
-					subMaterial[t][s].setColor(rgb[0], rgb[1], rgb[2], 0.3, 0.3, 0.3, 1, .0001, .0001, .0001);
-				} else {
-					// graduated color scheme // BH not quite so black
-					double k = (double) 0.2 + 0.3 * s / (variables.numSubTypes[t] - 1);
+			for (int s = variables.numSubTypes[t]; --s >= 0;) {
+				if (variables.isSubTypeSelected(t, s)) {
+					// a darkish shade of gray
+					double k = variables.getSelectedSubTypeShade(t, s);
 					subMaterial[t][s].setColor(0, 0, 0, k, k, k, 1, k, k, k);
+				} else {
+					// makes the atom color same its type color
+					subMaterial[t][s].setColor(rgb[0], rgb[1], rgb[2], 0.3, 0.3, 0.3, 1, 0.0001, 0.0001, 0.0001);
 				}
 			}
 		}
@@ -560,10 +569,10 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 		double[][] tempmat = null;
 		switch (viewType) {
-		case VIEW_TYPE_SUPER_HKL:
+		case VIEW_TYPE_CHILD_HKL:
 			tempmat = variables.childCell.getTempTransposedReciprocalBasis();
 			break;
-		case VIEW_TYPE_SUPER_UVW:
+		case VIEW_TYPE_CHILD_UVW:
 			tempmat = variables.childCell.getTempTransposedCartesianBasis();
 			break;
 		case VIEW_TYPE_PARENT_HKL:
@@ -648,11 +657,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		animBox.setSelected(false);
 		spinBox.setSelected(false);
 		colorBox.setSelected(false);
-		nButton.setSelected(true);
+//		nButton.setSelected(true);
 		uView.setText("0");
 		vView.setText("0");
 		wView.setText("1");
-		superHKL.setSelected(true);
+		childHKL.setSelected(true);
 		variables.resetSliders();
 		variables.readSliders();
 		variables.recalcDistortion();
@@ -686,25 +695,26 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		}
 		if (!((JToggleButton) src).isSelected())
 			return;
-		if (src == nButton) {
-			rp.clearAngles();
-			rp.setRotationAxis(0);
-		} else if (src == xButton) {
-			rp.clearAngles();
-			rp.setRotationAxis(1);
-		} else if (src == yButton) {
-			rp.clearAngles();
-			rp.setRotationAxis(2);
-		} else if (src == zButton) {
-			rp.clearAngles();
-			rp.setRotationAxis(3);
-		} else if (src == zoomButton) {
-			rp.clearAngles();
-			rp.setRotationAxis(4);
-		} else if (src == superHKL) {
-			resetViewDirection(VIEW_TYPE_SUPER_HKL);
-		} else if (src == superUVW) {
-			resetViewDirection(VIEW_TYPE_SUPER_UVW);
+//		if (src == nButton) {
+//			rp.clearAngles();
+//			rp.setRotationAxis(0);
+//		} else if (src == xButton) {
+//			rp.clearAngles();
+//			rp.setRotationAxis(1);
+//		} else if (src == yButton) {
+//			rp.clearAngles();
+//			rp.setRotationAxis(2);
+//		} else if (src == zButton) {
+//			rp.clearAngles();
+//			rp.setRotationAxis(3);
+//		} else if (src == zoomButton) {
+//			rp.clearAngles();
+//			rp.setRotationAxis(4);
+//		} else 
+			if (src == childHKL) {
+			resetViewDirection(VIEW_TYPE_CHILD_HKL);
+		} else if (src == childUVW) {
+			resetViewDirection(VIEW_TYPE_CHILD_UVW);
 		} else if (src == parentHKL) {
 			resetViewDirection(VIEW_TYPE_PARENT_HKL);
 		} else if (src == parentUVW) {
@@ -722,7 +732,7 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		boolean spin = spinBox.isSelected();
 		isSimpleColor = colorBox.isSelected();
 		isAnimateSelected = animBox.isSelected();
-		isTaintedMaterial = true;
+		iMaterialTainted = true;
 		rp.setSpinning(spin);
 		if (isAnimateSelected || spin) {
 			start();
@@ -747,18 +757,18 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		colorBox = newJCheckBox("Color", false);
 		colorBox.setVisible(variables.needSimpleColor);
 
-		ButtonGroup xyzButtons = new ButtonGroup();
-		nButton = newRadioButton("Normal", true, xyzButtons);
-		xButton = newRadioButton("Xrot", false, xyzButtons);
-		yButton = newRadioButton("Yrot", false, xyzButtons);
-		zButton = newRadioButton("Zrot", false, xyzButtons);
-		zoomButton = newRadioButton("Zoom", false, xyzButtons);
+//		ButtonGroup xyzButtons = new ButtonGroup();
+//		nButton = newRadioButton("Normal", true, xyzButtons);
+//		xButton = newRadioButton("Xrot", false, xyzButtons);
+//		yButton = newRadioButton("Yrot", false, xyzButtons);
+//		zButton = newRadioButton("Zrot", false, xyzButtons);
+//		zoomButton = newRadioButton("Zoom", false, xyzButtons);
 
-		viewType = VIEW_TYPE_SUPER_HKL;
+		viewType = VIEW_TYPE_CHILD_HKL;
 
 		ButtonGroup cellButtons = new ButtonGroup();
-		superHKL = newRadioButton("SupHKL", true, cellButtons);
-		superUVW = newRadioButton("SupUVW", false, cellButtons);
+		childHKL = newRadioButton("SupHKL", true, cellButtons);
+		childUVW = newRadioButton("SupUVW", false, cellButtons);
 		parentHKL = newRadioButton("ParHKL", false, cellButtons);
 		parentUVW = newRadioButton("ParUVW", false, cellButtons);
 		uView = newTextField("0", -10);
@@ -767,11 +777,11 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 		JPanel top = new JPanel();
 		top.setBackground(Color.WHITE);
-		top.add(nButton);
-		top.add(xButton);
-		top.add(yButton);
-		top.add(zButton);
-		top.add(zoomButton);
+//		top.add(nButton);
+//		top.add(xButton);
+//		top.add(yButton);
+//		top.add(zButton);
+//		top.add(zoomButton);
 		top.add(new JLabel("       "));
 		top.add(aBox);
 		top.add(bBox);
@@ -783,8 +793,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 
 		JPanel bottom = new JPanel();
 		bottom.setBackground(Color.WHITE);
-		bottom.add(superHKL);
-		bottom.add(superUVW);
+		bottom.add(childHKL);
+		bottom.add(childUVW);
 		bottom.add(parentHKL);
 		bottom.add(parentUVW);
 		bottom.add(new JLabel("          Direction: "));
@@ -892,8 +902,8 @@ public class IsoDistortApp extends IsoApp implements Runnable, KeyListener {
 		colorBox.setSelected(isSimpleColor);
 		// skipping spin and animation
 		// skipping rotation state buttons
-		superHKL.setSelected(app.superHKL.isSelected());
-		superUVW.setSelected(app.superUVW.isSelected());
+		childHKL.setSelected(app.childHKL.isSelected());
+		childUVW.setSelected(app.childUVW.isSelected());
 		parentHKL.setSelected(app.parentHKL.isSelected());
 		parentUVW.setSelected(app.parentUVW.isSelected());
 		uView.setText(app.uView.getText());

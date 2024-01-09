@@ -1677,50 +1677,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	}
 
 	@Override
-	protected void setControlsFrom(IsoApp a) {
-		if (a == null)
-			return;
-		isAdjusting = true;
-		IsoDiffractApp app = (IsoDiffractApp) a;
-		hOTxt.setText(app.hOTxt.getText());
-		kOTxt.setText(app.kOTxt.getText());
-		lOTxt.setText(app.lOTxt.getText());
-		hHTxt.setText(app.hHTxt.getText());
-		kHTxt.setText(app.kHTxt.getText());
-		lHTxt.setText(app.lHTxt.getText());
-		hVTxt.setText(app.hVTxt.getText());
-		kVTxt.setText(app.kVTxt.getText());
-		lVTxt.setText(app.lVTxt.getText());
-		qTxt.setText(app.qTxt.getText());
-		wavTxt.setText(app.wavTxt.getText());
-		minTxt.setText(app.minTxt.getText());
-		maxTxt.setText(app.maxTxt.getText());
-		fwhmTxt.setText(app.fwhmTxt.getText());
-		zoomTxt.setText(app.zoomTxt.getText());
-
-		xrayButton.setSelected(app.xrayButton.isSelected());
-		neutronButton.setSelected(app.neutronButton.isSelected());
-
-		childButton.setSelected(app.childButton.isSelected());
-		parentButton.setSelected(app.parentButton.isSelected());
-
-		tButton.setSelected(app.tButton.isSelected());
-		dButton.setSelected(app.dButton.isSelected());
-		qButton.setSelected(app.qButton.isSelected());
-
-		crystalButton.setSelected(app.crystalButton.isSelected());
-		powderButton.setSelected(app.powderButton.isSelected());
-		bothButton.setSelected(app.bothButton.isSelected());
-
-		colorBox.setSelected(app.colorBox.isSelected());
-
-		needsRecalc = true;
-		isAdjusting = false;
-		rp.im = null;
-		updateDisplay();
-	}
-
-	@Override
 	public void keyTyped(KeyEvent e) {
 		switch (e.getKeyChar()) {
 		case 'r':

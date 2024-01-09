@@ -180,7 +180,7 @@ public class ServerUtil {
 //		</BODY>
 //		</HTML>
 
-		System.out.println(new String(bytes));
+		//System.out.println(new String(bytes));
 		if (!bytesContain(bytes, SET_TIMEOUT)) {
 			consumer.accept(bytes);
 			return;

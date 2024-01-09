@@ -156,16 +156,6 @@ public class Variables {
 	 * Minimum atomic occupancy below which bonds are not drawn
 	 */
 	public double minBondOcc;
-	/**
-	 * Total number of bonds
-	 */
-	public int numBonds;
-	/**
-	 * bondInfo[bond index] = {avx, avy, avz, angleX, angleY, len^2, atom1 index,
-	 * atom2 index, bond index} reference atomInfo (below)
-	 * 
-	 */
-	public double[][] bondInfo; // [numBonds][9]
 
 	/**
 	 * If true (when at least two parents have the same element type) show the
@@ -234,11 +224,6 @@ public class Variables {
 	 * 
 	 */
 	private Bspt bspt;
-
-	/**
-	 * Map to retrieve bonds by atom1-atom2 number string key
-	 */
-	private Map<String, double[]> knownBonds;
 
 	public Variables(IsoApp app, boolean isDiffraction, boolean isSwitch) {
 		this.app = app;
@@ -616,32 +601,6 @@ public class Variables {
 		info[RX] = -Math.asin(tempvec[1]);
 		info[RY] = Math.atan2(tempvec[0], tempvec[2]);
 		info[L_2] = Math.sqrt(lensq) / 2;
-	}
-
-	public double[] getBondinfoFromKey(String key12) {
-		if (knownBonds == null)
-			return null;
-		return knownBonds.get(key12);
-
-	}
-
-	public double[] addBond(String key12, int a1, int a2) {
-		if (numBonds == bondInfo.length) {
-			double[][] bi = new double[numBonds * 2][];
-			for (int j = numBonds; --j >= 0;)
-				bi[j] = bondInfo[j];
-			bondInfo = bi;
-		}
-		double[] ab = new double[9];
-		ab[6] = a1;
-		ab[7] = a2;
-		ab[8] = numBonds;
-		bondInfo[numBonds] = ab;
-		if (knownBonds == null)
-			knownBonds = new HashMap<>();
-		knownBonds.put(key12, ab);
-		numBonds++;
-		return ab;
 	}
 
 	public void keyTyped(KeyEvent e) {
@@ -1314,39 +1273,39 @@ public class Variables {
 
 		private IsoTokenizer vt;
 
-		/**
-		 * Used only for connecting bonds with atoms
-		 */
-		private Map<String, Atom> atomMap = new HashMap<>();
-
-		/**
-		 * from parseAtoms()
-		 * 
-		 * @param t
-		 * @param s
-		 * @param a
-		 * @return "t_s_a" key
-		 */
-		private String getKeyTSA(int t, int s, int a) {
-			return t + "_" + s + "_" + a;
-		}
-
-		/**
-		 * from parseBonds()
-		 * 
-		 * @param t
-		 * @param s
-		 * @param a
-		 * @return "t_s_a" key
-		 */
-		private String getKeyTSA(String t, String s, String a) {
-			return t + "_" + s + "_" + a;
-		}
-
-		private int getAtomTSA(String tsa) {
-			Atom a = atomMap.get(tsa);
-			return (a == null ? -1 : a.index);
-		}
+//		/**
+//		 * Used only for connecting bonds with atoms
+//		 */
+//		private Map<String, Atom> atomMap = new HashMap<>();
+//
+//		/**
+//		 * from parseAtoms()
+//		 * 
+//		 * @param t
+//		 * @param s
+//		 * @param a
+//		 * @return "t_s_a" key
+//		 */
+//		private String getKeyTSA(int t, int s, int a) {
+//			return t + "_" + s + "_" + a;
+//		}
+//
+//		/**
+//		 * from parseBonds()
+//		 * 
+//		 * @param t
+//		 * @param s
+//		 * @param a
+//		 * @return "t_s_a" key
+//		 */
+//		private String getKeyTSA(String t, String s, String a) {
+//			return t + "_" + s + "_" + a;
+//		}
+//
+//		private int getAtomTSA(String tsa) {
+//			Atom a = atomMap.get(tsa);
+//			return (a == null ? -1 : a.index);
+//		}
 
 		/**
 		 * Parses the data byte array for isoviz data blocks
@@ -1368,8 +1327,8 @@ public class Variables {
 		 */
 		byte[] parse(Object data) {
 			try {
-				boolean skipBondList = true;// (isDiffraction || app.bondsUseBSPT);
-				String ignore = (skipBondList ? ";bondlist;" : null);
+				//boolean skipBondList = true;// (isDiffraction || app.bondsUseBSPT);
+				String ignore = ";bondlist;";
 				vt = new IsoTokenizer(data, ignore, isSwitch ? IsoTokenizer.QUIET : IsoTokenizer.DEBUG_LOW);
 
 				isoversion = getOneString("isoversion", null);
@@ -1378,8 +1337,8 @@ public class Variables {
 				parseCrystalSettings();
 
 				parseAtoms();
-				parseBonds(skipBondList);
-				System.out.println("Variables: " + numAtoms + " atoms and " + numBonds + " bonds were read");
+//				parseBonds(skipBondList);
+				System.out.println("Variables: " + numAtoms + " atoms were read");
 
 				parseStrainModes();
 				parseIrrepList();
@@ -1692,7 +1651,7 @@ public class Variables {
 				}
 			}
 
-			boolean haveBonds = (vt.setData("bondlist") > 0);
+			//boolean haveBonds = (vt.setData("bondlist") > 0);
 
 			// find atomic coordinates of parent
 			int nData = vt.setData("atomcoordlist");
@@ -1729,7 +1688,7 @@ public class Variables {
 			firstAtomOfType[numTypes] = new int[] { numAtomsRead, numAtoms };
 
 			readAtomCoordinates(ncol, numAtomsRead, numSubTypeAtomsRead, bsPrimitive, numPrimitiveSubAtoms,
-					firstAtomOfType, haveBonds);
+					firstAtomOfType);
 
 			numSubAtoms = (bsPrimitive == null ? numSubTypeAtomsRead : numPrimitiveSubAtoms);
 			for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
@@ -1770,7 +1729,7 @@ public class Variables {
 		}
 
 		private void readAtomCoordinates(int ncol, int numAtomsRead, int[][] numSubTypeAtomsRead, BitSet bsPrimitive,
-				int[][] numPrimitiveSubAtoms, int[][] firstAtomOfType, boolean haveBonds) {
+				int[][] numPrimitiveSubAtoms, int[][] firstAtomOfType) {
 			int lastT = 0;
 			for (int i = 0, ia = 0; i < numAtomsRead; i++) {
 				int pt = ncol * i;
@@ -1787,9 +1746,9 @@ public class Variables {
 					if (bsPrimitive != null) {
 						numPrimitiveSubAtoms[t][s]++;
 					}
-					Atom atom = atoms[ia] = new Atom(ia, t, s, a, coord, atomTypeSymbol[t]);
-					if (haveBonds)
-						atomMap.put(getKeyTSA(t + 1, s + 1, a + 1), atom);
+					atoms[ia] = new Atom(ia, t, s, a, coord, atomTypeSymbol[t]);
+//					if (haveBonds)
+//						atomMap.put(getKeyTSA(t + 1, s + 1, a + 1), atom);
 					ia++;
 				}
 				numSubTypeAtomsRead[t][s]++;
@@ -1886,65 +1845,65 @@ public class Variables {
 			return numSubTypeAtomsRead;
 		}
 
-		/**
-		 * Just create int[][] variables.bonds
-		 */
-		private void parseBonds(boolean skipBondList) {
-			if (isDiffraction)
-				return;
-			double d = getOneDouble("maxbondlength", 2.5);
-			// figure 1 minimum for a real number, not one that was adjusted
-			if (d < 0.5)
-				d *= 10;
-			halfMaxBondLength = d / 2;
-			// find minimum atomic occupancy for which bonds should be displayed
-			minBondOcc = getOneDouble("minbondocc", 0.5);
-			if (skipBondList)
-				return;
-			int numBondsRead = checkSizeN("bondlist", 6, false);
-			double[][] bondsTemp = null;
-			if (numBondsRead > 0) {
-				// find maximum length of bonds that can be displayed
-				bondsTemp = new double[numBondsRead][9];
-				for (int b = 0, pt = 0; b < numBondsRead; b++) {
-					String keyA = parseTSA(pt);
-					pt += 3;
-					String keyB = parseTSA(pt);
-					pt += 3;
-					int ia = getAtomTSA(keyA);
-					if (ia >= 0) {
-						int ib = getAtomTSA(keyB);
-						if (ib >= 0) {
-							bondsTemp[b][6] = ia;
-							bondsTemp[b][7] = ib;
-							bondsTemp[b][8] = numBonds++;
-						}
-					}
+//		/**
+//		 * Just create int[][] variables.bonds
+//		 */
+//		private void parseBonds(boolean skipBondList) {
+//			if (isDiffraction)
+//				return;
+//			double d = getOneDouble("maxbondlength", 2.5);
+//			// figure 1 minimum for a real number, not one that was adjusted
+//			if (d < 0.5)
+//				d *= 10;
+//			halfMaxBondLength = d / 2;
+//			// find minimum atomic occupancy for which bonds should be displayed
+//			minBondOcc = getOneDouble("minbondocc", 0.5);
+//			if (skipBondList)
+//				return;
+//			int numBondsRead = checkSizeN("bondlist", 6, false);
+//			double[][] bondsTemp = null;
+//			if (numBondsRead > 0) {
+//				// find maximum length of bonds that can be displayed
+//				bondsTemp = new double[numBondsRead][9];
+//				for (int b = 0, pt = 0; b < numBondsRead; b++) {
+//					String keyA = parseTSA(pt);
+//					pt += 3;
+//					String keyB = parseTSA(pt);
+//					pt += 3;
+//					int ia = getAtomTSA(keyA);
+//					if (ia >= 0) {
+//						int ib = getAtomTSA(keyB);
+//						if (ib >= 0) {
+//							bondsTemp[b][6] = ia;
+//							bondsTemp[b][7] = ib;
+//							bondsTemp[b][8] = numBonds++;
+//						}
+//					}
+//
+//				}
+//			}
+//			if (numBonds == 0) {
+//				// There are no bonds. Initialize the array to length zero
+//				bondInfo = new double[0][];
+//			} else if (numBonds == numBondsRead) {
+//				bondInfo = bondsTemp;
+//			} else {
+//				bondInfo = new double[numBonds][8];
+//				for (int i = 0; i < numBonds; i++)
+//					bondInfo[i] = bondsTemp[i];
+//			}
+//		}
 
-				}
-			}
-			if (numBonds == 0) {
-				// There are no bonds. Initialize the array to length zero
-				bondInfo = new double[0][];
-			} else if (numBonds == numBondsRead) {
-				bondInfo = bondsTemp;
-			} else {
-				bondInfo = new double[numBonds][8];
-				for (int i = 0; i < numBonds; i++)
-					bondInfo[i] = bondsTemp[i];
-			}
-		}
-
-		/**
-		 * Create an atom map key int the form "t_s_a"
-		 * 
-		 * @param pt
-		 * @return
-		 * 
-		 */
-		private String parseTSA(int pt) {
-			return getKeyTSA(vt.getString(pt++), vt.getString(pt++), vt.getString(pt++));
-		}
+//		/**
+//		 * Create an atom map key int the form "t_s_a"
+//		 * 
+//		 * @param pt
+//		 * @return
+//		 * 
+//		 */
+//		private String parseTSA(int pt) {
+//			return getKeyTSA(vt.getString(pt++), vt.getString(pt++), vt.getString(pt++));
+//		}
 
 		/**
 		 * parse the DIS OCC MAG ROT ELL modes, filling the information into the related
@@ -2676,8 +2635,6 @@ public class Variables {
 		subTypeName = null;
 		numSubAtoms = null;
 		numSubTypes = null;
-		knownBonds = null;
-		bondInfo = null;
 	}
 
 }

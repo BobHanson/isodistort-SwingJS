@@ -15,6 +15,7 @@ import java.awt.image.DataBufferInt;
 import javax.swing.JPanel;
 
 import org.byu.isodistort.IsoDistortApp;
+import org.byu.isodistort.local.IsoApp.IsoRenderPanel;
 
 /**
  * Provides an applet interface to the {@link Renderer}. It also implements
@@ -31,7 +32,7 @@ import org.byu.isodistort.IsoDistortApp;
  * @author Ken Perlin 2001
  */
 
-public class RenderPanel3D extends JPanel {
+public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
 	// APS (April 2009): edits thanks to: http://www.dgp.toronto.edu/~mjmcguff/learn/java/04-mouseInput/
 
@@ -357,6 +358,7 @@ public class RenderPanel3D extends JPanel {
 	 * Check for a resize prior to rendering, and then carry out the rendering into
 	 * the image raster int[] rgba data buffer
 	 */
+	@Override
 	public synchronized void updateForDisplay(boolean doPaint) {
 		if (!isInSync()) {
 			resync();
@@ -619,14 +621,17 @@ public class RenderPanel3D extends JPanel {
 
 	// additional IsoPanel-public methods
 	
+	@Override
 	public void setCamera(double t, double p) {
 		renderer.setCamera(t, p);
 	}
 
+	@Override
 	public void setSpinning(boolean spin) {
 		this.spin = spin;
 	}
 
+	@Override
 	public boolean isSpinning() {
 		return spin;
 	}
@@ -639,6 +644,7 @@ public class RenderPanel3D extends JPanel {
 //		return renderer;
 //	}
 //
+	@Override
 	public void clearAngles() {
 		theta = phi = sigma = 0;
 	}
@@ -647,10 +653,12 @@ public class RenderPanel3D extends JPanel {
 		return new Material(renderer);
 	}
 
+	@Override
 	public void reversePanningAction() {
 		invert = -invert;
 	}
 
+	@Override
 	public void clearOffsets() {
 		xOff = 0;
 		yOff = 0;
@@ -668,6 +676,7 @@ public class RenderPanel3D extends JPanel {
 		rotAxis = i;
 	}
 
+	@Override
 	public BufferedImage getImage() {
 		int sw = im.getWidth(null);
 		int sh = im.getHeight(null);
@@ -686,6 +695,7 @@ public class RenderPanel3D extends JPanel {
 		return bi; 
 	}
 
+	@Override
 	public void initializeSettings(double scdSize) {
 		double fl = 10;
 		double fov = 2 	* scdSize / fl;
@@ -703,11 +713,13 @@ public class RenderPanel3D extends JPanel {
 		addLight(-.5, -.5, .5, intensity, intensity, intensity);
 	}
 
+	@Override
 	public void resetView() {
 		setCamera(0, 0);
 		setFOV(fov0);
 	}
 
+	@Override
 	public double[][] getPerspective() {
 		double[] m = new double[16];
 		System.arraycopy(renderer.getCamera().getUnsafe(), 0, m, 0, 16);
@@ -715,6 +727,7 @@ public class RenderPanel3D extends JPanel {
 				new double[] { fov0, renderer.getFOV(), renderer.isOrthographic() ? 0 : 1 }, m }; 
 	}
 
+	@Override
 	public void setPerspective(double[][] params) {
 		double[] v = params[0];
 		fov0 = v[0];
@@ -729,6 +742,18 @@ public class RenderPanel3D extends JPanel {
 	 */
 	private void setPerspective(boolean b) {
 		renderer.setPerspective(b);
+	}
+
+	@Override
+	public void centerImage() {
+		clearOffsets();
+		push();
+		{
+			identity();
+			translate(0, 0, 0);
+			transformWorld();
+		}
+		pop();
 	}
 
 }

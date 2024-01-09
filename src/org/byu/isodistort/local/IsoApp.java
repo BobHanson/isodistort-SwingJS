@@ -14,6 +14,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -53,6 +54,7 @@ import javax.swing.text.DefaultCaret;
 
 import org.byu.isodistort.IsoDiffractApp;
 import org.byu.isodistort.IsoDistortApp;
+import org.byu.isodistort.IsoSymmetryApp;
 import org.byu.isodistort.server.ServerUtil;
 
 /**
@@ -64,40 +66,269 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".9_2024.01.06";
+	public static class IsoFrame extends JFrame {
 
-	static boolean isJS = (/** @j2sNative true || */
-	false);
+		private JComponent contentPane;
+		private JTabbedPane tabbedPane;
+
+		private IsoApp[] apps = new IsoApp[addJmol ? 3 : 2];
+
+		private int thisType;
+
+		private MenuActions actions;
+
+		public IsoFrame(String title) {
+			super(title);
+			contentPane = (JComponent) getContentPane();
+		}
+
+		public void addIsoPanel(IsoApp app, JPanel isoPanel) {
+			if (actions == null) {
+				actions = new MenuActions(app);
+				setJMenuBar((JMenuBar) actions.createMenuBar());
+			}
+			actions.setApp(app);
+			int type = app.appType;
+			this.apps[type] = app;
+			if (tabbedPane == null) {
+				tabbedPane = new JTabbedPane();
+				tabbedPane.setFocusable(false);
+				JPanel p = new JPanel();
+				p.setBorder(new EmptyBorder(0, 0, 0, 0));
+				p.setBackground(Color.WHITE);
+				tabbedPane.addTab("Distortion", p);
+				p = new JPanel();
+				p.setName("DiffPan");
+				p.setBorder(new EmptyBorder(0, 0, 0, 0));
+				p.setBackground(Color.WHITE);
+				tabbedPane.addTab("Diffraction", p);
+				if (addJmol) {
+					p = new JPanel();
+					p.setBorder(new EmptyBorder(0, 0, 0, 0));
+					p.setBackground(Color.WHITE);
+					tabbedPane.addTab("Symmetry", p);
+				}
+				add(tabbedPane);
+				tabbedPane.addChangeListener(new ChangeListener() {
+
+					@Override
+					public void stateChanged(ChangeEvent e) {
+						switchApps();
+					}
+
+				});
+			}
+			((JComponent) tabbedPane.getComponentAt(type)).removeAll();
+			((JComponent) tabbedPane.getComponentAt(type)).add(isoPanel);
+			tabbedPane.setSelectedIndex(type);
+		}
+
+		public void disposeApps() {
+			for (int i = 0; i < 2; i++) {
+				if (apps[i] != null) {
+					((JComponent) tabbedPane.getComponentAt(i)).removeAll();
+					apps[i].dispose();
+				}
+			}
+		}
+
+		public int getPanelHeight() {
+			int h = getContentPane().getHeight();
+			return h - 25;
+		}
+
+		@Override
+		public void repaint() {
+			super.repaint();
+		}
+
+		protected void switchApps() {
+			int type = tabbedPane.getSelectedIndex();
+			IsoApp newapp = apps[type];
+			IsoApp currentApp = apps[thisType];
+			thisType = type;
+			if (currentApp == null)
+				return;
+			if (newapp != null) {
+				currentApp.prepareToSwapOut();
+				((JComponent) getContentPane()).setTransferHandler(new FileUtil.FileDropHandler(newapp));
+				newapp.variables.setValuesFrom(currentApp.variables);
+				invalidate();
+				repaint();
+			} else {
+				currentApp.openApplication(type, currentApp.isovisData, null, false);
+			}
+		}
+
+	}
+
+	public interface IsoRenderPanel {
+
+		void addKeyListener(KeyListener listener);
+		void centerImage();
+		void clearAngles();
+		void clearOffsets();
+		BufferedImage getImage();
+		double[][] getPerspective();
+		void initializeSettings(double radius);
+		boolean isSpinning();
+		void removeKeyListener(KeyListener listener);
+		void resetView();
+		void reversePanningAction();
+		void setCamera(double tY, double tX);
+		void setPerspective(double[][] params);
+		void setPreferredSize(Dimension size);
+		void setSize(Dimension size);
+		void setSpinning(boolean spin);
+		void updateForDisplay(boolean b);
+	}
+
+	private class StatusPanel extends JScrollPane {
+
+		JTextArea area;
+
+		boolean isLockedVisible = false;
+
+		StatusPanel(JTextArea area) {
+			super(area);
+			setBorder(new EmptyBorder(0, 0, 0, 0));
+			setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+			setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+			this.area = area;
+			area.setAutoscrolls(false);
+			area.setEditable(false);
+			area.setMargin(new Insets(0, 15, 5, 5));
+			((DefaultCaret) area.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+			setBackground(Color.LIGHT_GRAY);
+			area.setBackground(Color.LIGHT_GRAY);
+			setVisible(false);
+		}
+
+		void addText(String status) {
+			if (status == null) {
+				area.setText("");
+			} else {
+				System.out.println(status);
+				String s = area.getText();
+				area.setText((s == null || s.length() == 0 ? "" : s + "\n") + status);
+				area.setCaretPosition(0);
+				area.setCaretPosition(area.getDocument().getLength());
+			}
+		}
+
+		void setDimension(Dimension d) {
+			setPreferredSize(new Dimension(d.width - 2, d.height));
+			area.setPreferredSize(new Dimension(d.width - 10, 1000));
+		}
+
+		/**
+		 * 
+		 * @param b       true for visible
+		 * @param andLock set true to ensure that FALSE is triggered only by
+		 *                andLock=true
+		 */
+		void setVisible(boolean b, boolean andLock) {
+			if (andLock) {
+				isLockedVisible = b;
+			}
+			if (b == isVisible())
+				return;
+			if (b || !isLockedVisible) {
+				controlPanel.setVisible(!b);
+				super.setVisible(b);
+			}
+			controlStatusPanel.setBackground(b ? Color.LIGHT_GRAY : Color.WHITE);
+			controlStatusPanel.setBorder(b ? statusBorder : controlBorder);
+		}
+	}
 
 	/**
-	 * the datafile to use for startup
+	 * viewListener class listens for the applet buttons and the inside methods
+	 * specify the viewing angles.
 	 */
-	protected String whichDataFile = // "data/test22.txt";
-			//"data/tbmno3-distortion.iso.txt"; // distortion file
-	"data/tbmno3-distortion.isoviz"; // isoviz
-	// "data/data.isoviz";
-	// "data/ZrP2O7-sg205-sg61-distort.isoviz"; // very large file
-	// "data/test28.txt"; // small file 
+	private class ViewListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent event) {
+			Object source = event.getSource();
+			if (source == applyView) {
+				applyView();
+				return;
+			}
+		}
+	}
+
+	final static String minorVersion = ".9_2024.01.06";
+	static boolean isJS = (/** @j2sNative true || */
+	false);
+	static boolean addJmol = true;
 
 	final static protected int APP_ISODISTORT = 0;
 	final static protected int APP_ISODIFFRACT = 1;
-
+	final static protected int APP_ISOSYMMETRY = 2;
 	protected final static int DIS = Mode.DIS; // displacive
 	protected final static int OCC = Mode.OCC; // occupancy (aka "scalar")
+
 	protected final static int MAG = Mode.MAG; // magnetic
 	protected final static int ROT = Mode.ROT; // rotational
+
 	protected final static int ELL = Mode.ELL; // ellipsoidal
 
 	/**
 	 * when saving data across switches between IsoDistort and IsoDiffract
 	 */
 	final static int SETTINGS_PERSPECTIVE = 0;
+
 	final static int SETTINGS_APP = 1;
 
 	/**
 	 * a few common parameters for initializing the GUI
 	 */
 	private static final int padding = 0, controlPanelHeight = 75, roomForScrollBar = 20;
+
+	private static int buttonID = 0;
+
+	final static Border controlBorder = new EmptyBorder(0, 0, 0, 0);// BorderFactory.createLineBorder(Color.BLACK, 1);
+
+	final static Border statusBorder = BorderFactory.createLineBorder(Color.RED, 1);
+
+	/**
+	 * From application main(String[] args)
+	 * 
+	 * @param type
+	 * @param args
+	 */
+	protected static void create(String type, String[] args) {
+		IsoApp app = null;
+		switch (type) {
+		case "IsoDistort":
+			app = new IsoDistortApp();
+			break;
+		case "IsoDiffract":
+			app = new IsoDiffractApp();
+		}
+		app.start(new IsoFrame(type), args, null, false);
+	}
+
+	private static JButton newJButton(String text, ViewListener vl) {
+		JButton b = new JButton(text);
+		b.setFocusable(false);
+		b.setMargin(new Insets(-3, 3, -2, 4));
+		b.setHorizontalAlignment(SwingConstants.LEFT);
+		b.setVerticalAlignment(SwingConstants.CENTER);
+		b.addActionListener(vl);
+		return b;
+	}
+
+	/**
+	 * the datafile to use for startup
+	 */
+	protected String whichDataFile = // "data/test22.txt";
+			// "data/tbmno3-distortion.iso.txt"; // distortion file
+			"data/tbmno3-distortion.isoviz"; // isoviz
+	// "data/data.isoviz";
+	// "data/ZrP2O7-sg205-sg61-distort.isoviz"; // very large file
+	// "data/test28.txt"; // small file
 
 	/**
 	 * this app's type, either APP_ISODISTORT or APP_ISODIFFRACT
@@ -135,7 +366,6 @@ public abstract class IsoApp {
 	 * the frame holding this app
 	 */
 	protected IsoFrame frame;
-
 	/**
 	 * drawing area width and height
 	 */
@@ -152,161 +382,6 @@ public abstract class IsoApp {
 	 */
 	private JScrollPane sliderScrollPane;
 
-	public static class IsoFrame extends JFrame {
-
-		private JComponent contentPane;
-		private JTabbedPane tabbedPane;
-		private JPanel distortionPanel;
-		private JPanel diffractionPanel;
-
-		private IsoApp[] apps = new IsoApp[2];
-		
-		private int thisType;
-		
-		private MenuActions actions;
-
-		
-		public IsoFrame(String title) {
-			super(title);
-			contentPane = (JComponent) getContentPane();
-		}
-
-	@Override
-		public void repaint() {
-			super.repaint();
-		}
-		
-		public void addIsoPanel(IsoApp app, JPanel isoPanel) {
-			if (actions == null) {
-				actions = new MenuActions(app);
-				setJMenuBar((JMenuBar) actions.createMenuBar());
-			}
-			actions.setApp(app);
-			int type = app.appType;
-			this.apps[type] = app;
-			if (tabbedPane == null) {
-				tabbedPane = new JTabbedPane();
-				tabbedPane.setFocusable(false);
-				distortionPanel = new JPanel();
-				distortionPanel.setName("DistPan");
-				distortionPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
-				distortionPanel.setBackground(Color.WHITE);
-				diffractionPanel = new JPanel();
-				diffractionPanel.setName("DiffPan");
-				diffractionPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
-				diffractionPanel.setBackground(Color.WHITE);
-				tabbedPane.addTab("Distortion", distortionPanel);
-				tabbedPane.addTab("Diffraction", diffractionPanel);
-				add(tabbedPane);
-				tabbedPane.addChangeListener(new ChangeListener() {
-
-					@Override
-					public void stateChanged(ChangeEvent e) {
-						switchApps();
-					}
-
-				});
-			}
-			((JComponent)tabbedPane.getComponentAt(type)).removeAll();
-			((JComponent)tabbedPane.getComponentAt(type)).add(isoPanel);
-			tabbedPane.setSelectedIndex(type);
-		}
-
-		protected void switchApps() {
-			int type = tabbedPane.getSelectedIndex();
-			IsoApp app = apps[type];
-			IsoApp thisApp = apps[thisType];
-			thisType = type;
-			if (thisApp == null)
-				return;
-			if (app != null) {
-				thisApp.prepareToSwapOut();
-				((JComponent)getContentPane()).setTransferHandler(new FileUtil.FileDropHandler(app));
-				app.variables.setValuesFrom(thisApp.variables);
-				invalidate();
-				repaint();
-			} else {
-				thisApp.openApplication(type, thisApp.isovisData, null, false);
-			}
-		}
-		
-		
-
-		public int getPanelHeight() {
-			int h = getContentPane().getHeight();
-			return h - 25;
-		}
-
-		public void disposeApps() {
-			for (int i = 0; i < 2; i++) {
-				if (apps[i] != null) {
-					((JComponent)tabbedPane.getComponentAt(i)).removeAll();
-					apps[i].dispose();
-				}
-			}
-		}
-
-	}
-
-	private class StatusPanel extends JScrollPane {
-
-		JTextArea area;
-
-		StatusPanel(JTextArea area) {
-			super(area);
-			setBorder(new EmptyBorder(0, 0, 0, 0));
-			setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-			setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-			this.area = area;
-			area.setAutoscrolls(false);
-			area.setEditable(false);
-			area.setMargin(new Insets(0, 15, 5, 5));
-			((DefaultCaret) area.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-			setBackground(Color.LIGHT_GRAY);
-			area.setBackground(Color.LIGHT_GRAY);
-			setVisible(false);
-		}
-
-		void setDimension(Dimension d) {
-			setPreferredSize(new Dimension(d.width - 2, d.height));
-			area.setPreferredSize(new Dimension(d.width - 10, 1000));
-		}
-
-		void addText(String status) {
-			if (status == null) {
-				area.setText("");
-			} else {
-				System.out.println(status);
-				String s = area.getText();
-				area.setText((s == null || s.length() == 0 ? "" : s + "\n") + status);
-				area.setCaretPosition(0);
-				area.setCaretPosition(area.getDocument().getLength());
-			}
-		}
-
-		boolean isLockedVisible = false;
-
-		/**
-		 * 
-		 * @param b       true for visible
-		 * @param andLock set true to ensure that FALSE is triggered only by
-		 *                andLock=true
-		 */
-		void setVisible(boolean b, boolean andLock) {
-			if (andLock) {
-				isLockedVisible = b;
-			}
-			if (b == isVisible())
-				return;
-			if (b || !isLockedVisible) {
-				controlPanel.setVisible(!b);
-				super.setVisible(b);
-			}
-			controlStatusPanel.setBackground(b ? Color.LIGHT_GRAY : Color.WHITE);
-			controlStatusPanel.setBorder(b ? statusBorder : controlBorder);
-		}
-	}
-
 	/**
 	 * panel that swaps for control panel during server actions.
 	 * 
@@ -317,6 +392,7 @@ public abstract class IsoApp {
 	 * Panel that holds all control components
 	 */
 	public JPanel controlPanel;
+
 	/**
 	 * Holds all the slider bars but not the viewPanel above it; added to
 	 * controlPanel
@@ -369,75 +445,6 @@ public abstract class IsoApp {
 	private List<JToggleButton> listenerList = new ArrayList<>();
 
 	/**
-	 * The variables are all read. Time to do any app-specific initialization before
-	 * we make the frame visible.
-	 */
-	abstract protected void init();
-
-	/**
-	 * Get the image from the renderer for saving.
-	 * 
-	 * @return the current image of drawing frame.
-	 */
-	abstract protected BufferedImage getImage();
-
-	/**
-	 * Something has changed.
-	 */
-	abstract public void updateDisplay();
-
-	/**
-	 * Center structure in window.
-	 */
-	abstract public void centerImage();
-
-	/**
-	 * Reset View.
-	 */
-	abstract public void reset();
-
-	/**
-	 * The "Apply View" action.
-	 * 
-	 */
-	abstract protected void applyView();
-
-	/**
-	 * The click callback comes to IsoApp and is distributed to the applet by this
-	 * method.
-	 * 
-	 * @param src
-	 */
-	abstract protected void handleButtonEvent(Object src);
-
-	abstract public void recalcCellColors();
-
-	/**
-	 * When an app is swapped back in, this method allows the app to reload its
-	 * settings.
-	 * 
-	 * @param app
-	 */
-	abstract protected void setControlsFrom(IsoApp app);
-
-	/**
-	 * This method allows the current application to finish up what it is doing
-	 * prior to swapping out.
-	 * 
-	 * @return false to disallow swapping out at this moment.
-	 * 
-	 */
-	abstract protected boolean prepareToSwapOut();
-
-	protected IsoApp(int appType) {
-		this.appType = appType;
-	}
-
-	private void clearSettingsForFileDrop() {
-		whichDataFile = null;
-	}
-
-	/**
 	 * listens for the check boxes that highlight a given atomic subtype.
 	 */
 	protected ItemListener buttonListener = new ItemListener() {
@@ -449,169 +456,6 @@ public abstract class IsoApp {
 
 	private JPanel controlStatusPanel;
 
-	private static int buttonID = 0;
-
-	protected JRadioButton newRadioButton(String label, boolean selected, ButtonGroup g) {
-		JRadioButton b = new JRadioButton(label, selected);
-		b.setName(++buttonID + ":" + label);
-		b.setHorizontalAlignment(JRadioButton.LEFT);
-		b.setVerticalAlignment(JRadioButton.CENTER);
-		b.setFocusable(false);
-		b.setBackground(Color.WHITE);
-		b.setForeground(Color.BLACK);
-		b.setVisible(true);
-		b.setBorderPainted(false);
-		b.addItemListener(buttonListener);
-		g.add(b);
-		listenerList.add(b);
-		return b;
-	}
-
-	protected JCheckBox newJCheckBox(String label, boolean selected) {
-		JCheckBox cb = new JCheckBox(label, selected);
-		cb.setName(++buttonID + ":" + label);
-		cb.setHorizontalAlignment(JCheckBox.LEFT);
-		cb.setVerticalAlignment(JCheckBox.CENTER);
-		cb.setFocusable(false);
-		cb.setVisible(true);
-		cb.setBackground(Color.WHITE);
-		cb.setForeground(Color.BLACK);
-		cb.addItemListener(buttonListener);
-		listenerList.add(cb);
-		return cb;
-	}
-
-	final static Border controlBorder = new EmptyBorder(0, 0, 0, 0);// BorderFactory.createLineBorder(Color.BLACK, 1);
-	final static Border statusBorder = BorderFactory.createLineBorder(Color.RED, 1);
-
-	/**
-	 * 
-	 * |------------------isoPanel------------------|
-	 * |.................................|..........|
-	 * |.................................|.slider...|
-	 * |..........drawPanel..............|..scroll..|
-	 * |.................................|...pane/..|
-	 * |.................................|.slider...|
-	 * |.................................|...panel..|
-	 * |.................................|..........|
-	 * |.................................|..........|
-	 * |.------------------------------------------.|
-	 * |..............controlStatusPanel............|
-	 * |............................................|
-	 * |--------------------------------------------|
-	 */
-
-	protected void initializePanels() {
-		frame.contentPane.setTransferHandler(new FileUtil.FileDropHandler(this));
-//		frame.contentPane.removeAll();
-		controlStatusPanel = new JPanel(new FlowLayout());
-		controlStatusPanel.setBackground(Color.WHITE);
-		controlPanel = new JPanel();
-		controlPanel.setBackground(Color.WHITE);
-		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
-		statusPanel = new StatusPanel(new JTextArea());
-		controlStatusPanel.add(controlPanel);
-		controlStatusPanel.add(statusPanel);
-		controlStatusPanel.setBorder(controlBorder);
-		isoPanel = new JPanel(new BorderLayout())
-//		{	// BH testing paints
-//			@Override 
-//			public void paint(Graphics g) {
-//				// only happens initially and on resize
-////				System.out.println("IA paint " 
-////						+ frame.tabbedPane.getHeight() + " "
-////						+ sliderPanel.getSize() + " "
-////				);
-//				super.paint(g);
-//			}
-//			
-//			@Override
-//			public void repaint() {
-//				super.repaint();
-//			}
-////			@Override
-////			public void repaint(int x, int y, int width, int height) {
-////				// does not happen
-////				System.out.println("IA repaint4");
-////				super.repaint(x, y, width, height);
-////			}
-//		}
-		;
-		if (sliderPanel == null) {
-			sliderPanel = new JPanel() 
-//			{
-//				public void setPreferredSize(Dimension d) {
-//					System.out.println(d);
-//					super.setPreferredSize(d);
-//				}
-//				
-//				public void paint(Graphics g) {
-//					super.paint(g);
-//				}
-//
-//			}
-			;
-			sliderPanel.setBackground(Color.WHITE);
-			sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.PAGE_AXIS));
-			// sets grid length equal to number of rows.
-		}
-
-		sliderScrollPane = new JScrollPane(sliderPanel) 
-//		{
-//			
-//			public void doLayout() {
-//				super.doLayout();
-////				System.out.println("slh" + sliderPanel.getPreferredSize());
-////				this.getVerticalScrollBar().setMaximum(sliderPanel.getPreferredSize().height);
-////				this.getVerticalScrollBar().getModel().setExtent(sliderPanel.getPreferredSize().height);
-////				System.out.println(this.getVerticalScrollBar().getModel().getExtent());
-//			}
-//			
-//		}
-		;
-		sliderScrollPane.setBackground(Color.YELLOW);
-
-		sliderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		sliderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-		sliderScrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
-		isoPanel.add(sliderScrollPane, BorderLayout.EAST);
-
-		isoPanel.add(controlStatusPanel, BorderLayout.SOUTH);
-
-		drawPanel = new JPanel(new BorderLayout());
-		isoPanel.add(drawPanel, BorderLayout.CENTER);
-
-		frame.addIsoPanel(this, isoPanel);
-	}
-
-	/**
-	 * Add general buttons to bottom control panel right side.
-	 * 
-	 * @param panel
-	 */
-	protected void addSaveButtons(JComponent panel) {
-		ViewListener vl = new ViewListener();
-		applyView = newJButton("Apply View", vl);
-		// saveImage = newJButton("Save Image", vl);
-		// saveISOVIZ = newJButton("Save ISOVIZ", vl);
-//		openOther = newJButton((appType == APP_ISODISTORT ? "View Diffraction" : "View Distortion"), vl);
-		panel.add(new JLabel("   "));
-		panel.add(applyView);
-		// panel.add(saveImage);
-		// panel.add(saveISOVIZ);
-		// panel.add(openOther);
-	}
-
-	private static JButton newJButton(String text, ViewListener vl) {
-		JButton b = new JButton(text);
-		b.setFocusable(false);
-		b.setMargin(new Insets(-3, 3, -2, 4));
-		b.setHorizontalAlignment(SwingConstants.LEFT);
-		b.setVerticalAlignment(SwingConstants.CENTER);
-		b.addActionListener(vl);
-		return b;
-	}
-
 	protected ActionListener textBoxListener = new ActionListener() {
 
 		@Override
@@ -621,159 +465,6 @@ public abstract class IsoApp {
 		}
 
 	};
-
-	protected JTextField newTextField(String text, int insetRight) {
-		JTextField t = new JTextField(text, 3);
-		t.setMargin(new Insets(-2, 0, -1, insetRight));
-		t.addActionListener(textBoxListener);
-		return t;
-	}
-
-	/**
-	 * This data reader has two modes of operatinon.
-	 * 
-	 * For data files, it can accept byte[], String, or InputStream data.
-	 * 
-	 * The alternative is to read a single-string data sequence directly from the
-	 * html file that calls the app (injected as isoData).
-	 * 
-	 * The Variables class then has a method that parses the byte[] representation
-	 * of the string.
-	 */
-	protected int readFile() {
-		switch (args == null ? 0 : args.length) {
-		case 3:
-			document = args[2];
-			// Fall through //
-		case 2:
-			formData = args[1]; // String or Map
-			// Fall through //
-		case 1:
-			isovisData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
-			whichDataFile = null;
-			break;
-		default:
-			String path = getClass().getName();
-			path = path.substring(0, path.lastIndexOf('.') + 1).replace('.', '/');
-			isovisData = FileUtil.readFileData(this, path + whichDataFile);
-		}
-		return FileUtil.getIsoFileTypeFromContents(isovisData);
-	}
-
-	/**
-	 * @param f
-	 * @return
-	 */
-	public void loadDroppedFile(File f) {
-		if (f == null)
-			return;
-		byte[] data = FileUtil.readFileData(this, f.getAbsolutePath());
-		if (data == null || handleNonIsoVizFile(FileUtil.getIsoFileTypeFromContents(data), data)) {
-			return;
-		}
-		new Thread(() -> {
-			openApplication(appType, data, null, true);
-		}, "isodistort_file_dropper").start();
-	}
-
-	private boolean handleNonIsoVizFile(int fileType, byte[] data) {
-		switch (fileType) {
-		case FileUtil.FILE_TYPE_FORMDATA_JSON:
-			sendFormDataToServer(ensureMapData(new String(data), true, false));
-			return true;
-		case FileUtil.FILE_TYPE_DISTORTION_TXT:
-			distortionFileToISOVIZ(whichDataFile == null ? "temp.isoviz": whichDataFile, data);
-			return true;
-		case FileUtil.FILE_TYPE_ISOVIZ:
-			return false;
-		default:
-			sayNotPossible("File type was not recognized.");
-			return true;
-		}
-	}
-
-
-	private void openApplication(int appType, Object data, Map<String, Object> mapFormData, boolean isDrop) {
-		if (data == null)
-			return;
-		if (!prepareToSwapOut())
-			return;
-		IsoFrame frame = this.frame;
-		SwingUtilities.invokeLater(() -> {
-			new Thread(() -> {
-				boolean isIsoDistort = (appType == APP_ISODISTORT);
-				IsoApp app = (isIsoDistort ? new IsoDistortApp() : new IsoDiffractApp());
-				frame.actions.setApp(app);
-				Object[] args = new Object[] { data };
-				if (isDrop) {
-					frame.disposeApps();
-					clearSettingsForFileDrop();
-					app.formData = mapFormData;
-				}
-				if (!app.start(frame, args, variables, isDrop))
-					return;
-				if (!isDrop) {
-					app.document = document;
-					app.formData = formData;
-					app.whichDataFile = whichDataFile;
-					app.distortionFileData = distortionFileData;
-					app.variables.setValuesFrom(variables);
-					app.updateDisplay();
-				}
-				app.frameResized();
-				app.frame.repaint();
-			}, "isodistort_application").start();
-
-		});
-	}
-
-	/**
-	 * Frame has been resized -- update renderer and display. This will occur
-	 * inititially and upon user resize drag.
-	 * 
-	 */
-	protected void frameResized() {
-//		System.out.println(this.appType + " resized" + isoPanel.getSize());
-//		System.out.println("resized" + controlStatusPanel.getBounds());
-		Dimension d = new Dimension(controlStatusPanel.getWidth() - 5, controlPanelHeight);
-		controlPanel.setPreferredSize(d);
-		statusPanel.setDimension(new Dimension(controlStatusPanel.getWidth(), controlPanelHeight - 5));
-		setPackedHeight();
-		d = new Dimension(frame.getContentPane().getPreferredSize().width 
-				- sliderPanelWidth - 20,
-				frame.getPanelHeight() - controlPanelHeight);
-		drawPanel.setPreferredSize(d);
-		sliderScrollPane.setPreferredSize(new Dimension(sliderScrollPane.getWidth(), d.height));
-		updateDimensions();
-	}
-
-	private void setPackedHeight() {
-		JPanel p = sliderPanel;
-		int h = 0;
-		for (int i = 0; i < p.getComponentCount(); i++) {
-			h += p.getComponent(i).getHeight();
-		}
-		p.setPreferredSize(new Dimension(sliderPanelWidth, h));
-		p.setSize(new Dimension(sliderPanelWidth, h));
-	}
-
-
-	protected void dispose() {
-		if (!isEnabled)
-			return;
-		isEnabled = false;
-		prepareToSwapOut();
-		while (listenerList.size() > 0) {
-			JToggleButton c = listenerList.remove(listenerList.size() - 1);
-			c.removeItemListener(buttonListener);
-		}
-		frame.removeComponentListener(componentListener);
-		frame.removeWindowListener(windowListener);
-		frame = null;
-		if (variables != null)
-			variables.dispose();
-		variables = null;
-	}
 
 	private ComponentListener componentListener = new ComponentAdapter() {
 
@@ -797,8 +488,7 @@ public abstract class IsoApp {
 	private WindowListener windowListener = new WindowAdapter() {
 
 		@Override
-		public void windowClosing(WindowEvent e) {
-			shutDown();
+		public void windowActivated(WindowEvent e) {
 		}
 
 		@Override
@@ -806,7 +496,12 @@ public abstract class IsoApp {
 		}
 
 		@Override
-		public void windowIconified(WindowEvent e) {
+		public void windowClosing(WindowEvent e) {
+			shutDown();
+		}
+
+		@Override
+		public void windowDeactivated(WindowEvent e) {
 		}
 
 		@Override
@@ -814,144 +509,83 @@ public abstract class IsoApp {
 		}
 
 		@Override
-		public void windowActivated(WindowEvent e) {
-		}
-
-		@Override
-		public void windowDeactivated(WindowEvent e) {
+		public void windowIconified(WindowEvent e) {
 		}
 
 	};
 
 	private int sliderPanelWidth;
 
+	protected IsoApp(int appType) {
+		this.appType = appType;
+	}
+
 	/**
-	 * From application main(String[] args)
+	 * Add general buttons to bottom control panel right side.
 	 * 
-	 * @param type
-	 * @param args
+	 * @param panel
 	 */
-	protected static void create(String type, String[] args) {
-		IsoApp app = null;
-		switch (type) {
-		case "IsoDistort":
-			app = new IsoDistortApp();
-			break;
-		case "IsoDiffract":
-			app = new IsoDiffractApp();
-		}
-		app.start(new IsoFrame(type), args, null, false);
+	protected void addSaveButtons(JComponent panel) {
+		ViewListener vl = new ViewListener();
+		applyView = newJButton("Apply View", vl);
+		// saveImage = newJButton("Save Image", vl);
+		// saveISOVIZ = newJButton("Save ISOVIZ", vl);
+//		openOther = newJButton((appType == APP_ISODISTORT ? "View Diffraction" : "View Distortion"), vl);
+		panel.add(new JLabel("   "));
+		panel.add(applyView);
+		// panel.add(saveImage);
+		// panel.add(saveISOVIZ);
+		// panel.add(openOther);
 	}
 
-	private boolean start(IsoFrame frame, Object[] args, Variables oldVariables, boolean isDrop) {
-		this.frame = frame;
-		this.args = args;
-		frame.contentPane = (JPanel) frame.getContentPane();
-		if (frame.tabbedPane == null) {
-			frame.contentPane.setLayout(new BorderLayout());
-		}
-		try {
-			long t = System.currentTimeMillis();
-
-			initializePanels();
-			addStatus(null);
-			addStatus(this + " Java " + System.getProperty("java.version"));
-
-			int fileType = readFile();
-			byte[] data = isovisData;
-			if (handleNonIsoVizFile(fileType, data))
-				return false;
-			variables = new Variables(this, appType == APP_ISODIFFRACT, oldVariables != null);
-					
-			isovisData = variables.parse(data);
-			if (oldVariables == null) {
-				frame.contentPane.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
-			} else {
-//				System.out.println("Fps " + frame.contentPane.getSize()  + frame.tabbedPane.getSize()  
-//				+ "\n" + frame.distortionPanel.getSize()
-//				+ "\n" + frame.diffractionPanel.getSize()
-//				);
-				frame.contentPane.setPreferredSize(frame.contentPane.getSize());
-			}
-			frame.tabbedPane.setPreferredSize(frame.contentPane.getPreferredSize());
-			frame.pack();
-			// frame is packed, so OUTER sizes are set now.
-			// but we still have to set the sliderPanel width
-			// and height. We provide a provisional setting here
-			// and let Variables adjust it as necessary.
-			resetPanelHeights();
-			variables.initSliderPanel(sliderPanel, sliderPanelWidth);
-			frame.pack();
-			updateDimensions();
-			init();
-			frame.setVisible(true); // #3
-			String title = frame.getTitle();
-			frame.setName(title);
-			frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion);
-			frame.addComponentListener(componentListener);
-			frame.addWindowListener(windowListener);
-			addStatus("Time to load: " + (System.currentTimeMillis() - t) + " ms");
-			return true;
-		} catch (Throwable e) {
-			JOptionPane.showMessageDialog(frame, "Error reading input data " + e.getMessage() + (whichDataFile == null ? "" : " for " + whichDataFile));
-			e.printStackTrace();
-			return false;
-		}
-
-	}
-
-	protected void resetPanelHeights() {
-		int sliderPaneHeight = frame.getPanelHeight() - controlPanelHeight - padding;
-		if (sliderPanelWidth <= 0)
-			sliderPanelWidth = frame.contentPane.getWidth() - sliderPaneHeight - roomForScrollBar - padding;
-		sliderScrollPane.setPreferredSize(new Dimension(sliderPanelWidth, sliderPaneHeight));
-		JScrollBar bar = sliderScrollPane.getVerticalScrollBar();
-		bar.setSize(new Dimension(bar.getWidth(), sliderPaneHeight));
-		
-		controlStatusPanel.setPreferredSize(
-				new Dimension(frame.contentPane.getWidth() - roomForScrollBar, controlPanelHeight));
-	}
-
-	protected void shutDown() {
-		dispose();
-		/**
-		 * @j2sNative
-		 */
-		{
-			System.exit(0);
-		}
-	}
-
-	protected void updateDimensions() {
-		drawWidth = drawPanel.getWidth();
-		drawHeight = drawPanel.getHeight();
-		// System.out.println("IsoA updateDIm" + drawWidth + " " + drawHeight);
+	public void addStatus(String status) {
+		statusPanel.addText(status);
 	}
 
 	/**
-	 * viewListener class listens for the applet buttons and the inside methods
-	 * specify the viewing angles.
+	 * The "Apply View" action.
+	 * 
 	 */
-	private class ViewListener implements ActionListener {
+	abstract protected void applyView();
 
-		@Override
-		public void actionPerformed(ActionEvent event) {
-			Object source = event.getSource();
-			if (source == applyView) {
-				applyView();
-				return;
-			}
-		}
+	/**
+	 * Center structure in window.
+	 */
+	abstract public void centerImage();
+
+	private void clearSettingsForFileDrop() {
+		whichDataFile = null;
+	}
+	private void createIsovizFromFormData(Object formData, Consumer<byte[]> consumer) {
+		// not available if dropped?
+		boolean isSwitch = (formData == null);
+		if (isSwitch)
+			formData = this.formData;
+		Map<String, Object> mapData = ensureMapData(formData, isSwitch, false);
+		if (mapData == null)
+			return;
+		if (isSwitch)
+			variables.updateModeFormData(mapData, document);
+		setStatus("...fetching ISOVIZ file from iso.byu...");
+		ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, mapData, consumer, 20);
 	}
 
-	// <P><FORM ACTION="isodistortuploadfile.php" METHOD="POST"
-	// enctype="multipart/form-data">
-	// Import an ISODISTORT distortion file:
-	// <INPUT TYPE="hidden" NAME="input" VALUE="distort">
-	// <INPUT TYPE="hidden" NAME="origintype" VALUE="dfile">
-	// <INPUT CLASS="btn btn-primary" TYPE="submit" VALUE="OK">
-	// <input name="toProcess" type="file" size="30">
-	// </form>
+	protected void dispose() {
+		if (!isEnabled)
+			return;
+		isEnabled = false;
+		prepareToSwapOut();
+		while (listenerList.size() > 0) {
+			JToggleButton c = listenerList.remove(listenerList.size() - 1);
+			c.removeItemListener(buttonListener);
+		}
+		frame.removeComponentListener(componentListener);
+		frame.removeWindowListener(windowListener);
+		frame = null;
+		if (variables != null)
+			variables.dispose();
+		variables = null;
+	}
 
 	/**
 	 * Process the distortion file data by passing it to the server and retrieving
@@ -985,102 +619,6 @@ public abstract class IsoApp {
 		}, 5);
 	}
 
-	protected void sendFormDataToServer(Map<String, Object> formData) {
-		Map<String, Object> mapFormData = setServerFormOriginType(formData, "isovizdistortion");
-		if (mapFormData == null) {
-			JOptionPane.showMessageDialog(frame,
-					"The server was not able to read the data necessary to create ISOVIS file data. ");
-			return;
-		}
-		createIsovizFromFormData(mapFormData, new Consumer<byte[]>() {
-
-			@Override
-			public void accept(byte[] data) {
-				setStatus("...opening ISODISTORT for " + data.length + " bytes of data...");
-				new Thread(() -> {
-					openApplication(appType, data, mapFormData, true);
-				}, "isodistort_from_server").start();
-
-			}
-
-		});
-	}
-
-	private void createIsovizFromFormData(Object formData, Consumer<byte[]> consumer) {
-		// not available if dropped?
-		boolean isSwitch = (formData == null);
-		if (isSwitch)
-			formData = this.formData;
-		Map<String, Object> mapData = ensureMapData(formData, isSwitch, false);
-		if (mapData == null)
-			return;
-		if (isSwitch)
-			variables.updateModeFormData(mapData, document);
-		setStatus("...fetching ISOVIZ file from iso.byu...");
-		ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, mapData, consumer, 20);
-	}
-
-	/**
-	 * "Press" the radio button for the page
-	 * 
-	 * @param formData
-	 * @param type
-	 * @return
-	 */
-	protected Map<String, Object> setServerFormOriginType(Map<String, Object> formData, String type) {
-		if (formData == null || formData.get("origintype") == null)
-			return null;
-		formData.put("origintype", type);
-		this.formData = formData;
-		return formData;
-	}
-
-	public void addStatus(String status) {
-		statusPanel.addText(status);
-	}
-
-	public void setStatus(String status) {
-		addStatus(status);
-		setStatusVisible(true);
-	}
-
-	public void setStatusVisible(boolean b) {
-		statusPanel.setVisible(b, false);
-	}
-
-	public boolean toggleStatusVisible() {
-		boolean b = !statusPanel.isVisible();
-		statusPanel.setVisible(b, true);
-		return b;
-	}
-
-	public boolean isStatusVisible() {
-		return statusPanel.isVisible();
-	}
-
-	public void setFormData(Map<String, Object> formData, String sliderSetting) {
-		variables.setModeFormData(formData, sliderSetting);
-	}
-
-	private void sayNotPossible(String msg) {
-		JOptionPane.showMessageDialog(frame, "This feature is not available " + msg);
-	}
-
-	/**
-	 * If we have form data, clone it, adjust its values, and pass the clone to the
-	 * server with a request to construct a new ISOVIZ file
-	 */
-	public void saveCurrent() {
-		createIsovizFromFormData(null, new Consumer<byte[]>() {
-
-			@Override
-			public void accept(byte[] data) {
-				FileUtil.saveDataFile(frame, data, "isoviz", false);
-			}
-
-		});
-	}
-
 	private Map<String, Object> ensureMapData(Object formData, boolean asClone, boolean silent) {
 		if (formData == null) {
 			formData = this.formData;
@@ -1102,78 +640,316 @@ public abstract class IsoApp {
 		return mapData;
 	}
 
-	private void updateFormData(Map<String, Object> map, Map<String, Object> values, String originType) {
-		String sliderSetting = "current";
-		if (values != null) {
-			sliderSetting = (String) values.remove("slidersetting");
-			map.putAll(values);
+	/**
+	 * Frame has been resized -- update renderer and display. This will occur
+	 * inititially and upon user resize drag.
+	 * 
+	 */
+	protected void frameResized() {
+//		System.out.println(this.appType + " resized" + isoPanel.getSize());
+//		System.out.println("resized" + controlStatusPanel.getBounds());
+		Dimension d = new Dimension(controlStatusPanel.getWidth() - 5, controlPanelHeight);
+		controlPanel.setPreferredSize(d);
+		statusPanel.setDimension(new Dimension(controlStatusPanel.getWidth(), controlPanelHeight - 5));
+		setPackedHeight();
+		d = new Dimension(frame.getContentPane().getPreferredSize().width - sliderPanelWidth - 20,
+				frame.getPanelHeight() - controlPanelHeight);
+		drawPanel.setPreferredSize(d);
+		sliderScrollPane.setPreferredSize(new Dimension(sliderScrollPane.getWidth(), d.height));
+		updateDimensions();
+	}
+
+	/**
+	 * Get the image from the renderer for saving.
+	 * 
+	 * @return the current image of drawing frame.
+	 */
+	abstract protected BufferedImage getImage();
+
+	/**
+	 * The click callback comes to IsoApp and is distributed to the applet by this
+	 * method.
+	 * 
+	 * @param src
+	 */
+	abstract protected void handleButtonEvent(Object src);
+
+	private boolean handleNonIsoVizFile(int fileType, byte[] data) {
+		switch (fileType) {
+		case FileUtil.FILE_TYPE_FORMDATA_JSON:
+			sendFormDataToServer(ensureMapData(new String(data), true, false));
+			return true;
+		case FileUtil.FILE_TYPE_DISTORTION_TXT:
+			distortionFileToISOVIZ(whichDataFile == null ? "temp.isoviz" : whichDataFile, data);
+			return true;
+		case FileUtil.FILE_TYPE_ISOVIZ:
+			return false;
+		default:
+			sayNotPossible("File type was not recognized.");
+			return true;
 		}
-		setFormData(map, sliderSetting);
-		setServerFormOriginType(map, originType);
 	}
 
-	public void saveImage() {
-		FileUtil.saveDataFile(frame, getImage(), "png", false);
-	}
+	/**
+	 * The variables are all read. Time to do any app-specific initialization before
+	 * we make the frame visible.
+	 */
+	abstract protected void init();
 
-	public void saveOriginal() {
-		FileUtil.saveDataFile(frame, isovisData, "isoviz", false);
-	}
+	/**
+	 * 
+	 * |------------------isoPanel------------------|
+	 * |.................................|..........|
+	 * |.................................|.slider...|
+	 * |..........drawPanel..............|..scroll..|
+	 * |.................................|...pane/..|
+	 * |.................................|.slider...|
+	 * |.................................|...panel..|
+	 * |.................................|..........|
+	 * |.................................|..........|
+	 * |.------------------------------------------.|
+	 * |..............controlStatusPanel............|
+	 * |............................................|
+	 * |--------------------------------------------|
+	 */
 
-	public void setPreferences(Map<String, Object> values) {
-		Map<String, Object> map = ensureMapData(null, true, true);
-		if (map == null) {
-			map = variables.getPreferences();
+	protected void initializePanels() {
+		frame.contentPane.setTransferHandler(new FileUtil.FileDropHandler(this));
+		controlStatusPanel = new JPanel(new FlowLayout());
+		controlStatusPanel.setBackground(Color.WHITE);
+		controlPanel = new JPanel();
+		controlPanel.setBackground(Color.WHITE);
+		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
+		statusPanel = new StatusPanel(new JTextArea());
+		controlStatusPanel.add(controlPanel);
+		controlStatusPanel.add(statusPanel);
+		controlStatusPanel.setBorder(controlBorder);
+		isoPanel = new JPanel(new BorderLayout());
+		if (sliderPanel == null) {
+			sliderPanel = new JPanel();
+			sliderPanel.setBackground(Color.WHITE);
+			sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.PAGE_AXIS));
+			// sets grid length equal to number of rows.
 		}
-		if (values == null) {
-			IsoDialog.openPreferencesDialog(this, map);
-		} else {
-			// after dialog
-			if (variables.setPreferences(map, values)) {
-				// we have a non-local change that needs servicing
-				sendFormDataToServer(map);
-			}
-			;
-		}
+		sliderScrollPane = new JScrollPane(sliderPanel);
+		sliderScrollPane.setBackground(Color.YELLOW);
+		sliderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		sliderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		sliderScrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
+		isoPanel.add(sliderScrollPane, BorderLayout.EAST);
+		isoPanel.add(controlStatusPanel, BorderLayout.SOUTH);
+		drawPanel = new JPanel(new BorderLayout());
+		isoPanel.add(drawPanel, BorderLayout.CENTER);
+		frame.addIsoPanel(this, isoPanel);
 	}
 
-	public void saveFormData(Map<String, Object> values) {
+	public boolean isStatusVisible() {
+		return statusPanel.isVisible();
+	}
+
+	/**
+	 * @param f
+	 * @return
+	 */
+	public void loadDroppedFile(File f) {
+		if (f == null)
+			return;
+		byte[] data = FileUtil.readFileData(this, f.getAbsolutePath());
+		if (data == null || handleNonIsoVizFile(FileUtil.getIsoFileTypeFromContents(data), data)) {
+			return;
+		}
+		new Thread(() -> {
+			openApplication(appType, data, null, true);
+		}, "isodistort_file_dropper").start();
+	}
+
+	protected JCheckBox newJCheckBox(String label, boolean selected) {
+		JCheckBox cb = new JCheckBox(label, selected);
+		cb.setName(++buttonID + ":" + label);
+		cb.setHorizontalAlignment(JCheckBox.LEFT);
+		cb.setVerticalAlignment(JCheckBox.CENTER);
+		cb.setFocusable(false);
+		cb.setVisible(true);
+		cb.setBackground(Color.WHITE);
+		cb.setForeground(Color.BLACK);
+		cb.addItemListener(buttonListener);
+		listenerList.add(cb);
+		return cb;
+	}
+
+	protected JRadioButton newRadioButton(String label, boolean selected, ButtonGroup g) {
+		JRadioButton b = new JRadioButton(label, selected);
+		b.setName(++buttonID + ":" + label);
+		b.setHorizontalAlignment(JRadioButton.LEFT);
+		b.setVerticalAlignment(JRadioButton.CENTER);
+		b.setFocusable(false);
+		b.setBackground(Color.WHITE);
+		b.setForeground(Color.BLACK);
+		b.setVisible(true);
+		b.setBorderPainted(false);
+		b.addItemListener(buttonListener);
+		g.add(b);
+		listenerList.add(b);
+		return b;
+	}
+
+	protected JTextField newTextField(String text, int insetRight) {
+		JTextField t = new JTextField(text, 3);
+		t.setMargin(new Insets(-2, 0, -1, insetRight));
+		t.addActionListener(textBoxListener);
+		return t;
+	}
+
+	private void openApplication(int appType, Object data, Map<String, Object> mapFormData, boolean isDrop) {
+		if (data == null)
+			return;
+		if (!prepareToSwapOut())
+			return;
+		IsoFrame frame = this.frame;
+		SwingUtilities.invokeLater(() -> {
+			new Thread(() -> {
+				//boolean isIsoDistort = (appType == APP_ISODISTORT);
+				IsoApp app;
+				switch (appType) {
+				default:
+				case APP_ISODISTORT:
+					app = new IsoDistortApp();
+					break;
+				case APP_ISODIFFRACT:
+					app = new IsoDiffractApp();
+					break;
+				case APP_ISOSYMMETRY:
+					app = new IsoSymmetryApp();
+					break;
+				}
+				frame.actions.setApp(app);
+				Object[] args = new Object[] { data };
+				if (isDrop) {
+					frame.disposeApps();
+					clearSettingsForFileDrop();
+					app.formData = mapFormData;
+				}
+				if (!app.start(frame, args, variables, isDrop))
+					return;
+				if (!isDrop) {
+					app.document = document;
+					app.formData = formData;
+					app.whichDataFile = whichDataFile;
+					app.distortionFileData = distortionFileData;
+					app.variables.setValuesFrom(variables);
+					app.updateDisplay();
+				}
+				app.frameResized();
+				app.frame.repaint();
+			}, "isodistort_application").start();
+
+		});
+	}
+
+	/**
+	 * This method allows the current application to finish up what it is doing
+	 * prior to swapping out.
+	 * 
+	 * @return false to disallow swapping out at this moment.
+	 * 
+	 */
+	abstract protected boolean prepareToSwapOut();
+
+	/**
+	 * This data reader has two modes of operatinon.
+	 * 
+	 * For data files, it can accept byte[], String, or InputStream data.
+	 * 
+	 * The alternative is to read a single-string data sequence directly from the
+	 * html file that calls the app (injected as isoData).
+	 * 
+	 * The Variables class then has a method that parses the byte[] representation
+	 * of the string.
+	 */
+	protected int readFile() {
+		switch (args == null ? 0 : args.length) {
+		case 3:
+			document = args[2];
+			// Fall through //
+		case 2:
+			formData = args[1]; // String or Map
+			// Fall through //
+		case 1:
+			isovisData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
+			whichDataFile = null;
+			break;
+		default:
+			String path = getClass().getName();
+			path = path.substring(0, path.lastIndexOf('.') + 1).replace('.', '/');
+			isovisData = FileUtil.readFileData(this, path + whichDataFile);
+		}
+		return FileUtil.getIsoFileTypeFromContents(isovisData);
+	}
+
+	abstract public void recalcCellColors();
+
+	/**
+	 * Reset View.
+	 */
+	abstract public void reset();
+
+	protected void resetPanelHeights() {
+		int sliderPaneHeight = frame.getPanelHeight() - controlPanelHeight - padding;
+		if (sliderPanelWidth <= 0)
+			sliderPanelWidth = frame.contentPane.getWidth() - sliderPaneHeight - roomForScrollBar - padding;
+		sliderScrollPane.setPreferredSize(new Dimension(sliderPanelWidth, sliderPaneHeight));
+		JScrollBar bar = sliderScrollPane.getVerticalScrollBar();
+		bar.setSize(new Dimension(bar.getWidth(), sliderPaneHeight));
+
+		controlStatusPanel
+				.setPreferredSize(new Dimension(frame.contentPane.getWidth() - roomForScrollBar, controlPanelHeight));
+	}
+
+	public void saveCIF(Map<String, Object> values) {
 		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
 		if (values == null) {
-			IsoDialog.openFormDialog(this, map);
+			IsoDialog.openCIFDialog(this, map);
 		} else {
 			// after dialog
-			String sliderSetting = (String) values.remove("slidersetting");
-			map.putAll(values);
-			setFormData(map, sliderSetting);
-			FileUtil.saveDataFile(frame, ServerUtil.toJSON(map), "json", false);
-		}
-	}
-
-	public void saveTOPAS(Map<String, Object> values) {
-		Map<String, Object> map = ensureMapData(null, true, false);
-		if (map == null)
-			return;
-		if (values == null) {
-			IsoDialog.openTOPASDialog(this, map);
-		} else {
-			// after dialog
-			updateFormData(map, values, "topas");
-			setStatus("...fetching TOPAS.STR file from iso.byu...");
-			ServerUtil.fetch(this, FileUtil.FILE_TYPE_TOPAS_STR, map, new Consumer<byte[]>() {
+			updateFormData(map, values, "structurefile");
+			setStatus("...fetching CIF file from iso.byu...");
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_CIF, map, new Consumer<byte[]>() {
 				@Override
 				public void accept(byte[] b) {
 					if (b == null) {
 						addStatus("upload failed");
 						return;
 					}
-					FileUtil.saveDataFile(frame, b, "STR", false);
+					FileUtil.saveDataFile(frame, b, "cif", false);
 				}
 			}, 20);
 		}
+	}
 
+	// <P><FORM ACTION="isodistortuploadfile.php" METHOD="POST"
+	// enctype="multipart/form-data">
+	// Import an ISODISTORT distortion file:
+	// <INPUT TYPE="hidden" NAME="input" VALUE="distort">
+	// <INPUT TYPE="hidden" NAME="origintype" VALUE="dfile">
+	// <INPUT CLASS="btn btn-primary" TYPE="submit" VALUE="OK">
+	// <input name="toProcess" type="file" size="30">
+	// </form>
+
+	/**
+	 * If we have form data, clone it, adjust its values, and pass the clone to the
+	 * server with a request to construct a new ISOVIZ file
+	 */
+	public void saveCurrent() {
+		createIsovizFromFormData(null, new Consumer<byte[]>() {
+
+			@Override
+			public void accept(byte[] data) {
+				FileUtil.saveDataFile(frame, data, "isoviz", false);
+			}
+
+		});
 	}
 
 	public void saveDistortionFile(Map<String, Object> values) {
@@ -1196,6 +972,21 @@ public abstract class IsoApp {
 					FileUtil.saveDataFile(frame, b, "iso.txt", false);
 				}
 			}, 20);
+		}
+	}
+
+	public void saveFormData(Map<String, Object> values) {
+		Map<String, Object> map = ensureMapData(null, true, false);
+		if (map == null)
+			return;
+		if (values == null) {
+			IsoDialog.openFormDialog(this, map);
+		} else {
+			// after dialog
+			String sliderSetting = (String) values.remove("slidersetting");
+			map.putAll(values);
+			setFormData(map, sliderSetting);
+			FileUtil.saveDataFile(frame, ServerUtil.toJSON(map), "json", false);
 		}
 	}
 
@@ -1223,27 +1014,223 @@ public abstract class IsoApp {
 
 	}
 
-	public void saveCIF(Map<String, Object> values) {
+	public void saveImage() {
+		FileUtil.saveDataFile(frame, getImage(), "png", false);
+	}
+
+	public void saveOriginal() {
+		FileUtil.saveDataFile(frame, isovisData, "isoviz", false);
+	}
+
+	public void saveTOPAS(Map<String, Object> values) {
 		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
 		if (values == null) {
-			IsoDialog.openCIFDialog(this, map);
+			IsoDialog.openTOPASDialog(this, map);
 		} else {
 			// after dialog
-			updateFormData(map, values, "structurefile");
-			setStatus("...fetching CIF file from iso.byu...");
-			ServerUtil.fetch(this, FileUtil.FILE_TYPE_CIF, map, new Consumer<byte[]>() {
+			updateFormData(map, values, "topas");
+			setStatus("...fetching TOPAS.STR file from iso.byu...");
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_TOPAS_STR, map, new Consumer<byte[]>() {
 				@Override
 				public void accept(byte[] b) {
 					if (b == null) {
 						addStatus("upload failed");
 						return;
 					}
-					FileUtil.saveDataFile(frame, b, "cif", false);
+					FileUtil.saveDataFile(frame, b, "STR", false);
 				}
 			}, 20);
 		}
+
+	}
+
+	private void sayNotPossible(String msg) {
+		JOptionPane.showMessageDialog(frame, "This feature is not available " + msg);
+	}
+
+	protected void sendFormDataToServer(Map<String, Object> formData) {
+		Map<String, Object> mapFormData = setServerFormOriginType(formData, "isovizdistortion");
+		if (mapFormData == null) {
+			JOptionPane.showMessageDialog(frame,
+					"The server was not able to read the data necessary to create ISOVIS file data. ");
+			return;
+		}
+		createIsovizFromFormData(mapFormData, new Consumer<byte[]>() {
+
+			@Override
+			public void accept(byte[] data) {
+				setStatus("...opening ISODISTORT for " + data.length + " bytes of data...");
+				new Thread(() -> {
+					openApplication(appType, data, mapFormData, true);
+				}, "isodistort_from_server").start();
+
+			}
+
+		});
+	}
+
+	public void setCursor(int c) {
+		frame.setCursor(c == 0 ? Cursor.getDefaultCursor() : Cursor.getPredefinedCursor(c));
+	}
+
+	public void setFormData(Map<String, Object> formData, String sliderSetting) {
+		variables.setModeFormData(formData, sliderSetting);
+	}
+
+	private void setPackedHeight() {
+		JPanel p = sliderPanel;
+		int h = 0;
+		for (int i = 0; i < p.getComponentCount(); i++) {
+			h += p.getComponent(i).getHeight();
+		}
+		p.setPreferredSize(new Dimension(sliderPanelWidth, h));
+		p.setSize(new Dimension(sliderPanelWidth, h));
+	}
+
+	public void setPreferences(Map<String, Object> values) {
+		Map<String, Object> map = ensureMapData(null, true, true);
+		if (map == null) {
+			map = variables.getPreferences();
+		}
+		if (values == null) {
+			IsoDialog.openPreferencesDialog(this, map);
+		} else {
+			// after dialog
+			if (variables.setPreferences(map, values)) {
+				// we have a non-local change that needs servicing
+				sendFormDataToServer(map);
+			}
+			;
+		}
+	}
+
+	/**
+	 * "Press" the radio button for the page
+	 * 
+	 * @param formData
+	 * @param type
+	 * @return
+	 */
+	protected Map<String, Object> setServerFormOriginType(Map<String, Object> formData, String type) {
+		if (formData == null || formData.get("origintype") == null)
+			return null;
+		formData.put("origintype", type);
+		this.formData = formData;
+		return formData;
+	}
+
+	public void setStatus(String status) {
+		addStatus(status);
+		setStatusVisible(true);
+	}
+
+	public void setStatusVisible(boolean b) {
+		statusPanel.setVisible(b, false);
+	}
+
+	protected void shutDown() {
+		dispose();
+		/**
+		 * @j2sNative
+		 */
+		{
+			System.exit(0);
+		}
+	}
+
+	private boolean start(IsoFrame frame, Object[] args, Variables oldVariables, boolean isDrop) {
+		this.frame = frame;
+		this.args = args;
+		frame.contentPane = (JPanel) frame.getContentPane();
+		if (frame.tabbedPane == null) {
+			frame.contentPane.setLayout(new BorderLayout());
+		}
+		try {
+			long t = System.currentTimeMillis();
+
+			initializePanels();
+			addStatus(null);
+			addStatus(this + " Java " + System.getProperty("java.version"));
+
+			int fileType = readFile();
+			byte[] data = isovisData;
+			if (handleNonIsoVizFile(fileType, data))
+				return false;
+			variables = new Variables(this, appType == APP_ISODIFFRACT, oldVariables != null);
+
+			isovisData = variables.parse(data);
+			if (oldVariables == null) {
+				frame.contentPane.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
+			} else {
+//				System.out.println("Fps " + frame.contentPane.getSize()  + frame.tabbedPane.getSize()  
+//				+ "\n" + frame.distortionPanel.getSize()
+//				+ "\n" + frame.diffractionPanel.getSize()
+//				);
+				frame.contentPane.setPreferredSize(frame.contentPane.getSize());
+			}
+			frame.tabbedPane.setPreferredSize(frame.contentPane.getPreferredSize());
+			frame.pack();
+			// frame is packed, so OUTER sizes are set now.
+			// but we still have to set the sliderPanel width
+			// and height. We provide a provisional setting here
+			// and let Variables adjust it as necessary.
+			resetPanelHeights();
+			variables.initSliderPanel(sliderPanel, sliderPanelWidth);
+			frame.pack();
+			updateDimensions();
+			init();
+			frame.setVisible(true); // #3
+			String title = frame.getTitle();
+			frame.setName(title);
+			frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion);
+			frame.addComponentListener(componentListener);
+			frame.addWindowListener(windowListener);
+			addStatus("Time to load: " + (System.currentTimeMillis() - t) + " ms");
+			return true;
+		} catch (Throwable e) {
+			JOptionPane.showMessageDialog(frame, "Error reading input data " + e.getMessage()
+					+ (whichDataFile == null ? "" : " for " + whichDataFile));
+			e.printStackTrace();
+			return false;
+		}
+
+	}
+
+	public boolean toggleStatusVisible() {
+		boolean b = !statusPanel.isVisible();
+		statusPanel.setVisible(b, true);
+		return b;
+	}
+
+	protected void updateDimensions() {
+		drawWidth = drawPanel.getWidth();
+		drawHeight = drawPanel.getHeight();
+		// System.out.println("IsoA updateDIm" + drawWidth + " " + drawHeight);
+	}
+
+	/**
+	 * Something has changed.
+	 */
+	abstract public void updateDisplay();
+
+	private void updateFormData(Map<String, Object> map, Map<String, Object> values, String originType) {
+		String sliderSetting = "current";
+		if (values != null) {
+			sliderSetting = (String) values.remove("slidersetting");
+			map.putAll(values);
+		}
+		setFormData(map, sliderSetting);
+		setServerFormOriginType(map, originType);
+	}
+
+	public void viewPage(String originType) {
+		Map<String, Object> map = ensureMapData(null, true, false);
+		if (map == null)
+			return;
+		updateFormData(map, null, originType);
+		ServerUtil.displayIsoPage(this, map);
 	}
 
 	public void viewSubgroupTree(Map<String, Object> values) {
@@ -1257,18 +1244,6 @@ public abstract class IsoApp {
 			updateFormData(map, values, "tree");
 			ServerUtil.displayIsoPage(this, map);
 		}
-	}
-
-	public void viewPage(String originType) {
-		Map<String, Object> map = ensureMapData(null, true, false);
-		if (map == null)
-			return;
-		updateFormData(map, null, originType);
-		ServerUtil.displayIsoPage(this, map);
-	}
-
-	public void setCursor(int c) {
-		frame.setCursor(c == 0 ? Cursor.getDefaultCursor() : Cursor.getPredefinedCursor(c));
 	}
 
 }

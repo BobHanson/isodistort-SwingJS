@@ -66,6 +66,23 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
+	final static String minorVersion = ".9_2024.01.06";
+
+	static boolean isJS = (/** @j2sNative true || */false);
+	
+	static boolean addJmol = false; // BH experimental
+
+	/**
+	 * the datafile to use for startup
+	 */
+	protected String whichDataFile = // "data/test22.txt";
+			// "data/tbmno3-distortion.iso.txt"; // distortion file
+			//"data/tbmno3-distortion.isoviz"; // isoviz
+	 "data/data.isoviz";
+	// "data/ZrP2O7-sg205-sg61-distort.isoviz"; // very large file
+	// "data/test28.txt"; // small file
+
+	
 	public static class IsoFrame extends JFrame {
 
 		private JComponent contentPane;
@@ -258,11 +275,6 @@ public abstract class IsoApp {
 		}
 	}
 
-	final static String minorVersion = ".9_2024.01.06";
-	static boolean isJS = (/** @j2sNative true || */
-	false);
-	static boolean addJmol = true;
-
 	final static protected int APP_ISODISTORT = 0;
 	final static protected int APP_ISODIFFRACT = 1;
 	final static protected int APP_ISOSYMMETRY = 2;
@@ -319,16 +331,6 @@ public abstract class IsoApp {
 		b.addActionListener(vl);
 		return b;
 	}
-
-	/**
-	 * the datafile to use for startup
-	 */
-	protected String whichDataFile = // "data/test22.txt";
-			// "data/tbmno3-distortion.iso.txt"; // distortion file
-			"data/tbmno3-distortion.isoviz"; // isoviz
-	// "data/data.isoviz";
-	// "data/ZrP2O7-sg205-sg61-distort.isoviz"; // very large file
-	// "data/test28.txt"; // small file
 
 	/**
 	 * this app's type, either APP_ISODISTORT or APP_ISODIFFRACT
@@ -837,9 +839,9 @@ public abstract class IsoApp {
 					app.whichDataFile = whichDataFile;
 					app.distortionFileData = distortionFileData;
 					app.variables.setValuesFrom(variables);
-					app.updateDisplay();
 				}
 				app.frameResized();
+				app.updateDisplay();
 				app.frame.repaint();
 			}, "isodistort_application").start();
 

@@ -39,8 +39,9 @@ import org.byu.isodistort.render.RenderPanel3D;
  * 
  * The ISODISTORT app (formerly "applet")
  * 
- * This class handles all GUI associated with rendering and control. It does not 
+ * This class handles all 3D GUI associated with rendering and control. It does not 
  * deal with the Variables "sliderPanel". 
+ * 
  * 
  * 
  * 

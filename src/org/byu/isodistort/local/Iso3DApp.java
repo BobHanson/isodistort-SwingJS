@@ -4,6 +4,13 @@ import javax.swing.JCheckBox;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 
+/**
+ * Iso3DApp subclasses IsoApp for a 3D application that has atoms and 
+ * bonds, arrows, cells, and axes. 
+ *  
+ * @author hanso
+ *
+ */
 public abstract class Iso3DApp extends IsoApp {
 
 	

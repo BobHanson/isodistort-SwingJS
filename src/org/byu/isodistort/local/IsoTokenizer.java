@@ -1,7 +1,5 @@
 package org.byu.isodistort.local;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.BitSet;
 import java.util.Map;
 import java.util.TreeMap;
@@ -164,21 +162,12 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * @param verbosity QUIET (0) no reporting; DEBUG_LOW (1) key and number of
 	 *                  values only; DEBUG_HIGH (2) full report for each byte parsed
 	 */
-	public IsoTokenizer(Object data, String ignore, int verbosity) {
+	public IsoTokenizer(byte[] data, String ignore, int verbosity) {
 		//ignore = null;
-		if (data instanceof String) {
-			bytes = ((String) data).getBytes();
-		} else if (data instanceof byte[]) {
-			bytes = (byte[]) data;
-		} else if (data instanceof InputStream) {
-			try {
-				bytes = FileUtil.getLimitedStreamBytes((InputStream) data, Integer.MAX_VALUE, true);
-			} catch (IOException e) {
-				e.printStackTrace();
-				bytes = new byte[0];
-			}
-		}
+		if (ignore == null)
+			ignore = ";bondlist;";
 		// verbosity = DEBUG_HIGH;
+		bytes = data;
 		readBlocks(bytes, ignore, this, verbosity);
 	}
 
@@ -632,7 +621,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 				"      12\r\n" + 
 				"!end modesFile\r\n" + 
 				"";
-		IsoTokenizer vt = new IsoTokenizer(s, null, DEBUG_LOW);
+		IsoTokenizer vt = new IsoTokenizer(s.getBytes(), null, DEBUG_LOW);
 		dumpMap(vt.bytes, vt);
 
 	}
@@ -643,7 +632,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 */
 	static void testViz() {
 		String s = "!test1 0 0.0 2.5 -3.2 4.0001 1234567 123456.7890123456 123456789.01234567890123 3.56000000 #3 adf4\n 5 \n\n\n#!test2 testing  \n\n!test3 OK";
-		IsoTokenizer vt = new IsoTokenizer(s, null, QUIET);// DEBUG_HIGH);
+		IsoTokenizer vt = new IsoTokenizer(s.getBytes(), null, QUIET);// DEBUG_HIGH);
 		dumpMap(vt.bytes, vt);
 		int nData = vt.setData("test1");
 		for (int i = 0; i < nData; i++) {

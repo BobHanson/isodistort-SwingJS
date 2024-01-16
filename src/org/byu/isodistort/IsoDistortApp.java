@@ -494,8 +494,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	protected void dispose() {
 		if (rp3 != null)
 			rp3.removeKeyListener(this);
-//		rp3.dispose();
-//		rp = null;
+		rp3.dispose();
+		rp3 = null;
 		super.dispose();
 	}
 

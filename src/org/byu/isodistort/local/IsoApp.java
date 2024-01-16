@@ -75,10 +75,12 @@ public abstract class IsoApp {
 	/**
 	 * the datafile to use for startup
 	 */
-	protected String whichDataFile = // "data/test22.txt";
+	protected String whichDataFile = 
+			"data/tbmno3-distortion.isoviz"; // INCOMMENSURATE
+			// "data/test22.txt";
 			// "data/tbmno3-distortion.iso.txt"; // distortion file
-			//"data/tbmno3-distortion.isoviz"; // isoviz
-	 "data/data.isoviz";
+			//"data/tbmno3-distortion.isoviz"; // isoviz [3D+1] magnetic 
+	// "data/data.isoviz";
 	// "data/ZrP2O7-sg205-sg61-distort.isoviz"; // very large file
 	// "data/test28.txt"; // small file
 
@@ -94,12 +96,12 @@ public abstract class IsoApp {
 
 		private MenuActions actions;
 
-		public IsoFrame(String title) {
+		IsoFrame(String title) {
 			super(title);
 			contentPane = (JComponent) getContentPane();
 		}
 
-		public void addIsoPanel(IsoApp app, JPanel isoPanel) {
+		void addIsoPanel(IsoApp app, JPanel isoPanel) {
 			if (actions == null) {
 				actions = new MenuActions(app);
 				setJMenuBar((JMenuBar) actions.createMenuBar());
@@ -140,7 +142,11 @@ public abstract class IsoApp {
 			tabbedPane.setSelectedIndex(type);
 		}
 
-		public void disposeApps() {
+		void enableDiffraction(boolean tf) {
+			tabbedPane.setEnabledAt(APP_ISODIFFRACT, tf);
+		}
+		
+		void disposeApps() {
 			for (int i = 0; i < 2; i++) {
 				if (apps[i] != null) {
 					((JComponent) tabbedPane.getComponentAt(i)).removeAll();
@@ -149,7 +155,7 @@ public abstract class IsoApp {
 			}
 		}
 
-		public int getPanelHeight() {
+		int getPanelHeight() {
 			int h = getContentPane().getHeight();
 			return h - 25;
 		}
@@ -311,15 +317,10 @@ public abstract class IsoApp {
 	 * @param args
 	 */
 	protected static void create(String type, String[] args) {
-		IsoApp app = null;
-		switch (type) {
-		case "IsoDistort":
-			app = new IsoDistortApp();
-			break;
-		case "IsoDiffract":
-			app = new IsoDiffractApp();
-		}
-		app.start(new IsoFrame(type), args, null, false);
+		int appType = ("IsoDiffract".equals(type) ? APP_ISODIFFRACT : APP_ISODISTORT);
+		if (!startApp(null, new IsoFrame(type), appType, args, null, null, false)) {
+			System.exit(1);
+		};
 	}
 
 	private static JButton newJButton(String text, ViewListener vl) {
@@ -518,8 +519,17 @@ public abstract class IsoApp {
 
 	private int sliderPanelWidth;
 
+	/**
+	 * true if Variables.modDim > 0 based on ISOViz !numberOfModulations > 0
+	 * or FormData "xkparam... presence
+	 * or DFile "!
+	 */
+	public Boolean isIncommensurate;
+
 	protected IsoApp(int appType) {
 		this.appType = appType;
+		statusPanel = new StatusPanel(new JTextArea());
+
 	}
 
 	/**
@@ -598,8 +608,11 @@ public abstract class IsoApp {
 	 * 
 	 * @param f
 	 */
-	private void distortionFileToISOVIZ(String fileName, byte[] data) {
+	private String distortionFileToISOVIZ(String fileName, byte[] data) {
 		// 1) send distortion file data to the isodistort server
+		if (appType == APP_ISODIFFRACT && FileUtil.checkIncommensurateDFile(data)) {
+			return "Diffraction is not available for an incommensurately modulated structure";
+		}
 		Map<String, Object> mapFormData = new LinkedHashMap<String, Object>();
 		mapFormData.put("input", "distort");
 		mapFormData.put("origintype", "dfile");
@@ -615,10 +628,11 @@ public abstract class IsoApp {
 					return;
 				}
 				distortionFileData = b;
-				sendFormDataToServer(FileUtil.scrapeHTML(IsoApp.this, new String(b)));
+				sendFormDataToServer(FileUtil.scrapeHTML(IsoApp.this, new String(b)), false);
 			}
 
 		}, 5);
+		return null;
 	}
 
 	private Map<String, Object> ensureMapData(Object formData, boolean asClone, boolean silent) {
@@ -677,19 +691,23 @@ public abstract class IsoApp {
 	abstract protected void handleButtonEvent(Object src);
 
 	private boolean handleNonIsoVizFile(int fileType, byte[] data) {
+		String err = null;
 		switch (fileType) {
-		case FileUtil.FILE_TYPE_FORMDATA_JSON:
-			sendFormDataToServer(ensureMapData(new String(data), true, false));
-			return true;
-		case FileUtil.FILE_TYPE_DISTORTION_TXT:
-			distortionFileToISOVIZ(whichDataFile == null ? "temp.isoviz" : whichDataFile, data);
-			return true;
 		case FileUtil.FILE_TYPE_ISOVIZ:
 			return false;
+		case FileUtil.FILE_TYPE_FORMDATA_JSON:
+			Map<String, Object> formData = ensureMapData(new String(data), true, false);
+			err = sendFormDataToServer(formData, true);
+			break;
+		case FileUtil.FILE_TYPE_DISTORTION_TXT:
+			err = distortionFileToISOVIZ(whichDataFile == null ? "temp.isoviz" : whichDataFile, data);
+			break;
 		default:
-			sayNotPossible("File type was not recognized.");
-			return true;
+			err = "File type was not recognized.";
+			break;
 		}
+		sayNotPossible(err);
+		return true;
 	}
 
 	/**
@@ -714,15 +732,18 @@ public abstract class IsoApp {
 	 * |............................................|
 	 * |--------------------------------------------|
 	 */
-
+	
 	protected void initializePanels() {
+		if (frame.tabbedPane == null) {
+			frame.contentPane = (JPanel) frame.getContentPane();
+			frame.contentPane.setLayout(new BorderLayout());
+		}
 		frame.contentPane.setTransferHandler(new FileUtil.FileDropHandler(this));
 		controlStatusPanel = new JPanel(new FlowLayout());
 		controlStatusPanel.setBackground(Color.WHITE);
 		controlPanel = new JPanel();
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
-		statusPanel = new StatusPanel(new JTextArea());
 		controlStatusPanel.add(controlPanel);
 		controlStatusPanel.add(statusPanel);
 		controlStatusPanel.setBorder(controlBorder);
@@ -743,6 +764,12 @@ public abstract class IsoApp {
 		drawPanel = new JPanel(new BorderLayout());
 		isoPanel.add(drawPanel, BorderLayout.CENTER);
 		frame.addIsoPanel(this, isoPanel);
+		if (appType == APP_ISODISTORT) {
+			boolean isModulated = (variables.modDim != 0);
+			frame.enableDiffraction(!isModulated);
+			if (isModulated)
+				addStatus("NOTE: Diffraction is not available for an incommensurately modulated structure");
+		}
 	}
 
 	public boolean isStatusVisible() {
@@ -802,7 +829,7 @@ public abstract class IsoApp {
 		return t;
 	}
 
-	private void openApplication(int appType, Object data, Map<String, Object> mapFormData, boolean isDrop) {
+	private void openApplication(int appType, byte[] data, Map<String, Object> mapFormData, boolean isDrop) {
 		if (data == null)
 			return;
 		if (!prepareToSwapOut())
@@ -810,43 +837,107 @@ public abstract class IsoApp {
 		IsoFrame frame = this.frame;
 		SwingUtilities.invokeLater(() -> {
 			new Thread(() -> {
-				//boolean isIsoDistort = (appType == APP_ISODISTORT);
-				IsoApp app;
-				switch (appType) {
-				default:
-				case APP_ISODISTORT:
-					app = new IsoDistortApp();
-					break;
-				case APP_ISODIFFRACT:
-					app = new IsoDiffractApp();
-					break;
-				case APP_ISOSYMMETRY:
-					app = new IsoSymmetryApp();
-					break;
-				}
-				frame.actions.setApp(app);
-				Object[] args = new Object[] { data };
-				if (isDrop) {
-					frame.disposeApps();
-					clearSettingsForFileDrop();
-					app.formData = mapFormData;
-				}
-				if (!app.start(frame, args, variables, isDrop))
-					return;
-				if (!isDrop) {
-					app.document = document;
-					app.formData = formData;
-					app.whichDataFile = whichDataFile;
-					app.distortionFileData = distortionFileData;
-					app.variables.setValuesFrom(variables);
-				}
-				app.frameResized();
-				app.updateDisplay();
-				app.frame.repaint();
+				startApp(this, frame, appType, null, data, mapFormData, isDrop);
 			}, "isodistort_application").start();
 
 		});
 	}
+
+	private static boolean startApp(IsoApp fromApp, IsoFrame frame, int appType, Object[] args, byte[] data,
+			Map<String, Object> mapFormData, boolean isDrop) {
+		// boolean isIsoDistort = (appType == APP_ISODISTORT);
+		IsoApp app;
+		switch (appType) {
+		default:
+		case APP_ISODISTORT:
+			app = new IsoDistortApp();
+			break;
+		case APP_ISODIFFRACT:
+			app = new IsoDiffractApp();
+			break;
+		case APP_ISOSYMMETRY:
+			app = new IsoSymmetryApp();
+			break;
+		}
+		if (args == null || args.length == 0)
+			args = new Object[] { data };
+		app.args = args;
+		app.addStatus(null);
+		int fileType = app.readFile();
+		data = app.isovisData;
+		if (app.handleNonIsoVizFile(fileType, data))
+			return false;
+		boolean isSwitch = (!isDrop && fromApp != null);
+		IsoTokenizer vt = new IsoTokenizer(data, null, isSwitch ? IsoTokenizer.QUIET : IsoTokenizer.DEBUG_LOW);
+		app.variables = new Variables(app);
+		try {
+			if (!app.variables.parse(vt))
+				return false;
+
+			Variables oldVariables = (isSwitch ? fromApp.variables : null);
+			if (isDrop && fromApp != null) {
+				frame.disposeApps();
+				fromApp.clearSettingsForFileDrop();
+				app.formData = mapFormData;
+			}
+			long t = System.currentTimeMillis();
+			app.prepareFrame(frame, oldVariables, isDrop);
+			app.updateDimensions();
+			app.init();
+			app.finalizeFrame();
+			app.addStatus("Time to load: " + (System.currentTimeMillis() - t) + " ms");
+		} catch (Throwable e) {
+			JOptionPane.showMessageDialog(frame, "Error reading input data " + e.getMessage()
+					+ (app.whichDataFile == null ? "" : " for " + app.whichDataFile));
+			e.printStackTrace();
+			return false;
+		}
+		if (!isDrop && fromApp != null) {
+			app.document = fromApp.document;
+			app.formData = fromApp.formData;
+			app.whichDataFile = fromApp.whichDataFile;
+			app.distortionFileData = fromApp.distortionFileData;
+			app.isIncommensurate = fromApp.isIncommensurate;
+			app.variables.setValuesFrom(fromApp.variables);
+		}
+		app.frameResized();
+		app.updateDisplay();
+		app.frame.repaint();
+		return true;
+	}
+
+	private void prepareFrame(IsoFrame frame, Variables oldVariables, boolean isDrop) {
+		this.frame = frame;
+		initializePanels();
+		boolean haveFrame = (isDrop || oldVariables != null);
+		addStatus(null);
+		addStatus(this + " Java " + System.getProperty("java.version"));
+		Dimension d = (haveFrame ? frame.contentPane.getSize()
+				: new Dimension(variables.appletWidth, variables.appletHeight));
+		frame.contentPane.setPreferredSize(d);
+		frame.tabbedPane.setPreferredSize(frame.contentPane.getPreferredSize());
+		frame.pack();
+		// frame is packed, so OUTER sizes are set now.
+		// but we still have to set the sliderPanel width
+		// and height. We provide a provisional setting here
+		// and let Variables adjust it as necessary.
+		resetPanelHeights();
+		variables.initSliderPanel(sliderPanel, sliderPanelWidth);
+		frame.pack();
+	}
+
+	private void finalizeFrame() {
+		frame.setVisible(true); // #3
+		String title = frame.getTitle();
+		frame.setName(title);
+		frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion);
+		frame.addComponentListener(componentListener);
+		frame.addWindowListener(windowListener);
+		if (frame.actions != null)
+			frame.actions.setApp(this);
+	}
+
+
 
 	/**
 	 * This method allows the current application to finish up what it is doing
@@ -869,7 +960,7 @@ public abstract class IsoApp {
 	 * of the string.
 	 */
 	protected int readFile() {
-		switch (args == null ? 0 : args.length) {
+		switch (args == null || args.length == 0 || args[0] == null ? 0 : args.length) {
 		case 3:
 			document = args[2];
 			// Fall through //
@@ -1052,12 +1143,14 @@ public abstract class IsoApp {
 		JOptionPane.showMessageDialog(frame, "This feature is not available " + msg);
 	}
 
-	protected void sendFormDataToServer(Map<String, Object> formData) {
+	protected String sendFormDataToServer(Map<String, Object> formData, boolean checkIncommensurate) {
 		Map<String, Object> mapFormData = setServerFormOriginType(formData, "isovizdistortion");
 		if (mapFormData == null) {
-			JOptionPane.showMessageDialog(frame,
-					"The server was not able to read the data necessary to create ISOVIS file data. ");
-			return;
+			return "The server was not able to read the data necessary to create ISOVIS file data.";
+		}
+		boolean isIncommensurate = (checkIncommensurate && FileUtil.checkIncommensurateFormData(formData));
+		if (isIncommensurate && appType == APP_ISODIFFRACT) {
+			return "Diffraction is not available for an incommensurately modulated structure";
 		}
 		createIsovizFromFormData(mapFormData, new Consumer<byte[]>() {
 
@@ -1071,6 +1164,7 @@ public abstract class IsoApp {
 			}
 
 		});
+		return null;
 	}
 
 	public void setCursor(int c) {
@@ -1102,9 +1196,8 @@ public abstract class IsoApp {
 			// after dialog
 			if (variables.setPreferences(map, values)) {
 				// we have a non-local change that needs servicing
-				sendFormDataToServer(map);
+				sendFormDataToServer(map, false);
 			}
-			;
 		}
 	}
 
@@ -1140,64 +1233,6 @@ public abstract class IsoApp {
 		{
 			System.exit(0);
 		}
-	}
-
-	private boolean start(IsoFrame frame, Object[] args, Variables oldVariables, boolean isDrop) {
-		this.frame = frame;
-		this.args = args;
-		frame.contentPane = (JPanel) frame.getContentPane();
-		if (frame.tabbedPane == null) {
-			frame.contentPane.setLayout(new BorderLayout());
-		}
-		try {
-			long t = System.currentTimeMillis();
-
-			initializePanels();
-			addStatus(null);
-			addStatus(this + " Java " + System.getProperty("java.version"));
-
-			int fileType = readFile();
-			byte[] data = isovisData;
-			if (handleNonIsoVizFile(fileType, data))
-				return false;
-			variables = new Variables(this, appType == APP_ISODIFFRACT, oldVariables != null);
-
-			isovisData = variables.parse(data);
-			if (oldVariables == null) {
-				frame.contentPane.setPreferredSize(new Dimension(variables.appletWidth, variables.appletHeight));
-			} else {
-//				System.out.println("Fps " + frame.contentPane.getSize()  + frame.tabbedPane.getSize()  
-//				+ "\n" + frame.distortionPanel.getSize()
-//				+ "\n" + frame.diffractionPanel.getSize()
-//				);
-				frame.contentPane.setPreferredSize(frame.contentPane.getSize());
-			}
-			frame.tabbedPane.setPreferredSize(frame.contentPane.getPreferredSize());
-			frame.pack();
-			// frame is packed, so OUTER sizes are set now.
-			// but we still have to set the sliderPanel width
-			// and height. We provide a provisional setting here
-			// and let Variables adjust it as necessary.
-			resetPanelHeights();
-			variables.initSliderPanel(sliderPanel, sliderPanelWidth);
-			frame.pack();
-			updateDimensions();
-			init();
-			frame.setVisible(true); // #3
-			String title = frame.getTitle();
-			frame.setName(title);
-			frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion);
-			frame.addComponentListener(componentListener);
-			frame.addWindowListener(windowListener);
-			addStatus("Time to load: " + (System.currentTimeMillis() - t) + " ms");
-			return true;
-		} catch (Throwable e) {
-			JOptionPane.showMessageDialog(frame, "Error reading input data " + e.getMessage()
-					+ (whichDataFile == null ? "" : " for " + whichDataFile));
-			e.printStackTrace();
-			return false;
-		}
-
 	}
 
 	public boolean toggleStatusVisible() {

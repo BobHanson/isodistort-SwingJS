@@ -214,21 +214,21 @@ public class Variables {
 	private boolean isAdjusting;
 
 	/**
-	 * just switching apps; fewer println calls
-	 * 
-	 */
-	private boolean isSwitch;
-
-	/**
 	 * Binary Space Partitioning Tree for speedy determination of bonded atoms
 	 * 
 	 */
 	private Bspt bspt;
+	
+	
+	/**
+	 * flag to indicate that this is an incommensurately modulated structure;
+	 * 0 means not incommensurate
+	 */
+	public int modDim;
 
-	public Variables(IsoApp app, boolean isDiffraction, boolean isSwitch) {
+	public Variables(IsoApp app) {
 		this.app = app;
-		this.isSwitch = isSwitch;
-		this.isDiffraction = isDiffraction;
+		this.isDiffraction = (app.appType == IsoApp.APP_ISODIFFRACT);
 	}
 
 	/**
@@ -239,12 +239,11 @@ public class Variables {
 	 * @param datan
 	 * @return byte[]
 	 */
-	public byte[] parse(Object data) {
-		long t = System.currentTimeMillis();
-		byte[] bytes = new IsoParser().parse(data);
-		System.out.println(app + " " + "Variables parsed in " + (System.currentTimeMillis() - t) + " ms");
+	public boolean parse(IsoTokenizer vt) throws RuntimeException {
+		if (!new IsoParser().parse(vt))
+			return false;
 		gui = new SliderPanelGUI();
-		return bytes;
+		return true;
 	}
 
 	/**
@@ -1045,9 +1044,12 @@ public class Variables {
 		 * x-angle , y-angle, length]
 		 * 
 		 */
-		private double[][] axesInfo = new double[3][6];;
+		private double[][] axesInfo = new double[3][6];
+
+		private boolean isChild;;
 
 		Cell(boolean isChild) {
+			this.isChild = isChild;
 			if (!isChild) {
 				// parent only
 				TmatInverseTranspose = new double[3][3];
@@ -1153,8 +1155,9 @@ public class Variables {
 			MathUtil.mat3transpose(Tmat, t);
 			MathUtil.mat3inverse(t, TmatInverseTranspose, t3, t2);
 			if (isRhomb) {
-				double temp1 = latt0[A] * Math.sin(latt0[GAMMA] / 2);
+				double temp1 = Math.sin(latt0[GAMMA] / 2);
 				double temp2 = Math.sqrt(1 / temp1 / temp1 - 4.0 / 3.0);
+				temp1 *= latt0[A];
 				basisCart0[0][0] = temp1 * (1);
 				basisCart0[0][1] = temp1 * (-1);
 				basisCart0[0][2] = temp1 * (0);
@@ -1180,6 +1183,7 @@ public class Variables {
 				basisCart0[1][2] = latt0[C] * temp1;
 				basisCart0[2][2] = latt0[C] * temp2;
 			}
+			
 
 		}
 
@@ -1258,6 +1262,11 @@ public class Variables {
 			return axesInfo[axis];
 		}
 
+		@Override
+		public String toString() {
+			return "[" + (isChild ? "childCell" : "parentCell") + "]";
+		}
+
 	} // end of Cell
 
 	/**
@@ -1322,22 +1331,22 @@ public class Variables {
 		 * 
 		 * 
 		 * @param data may be a String, byte[], or InputStream
-		 * @return
+		 * @return true if successful
 		 * 
 		 */
-		byte[] parse(Object data) {
+		boolean parse(IsoTokenizer vt) throws RuntimeException {
+			this.vt = vt;
+			modDim = getOneInt("numberOfModulations", 0);
+			app.isIncommensurate = Boolean.valueOf(modDim > 0);
+			if (isDiffraction && modDim > 0)
+				parseError("Incommensurately modulated structures cannot be analyzed using ISODIFFRACT", 2);
 			try {
-				//boolean skipBondList = true;// (isDiffraction || app.bondsUseBSPT);
-				String ignore = ";bondlist;";
-				vt = new IsoTokenizer(data, ignore, isSwitch ? IsoTokenizer.QUIET : IsoTokenizer.DEBUG_LOW);
-
 				isoversion = getOneString("isoversion", null);
-
 				parseAppletSettings();
 				parseCrystalSettings();
 
 				parseAtoms();
-//				parseBonds(skipBondList);
+				parseBonds();
 				System.out.println("Variables: " + numAtoms + " atoms were read");
 
 				parseStrainModes();
@@ -1346,13 +1355,11 @@ public class Variables {
 			} catch (Throwable t) {
 				t.printStackTrace();
 				parseError("Java error", 2);
+				return false;
 			}
-
-			byte[] bytes = vt.getBytes();
 			vt.dispose();
-			vt = null;
-			return bytes;
-
+			this.vt = null;
+			return true;
 		}
 
 		private void parseError(int size, int n) {
@@ -1845,65 +1852,20 @@ public class Variables {
 			return numSubTypeAtomsRead;
 		}
 
-//		/**
-//		 * Just create int[][] variables.bonds
-//		 */
-//		private void parseBonds(boolean skipBondList) {
-//			if (isDiffraction)
-//				return;
-//			double d = getOneDouble("maxbondlength", 2.5);
-//			// figure 1 minimum for a real number, not one that was adjusted
-//			if (d < 0.5)
-//				d *= 10;
-//			halfMaxBondLength = d / 2;
-//			// find minimum atomic occupancy for which bonds should be displayed
-//			minBondOcc = getOneDouble("minbondocc", 0.5);
-//			if (skipBondList)
-//				return;
-//			int numBondsRead = checkSizeN("bondlist", 6, false);
-//			double[][] bondsTemp = null;
-//			if (numBondsRead > 0) {
-//				// find maximum length of bonds that can be displayed
-//				bondsTemp = new double[numBondsRead][9];
-//				for (int b = 0, pt = 0; b < numBondsRead; b++) {
-//					String keyA = parseTSA(pt);
-//					pt += 3;
-//					String keyB = parseTSA(pt);
-//					pt += 3;
-//					int ia = getAtomTSA(keyA);
-//					if (ia >= 0) {
-//						int ib = getAtomTSA(keyB);
-//						if (ib >= 0) {
-//							bondsTemp[b][6] = ia;
-//							bondsTemp[b][7] = ib;
-//							bondsTemp[b][8] = numBonds++;
-//						}
-//					}
-//
-//				}
-//			}
-//			if (numBonds == 0) {
-//				// There are no bonds. Initialize the array to length zero
-//				bondInfo = new double[0][];
-//			} else if (numBonds == numBondsRead) {
-//				bondInfo = bondsTemp;
-//			} else {
-//				bondInfo = new double[numBonds][8];
-//				for (int i = 0; i < numBonds; i++)
-//					bondInfo[i] = bondsTemp[i];
-//			}
-//		}
-
-//		/**
-//		 * Create an atom map key int the form "t_s_a"
-//		 * 
-//		 * @param pt
-//		 * @return
-//		 * 
-//		 */
-//		private String parseTSA(int pt) {
-//			return getKeyTSA(vt.getString(pt++), vt.getString(pt++), vt.getString(pt++));
-//		}
+		/**
+		 * Just get max/min information
+		 */
+		private void parseBonds() {
+			if (isDiffraction)
+				return;
+			double d = getOneDouble("maxbondlength", 2.5);
+			// figure 1 minimum for a real number, not one that was adjusted
+			if (d < 0.5)
+				d *= 10;
+			halfMaxBondLength = d / 2;
+			// find minimum atomic occupancy for which bonds should be displayed
+			minBondOcc = getOneDouble("minbondocc", 0.5);
+		}
 
 		/**
 		 * parse the DIS OCC MAG ROT ELL modes, filling the information into the related

@@ -14,10 +14,13 @@
 !defaultuiso    0.04000
 
 #maximum_bond_length_in_angstroms 
-!maxbondlength    0.25000
+!maxbondlength    2.50000
 
 #view_width_in_pixels 
 !appletwidth   1024
+
+#number_of_incommensurate_modulations 
+!numberOfModulations      1
 
 #parentcell_parameters_in_angstroms_and_radians 
 !parentcell 

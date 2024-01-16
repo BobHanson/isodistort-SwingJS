@@ -70,14 +70,17 @@ public class ServerUtil {
 	final static String publicServerURL = "https://iso.byu.edu/iso/";
 	final static String testServerURL = "https://isotest.byu.edu/iso/";
 
+	static boolean testing = true;
+
+	static String isoUrl = (testing ? testServerURL : publicServerURL);
+
+
 	/**
 	 * Fetch a result from the server. This method handles all such requests.
 	 */
 
 	public static boolean fetch(IsoApp app, int type, Map<String, Object> mapFormData, Consumer<byte[]> consumer,
 			int delay) {
-
-		boolean testing = true;
 
 		byte[] fileData = (byte[]) mapFormData.remove("toProcess");
 		String fileName = (String) mapFormData.remove("fileName");
@@ -102,7 +105,7 @@ public class ServerUtil {
 			}
 		}
 
-		String url = (testing ? testServerURL : publicServerURL) + service;
+		String url = isoUrl + service;
 		app.addStatus("ServerUtil.fetch " + url + " " + mapFormData.get("origintype"));
 		app.setCursor(Cursor.WAIT_CURSOR);
 		new Thread(() -> {
@@ -180,8 +183,8 @@ public class ServerUtil {
 //		</BODY>
 //		</HTML>
 
-		System.out.println(new String(bytes));
-		if (!bytesContain(bytes, SET_TIMEOUT)) {
+		//System.out.println(new String(bytes));
+		if (!FileUtil.bytesContain(bytes, SET_TIMEOUT)) {
 			consumer.accept(bytes);
 			return;
 		}
@@ -208,36 +211,7 @@ public class ServerUtil {
 		tempFileTimer.start();
 	}
 
-	private static boolean bytesContain(byte[] bytes, byte[] b) {
-
-		int nb = bytes.length, n = b.length;
-		if (nb < n || nb == 0) {
-			return false;
-		}
-		byte b0 = b[0];
-		int i0 = 0;
-		int i1 = nb - n;
-		// 012345678901
-		// ......abc...
-		// 0......ababc..
-		// ....... ^ pt = 2, i0 =
-		for (int pt = 0, i = 0; i - pt <= i1; i++) {
-			if (bytes[i] == b[pt++]) {
-				if (pt == n)
-					return true;
-				if (i0 == 0 && bytes[i + 1] == b0) {
-					i0 = i + 1;
-				}
-				continue;
-			}
-			if (i0 > 0) {
-				i = i0 - 1;
-				i0 = 0;
-			}
-			pt = 0;
-		}
-		return false;
-	}
+	
 
 	
 
@@ -328,7 +302,7 @@ public class ServerUtil {
 //	}
 //
 	public static String setIsoBase(String html) {
-		return html.replace("<HEAD>",  "<HEAD><base href=" + publicServerURL + ">");
+		return html.replace("<HEAD>",  "<HEAD><base href=" + isoUrl + ">");
 	}
 
 	/**

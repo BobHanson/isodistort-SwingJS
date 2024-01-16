@@ -513,6 +513,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			y0 = y1;
 		}
 	}
+	
 
 	void drawPowderSticks(Graphics gr) {
 		double axisYOffset = (isBoth ? shortPowderAxisYOffset : powderAxisYOffset);
@@ -671,18 +672,15 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * 
 	 */
 	public void recalcIntensities() {
-		double zzzNR, zzzNI, pppNR, pppNI, scatNR, scatNI, scatM;
 		double[] zzzM = new double[3], pppM = new double[3];
 		double[] qhat = new double[3], supxyz = new double[3];
-		double phase, thermal;
 		double[] atomScatFac = new double[2];
-		double Intensity000; // The total scattering factor of the unit cell
 
 		for (int p = 0; p < peakCount; p++) {
-			zzzNR = 0;
-			zzzNI = 0;
-			pppNR = 0;
-			pppNI = 0;
+			double zzzNR = 0;
+			double zzzNI = 0;
+			double pppNR = 0;
+			double pppNI = 0;
 			for (int i = 0; i < 3; i++) {
 				zzzM[i] = 0;
 				pppM[i] = 0;
@@ -690,45 +688,54 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			MathUtil.set3(variables.childCell.toTempCartesian(crystalPeakHKL[p]), qhat);
 			MathUtil.norm3(qhat);
 			double d = 2 * Math.PI * peakDInv[p];
-			thermal = Math.exp(-0.5 * uiso * d * d);
+			double thermal = Math.exp(-0.5 * uiso * d * d);
 
 			for (int ia = 0, n = variables.numAtoms; ia < n; ia++) {
 				Atom a = variables.getAtom(ia);
 				MathUtil.set3(a.getFinalFractionalCoord(), supxyz);
-				if (supxyz[0] >= 0 && supxyz[0] < 1 && supxyz[1] >= 0 && supxyz[1] < 1 && supxyz[2] >= 0
-						&& supxyz[2] < 1) {
-					// just [atomicNumber, 0] for xray
-					atomScatFac = Elements.getScatteringFactor(a.getAtomTypeSymbol(), isXray);
-					phase = 2 * (Math.PI) * MathUtil.dot3(crystalPeakHKL[p], supxyz);
-					double occ = a.getOccupancy();
-					scatNR = occ * atomScatFac[0];
-					scatNI = occ * atomScatFac[1];
-					occ = a.getInitialOccupancy();
-					zzzNR += occ * atomScatFac[0];
-					zzzNI += occ * atomScatFac[1];
-					pppNR += scatNR * Math.cos(phase) - scatNI * Math.sin(phase);
-					pppNI += scatNI * Math.cos(phase) + scatNR * Math.sin(phase);
+				
+				// BH 2023.01.15 This was causing large jumps in intensities.
+				// I believe this is no longer necessary
+				// now that we are using only primitives.
+				// It should not matter if an atom moves out of the unit cell.
+				// Correct? 
+
+				//	if (supxyz[0] >= 0 && supxyz[0] < 1 && supxyz[1] >= 0 && supxyz[1] < 1 && supxyz[2] >= 0
+//						&& supxyz[2] < 1) {
+				// just [atomicNumber, 0] for xray
+				atomScatFac = Elements.getScatteringFactor(a.getAtomTypeSymbol(), isXray);
+				double phase = 2 * (Math.PI) * MathUtil.dot3(crystalPeakHKL[p], supxyz);
+				double occ = a.getOccupancy();
+				double scatNR = occ * atomScatFac[0];
+				double scatNI = occ * atomScatFac[1];
+				occ = a.getInitialOccupancy();
+				zzzNR += occ * atomScatFac[0];
+				zzzNI += occ * atomScatFac[1];
+				pppNR += scatNR * Math.cos(phase) - scatNI * Math.sin(phase);
+				pppNI += scatNI * Math.cos(phase) + scatNR * Math.sin(phase);
 //	        				System.out.format("t:%d,s:%d,a:%d, pos:(%.2f,%.2f,%.2f), scatNR/NI:%.3f/%.3f, phase:%.3f%n", t, s, a, supxyz[0], supxyz[1], supxyz[2], scatNR, scatNI, phase);
-					// remember that magnetic mode vectors (magnetons/Angstrom) were predefined to
-					// transform this way.
-					// mucart is temporary only
-					double[] mucart = variables.childCell.toTempCartesian(a.getMagneticMoment());
-					if (isXray) {
-						scatM = 0.0;
+				// remember that magnetic mode vectors (magnetons/Angstrom) were predefined to
+				// transform this way.
+				// mucart is temporary only
+				double[] mucart = variables.childCell.toTempCartesian(a.getMagneticMoment());
+				double scatM;
+				if (isXray) {
+					scatM = 0.0;
 //						for (int i = 0; i < 3; i++)
 //							zzzM[i] += 0;
-					} else {
-						scatM = a.getOccupancy() * 5.4;
-						for (int i = 0; i < 3; i++)
-							zzzM[i] += scatM * mucart[i];
-					}
+				} else {
+					scatM = a.getOccupancy() * 5.4;
 					for (int i = 0; i < 3; i++)
-						pppM[i] += scatM * (mucart[i] - MathUtil.dot3(mucart, qhat) * qhat[i]) * Math.cos(phase);
+						zzzM[i] += scatM * mucart[i];
 				}
+				for (int i = 0; i < 3; i++)
+					pppM[i] += scatM * (mucart[i] - MathUtil.dot3(mucart, qhat) * qhat[i]) * Math.cos(phase);
+//				}
 			}
 
-			Intensity000 = zzzNR * zzzNR + zzzNI * zzzNI + MathUtil.lenSq3(zzzM);
-			peakIntensity[p] = thermal * (pppNR * pppNR + pppNI * pppNI + MathUtil.lenSq3(pppM)) / Intensity000;
+			double intensity000 = zzzNR * zzzNR + zzzNI * zzzNI + MathUtil.lenSq3(zzzM);
+			double di = (pppNR * pppNR + pppNI * pppNI + MathUtil.lenSq3(pppM));
+			peakIntensity[p] = thermal * di / intensity000;
 		}
 	}
 
@@ -1021,13 +1028,16 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			powderY[i] = 0;
 		double sigmapix = Math
 				.ceil(powderXRange * (powderResolution / Math.sqrt(8 * Math.log(2))) / (powderXMax - powderXMin));
+		double f = 1.0 * powderXRange / drawWidth;
 		for (int p = 0; p < peakCount; p++) {
-			double center = powderXRange * powderPeakX[p] / drawWidth;
+			double center = powderPeakX[p] * f;
 			int left = Math.max((int) Math.floor(center - 5 * sigmapix), 0);
 			int right = Math.min((int) Math.ceil(center + 5 * sigmapix), powderXRange - 1);
+			double pmi = peakIntensity[p] * peakMultiplicities[p];
 			for (int i = left; i <= right; i++) {
 				double d = (i - center) / sigmapix;
-				powderY[i] += Math.exp(-d * d / 2) * peakIntensity[p] * peakMultiplicities[p];
+				double v = Math.exp(-d * d / 2) * pmi;
+				powderY[i] += v;				
 			}
 		}
 	}
@@ -1673,50 +1683,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		colorBox.setSelected(false);
 		variables.resetSliders();
 		needsRecalc = true;
-		updateDisplay();
-	}
-
-	@Override
-	protected void setControlsFrom(IsoApp a) {
-		if (a == null)
-			return;
-		isAdjusting = true;
-		IsoDiffractApp app = (IsoDiffractApp) a;
-		hOTxt.setText(app.hOTxt.getText());
-		kOTxt.setText(app.kOTxt.getText());
-		lOTxt.setText(app.lOTxt.getText());
-		hHTxt.setText(app.hHTxt.getText());
-		kHTxt.setText(app.kHTxt.getText());
-		lHTxt.setText(app.lHTxt.getText());
-		hVTxt.setText(app.hVTxt.getText());
-		kVTxt.setText(app.kVTxt.getText());
-		lVTxt.setText(app.lVTxt.getText());
-		qTxt.setText(app.qTxt.getText());
-		wavTxt.setText(app.wavTxt.getText());
-		minTxt.setText(app.minTxt.getText());
-		maxTxt.setText(app.maxTxt.getText());
-		fwhmTxt.setText(app.fwhmTxt.getText());
-		zoomTxt.setText(app.zoomTxt.getText());
-
-		xrayButton.setSelected(app.xrayButton.isSelected());
-		neutronButton.setSelected(app.neutronButton.isSelected());
-
-		childButton.setSelected(app.childButton.isSelected());
-		parentButton.setSelected(app.parentButton.isSelected());
-
-		tButton.setSelected(app.tButton.isSelected());
-		dButton.setSelected(app.dButton.isSelected());
-		qButton.setSelected(app.qButton.isSelected());
-
-		crystalButton.setSelected(app.crystalButton.isSelected());
-		powderButton.setSelected(app.powderButton.isSelected());
-		bothButton.setSelected(app.bothButton.isSelected());
-
-		colorBox.setSelected(app.colorBox.isSelected());
-
-		needsRecalc = true;
-		isAdjusting = false;
-		rp.im = null;
 		updateDisplay();
 	}
 

@@ -309,6 +309,24 @@ public class FileUtil {
 		return buf;
 	}
 
+	
+	final static byte[] IRREP_SSGNum = "!irrepSSGNum".getBytes();
+	
+	public static boolean checkIncommensurateDFile(byte[] data) {
+	  return bytesContain(data, IRREP_SSGNum);		
+	}
+	
+	public static boolean checkIncommensurateFormData(Map<String, Object> data) {
+		Object o = data.get("irrepcount");
+		int nrep = (o == null ? 0 : Integer.valueOf(o.toString()));
+		for (int i = 1; i <= nrep; i++) {
+			o = data.get("nmodstar" + i);
+			if (o != null && o.toString().charAt(0) != '0')
+				return true;
+		}
+		return false;
+	}
+		
 	public static int getIsoFileTypeFromContents(byte[] data) {
 		int type = FILE_TYPE_UNKNOWN;
 		for (int pt = 0, i = 0, n = Math.min(data.length - 20, 500); i < n; i++) {
@@ -326,11 +344,17 @@ public class FileUtil {
 				break;
 			case '!':
 				if (i == pt) {
-					String tag = new String(data, i + 1, 20);
-					if (tag.equals("begin distortionFile")) {
-						type = FILE_TYPE_DISTORTION_TXT;
-					} else if (tag.startsWith("isoversion")) {
-						type = FILE_TYPE_ISOVIZ;
+					if (data[i + 8] == 'i') {
+						//012345678 
+						//!isoversion
+						//!begin distortionFile
+						String tag = new String(data, i + 1, 20);
+						if (tag.equals("begin distortionFile")) {
+							type = FILE_TYPE_DISTORTION_TXT;
+						} else if (tag.startsWith("isoversion")) {
+							type = FILE_TYPE_ISOVIZ;
+						}
+						break;
 					}
 				}
 				i = n;
@@ -431,6 +455,37 @@ public class FileUtil {
 			return null;
 		int pt1 = line.indexOf("\"", pt);
 		return (pt1 < 0 ? null : line.substring(pt, pt1).trim());
+	}
+
+	public static boolean bytesContain(byte[] bytes, byte[] b) {
+	
+		int nb = bytes.length, n = b.length;
+		if (nb < n || nb == 0) {
+			return false;
+		}
+		byte b0 = b[0];
+		int i0 = 0;
+		int i1 = nb - n;
+		// 012345678901
+		// ......abc...
+		// 0......ababc..
+		// ....... ^ pt = 2, i0 =
+		for (int pt = 0, i = 0; i - pt <= i1; i++) {
+			if (bytes[i] == b[pt++]) {
+				if (pt == n)
+					return true;
+				if (i0 == 0 && bytes[i + 1] == b0) {
+					i0 = i + 1;
+				}
+				continue;
+			}
+			if (i0 > 0) {
+				i = i0 - 1;
+				i0 = 0;
+			}
+			pt = 0;
+		}
+		return false;
 	}
 
 }

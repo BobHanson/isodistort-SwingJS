@@ -278,7 +278,7 @@ public abstract class IsoDialog extends JDialog {
 		}
 
 		FULLPROFDialog(IsoApp app, Map<String, Object> formData) {
-			super(app, formData, null, "Save FULLPROF cpr");
+			super(app, formData, null, "Save FullProf.pcr");
 		}
 
 	}
@@ -351,7 +351,7 @@ public abstract class IsoDialog extends JDialog {
 				"label", "\n", //
 				"ctreetopas", "label", "Generate TOPAS.STR output for subgroup tree", //
 				"enable", //e1, //
-				"label", "\nRemember to add the appropriate peak shape line ",
+				"label", "\nRemember to add the appropriate peak profile ",
 				"label", "\nwhen adding this to a TOPAS input file", //
 				"label", "\n", "ctopasstrain", "label", "Include strain modes in TOPAS.STR", //
 				"endenable", //e1, //
@@ -446,7 +446,7 @@ public abstract class IsoDialog extends JDialog {
 		}
 
 		TOPASDialog(IsoApp app, Map<String, Object> formData) {
-			super(app, formData, topas, "Save TOPAS", true);
+			super(app, formData, topas, "Save TOPAS.str", true);
 			init();
 		}
 

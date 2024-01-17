@@ -31,7 +31,7 @@ public class FileUtil {
 	public final static int FILE_TYPE_ISOVIZ         = 2;
 	public final static int FILE_TYPE_FORMDATA_JSON  = 3;
 	public final static int FILE_TYPE_DISTORTION_TXT = 4;
-	public final static int FILE_TYPE_FULLPROF_CPR   = 5;
+	public final static int FILE_TYPE_FULLPROF_PCR   = 5;
 	public final static int FILE_TYPE_CIF            = 6;
 	public final static int FILE_TYPE_TOPAS_STR      = 7;
 	public final static int FILE_TYPE_PAGE_HTML      = 8;

@@ -1093,14 +1093,14 @@ public abstract class IsoApp {
 			// after dialog
 			updateFormData(map, values, "fullprof");
 			setStatus("...fetching FULLPROF file from iso.byu...");
-			ServerUtil.fetch(this, FileUtil.FILE_TYPE_FULLPROF_CPR, map, new Consumer<byte[]>() {
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_FULLPROF_PCR, map, new Consumer<byte[]>() {
 				@Override
 				public void accept(byte[] b) {
 					if (b == null) {
 						addStatus("upload failed");
 						return;
 					}
-					FileUtil.saveDataFile(frame, b, "cpr", false);
+					FileUtil.saveDataFile(frame, b, "pcr", false);
 				}
 			}, 20);
 		}

@@ -371,12 +371,16 @@ public class FileUtil {
 				long t = System.currentTimeMillis();
 				// 33 ms to read 8 MB
 				BufferedInputStream bis = null;
-				try {
-	
+				try {	
 					File f = new File(path);
 					bis = new BufferedInputStream(new FileInputStream(f));
 				} catch (Exception e) {
-					bis = new BufferedInputStream((InputStream) app.getClass().getResource("/" + path).getContent());
+					InputStream is = (InputStream) app.getClass().getResource("/" + path).getContent();
+					if (is == null) {
+						app.addStatus("FileUtil.readFileData could not find resource " + path);
+						return null;					
+					}
+					bis = new BufferedInputStream(is);
 				}
 				byte[] bytes = getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
 				app.addStatus("FileUtil.readFileData " + (System.currentTimeMillis() - t) + " ms for " + bytes.length + " bytes");

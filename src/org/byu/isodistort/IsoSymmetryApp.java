@@ -225,4 +225,10 @@ public class IsoSymmetryApp extends Iso3DApp {
 		
 	}
 
+	@Override
+	protected void updateViewOptions() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

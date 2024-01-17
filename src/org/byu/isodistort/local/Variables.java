@@ -163,7 +163,7 @@ public class Variables {
 	 * 
 	 */
 	public boolean needSimpleColor;
-
+	
 	/**
 	 * cell for the child, aka "super" cell
 	 * 
@@ -301,17 +301,8 @@ public class Variables {
 		rgb[2] = c.getBlue() / 255.0;
 	}
 
-	/**
-	 * calculates the parent atom colors and associated slideres
-	 * 
-	 * @param simpleColor true if subtypes are not differentiated with shading
-	 */
-	public void setColors(boolean simpleColor) {
-		gui.setColors(simpleColor);
-	}
-
-	public void recolorPanels() {
-		gui.recolorPanels();
+	public void updateColorScheme(boolean simpleColor) {
+		gui.updateColorScheme(simpleColor);
 	}
 
 	/**
@@ -326,6 +317,7 @@ public class Variables {
 		gui.setComponentValuesFrom(v);
 		gui.readSliders();
 		isChanged = true;
+		gui.updateColorScheme(v.gui.simpleColor);
 		isAdjusting = false;
 		app.updateDimensions();
 		app.updateDisplay();
@@ -1949,7 +1941,7 @@ public class Variables {
 		private void getAtomModeData(Mode mode, int[][] firstAtomOfType, int[][] numSubTypeAtomsRead,
 				BitSet bsPrimitive) {
 
-//          t    m   calcAmp   maxAmp  irrep  name
+//        t    m   calcAmp   maxAmp  irrep  name
 //		    1    1   0.00030   2.82843    3 GM1+[Sr:b:occ]A1g(a) 
 
 			int type = mode.type;
@@ -2093,9 +2085,16 @@ public class Variables {
 		int[] atomTypeUnique;
 
 		/**
-		 * resets the background colors of the panel components
+		 * current static of (no) shading in slider panel
 		 */
-		void recolorPanels() {
+		public boolean simpleColor;
+
+		void updateColorScheme(boolean isSimple) {
+			simpleColor = isSimple;
+			app.clrBox.setEnabled(false);
+			app.clrBox.setSelected(isSimple);
+			app.clrBox.setEnabled(true);
+			setColors(isSimple);
 			for (int t = 0; t < numTypes; t++) {
 				Color c = getDefaultModeColor(t);
 				typeNamePanels[t].setBackground(c);
@@ -2112,7 +2111,6 @@ public class Variables {
 						typePanels[i][t].setBackground(modes[i].colorT[t]);
 				}
 			}
-
 		}
 
 		void setColors(boolean simpleColor) {

@@ -348,7 +348,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	JLabel horizLabel, upperLabel, centerLabel, qrangeLabel, wavLabel, minLabel, maxLabel, fwhmLabel, zoomLabel,
 			mouseoverLabel;
-	JCheckBox colorBox;
+
 	/**
 	 * Radio buttons
 	 */
@@ -1680,9 +1680,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		tButton.setSelected(true);
 		parentButton.setSelected(true);
 		xrayButton.setSelected(true);
-		colorBox.setSelected(false);
 		variables.resetSliders();
 		needsRecalc = true;
+		clrBox.setSelected(false);
 		updateDisplay();
 	}
 
@@ -1722,14 +1722,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		neutronButton = newRadioButton("Neut", false, g);
 		neutronButton.setHorizontalAlignment(JRadioButton.LEFT);
 
-		colorBox = new JCheckBox("Color", false);
-		colorBox.setHorizontalAlignment(JCheckBox.LEFT);
-		colorBox.setVerticalAlignment(JCheckBox.CENTER);
-		colorBox.setFocusable(false);
-		colorBox.setBackground(Color.WHITE);
-		colorBox.setForeground(Color.BLACK);
-		colorBox.addItemListener(buttonListener);
-
 		hOTxt = newTextField("0", -10);
 		kOTxt = newTextField("0", -10);
 		lOTxt = newTextField("0", -10);
@@ -1765,7 +1757,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		botControlPanel.setBackground(Color.WHITE);
 
 		topControlPanel.add(mouseoverLabel);
-		topControlPanel.add(colorBox);
 		topControlPanel.add(new JLabel("      "));
 		topControlPanel.add(xrayButton);
 		topControlPanel.add(neutronButton);
@@ -1779,6 +1770,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		topControlPanel.add(crystalButton);
 		topControlPanel.add(powderButton);
 		topControlPanel.add(bothButton);
+		
+		addTopButtons(topControlPanel); // color box
 
 		botControlPanel.add(centerLabel);
 		botControlPanel.add(hOTxt);
@@ -1805,7 +1798,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		botControlPanel.add(zoomLabel);
 		botControlPanel.add(zoomTxt);
 
-		addSaveButtons(botControlPanel);
+		//addBottomButtons(botControlPanel); // applyView
 
 		controlPanel.add(topControlPanel);
 		controlPanel.add(botControlPanel);
@@ -1868,9 +1861,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		crystalButton.setVisible(!isMouseOver);
 		powderButton.setVisible(!isMouseOver);
 		bothButton.setVisible(!isMouseOver);
-
-		colorBox.setVisible(!isMouseOver && variables.needSimpleColor);
-
+		clrBox.setVisible(!isMouseOver && variables.needSimpleColor);
 	}
 
 	@Override
@@ -1881,9 +1872,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	@Override
 	protected void handleButtonEvent(Object src) {
 		if (src instanceof JCheckBox) {
-			isSimpleColor = colorBox.isSelected();
-			variables.setColors(isSimpleColor);
-			variables.recolorPanels();
 			drawPanel.repaint();
 			return;
 		}
@@ -1980,6 +1968,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	public static void main(String[] args) {
 		create("IsoDiffract", args);
+	}
+
+	@Override
+	protected void updateViewOptions() {
+		// n/a
 	}
 
 

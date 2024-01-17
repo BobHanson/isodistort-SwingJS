@@ -66,7 +66,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".10_2024.01.16";
+	final static String minorVersion = ".10_2024.01.17";
 
 	static boolean isJS = (/** @j2sNative true || */false);
 	
@@ -90,7 +90,7 @@ public abstract class IsoApp {
 		private JComponent contentPane;
 		private JTabbedPane tabbedPane;
 
-		private IsoApp[] apps = new IsoApp[addJmol ? 3 : 2];
+		private IsoApp[] apps = new IsoApp[3];
 
 		private int thisType;
 
@@ -147,10 +147,11 @@ public abstract class IsoApp {
 		}
 		
 		void disposeApps() {
-			for (int i = 0; i < 2; i++) {
+			for (int i = 0; i < 3; i++) {
 				if (apps[i] != null) {
 					((JComponent) tabbedPane.getComponentAt(i)).removeAll();
 					apps[i].dispose();
+					apps[i] = null;
 				}
 			}
 		}
@@ -378,6 +379,8 @@ public abstract class IsoApp {
 	// saveImage, saveISOVIZ,
 	// openOther;
 
+	protected JCheckBox clrBox;
+	
 	public int initializing = 5; // lead needed to get first display. Why?
 
 	/**
@@ -453,6 +456,11 @@ public abstract class IsoApp {
 	protected ItemListener buttonListener = new ItemListener() {
 		@Override
 		public void itemStateChanged(ItemEvent event) {
+			if (event.getSource() == clrBox) {
+				variables.updateColorScheme(clrBox.isSelected());
+			}
+			if (!isAdjusting)
+				updateViewOptions();
 			handleButtonEvent(event.getSource());
 		}
 	};
@@ -463,6 +471,10 @@ public abstract class IsoApp {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
+			if (appType == APP_ISODISTORT) {
+				applyView();
+				return;
+			}
 			needsRecalc = true;
 			updateDisplay();
 		}
@@ -533,18 +545,29 @@ public abstract class IsoApp {
 	}
 
 	/**
+	 * Add general buttons to the top control panel right side.
+	 * @param top
+	 */
+	protected void addTopButtons(JPanel top) {
+		clrBox = newJCheckBox("Color", false);
+		clrBox.setVisible(variables.needSimpleColor);
+		top.add(clrBox);
+	}
+
+	/**
 	 * Add general buttons to bottom control panel right side.
 	 * 
-	 * @param panel
+	 * @param bottom
 	 */
-	protected void addSaveButtons(JComponent panel) {
+	protected void addBottomButtons(JPanel bottom) {
 		ViewListener vl = new ViewListener();
 		applyView = newJButton("Apply View", vl);
+		
 		// saveImage = newJButton("Save Image", vl);
 		// saveISOVIZ = newJButton("Save ISOVIZ", vl);
 //		openOther = newJButton((appType == APP_ISODISTORT ? "View Diffraction" : "View Distortion"), vl);
-		panel.add(new JLabel("   "));
-		panel.add(applyView);
+		bottom.add(new JLabel("   "));
+		bottom.add(applyView);
 		// panel.add(saveImage);
 		// panel.add(saveISOVIZ);
 		// panel.add(openOther);
@@ -875,10 +898,13 @@ public abstract class IsoApp {
 				return false;
 
 			Variables oldVariables = (isSwitch ? fromApp.variables : null);
-			if (isDrop && fromApp != null) {
+			if (isDrop) {
 				frame.disposeApps();
-				fromApp.clearSettingsForFileDrop();
 				app.formData = mapFormData;
+				if (fromApp != null) {
+					fromApp.clearSettingsForFileDrop();
+					fromApp = null;
+				}
 			}
 			long t = System.currentTimeMillis();
 			app.prepareFrame(frame, oldVariables, isDrop);
@@ -892,7 +918,7 @@ public abstract class IsoApp {
 			e.printStackTrace();
 			return false;
 		}
-		if (!isDrop && fromApp != null) {
+		if (fromApp != null) {
 			app.document = fromApp.document;
 			app.formData = fromApp.formData;
 			app.whichDataFile = fromApp.whichDataFile;
@@ -1251,6 +1277,8 @@ public abstract class IsoApp {
 	 * Something has changed.
 	 */
 	abstract public void updateDisplay();
+
+	abstract protected void updateViewOptions();
 
 	private void updateFormData(Map<String, Object> map, Map<String, Object> values, String originType) {
 		String sliderSetting = "current";

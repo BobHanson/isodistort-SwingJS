@@ -94,7 +94,7 @@ public class ServerUtil {
 			case FileUtil.FILE_TYPE_SUBGROUP_TREE:
 			case FileUtil.FILE_TYPE_PAGE_HTML:
 			case FileUtil.FILE_TYPE_DISTORTION_TXT:
-			case FileUtil.FILE_TYPE_FULLPROF_CPR:
+			case FileUtil.FILE_TYPE_FULLPROF_PCR:
 			case FileUtil.FILE_TYPE_TOPAS_STR:
 			case FileUtil.FILE_TYPE_CIF:
 			case FileUtil.FILE_TYPE_ISOVIZ:

@@ -135,7 +135,7 @@ public class MenuActions {
 					}
 				});
 
-		actions.put("File.Save.saveDistortionFile", new IsoAction("saveDistortionFile", "Distortion File",
+		actions.put("File.Save.saveDistortionFile", new IsoAction("saveDistortionFile", "Distortion file",
 				"Save current configuration as a distortion file.", 0) {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -152,7 +152,7 @@ public class MenuActions {
 //		});
 //
 		actions.put("File.Save.saveCIF",
-				new IsoAction("saveCIF", "-ISO-CIF File", "Save current configuration as CIF file.", 0) {
+				new IsoAction("saveCIF", "-CIF file", "Save current configuration as CIF file.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						new Thread(() -> {
@@ -162,14 +162,14 @@ public class MenuActions {
 				});
 
 		actions.put("File.Save.saveTOPAS",
-				new IsoAction("saveTOPAS", "TOPAS.STR ISODISTORT Section", "Save ISODISTORT section of TOPAS.STR.", 0) {
+				new IsoAction("saveTOPAS", "TOPAS.str file", "Save ISODISTORT section of TOPAS.STR.", 0) {
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						app.saveTOPAS(null);
 					}
 				});
 
-		actions.put("File.Save.saveFULLPROF", new IsoAction("saveFULLPROF", "FULLPROF CPR Input", "Save ", 0) {
+		actions.put("File.Save.saveFULLPROF", new IsoAction("saveFULLPROF", "FullProf.pcr file", "Save ", 0) {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.saveFULLPROF(null);

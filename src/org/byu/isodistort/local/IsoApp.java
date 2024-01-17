@@ -66,7 +66,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".10_2024.01.15";
+	final static String minorVersion = ".10_2024.01.16";
 
 	static boolean isJS = (/** @j2sNative true || */false);
 	
@@ -76,11 +76,11 @@ public abstract class IsoApp {
 	 * the datafile to use for startup
 	 */
 	protected String whichDataFile = 
-			"data/tbmno3-distortion.isoviz"; // INCOMMENSURATE
+			///"data/tbmno3-distortion.isoviz"; // INCOMMENSURATE
 			// "data/test22.txt";
 			// "data/tbmno3-distortion.iso.txt"; // distortion file
 			//"data/tbmno3-distortion.isoviz"; // isoviz [3D+1] magnetic 
-	// "data/data.isoviz";
+	"data/data.isoviz";
 	// "data/ZrP2O7-sg205-sg61-distort.isoviz"; // very large file
 	// "data/test28.txt"; // small file
 
@@ -1093,14 +1093,14 @@ public abstract class IsoApp {
 			// after dialog
 			updateFormData(map, values, "fullprof");
 			setStatus("...fetching FULLPROF file from iso.byu...");
-			ServerUtil.fetch(this, FileUtil.FILE_TYPE_FULLPROF_CPR, map, new Consumer<byte[]>() {
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_FULLPROF_PCR, map, new Consumer<byte[]>() {
 				@Override
 				public void accept(byte[] b) {
 					if (b == null) {
 						addStatus("upload failed");
 						return;
 					}
-					FileUtil.saveDataFile(frame, b, "cpr", false);
+					FileUtil.saveDataFile(frame, b, "pcr", false);
 				}
 			}, 20);
 		}

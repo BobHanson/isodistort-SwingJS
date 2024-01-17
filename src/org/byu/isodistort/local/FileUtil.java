@@ -31,7 +31,7 @@ public class FileUtil {
 	public final static int FILE_TYPE_ISOVIZ         = 2;
 	public final static int FILE_TYPE_FORMDATA_JSON  = 3;
 	public final static int FILE_TYPE_DISTORTION_TXT = 4;
-	public final static int FILE_TYPE_FULLPROF_CPR   = 5;
+	public final static int FILE_TYPE_FULLPROF_PCR   = 5;
 	public final static int FILE_TYPE_CIF            = 6;
 	public final static int FILE_TYPE_TOPAS_STR      = 7;
 	public final static int FILE_TYPE_PAGE_HTML      = 8;
@@ -371,12 +371,16 @@ public class FileUtil {
 				long t = System.currentTimeMillis();
 				// 33 ms to read 8 MB
 				BufferedInputStream bis = null;
-				try {
-	
+				try {	
 					File f = new File(path);
 					bis = new BufferedInputStream(new FileInputStream(f));
 				} catch (Exception e) {
-					bis = new BufferedInputStream((InputStream) app.getClass().getResource("/" + path).getContent());
+					InputStream is = (InputStream) app.getClass().getResource("/" + path).getContent();
+					if (is == null) {
+						app.addStatus("FileUtil.readFileData could not find resource " + path);
+						return null;					
+					}
+					bis = new BufferedInputStream(is);
 				}
 				byte[] bytes = getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
 				app.addStatus("FileUtil.readFileData " + (System.currentTimeMillis() - t) + " ms for " + bytes.length + " bytes");

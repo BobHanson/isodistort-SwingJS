@@ -582,6 +582,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	@Override
 	public void centerImage() {
 		rp3.centerImage();
+		updateDisplay();
 	}
 
 	@Override

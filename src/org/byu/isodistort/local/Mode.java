@@ -337,7 +337,6 @@ class Mode {
 	/**
 	 * Set colors for the different mode types.
 	 * 
-	 * @param simpleColor
 	 */
 	void setColors(int[] atomTypeUnique, int numUniques) {
 		float brightness;

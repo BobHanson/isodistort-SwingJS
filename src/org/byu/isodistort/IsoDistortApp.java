@@ -70,7 +70,9 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	 * cylinders for the parent and child cell.
 	 * 
 	 */
-	private Geometry atomObjects, bondObjects, cellObjects, axisObjects;
+	private Geometry atomObjects, bondObjects, axisObjects;
+	
+	private Geometry[] cellObjects = new Geometry[2];
 
 	/**
 	 * Materials for coloring bonds and cells.
@@ -107,7 +109,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		Geometry world = rp3.getWorld();
 		atomObjects = world.add();
 		bondObjects = world.add();
-		cellObjects = world.add();
+		cellObjects[0] = world.add();
+		cellObjects[1] = world.add();
 		axisObjects = world.add();
 		
 		double modelRadius = initFieldOfView();
@@ -123,7 +126,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	@Override
 	protected void enableSelectedObjects() {
 		atomObjects.setEnabled(showAtoms);
-		cellObjects.setEnabled(showCells);
+		cellObjects[0].setEnabled(showParentCell);
+		cellObjects[1].setEnabled(showChildCell);
 		bondObjects.setEnabled(showBonds);
 		axisObjects.setEnabled(showAxes);
 	}
@@ -174,10 +178,15 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	 * 
 	 */
 	private void initCells() {
-		showCells = showCells0;
-		cellObjects.clear(0);
-		for (int c = 0; c < 24; c++) {
-			cellObjects.add().cylinder(numCellSides).setMaterial(c < 12 ? parentCellMaterial : childCellMaterial);
+		showChildCell = showChildCell0;
+		showParentCell = showParentCell0;
+		cellObjects[0].clear(0);
+		cellObjects[1].clear(0);
+		for (int c = 0; c < 12; c++) {
+			cellObjects[0].add().cylinder(numCellSides).setMaterial(parentCellMaterial);
+		}
+		for (int c = 0; c < 12; c++) {
+			cellObjects[1].add().cylinder(numCellSides).setMaterial(childCellMaterial);
 		}
 	}
 
@@ -236,11 +245,11 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	@Override
 	protected void renderCells() {
 		double r = variables.atomMaxRadius * cellMultiplier;
-		for (int c = 0, i = 0; i < 12; i++, c++) {
-			transformCylinder(r, variables.parentCell.getCellInfo(i), cellObjects.child(c));
+		for (int i = 0; i < 12; i++) {
+			transformCylinder(r, variables.parentCell.getCellInfo(i), cellObjects[0].child(i));
 		}
-		for (int c = 12, i = 0; i < 12; i++, c++) {
-			transformCylinder(r, variables.childCell.getCellInfo(i), cellObjects.child(c));
+		for (int i = 0; i < 12; i++) {
+			transformCylinder(r, variables.childCell.getCellInfo(i), cellObjects[1].child(i));
 		}
 	}
 
@@ -413,13 +422,20 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 	@Override
 	public void recalcCellColors() {
-		double c = variables.getSetChildSliderFraction(Double.NaN);
-		double p = 1 - c;
-		// f = f/.8;
 		// parent cell slightly red
-		parentCellMaterial.setColor(.8 + .2 * c, .5 + 0.5*  c, .5 + 0.5 * c, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+		parentCellMaterial.setColor(.8, .5, .5, 1.5, 1.5, 1.5, 20, .30, .30, .30);
 		// child cell slightly blue
-		childCellMaterial.setColor(.5 + 0.6 * p, .5 + 0.5 * p, .8 + 0.2 * p, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+		childCellMaterial.setColor(.5, .5, .8, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+//
+//	nah!
+//
+//		double c = variables.getSetChildSliderFraction(Double.NaN);
+//		double p = 1 - c;
+//		// f = f/.8;
+//		// parent cell slightly red
+//		parentCellMaterial.setColor(.8 + .2 * c, .5 + 0.5*  c, .5 + 0.5 * c, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+//		// child cell slightly blue
+//		childCellMaterial.setColor(.5 + 0.6 * p, .5 + 0.5 * p, .8 + 0.2 * p, 1.5, 1.5, 1.5, 20, .30, .30, .30);
 	}
 
 	@Override
@@ -542,13 +558,15 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		aBox.setSelected(showAtoms);
 		showBonds = showBonds0;
 		bBox.setSelected(showBonds);
-		showCells = showCells0;
-		cBox.setSelected(showCells);
+		showParentCell = showParentCell0;
+		showChildCell = showChildCell0;
+		cpBox.setSelected(showParentCell);
+		ccBox.setSelected(showChildCell);
 		showAxes = showAxes0;
 		axesBox.setSelected(showAxes);
 		animBox.setSelected(false);
 		spinBox.setSelected(false);
-		colorBox.setSelected(false);
+		clrBox.setSelected(false);
 //		nButton.setSelected(true);
 		uView.setText("0");
 		vView.setText("0");
@@ -564,6 +582,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	@Override
 	public void centerImage() {
 		rp3.centerImage();
+		updateDisplay();
 	}
 
 	@Override
@@ -573,11 +592,6 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 	@Override
 	protected void handleButtonEvent(Object src) {
-		if (src instanceof JCheckBox) {
-			if (!isAdjusting)
-				updateViewOptions();
-			return;
-		}
 		if (!((JToggleButton) src).isSelected())
 			return;
 //		if (src == nButton) {
@@ -609,14 +623,16 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 	}
 
+	@Override
 	protected void updateViewOptions() {
 		showAtoms = aBox.isSelected();
 		showBonds = bBox.isSelected();
-		showCells = cBox.isSelected();
+		showParentCell = cpBox.isSelected();
+		showChildCell = ccBox.isSelected();
 		showAxes = axesBox.isSelected();
 		boolean spin = spinBox.isSelected();
-		isSimpleColor = colorBox.isSelected();
 		isAnimateSelected = animBox.isSelected();
+		clrBox.setVisible(variables.needSimpleColor);
 		isMaterialTainted = true;
 		rp3.setSpinning(spin);
 		if (isAnimateSelected || spin) {
@@ -635,12 +651,11 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 		aBox = newJCheckBox("Atoms", showAtoms);
 		bBox = newJCheckBox("Bonds", showBonds);
-		cBox = newJCheckBox("Cells", showCells);
+		cpBox = newJCheckBox("Parent Cell", showParentCell);
+		ccBox = newJCheckBox("Child Cell", showChildCell);
 		axesBox = newJCheckBox("Axes", showAxes);
 		animBox = newJCheckBox("Animate", false);
 		spinBox = newJCheckBox("Spin", false);
-		colorBox = newJCheckBox("Color", false);
-		colorBox.setVisible(variables.needSimpleColor);
 
 //		ButtonGroup xyzButtons = new ButtonGroup();
 //		nButton = newRadioButton("Normal", true, xyzButtons);
@@ -670,11 +685,13 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		top.add(new JLabel("       "));
 		top.add(aBox);
 		top.add(bBox);
-		top.add(cBox);
+		top.add(cpBox);
+		top.add(ccBox);
 		top.add(axesBox);
 		top.add(spinBox);
 		top.add(animBox);
-		top.add(colorBox);
+
+		addTopButtons(top);
 
 		JPanel bottom = new JPanel();
 		bottom.setBackground(Color.WHITE);
@@ -687,11 +704,10 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		bottom.add(vView);
 		bottom.add(wView);
 
-		addSaveButtons(bottom);
+		addBottomButtons(bottom);
 
 		controlPanel.add(top);
 		controlPanel.add(bottom);
-
 	}
 
 	@Override

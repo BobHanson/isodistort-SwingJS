@@ -37,18 +37,15 @@ public abstract class Iso3DApp extends IsoApp {
 	protected double animAmp = 1;
 
 	/**
-	 * no shading in slider panel
-	 */
-	protected boolean isSimpleColor;
-
-	/**
 	 * Initially show bonds or not
 	 */
-	protected boolean showBonds0 = true, showAtoms0 = true, showCells0 = true, showAxes0 = false;
+	protected boolean showBonds0 = true, showAtoms0 = true, 
+			showParentCell0 = true, showChildCell0 = true, 
+			showAxes0 = false;
 	/**
 	 * Currently show bonds or not
 	 */
-	protected boolean showBonds, showAtoms, showCells, showAxes;
+	protected boolean showBonds, showAtoms, showParentCell, showChildCell, showAxes;
 	/**
 	 * Which type of view direction: childHKL, childUVW, parentHKL, parentUVW
 	 */
@@ -58,7 +55,7 @@ public abstract class Iso3DApp extends IsoApp {
 	 * Check boxes for zoom, spin, anim toggles
 	 * 
 	 */
-	protected JCheckBox aBox, bBox, cBox, spinBox, colorBox, animBox, axesBox;
+	protected JCheckBox aBox, bBox, cpBox, ccBox, spinBox, animBox, axesBox;
 
 	/**
 	 * Buttons to use child or parent cell for view vectors
@@ -132,7 +129,7 @@ public abstract class Iso3DApp extends IsoApp {
 		if (showBonds) {
 			checkBonding();
 		}
-		if (showCells) {
+		if (showParentCell || showChildCell) {
 			variables.setCellInfo();
 		}
 		for (int axis = 0; axis < 3; axis++) {
@@ -151,8 +148,6 @@ public abstract class Iso3DApp extends IsoApp {
 	 * recalculates the atom colors after a checkbox has been set.
 	 */
 	protected void recalcMaterials() {
-		variables.setColors(isSimpleColor);
-		variables.recolorPanels();
 		if (showAtoms)
 			recalcAtomColors();
 		isMaterialTainted = false;
@@ -190,7 +185,7 @@ public abstract class Iso3DApp extends IsoApp {
 			if (showBonds) {
 				renderBonds();
 			}
-			if (showCells) {
+			if (showParentCell || showChildCell) {
 				renderCells();
 			}
 			if (showAxes) {

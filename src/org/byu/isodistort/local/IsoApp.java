@@ -66,7 +66,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".10_2024.01.19";
+	final static String minorVersion = ".11_2024.01.19";
 
 	static boolean isJS = (/** @j2sNative true || */false);
 	

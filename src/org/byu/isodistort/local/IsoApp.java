@@ -1202,6 +1202,8 @@ public abstract class IsoApp {
 		variables.setModeFormData(formData, sliderSetting);
 	}
 
+
+//Save for debugging
 //	private void setPackedHeight() {
 ////		int h = getComponentHeight(sliderPanel, "setPackedHeight");
 ////		sliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, h));
@@ -1209,8 +1211,9 @@ public abstract class IsoApp {
 ////		sliderPanel.setMinimumSize(new Dimension(sliderPanelWidth, h));
 ////		sliderPanel.setSize(new Dimension(sliderPanelWidth, h));
 //	}
-
-// not necessary!
+//
+//save for debugging
+//
 //	private int getComponentHeight(JPanel p, String msg) {
 //		int h = 0;
 //		for (int i = 0; i < p.getComponentCount(); i++) {

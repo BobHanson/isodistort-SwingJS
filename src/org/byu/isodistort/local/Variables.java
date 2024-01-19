@@ -2542,7 +2542,7 @@ public class Variables {
 
 		int test = 0;
 		private void addPanel(JPanel sliderPanel, Component c, String name) {
-			c.setName(name);
+			c.setName(name); // this is for debugging
 			// https://stackoverflow.com/questions/18405660/how-to-set-component-size-inside-container-with-boxlayout
 			c.setMaximumSize(new Dimension(Integer.MAX_VALUE, c.getMinimumSize().height));
 			sliderPanel.add(c);			

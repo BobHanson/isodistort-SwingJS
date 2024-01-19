@@ -66,7 +66,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".10_2024.01.17";
+	final static String minorVersion = ".10_2024.01.19";
 
 	static boolean isJS = (/** @j2sNative true || */false);
 	
@@ -494,8 +494,8 @@ public abstract class IsoApp {
 			// but we still have to set the sliderPanel width
 			// and height. We provide a provisional setting here
 			// and let Variables adjust it as necessary.
-			resetPanelHeights();
-			frame.pack();
+//			resetPanelHeights();
+//			frame.pack();
 			updateDisplay();
 		}
 	};
@@ -690,11 +690,12 @@ public abstract class IsoApp {
 		Dimension d = new Dimension(controlStatusPanel.getWidth() - 5, controlPanelHeight);
 		controlPanel.setPreferredSize(d);
 		statusPanel.setDimension(new Dimension(controlStatusPanel.getWidth(), controlPanelHeight - 5));
-		setPackedHeight();
+		// not necessary! setPackedHeight();
 		d = new Dimension(frame.getContentPane().getPreferredSize().width - sliderPanelWidth - 20,
 				frame.getPanelHeight() - controlPanelHeight);
 		drawPanel.setPreferredSize(d);
 		sliderScrollPane.setPreferredSize(new Dimension(sliderScrollPane.getWidth(), d.height));
+		
 		updateDimensions();
 	}
 
@@ -780,7 +781,7 @@ public abstract class IsoApp {
 		sliderScrollPane = new JScrollPane(sliderPanel);
 		sliderScrollPane.setBackground(Color.YELLOW);
 		sliderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		sliderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		sliderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		sliderScrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
 		isoPanel.add(sliderScrollPane, BorderLayout.EAST);
 		isoPanel.add(controlStatusPanel, BorderLayout.SOUTH);
@@ -1201,16 +1202,29 @@ public abstract class IsoApp {
 		variables.setModeFormData(formData, sliderSetting);
 	}
 
-	private void setPackedHeight() {
-		JPanel p = sliderPanel;
-		int h = 0;
-		for (int i = 0; i < p.getComponentCount(); i++) {
-			h += p.getComponent(i).getHeight();
-		}
-		p.setPreferredSize(new Dimension(sliderPanelWidth, h));
-		p.setSize(new Dimension(sliderPanelWidth, h));
-	}
+//	private void setPackedHeight() {
+////		int h = getComponentHeight(sliderPanel, "setPackedHeight");
+////		sliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, h));
+////		sliderPanel.setMaximumSize(new Dimension(sliderPanelWidth, h));
+////		sliderPanel.setMinimumSize(new Dimension(sliderPanelWidth, h));
+////		sliderPanel.setSize(new Dimension(sliderPanelWidth, h));
+//	}
 
+// not necessary!
+//	private int getComponentHeight(JPanel p, String msg) {
+//		int h = 0;
+//		for (int i = 0; i < p.getComponentCount(); i++) {
+//			Component child = p.getComponent(i);
+//			int ch = (child instanceof JComponent ? ((JComponent) child).getPreferredSize().height : child.getHeight());
+//			h += ch;
+//			System.out.println(msg + " "  + i + " " + ch + " " + h + " ps=" + child.getPreferredSize() + " " + child.getClass().getName() + " "  + child.getName() );
+//			if (child instanceof JPanel) {
+//				getComponentHeight((JPanel) child, msg + "--");
+//			}
+//		}
+//		return h;
+//	}
+//
 	public void setPreferences(Map<String, Object> values) {
 		Map<String, Object> map = ensureMapData(null, true, true);
 		if (map == null) {

@@ -2023,7 +2023,7 @@ public class Variables {
 
 		private final static int subTypeWidth = 210;
 		private final static int barheight = 22;
-		private final static int mainSliderLabelWidth = 66;
+	//	private final static int mainSliderLabelWidth = 66;
 
 		/**
 		 * Master (top most) slider bar controls all slider bars for superpositioning of
@@ -2209,12 +2209,12 @@ public class Variables {
 
 			masterSliderPanel = new JPanel();
 			masterSliderPanel.setLayout(new BoxLayout(masterSliderPanel, BoxLayout.LINE_AXIS));
-			masterSliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
+			//masterSliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
 			masterSliderPanel.setBackground(Color.WHITE);
 
 			// Master Slider Panel
 			mainSliderLabel = new JLabel("child");
-			mainSliderLabel.setPreferredSize(new Dimension(mainSliderLabelWidth, barheight));
+			//mainSliderLabel.setPreferredSize(new Dimension(mainSliderLabelWidth, barheight));
 			mainSliderLabel.setForeground(Color.BLACK);
 			mainSliderLabel.setHorizontalAlignment(JLabel.CENTER);
 			mainSliderLabel.setVerticalAlignment(JLabel.CENTER);
@@ -2226,7 +2226,7 @@ public class Variables {
 			masterSliderPanel.add(Box.createRigidArea(new Dimension(1, 1)));
 			masterSliderPanel.add(mainSliderLabel);
 			masterSliderPanel.add(Box.createHorizontalGlue());
-			add(sliderPanel, masterSliderPanel);
+			addPanel(sliderPanel, masterSliderPanel, "masterPanel");
 
 			// Initialize type-specific subpanels of scrollPanel
 			typeLabel = new JLabel[numTypes];
@@ -2239,6 +2239,7 @@ public class Variables {
 			for (int t = 0; t < numTypes; t++) {
 				Color c = getDefaultModeColor(t);
 				JPanel tp = new JPanel();
+				tp.setName("typeOuterPanel_" + t);
 				tp.setLayout(new BoxLayout(tp, BoxLayout.Y_AXIS));
 				tp.setBorder(new EmptyBorder(2, 2, 5, 2));
 				tp.setBackground(c); // important
@@ -2247,55 +2248,63 @@ public class Variables {
 				subTypeLabels[t] = new JLabel[numSubTypes[t]];
 				typeLabel[t] = newWhiteLabel("" + atomTypeName[t] + " Modes", JLabel.CENTER);
 				typeNamePanels[t] = new JPanel(new GridLayout(1, 1, 0, 0));
-				typeNamePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight));
+				typeNamePanels[t].setName("typeNamePanel_" + t + " " + atomTypeName[t]);
+//				typeNamePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight));
 				typeNamePanels[t].add(typeLabel[t]);
 				typeNamePanels[t].setBackground(c); // important
+				tp.add(typeNamePanels[t]);
 				
 				// typeDataPanel
 				typeDataPanels[t] = new JPanel(new GridLayout(numSubRows[t], subTypesPerRow[t], 0, 0));
-				typeDataPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, numSubRows[t] * barheight));
-				for (int s = 0; s < numSubTypes[t]; s++) {
+//				typeDataPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, numSubRows[t] * barheight));
+				typeDataPanels[t].setName("typeDataPanel_" + t);
+				int nst = numSubTypes[t];
+				for (int s = 0; s < nst; s++) {
+					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
+					p.setName("subtypePanel_" + s);
+					p.setBackground(c);
 					JCheckBox b = subTypeBoxes[t][s] = newSubtypeCheckbox("subType_" + t + "_" + s, c);
 					b.setEnabled(!isDiffraction);
 					subTypeLabels[t][s] = newWhiteLabel("", JLabel.LEFT);
-					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
-					p.setBackground(c);
 					p.add(b);
 					p.add(subTypeLabels[t][s]);
 					typeDataPanels[t].add(p);
 				}
 				// Makes sure that each subtype row is full for alignment purposes
-				for (int s = numSubTypes[t]; s < numSubRows[t] * subTypesPerRow[t]; s++)
-					typeDataPanels[t].add(new JLabel(""));
-				tp.add(typeNamePanels[t]);
+				for (int s = nst; s < numSubRows[t] * subTypesPerRow[t]; s++) {
+					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
+					p.setName("subtypeFillerPanel_" + s);
+					p.setBackground(c);
+					//p.add(new JLabel(""));
+					typeDataPanels[t].add(p);
+				}
 				tp.add(typeDataPanels[t]);
-				tp.setPreferredSize(new Dimension(sliderPanelWidth, (numSubRows[t] + 1) * barheight));
-				add(sliderPanel, tp);
+				addPanel(sliderPanel, tp, "typePanel_" + t + " " + typeLabel[t].getText());
 				int n = 0;
 				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 					n += initModeGUI(sliderPanel, modes[i], t);
 				}
 				if (n == 0) {
 					tp = new JPanel(new GridLayout(1, 1, 0, 0));
-					tp.setPreferredSize(new Dimension(sliderPanelWidth, 5));
+					//tp.setPreferredSize(new Dimension(sliderPanelWidth, 5));
 					tp.setBackground(c);
-					add(sliderPanel, tp);
+					addPanel(sliderPanel, tp, "typeFiller_" + t);
 				}
 
 			}
 			Color c = modes[STRAIN].colorT[0];
 			JPanel strainTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
-			strainTitlePanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
+			//strainTitlePanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
 			strainTitlePanel.setBackground(c);
 			JLabel strainTitle = newWhiteLabel("Strain Modes", JLabel.CENTER);
 			strainTitlePanel.add(strainTitle);
-			add(sliderPanel, strainTitlePanel);
+			addPanel(sliderPanel, strainTitlePanel, "strainTitlePanel");
 
 			// strainDataPanel
 			initCell(childCell, c);
 			initCell(parentCell, c);
 			JPanel strainDataPanel = new JPanel(new GridLayout(2, 6, 0, 0));
-			strainDataPanel.setPreferredSize(new Dimension(sliderPanelWidth, 2 * barheight));
+			//strainDataPanel.setPreferredSize(new Dimension(sliderPanelWidth, 2 * barheight));
 			strainDataPanel.setBackground(c);
 			strainDataPanel.add(parentCell.title);
 			for (int n = 0; n < 6; n++)
@@ -2303,17 +2312,20 @@ public class Variables {
 			strainDataPanel.add(childCell.title);
 			for (int n = 0; n < 6; n++)
 				strainDataPanel.add(childCell.labels[n]);
-			add(sliderPanel, strainDataPanel);
+			addPanel(sliderPanel, strainDataPanel, "strainDataPanel");
 			initModeGUI(sliderPanel, modes[STRAIN], 0);
 
 			c = modes[IRREP].colorT[0];
 			JPanel irrepTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
-			irrepTitlePanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
+			//irrepTitlePanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
 			irrepTitlePanel.setBackground(c);
 			JLabel irrepTitle = newWhiteLabel("Single-Irrep Master Amplitudes", JLabel.CENTER);
 			irrepTitlePanel.add(irrepTitle);
-			add(sliderPanel, irrepTitlePanel);
+			addPanel(sliderPanel, irrepTitlePanel, "irrepTitlePanel");
 			initModeGUI(sliderPanel, modes[IRREP], 0);
+			// this Glue is nice, because it adds just a bit of 
+			// vertical padding around the sliders
+			sliderPanel.add(Box.createVerticalGlue());
 		}
 
 		private void initCell(Cell cell, Color c) {
@@ -2398,6 +2410,7 @@ public class Variables {
 			IsoSlider(int type, String name, int min, double calcAmp, double maxAmp, Color c) {
 				super(JSlider.HORIZONTAL, min, sliderMax, (int) (calcAmp / maxAmp * sliderMax));
 				setName(name);
+				// this setting is important; without it, everything looks shrunk
 				setPreferredSize(new Dimension(sliderWidth, barheight));
 				if (type >= 0 && showSliderPointers) {
 					this.min = min;
@@ -2513,8 +2526,8 @@ public class Variables {
 			sliderTM[type][t] = new IsoSlider[nModes];
 			mode.values[t] = new double[nModes];
 			JPanel tp = typePanels[type][t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
-			int h = (int) (mode.modesPerType[t] * barheight);
-			tp.setPreferredSize(new Dimension(sliderPanelWidth, h));
+			//not necessary! int h = (int) (mode.modesPerType[t] * barheight);
+			//tp.setPreferredSize(new Dimension(sliderPanelWidth, h));
 			tp.setBackground(c);
 			for (int m = 0; m < nModes; m++) {
 				sliderTM[type][t][m] = new IsoSlider(mode.type, getInputName(mode.type, t, m), min,
@@ -2523,11 +2536,15 @@ public class Variables {
 				tp.add(sliderTM[type][t][m]);
 				tp.add(sliderTM[type][t][m].sliderLabel);
 			}
-			add(sliderPanel, tp);
+			addPanel(sliderPanel, tp, "modeSliderPanelType_" + t);
 			return nModes;
 		}
 
-		private void add(JPanel sliderPanel, Component c) {
+		int test = 0;
+		private void addPanel(JPanel sliderPanel, Component c, String name) {
+			c.setName(name);
+			// https://stackoverflow.com/questions/18405660/how-to-set-component-size-inside-container-with-boxlayout
+			c.setMaximumSize(new Dimension(Integer.MAX_VALUE, c.getMinimumSize().height));
 			sliderPanel.add(c);			
 		}
 

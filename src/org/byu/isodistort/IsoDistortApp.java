@@ -443,7 +443,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		for (int t = variables.numTypes; --t >= 0;) {
 			variables.getColors(t, rgb);
 			for (int s = variables.numSubTypes[t]; --s >= 0;) {
-				if (variables.isSubTypeSelected(t, s)) {
+				// BH reversing this action
+				if (!variables.isSubTypeSelected(t, s)) {
 					// a darkish shade of gray
 					double k = variables.getSelectedSubTypeShade(t, s);
 					subMaterial[t][s].setColor(0, 0, 0, k, k, k, 1, k, k, k);
@@ -456,23 +457,24 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	}
 
 	/**
+	 * The hkl or uvw view direction indices in lattice coordinates
+	 */
+	private double[] viewIndices = new double[3];
+
+	/**
 	 * resets the viewing direction without changing anything else
 	 */
 	void resetViewDirection(int type) {
 		if (type >= 0)
 			viewType = type;
 		/**
-		 * The hkl or uvw view direction indices in lattice coordinates
-		 */
-		double[] viewIndices = new double[3];
-		/**
 		 * The view direction in cartesian coordinates
 		 */
 		double[] viewDir = new double[3];
 
-		viewIndices[0] = Double.parseDouble(uView.getText());
-		viewIndices[1] = Double.parseDouble(vView.getText());
-		viewIndices[2] = Double.parseDouble(wView.getText());
+		viewIndices[0] = getText(uView, viewIndices[0], 2);
+		viewIndices[1] = getText(vView, viewIndices[1], 2);
+		viewIndices[2] = getText(wView, viewIndices[2], 2);
 
 		double[][] tempmat = null;
 		switch (viewType) {
@@ -492,7 +494,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		MathUtil.mat3mul(tempmat, viewIndices, viewDir);
 		double l2 = MathUtil.lenSq3(viewDir);
 		if (l2 > 0.000000000001) {
-			MathUtil.scale3(viewDir, 1 / Math.sqrt(l2));
+			MathUtil.scale3(viewDir, 1 / Math.sqrt(l2), viewDir);
 			double xV = viewDir[0];
 			double yV = viewDir[1];
 			double zV = viewDir[2];
@@ -574,7 +576,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		variables.resetSliders();
 		variables.readSliders();
 		variables.recalcDistortion();
-		variables.clearSubtypeSelection();
+		variables.selectAllSubtypes();
 		updateDisplay();
 	}
 

@@ -15,7 +15,7 @@ import java.awt.image.DataBufferInt;
 import javax.swing.JPanel;
 
 import org.byu.isodistort.IsoDistortApp;
-import org.byu.isodistort.local.IsoApp.IsoRenderPanel;
+import org.byu.isodistort.local.Iso3DApp.IsoRenderPanel;
 
 /**
  * Provides an applet interface to the {@link Renderer}. It also implements

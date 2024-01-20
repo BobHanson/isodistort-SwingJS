@@ -49,7 +49,7 @@ public class Variables {
 	public final static int MAG = Mode.MAG; // magnetic
 	public final static int ROT = Mode.ROT; // rotational
 	public final static int ELL = Mode.ELL; // ellipsoidal
-	private final static int MODE_ATOMIC_COUNT = Mode.MODE_ATOMIC_COUNT;
+	private final static int MODE_ATOMIC_COUNT = Mode.ELL + 1; // 5 (same as STRAIN)
 
 	public final static int STRAIN = Mode.STRAIN;
 	public final static int IRREP = Mode.IRREP; // irreducible representations
@@ -88,7 +88,7 @@ public class Variables {
 	public String isoversion;
 
 	/**
-	 * only used to hide the checkboxes
+	 * used to flag issues about incommensurately modulated structures;
 	 * 
 	 */
 	private boolean isDiffraction;
@@ -228,7 +228,7 @@ public class Variables {
 
 	public Variables(IsoApp app) {
 		this.app = app;
-		this.isDiffraction = (app.appType == IsoApp.APP_ISODIFFRACT);
+		isDiffraction = (app.appType == IsoApp.APP_ISODIFFRACT);
 	}
 
 	/**
@@ -262,9 +262,20 @@ public class Variables {
 	}
 
 	public boolean isSubTypeSelected(int t, int s) {
-		return gui.subTypeBoxes[t][s].isSelected();
+		return gui.subTypeCheckBoxes[t][s].isSelected();
 	}
 
+	public boolean allAtomsSelected() {
+		for (int t = gui.subTypeCheckBoxes.length; --t >= 0;) {
+			JCheckBox[] boxes = gui.subTypeCheckBoxes[t];
+			for (int s = boxes.length; --s >= 0;) {
+				if (!boxes[s].isSelected())
+					return false;
+			}
+		}
+		return true;
+	}
+	
 	public Atom getAtom(int ia) {
 		return atoms[ia];
 	}
@@ -273,13 +284,19 @@ public class Variables {
 		return atoms[a].info;
 	}
 
-	public void clearSubtypeSelection() {
+	public void enableSubtypeSelection(boolean tf) {
 		for (int t = 0; t < numTypes; t++)
 			for (int s = 0; s < numSubTypes[t]; s++)
-				gui.subTypeBoxes[t][s].setSelected(false);
+				gui.subTypeCheckBoxes[t][s].setEnabled(tf);// was false
 	}
 
-	public double getSetChildSliderFraction(double newVal) {
+	public void selectAllSubtypes() {
+		for (int t = 0; t < numTypes; t++)
+			for (int s = 0; s < numSubTypes[t]; s++)
+				gui.subTypeCheckBoxes[t][s].setSelected(true);// was false
+	}
+
+	public double getSetChildFraction(double newVal) {
 		double d = childFraction;
 		if (!Double.isNaN(newVal))
 			childFraction = newVal;
@@ -324,6 +341,7 @@ public class Variables {
 	}
 
 	public void saveModeValues() {
+		// Save old childSliderVal and set it to 1.0
 		modes[DIS].saveMode();
 		modes[OCC].saveMode();
 		modes[MAG].saveMode();
@@ -587,7 +605,7 @@ public class Variables {
 		if (lensq < 0) {
 			lensq = MathUtil.lenSq3(tempvec);
 		}
-		MathUtil.scale3(tempvec, 1 / Math.sqrt(lensq));
+		MathUtil.scale3(tempvec, 1 / Math.sqrt(lensq), tempvec);
 		MathUtil.average3(pt1, pt2, info);
 		info[RX] = -Math.asin(tempvec[1]);
 		info[RY] = Math.atan2(tempvec[0], tempvec[2]);
@@ -1790,7 +1808,10 @@ public class Variables {
 				if (vt.getInt(3 * i) != i + 1)
 					parseError("atom types are not in sequential order", 2);
 				atomTypeName[i] = vt.getString(3 * i + 1);
-				atomTypeSymbol[i] = vt.getString(3 * i + 2);
+				// no reason to believe this would be XX or xx, but 
+				// this guarantees Xx for Elements.getScatteringFactor. 
+				String s = vt.getString(3 * i + 2);
+				atomTypeSymbol[i] = s.substring(0, 1).toUpperCase() + (s.length() == 1 ? "" : s.substring(1,2).toLowerCase());
 			}
 
 			numSubTypes = new int[n];
@@ -1957,7 +1978,8 @@ public class Variables {
 				mode.calcAmpTM[atomType][mt] = vt.getDouble(pt++);
 				mode.maxAmpTM[atomType][mt] = vt.getDouble(pt++);
 				mode.irrepTM[atomType][mt] = vt.getInt(pt++) - 1;
-				mode.nameTM[atomType][mt] = vt.getString(pt++);
+				mode.setModeName(atomType, mt, vt.getString(pt++));
+				
 				for (int s = 0; s < numSubTypes[atomType]; s++) {
 					for (int a = 0; a < numSubTypeAtomsRead[atomType][s]; a++, iread++, pt += ncol) {
 						if (bsPrimitive != null && !bsPrimitive.get(iread))
@@ -1984,7 +2006,7 @@ public class Variables {
 			modes[STRAIN] = new Mode(STRAIN, 1, null, null);
 			modes[STRAIN].initArrays(null, n);
 			for (int m = 0; m < n; m++) {
-				modes[STRAIN].nameTM[0][m] = vt.getString(ncol * m + 4);
+				modes[STRAIN].setModeName(0, m, vt.getString(ncol * m + 4));
 				modes[STRAIN].irrepTM[0][m] = vt.getInt(ncol * m + 3) - 1;
 				modes[STRAIN].calcAmpTM[0][m] = vt.getDouble(ncol * m + 1);
 				modes[STRAIN].maxAmpTM[0][m] = vt.getDouble(ncol * m + 2);
@@ -2005,7 +2027,7 @@ public class Variables {
 			for (int i = 0; i < n; i++) {
 				if (vt.getInt(2 * i) != i + 1)
 					parseError("Error: irreps are not in ascending order.", 2);
-				modes[IRREP].nameTM[0][i] = vt.getString(2 * i + 1);
+				modes[IRREP].setModeName(0, i, vt.getString(2 * i + 1));
 			}
 		}
 
@@ -2047,7 +2069,7 @@ public class Variables {
 		/**
 		 * Array of checkboxes -- one for each atomic subtype
 		 */
-		private JCheckBox[][] subTypeBoxes;
+		private JCheckBox[][] subTypeCheckBoxes;
 
 		/**
 		 * mode sliders and their labels and pointers
@@ -2143,12 +2165,14 @@ public class Variables {
 
 		void setComponentValuesFrom(Variables v) {
 
-			for (int t = subTypeBoxes.length; --t >= 0;) {
-				JCheckBox[] boxes = subTypeBoxes[t];
-				for (int s = boxes.length; --s >= 0;) {
-					boxes[s].setSelected(v.gui.subTypeBoxes[t][s].isSelected());
-				}
-			}
+// BH letting the two apps be independent wrt checkboxes in sliderPanel
+//
+//			for (int t = subTypeBoxes.length; --t >= 0;) {
+//				JCheckBox[] boxes = subTypeBoxes[t];
+//				for (int s = boxes.length; --s >= 0;) {
+//					boxes[s].setSelected(v.gui.subTypeBoxes[t][s].isSelected());
+//				}
+//			}
 
 			mainSlider.setValue(v.gui.mainSlider.getValue());
 			for (int i = 0; i < MODE_COUNT; i++) {
@@ -2232,7 +2256,7 @@ public class Variables {
 			typeLabel = new JLabel[numTypes];
 			typeNamePanels = new JPanel[numTypes];
 			typeDataPanels = new JPanel[numTypes];
-			subTypeBoxes = new JCheckBox[numTypes][];
+			subTypeCheckBoxes = new JCheckBox[numTypes][];
 			subTypeLabels = new JLabel[numTypes][];
 
 			// The big loop over types
@@ -2244,7 +2268,7 @@ public class Variables {
 				tp.setBorder(new EmptyBorder(2, 2, 5, 2));
 				tp.setBackground(c); // important
 				//tp.setOpaque(true);
-				subTypeBoxes[t] = new JCheckBox[numSubTypes[t]];
+				subTypeCheckBoxes[t] = new JCheckBox[numSubTypes[t]];
 				subTypeLabels[t] = new JLabel[numSubTypes[t]];
 				typeLabel[t] = newWhiteLabel("" + atomTypeName[t] + " Modes", JLabel.CENTER);
 				typeNamePanels[t] = new JPanel(new GridLayout(1, 1, 0, 0));
@@ -2263,8 +2287,8 @@ public class Variables {
 					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
 					p.setName("subtypePanel_" + s);
 					p.setBackground(c);
-					JCheckBox b = subTypeBoxes[t][s] = newSubtypeCheckbox("subType_" + t + "_" + s, c);
-					b.setEnabled(!isDiffraction);
+					JCheckBox b = subTypeCheckBoxes[t][s] = newSubtypeCheckbox("subType_" + t + "_" + s, c);
+					// BH testing removal b.setEnabled(!isDiffraction);
 					subTypeLabels[t][s] = newWhiteLabel("", JLabel.LEFT);
 					p.add(b);
 					p.add(subTypeLabels[t][s]);
@@ -2381,6 +2405,7 @@ public class Variables {
 		private JCheckBox newSubtypeCheckbox(String name, Color c) {
 			JCheckBox b = new JCheckBox("");
 			b.setName(name);
+			b.setSelected(true);
 			b.setFocusable(false);
 			b.setOpaque(false);
 //			b.setBackground(c);

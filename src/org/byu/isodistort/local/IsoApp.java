@@ -14,7 +14,6 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -66,7 +65,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".11_2024.01.19";
+	final static String minorVersion = ".11_2024.01.20";
 
 	static boolean isJS = (/** @j2sNative true || */false);
 	
@@ -184,27 +183,6 @@ public abstract class IsoApp {
 			}
 		}
 
-	}
-
-	public interface IsoRenderPanel {
-
-		void addKeyListener(KeyListener listener);
-		void centerImage();
-		void clearAngles();
-		void clearOffsets();
-		BufferedImage getImage();
-		double[][] getPerspective();
-		void initializeSettings(double radius);
-		boolean isSpinning();
-		void removeKeyListener(KeyListener listener);
-		void resetView();
-		void reversePanningAction();
-		void setCamera(double tY, double tX);
-		void setPerspective(double[][] params);
-		void setPreferredSize(Dimension size);
-		void setSize(Dimension size);
-		void setSpinning(boolean spin);
-		void updateForDisplay(boolean b);
 	}
 
 	private class StatusPanel extends JScrollPane {
@@ -473,13 +451,50 @@ public abstract class IsoApp {
 		public void actionPerformed(ActionEvent e) {
 			if (appType == APP_ISODISTORT) {
 				applyView();
-				return;
+			} else {
+				needsRecalc = true;
+				updateDisplay();
 			}
-			needsRecalc = true;
-			updateDisplay();
+			SwingUtilities.invokeLater(()->{
+				((JComponent) e.getSource()).requestFocus();
+			});
 		}
 
 	};
+
+	protected double getText(JTextField t, double currentValue, int precision) {
+		double val = 0;
+		try {
+			String s = t.getText();
+			if (s.length() == 0) {
+				t.setText(precision == 2 ? trim00(currentValue) : MathUtil.varToString(currentValue, precision, 0));
+				val = currentValue;
+			} else {
+				val = Double.parseDouble(s);
+			}
+			t.setForeground(Color.BLACK);
+		} catch (NumberFormatException e) {
+			val = currentValue;
+			t.setForeground(Color.RED);
+			SwingUtilities.invokeLater(()->{
+				((JComponent) t).requestFocus();
+			});
+		}
+		controlPanel.repaint();
+		return val;
+	}
+
+	protected static String trim00(double val) {
+		String s = MathUtil.varToString(val, 2, 0);
+		int n = s.length() - 1;
+		char ch = '0';
+		while ((ch = s.charAt(n)) == '0') {
+			--n;
+		}
+		if (ch != '.')
+			n++;
+		return s.substring(0, n);
+	}
 
 	private ComponentListener componentListener = new ComponentAdapter() {
 

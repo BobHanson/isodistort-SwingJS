@@ -22,7 +22,7 @@ public class MathUtil {
 	 * @param v a vector
 	 */
 	public static void norm3(double[] v) {
-		scale3(v, 1/ len3(v));
+		scale3(v, 1/ len3(v), v);
 	}
 
 	public static double len3(double[] xyz) {
@@ -270,7 +270,7 @@ public class MathUtil {
 		dest[1] = srca[1] + s * srcb[1];
 		dest[2] = srca[2] + s * srcb[2];
 	}
-
+	
 	/**
 	 * Calculate (src1 + src2)/2 and place the result in dest.
 	 * 
@@ -388,10 +388,10 @@ public class MathUtil {
 		return (d > d2 ? d : d2);
 	}
 
-	public static void scale3(double[] a, double d) {
-		a[0] *= d;
-		a[1] *= d;
-		a[2] *= d;
+	public static void scale3(double[] src, double d, double[] dest) {
+		dest[0] = src[0] * d;
+		dest[1] = src[1] * d;
+		dest[2] = src[2] * d;
 	}
 
 	public static double dist3(double[] a, double[] b) {
@@ -410,5 +410,6 @@ public class MathUtil {
 		}
 		return s+"]";
 	}
+
 
 }

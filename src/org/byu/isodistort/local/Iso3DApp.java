@@ -1,5 +1,9 @@
 package org.byu.isodistort.local;
 
+import java.awt.Dimension;
+import java.awt.event.KeyListener;
+import java.awt.image.BufferedImage;
+
 import javax.swing.JCheckBox;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
@@ -12,6 +16,29 @@ import javax.swing.JTextField;
  *
  */
 public abstract class Iso3DApp extends IsoApp {
+	
+	public interface IsoRenderPanel {
+
+		void addKeyListener(KeyListener listener);
+		void centerImage();
+		void clearAngles();
+		void clearOffsets();
+		BufferedImage getImage();
+		double[][] getPerspective();
+		void initializeSettings(double radius);
+		boolean isSpinning();
+		void removeKeyListener(KeyListener listener);
+		void resetView();
+		void reversePanningAction();
+		void setCamera(double tY, double tX);
+		void setPerspective(double[][] params);
+		void setPreferredSize(Dimension size);
+		void setSize(Dimension size);
+		void setSpinning(boolean spin);
+		void updateForDisplay(boolean b);
+	}
+
+
 
 	
 

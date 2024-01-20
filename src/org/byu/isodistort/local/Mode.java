@@ -24,8 +24,6 @@ class Mode {
 	final static int MAG = 2; // magnetic
 	final static int ROT = 3; // rotational
 	final static int ELL = 4; // ellipsoidal
-	final static int MODE_ATOMIC_COUNT = 5;
-
 	final static int STRAIN = 5;
 	final static int IRREP = 6; // irreducible representations
 	final static int MODE_COUNT = 7;
@@ -50,11 +48,6 @@ class Mode {
 	 */
 	int[] modesPerType;
 
-//	/**
-//	 * This [atomtype][mode][subtype][subatom][value]
-//	 */
-//	double[][][][][] fileModeCoeffsTMSA; // was xxxmodeVect
-
 	/**
 	 * [atomtype][modefortype]
 	 */
@@ -62,6 +55,7 @@ class Mode {
 	double[][] maxAmpTM;
 	int[][] irrepTM;
 	String[][] nameTM;
+	boolean[][] isGM1TM;
 	double[][] values;
 
 	private double[][] savedValues;
@@ -129,12 +123,14 @@ class Mode {
 		this.modesPerType = perType;
 
 		nameTM = new String[numTypes][];
+		isGM1TM = new boolean[numTypes][];
 		calcAmpTM = new double[numTypes][];
 		maxAmpTM = new double[numTypes][];
 		irrepTM = new int[numTypes][];
 		for (int t = 0; t < numTypes; t++) {
 			int nmodes = modesPerType[t];
 			nameTM[t] = new String[nmodes];
+			isGM1TM[t] = new boolean[nmodes];
 			calcAmpTM[t] = new double[nmodes];
 			maxAmpTM[t] = new double[nmodes];
 			irrepTM[t] = new int[nmodes];
@@ -175,7 +171,7 @@ class Mode {
 	 */
 	void calcDistortion(Variables v, double[][][] max, double[] tempvec, double[][] tempmat) {
 		double[] irrepVals = (v.modes[IRREP] == null ? null : v.modes[IRREP].values[0]);
-		double f = v.getSetChildSliderFraction(Double.NaN);
+		double f = v.getSetChildFraction(Double.NaN);
 		for (int ia = 0, n = v.numAtoms; ia < n; ia++) {
 			Atom a = v.atoms[ia];
 			MathUtil.vecfill(delta, 0);
@@ -257,16 +253,11 @@ class Mode {
 			return;
 		for (int t = numTypes; --t >= 0;) {
 			for (int m = modesPerType[t]; --m >= 0;) {
-				String name = nameTM[t][m];
-				boolean isGM1 = (name.startsWith("GM1") && !name.startsWith("GM1-"));
-				if (isGM1 == isGM) {
-					values[t][m] = (2 * rval.nextFloat() - 1) * maxAmpTM[t][m];
-				} else if (isGM) {
-					values[t][m] = 0;
-				}
+				values[t][m] = (isGM1TM[t][m] == isGM ? (2 * rval.nextFloat() - 1) * maxAmpTM[t][m] : 0);
 			}
 		}
 	}
+
 
 	/**
 	 * Return mode to pre-randomized settings.
@@ -324,8 +315,7 @@ class Mode {
 	 */
 	void readSliders(IsoSlider[][] sliders, double childFraction, double maxJSliderIntVal, Mode irreps) {
 		boolean isIrrep = (type == IRREP);
-		boolean isAtomic = (type < MODE_ATOMIC_COUNT);
-		for (int t = 0, n = (isAtomic ? numTypes : 1); t < n; t++) {
+		for (int t = 0; t < numTypes; t++) {
 			for (int m = modesPerType[t]; --m >= 0;) {
 				double max = maxAmpTM[t][m];
 				double val = values[t][m] = max * sliders[t][m].getValue() / maxJSliderIntVal;
@@ -397,6 +387,11 @@ class Mode {
 	@Override
 	public String toString() {
 		return "[Mode " + type + " count=" + count + "]";
+	}
+
+	void setModeName(int t, int s, String name) {
+		nameTM[t][s] = name;
+		isGM1TM[t][s] = (name.startsWith("GM1") && !name.startsWith("GM1-"));
 	}
 
 }

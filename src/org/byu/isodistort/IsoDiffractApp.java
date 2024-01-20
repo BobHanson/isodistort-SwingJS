@@ -121,6 +121,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		}
 
 		private int mouseX, mouseY;
+		
 		private class Adapter extends MouseAdapter {
 
 			@Override
@@ -685,7 +686,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * resetCrystalPeaks, resetPowerPeaks, recalcCrystal, recalcPowder.
 	 * 
 	 */
-	private void recalcStrainstuff() {
+	private void recalcStrainMetrics() {
 		double[][] slatt2cart = new double[3][3]; // transforms childHKL to XYZ cartesian
 		double[][] rotmat = new double[3][3];// Rotates cartesian q-space so as to place axes1 along +x and axes2 in +y
 												// hemi-plane
@@ -793,40 +794,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			}
 			double f = (pppNR == 0 ? 0 
 					: (pppNR * pppNR + pppNI * pppNI + (isXray ? 0 : MathUtil.lenSq3(pppM)))
-						/ (zzzNR * zzzNR + zzzNI * zzzNI + (isXray ? 0 : MathUtil.lenSq3(zzzM))));
-			
+						/ (zzzNR * zzzNR + zzzNI * zzzNI + (isXray ? 0 : MathUtil.lenSq3(zzzM))));			
 			peakIntensity[p] = (f < MIN_PEAK_INTENSITY ? MIN_PEAK_INTENSITY / 2 : thermal * f);
-
-//			System.out.println("ida " + p + " " + powderPeakX[p] + " " + peakIntensity[p]);
-			
-
-//			original reads:
-//			for (each atom) {
-//				scatNR = rd.atomFinalOcc[t][s][a] * atomScatFac[0];
-//				scatNI = rd.atomFinalOcc[t][s][a] * atomScatFac[1];
-//				zzzNR += rd.atomInitOcc[t][s][a] * atomScatFac[0];
-//				zzzNI += rd.atomInitOcc[t][s][a] * atomScatFac[1];
-//				pppNR += scatNR * Math.cos(phase) - scatNI * Math.sin(phase);
-//				pppNI += scatNI * Math.cos(phase) + scatNR * Math.sin(phase);
-////				System.out.format("t:%d,s:%d,a:%d, pos:(%.2f,%.2f,%.2f), scatNR/NI:%.3f/%.3f, phase:%.3f%n", t, s, a, supxyz[0], supxyz[1], supxyz[2], scatNR, scatNI, phase);
-//				// remember that magnetic mode vectors (magnetons/Angstrom) were predefined to
-//				// transform this way.
-//				Vec.matdotvect(rd.sBasisCart, rd.atomFinalMag[t][s][a], mucart);
-//				if (isXray) {
-//					scatM = 0.0;
-//					for (int i = 0; i < 3; i++)
-//						zzzM[i] += 0;
-//				} else {
-//					scatM = rd.atomFinalOcc[t][s][a] * (5.4);
-//					for (int i = 0; i < 3; i++)
-//						zzzM[i] += rd.atomInitOcc[t][s][a] * (5.4) * mucart[i];
-//				}
-//				for (int i = 0; i < 3; i++)
-//					pppM[i] += scatM * (mucart[i] - Vec.dot(mucart, qhat) * qhat[i]) * Math.cos(phase);
-//			}
-//			Intensity000 = Math.pow(zzzNR, 2) + Math.pow(zzzNI, 2) + Vec.dot(zzzM, zzzM);
-//			peakintList[p] = thermal * (Math.pow(pppNR, 2) + Math.pow(pppNI, 2) + Vec.dot(pppM, pppM)) / Intensity000;
-
 		}
 	}
 
@@ -841,7 +810,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// update the structure based on current slider values
 		variables.recalcDistortion();
 
-		recalcStrainstuff();
+		recalcStrainMetrics();
 
 		// update the peak drawing coordinates
 		for (int p = 0; p < peakCount; p++) {
@@ -950,7 +919,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		variables.readSliders(); // Get the latest strain information
 		variables.recalcDistortion(); // Update the distortion
-		recalcStrainstuff(); // Get updat ed slatt2rotcart transformation
+		recalcStrainMetrics(); // Get updat ed slatt2rotcart transformation
 
 		double[][] limits = new double[8][3]; // HKL search limits
 		// Find out the childHKL range covered within the Qrange specified.
@@ -1049,7 +1018,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// update the peak intensities based on current structure
 
 		variables.recalcDistortion();
-		recalcStrainstuff();
+		recalcStrainMetrics();
 		recalcPowderPeakPositionsAndValues();
 		recalcIntensities();
 		recalcPowderPattern();
@@ -1105,19 +1074,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * 
 	 */
 	private void resetPowderPeaks() {
-
-		// Diagnostic code
-		// double[][] slatt2platt = new double[3][3]; // transforms childHKL to
-		// parentHKL
-		// Vec.matcopy(variables.Tmat, slatt2platt);
-		// for (int i = 0; i < 3; i++) {
-		// for (int j = 0; j < 3; j++)
-		// System.out.format("[%d][%d] = %.4f, ", i, j, slatt2platt[i][j]);
-		// System.out.println("");
-		// }
-
-		
-		
 		double tol = 0.0001;
 		powderWavelength = getText(wavTxt, powderWavelength, 2);
 		powderXMin = getText(minTxt, powderXMin, 2);
@@ -1145,14 +1101,14 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		for (int m = 0; m < nStrains; m++)
 			strainVals[m] = (2 * rval.nextFloat() - 1);// *rd.strainmodeMaxAmp[m];
 		variables.recalcDistortion();// Update the distortion parameters
-		recalcStrainstuff(); // Build the randomized dinvmetric tensor
+		recalcStrainMetrics(); // Build the randomized dinvmetric tensor
 		MathUtil.mat3copy(metric, randommetric1);
 
 		// randomize the strains again to be extra careful
 		for (int m = 0; m < nStrains; m++)
 			strainVals[m] = (2 * rval.nextFloat() - 1);// *rd.strainmodeMaxAmp[m];
 		variables.recalcDistortion();// Update the distortion parameters
-		recalcStrainstuff(); // Build the randomized dinvmetric tensor
+		recalcStrainMetrics(); // Build the randomized dinvmetric tensor
 		MathUtil.mat3copy(metric, randommetric2);
 
 		// restore the strains to their original values
@@ -1185,36 +1141,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		double[] dinvlist2 = new double[maxPeaks];// randomly strained list of dinverse values
 		double[] childHKL = new double[3];
 
-		for (int h = -limH; h <= limH; h++)
-			for (int k = -limK; k <= limK; k++)
+		for (int h = -limH; h <= limH; h++) {
+			for (int k = -limK; k <= limK; k++) {
 				for (int l = -limL; l <= limL; l++) {
 					MathUtil.set3(childHKL, h, k, l);
-
-//					// Diagnostic code
-//					Vec.matdotvect(slatt2platt, childHKL, parenthkl);
-//					// Diagnostic code
-//					double[] ttt = new double[3];
-//					for (int i = 0; i < 3; i++) {
-//						ttt[i] = Math.abs(parenthkl[i]);
-//					}
-//					for (int j = 0; j < 2; j++) {
-//						for (int i = 0; i < 2; i++) {
-//							if (ttt[i] > ttt[i + 1]) {
-//								temp = ttt[i + 1];
-//								ttt[i + 1] = ttt[i];
-//								ttt[i] = temp;
-//							}
-//						}
-//					}
-					//
-					// //Diagnostic code boolean diagnosticflag = Math.abs(ttt[0]-0)<tol &&
-					// Math.abs(ttt[1]-0)<tol && Math.abs(ttt[2]-2)<tol; if (diagnosticflag)
-					// System.out.
-					// format("orig suphkl:(%.4f,%.4f,%.4f), parhkl:(%.4f,%.4f,%.4f),
-					// ttt:(%.4f,%.4f,%.4f)%n"
-					// , childHKL[0], childHKL[1], childHKL[2], parenthkl[0], parenthkl[1],
-					// parenthkl[2], ttt[0], ttt[1], ttt[2]);
-
 					// Generate the standard metric and two randomized metrics.
 					MathUtil.mat3mul(metric0, childHKL, tempvec);
 					double dinv0 = Math.sqrt(MathUtil.dot3(childHKL, tempvec));
@@ -1257,6 +1187,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 						}
 					}
 				}
+			}
+		}
 
 		sortPowderPeaks(dinvlist0, tol);
 		// keep only a practical number of peaks
@@ -1277,6 +1209,15 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		recalcPowder(); // recalculate intensities and positions
 	}
 
+	/**
+	 * A class that takes care of picking the "best" [h k l] that will 
+	 * be displayed on a mouse-over in powder mode. Arrays.sort is passed
+	 * an ordered list of integers -- [0, 1, 2, 3, 4, ...], which are 
+	 * indices into the HKLs array. 
+	 * 
+	 * @author hanso
+	 *
+	 */
 	private static class PowderPeakSorter implements Comparator<Integer> {
 
 		private double[] dinv;
@@ -1347,8 +1288,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	
 	private void setPowderScaleFactor() {
-//		if ((isBoth || isPowder) && !variables.allAtomsSelected())
-//			return;
 		powderScaleFactor = 0;
 		for (int i = 0; i < powderXRange; i++) {
 			if (powderY[i] > powderScaleFactor)
@@ -1484,34 +1423,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		if (distAbsValA != distAbsValB)
 			return (distAbsValA < distAbsValB); // [042] better than [024]
 		return (distMinusA >= distMinusB);
-
-//		was:
-//		boolean anicerthanb = true;
-//			if (za < zb)
-//				anicerthanb = false;
-//			else if (za == zb) {
-//				if (sa > sb)
-//					anicerthanb = false;
-//				else if (sa == sb) {
-//					if (ma > mb)
-//						anicerthanb = false;
-//					else if (ma == mb) {
-//						if (dza < dzb)
-//							anicerthanb = false;
-//						else if (dza == dzb) {
-//							if (dsa > dsb)
-//								anicerthanb = false;
-//							else if (dsa == dsb) {
-//								if (dma < dmb)
-//									anicerthanb = false;
-//							}
-//						}
-//					}
-//				}
-//			}
-//
-//			return anicerthanb;
-
 	}
 
 	/**
@@ -1545,64 +1456,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		Arrays.sort(sb);
 		Arrays.sort(pa);
 		Arrays.sort(pb);
-//		int tempi;
-//		double tempr;
-//		for (int j = 0; j < 2; j++)
-//			for (int i = 0; i < 2; i++) {
-//				if (sa[i] > sa[i + 1]) {
-//					tempi = sa[i + 1];
-//					sa[i + 1] = sa[i];
-//					sa[i] = tempi;
-//				}
-//				if (sb[i] > sb[i + 1]) {
-//					tempi = sb[i + 1];
-//					sb[i + 1] = sb[i];
-//					sb[i] = tempi;
-//				}
-//				if (pa[i] > pa[i + 1]) {
-//					tempr = pa[i + 1];
-//					pa[i + 1] = pa[i];
-//					pa[i] = tempr;
-//				}
-//				if (pb[i] > pb[i + 1]) {
-//					tempr = pb[i + 1];
-//					pb[i + 1] = pb[i];
-//					pb[i] = tempr;
-//				}
-//			}
-//
 		return ((sa[0] == sb[0]) && (sa[1] == sb[1]) && (sa[2] == sb[2]) && approxEqual(pa[0], pb[0], tol)
 				&& approxEqual(pa[1], pb[1], tol) && approxEqual(pa[2], pb[2], tol));
-
-//		if (!sameCheck) {
-//		boolean fullCheck;
-//			int[] comp = new int[6];
-//			comp[0] = Math.abs(sa[0] - sa[1]);
-//			comp[1] = Math.abs(sa[0] + sa[1]);
-//			comp[2] = Math.abs(sa[1] - sa[2]);
-//			comp[3] = Math.abs(sa[1] + sa[2]);
-//			comp[4] = Math.abs(sa[0] - sa[2]);
-//			comp[5] = Math.abs(sa[0] + sa[2]);
-//			for (int j = 0; j < 3; j++)
-//				for (int jj = j + 1; jj < 3; jj++)
-//					for (int i = 0; i < 3; i++)
-//						for (int ii = i + 1; ii < 3; ii++)
-//							if ((sa[i] == sb[j]) && (sa[ii] == sb[jj]))
-//								for (int jjj = 0; jjj < 3; jjj++)
-//									if ((jjj != j) && (jjj != jj))
-//										for (int k = 0; k < 6; k++)
-//											if (sb[jjj] == comp[k]) {
-//												// System.out.println(i+","+ii+","+j+","+jj+":
-//												// "+jjj+","+tb[jjj]+","+comp[k]);
-//												hexCheck = true;
-//											}
-//		}
-//
-//		fullCheck = sameCheck; // used to be (hexCheck || sameCheck)
-//		// System.out.println("("+ta[0]+","+ta[1]+","+ta[2]+")
-//		// ("+tb[0]+","+tb[1]+","+tb[2]+"): "+fullCheck);
-//
-//		return fullCheck;
 	}
 
 	private static boolean approxEqual(double a, double b, double tol) {

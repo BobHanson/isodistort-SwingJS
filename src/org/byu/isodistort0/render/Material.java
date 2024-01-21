@@ -39,7 +39,7 @@ public class Material implements Runnable {
 		}
 	}
 
-	private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+	//private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 	/**
 	 * Flag determining wheter to precompute and store color tables for direct look

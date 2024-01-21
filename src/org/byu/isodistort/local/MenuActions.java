@@ -74,6 +74,10 @@ public class MenuActions {
 
 	abstract class IsoAction extends AbstractAction {
 
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
 		String id;
 		String label;
 		String tip;
@@ -100,6 +104,11 @@ public class MenuActions {
 		actions.put("File.Save.", null);
 		actions.put("View.", null);
 		actions.put("Set.", new IsoAction("set", "Set", null, 0) {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
 			// we can catch menu openings and adjust as necessary just before opening
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -112,6 +121,11 @@ public class MenuActions {
 			// Because this is a menu, not just an item, this action will be connected to
 			// the mousePressed action.
 
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				menuMap.get("Help.showStatus").setText(app.isStatusVisible() ? "Hide Status Bar" : "Show Status Bar");
@@ -121,6 +135,11 @@ public class MenuActions {
 
 		actions.put("File.Save.saveOriginal",
 				new IsoAction("saveOriginal", "Original ISOVIZ", "Save original values as an isoviz file.", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						app.saveOriginal();
@@ -129,6 +148,11 @@ public class MenuActions {
 
 		actions.put("File.Save.saveCurrent",
 				new IsoAction("saveCurrent", "Current ISOVIZ", "Save current values as an isoviz file.", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						app.saveCurrent();
@@ -137,6 +161,11 @@ public class MenuActions {
 
 		actions.put("File.Save.saveDistortionFile", new IsoAction("saveDistortionFile", "Distortion file",
 				"Save current configuration as a distortion file.", 0) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.saveDistortionFile(null);
@@ -153,6 +182,11 @@ public class MenuActions {
 //
 		actions.put("File.Save.saveCIF",
 				new IsoAction("saveCIF", "-CIF file", "Save current configuration as CIF file.", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						new Thread(() -> {
@@ -163,6 +197,11 @@ public class MenuActions {
 
 		actions.put("File.Save.saveTOPAS",
 				new IsoAction("saveTOPAS", "TOPAS.str file", "Save ISODISTORT section of TOPAS.STR.", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						app.saveTOPAS(null);
@@ -170,6 +209,11 @@ public class MenuActions {
 				});
 
 		actions.put("File.Save.saveFULLPROF", new IsoAction("saveFULLPROF", "FullProf.pcr file", "Save ", 0) {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.saveFULLPROF(null);
@@ -179,6 +223,11 @@ public class MenuActions {
 		
 		actions.put("File.Save.saveImage",
 				new IsoAction("saveImage", "-Save Image", "Save current PNG image.", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						app.saveImage();
@@ -188,6 +237,11 @@ public class MenuActions {
 
 
 		actions.put("View.domains", new IsoAction("viewDomains", "Domains", "View domains for this distortion.", 0) {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.viewPage("domains");
@@ -197,6 +251,11 @@ public class MenuActions {
 
 		actions.put("View.primaryOrderParameters", new IsoAction("viewPrimary", "Primary Order Parameters",
 				"View a list of the primary order parameters.", 0) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.viewPage("primary");
@@ -205,6 +264,11 @@ public class MenuActions {
 
 		actions.put("View.modesDetails", new IsoAction("viewModesDetails", "-Modes Details",
 				"View a detailed description of the symmetry modes.", 0) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.viewPage("modesdetails");
@@ -213,6 +277,11 @@ public class MenuActions {
 
 		actions.put("View.viewCompleteMode", new IsoAction("viewComplete", "Complete Mode Details",
 				"View the complete listing of symmetry mode details.", 0) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.viewPage("completemodesdetails");
@@ -221,6 +290,11 @@ public class MenuActions {
 
 		actions.put("View.viewIRMatrices", new IsoAction("viewIRMatrices", "IR Matrices",
 				"View the full list of irreducible representation matrices.", 0) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.viewPage("irreps");
@@ -230,6 +304,11 @@ public class MenuActions {
 
 		actions.put("View.subgroupTree", new IsoAction("viewSubgroupTree", "-Subgroup Tree",
 				"View the subgroup tree listing for this distortion.", 0) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.viewSubgroupTree(null);
@@ -238,6 +317,11 @@ public class MenuActions {
 
 		actions.put("Set.zero", new IsoAction("setZero", "Reset to Parent",
 				"Set the sliders to their 0 'parent' positions.", KeyEvent.VK_Z) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 'z', 0));
@@ -246,6 +330,11 @@ public class MenuActions {
 
 		actions.put("Set.resetVariables", new IsoAction("setResetVariables", "Reset to Child",
 				"Reset the sliders to their original 'child' positions.", KeyEvent.VK_I) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 'i', 0));
@@ -254,6 +343,11 @@ public class MenuActions {
 
 		actions.put("Set.toggle", new IsoAction("setToggle", "Toggle Irrep Sliders",
 				"Toggle Irrep sliders between parent and child.", KeyEvent.VK_S) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.variables.keyTyped(new KeyEvent(app.frame, KeyEvent.KEY_TYPED, 0, 0, 0, 's', 0));
@@ -262,6 +356,11 @@ public class MenuActions {
 
 		actions.put("Set.resetView", new IsoAction("setResetView", "-Reset View",
 				"Reset the view and sliders to their original settings.", KeyEvent.VK_R) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.reset();
@@ -270,6 +369,11 @@ public class MenuActions {
 
 		actions.put("Set.center",
 				new IsoAction("setCenter", "Recenter Structure", "Center the strucure in the window.", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						// IsoDistortApp only
@@ -279,6 +383,11 @@ public class MenuActions {
 
 		actions.put("Set.preferences",
 				new IsoAction("setPreferences", "-Preferences", "Set various atom and bond parameters.", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						app.setPreferences(null);
@@ -286,6 +395,11 @@ public class MenuActions {
 				});
 
 		actions.put("Help.showStatus", new IsoAction("helpShowStatus", "Show Status Bar", "Show the status bar.", 0) {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.toggleStatusVisible();
@@ -294,6 +408,11 @@ public class MenuActions {
 
 		actions.put("Help.isodistortHome",
 				new IsoAction("helpIsodistortHome", "ISODISTORT Home Page", "Show the ISODISTORT Home Page", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						FileUtil.openURL(app, "https://iso.byu.edu/iso/isodistort.php");
@@ -302,6 +421,11 @@ public class MenuActions {
 
 		actions.put("Help.isodistortHelp",
 				new IsoAction("helpIsodistortHelp", "ISODISTORT Help", "Show the ISODISTORT Help page", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						FileUtil.openURL(app, "https://stokes.byu.edu/iso/isodistorthelp.php");
@@ -310,6 +434,11 @@ public class MenuActions {
 
 		actions.put("Help.isotropyHome", new IsoAction("helpIsotropyHome", "ISOTROPY Software Suite Home Page",
 				"Show the ISOTROPY home page", 0) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				FileUtil.openURL(app, "https://iso.byu.edu/iso/isotropy.php");
@@ -318,6 +447,11 @@ public class MenuActions {
 
 		actions.put("Help.swingjs", new IsoAction("helpSwingjs", "About java2script/SwingJS",
 				"Go to the java2script/SwingJS GitHub page", 0) {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				FileUtil.openURL(app, "https://github.com/BobHanson/java2script");

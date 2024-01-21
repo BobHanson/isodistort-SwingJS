@@ -94,6 +94,10 @@ import javax.swing.border.EmptyBorder;
  */
 public abstract class IsoDialog extends JDialog {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private static CIFDialog cifDialog;
 	private static DistortionDialog distortionDialog;
 	private static FormDialog formDialog;
@@ -113,6 +117,11 @@ public abstract class IsoDialog extends JDialog {
 	}
 
 	private static class CIFDialog extends IsoDialog {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
 
 		static void openDialog(IsoApp app, Map<String, Object> formData) {
 			if (cifDialog == null) {
@@ -211,6 +220,11 @@ public abstract class IsoDialog extends JDialog {
 
 	private static class DistortionDialog extends FormDialog {
 
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+
 		static void openDisDialog(IsoApp app, Map<String, Object> formData) {
 			if (distortionDialog == null) {
 				distortionDialog = new DistortionDialog(app, formData);
@@ -236,6 +250,11 @@ public abstract class IsoDialog extends JDialog {
 	}
 
 	private static class FormDialog extends IsoDialog {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
 
 		static void openDialog(IsoApp app, Map<String, Object> formData) {
 			if (formDialog == null) {
@@ -267,6 +286,11 @@ public abstract class IsoDialog extends JDialog {
 
 	private static class FULLPROFDialog extends FormDialog {
 
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+
 		static void openFPDialog(IsoApp app, Map<String, Object> formData) {
 			if (fullProfDialog == null) {
 				fullProfDialog = new FULLPROFDialog(app, formData);
@@ -288,6 +312,11 @@ public abstract class IsoDialog extends JDialog {
 	}
 
 	private static class PrefsDialog extends IsoDialog {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
 
 		static void openDialog(IsoApp app, Map<String, Object> formData) {
 			if (prefsDialog == null) {
@@ -328,6 +357,11 @@ public abstract class IsoDialog extends JDialog {
 
 	private static class TreeDialog extends IsoDialog {
 
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+
 		static void openDialog(IsoApp app, Map<String, Object> formData) {
 			if (treeDialog == null) {
 				treeDialog = new TreeDialog(app, formData);
@@ -357,74 +391,6 @@ public abstract class IsoDialog extends JDialog {
 				"endenable", //e1, //
 				"label", "\n",//
 				"ctreecif", "label", "Generate CIF output for subgroup tree", //
-				"enable", //e1, //
-				"label", "\nNumber of decimal places in CIF file:", //
-				"bcifdec", " 5, 6, 7, 8, 9,10,11,12,13,14,15,16", //
-
-				"label", "\n", "cnonstandardsetting", //
-				"enable", //e2, //
-				"label", "Use alternate (possibly nonstandard) setting in CIF output (matrix S\u207b\u00b9)", //
-				"label", "\n             with respect to:", //
-				"rsettingwrt", "parent", "parent", //
-				"rsettingwrt", "subgroup", "subgroup", //
-				"label", "\n      Basis vectors of subgroup lattice (rational numbers):", //
-				"grid", "3", "8", //
-
-				"label", " ", //
-				"label", "  a'    =", //
-				"fbasist11", //
-				"label", "  a     +", //
-				"fbasist12", //
-				"label", "  b     +", //
-				"fbasist13", //
-				"label", "  c", //
-
-				"label", " ", //
-				"label", "  b'    =", //
-				"fbasist21", //
-				"label", "  a     +", //
-				"fbasist22", //
-				"label", "  b     +", //
-				"fbasist23", //
-				"label", "  c", //
-
-				"label", " ", //
-				"label", "  c'    =", //
-				"fbasist31", //
-				"label", "  a     +", //
-				"fbasist32", //
-				"label", "  b     +", //
-				"fbasist33", //
-				"label", "  c", //
-
-				"label", "\n      Origin of subgroup (either rational or decimal numbers):", //
-				"grid", "1", "8", //
-				"label", " ", "Forigint1", //
-				"label", "  a     +", //
-				"Forigint2", //
-				"label", "  b     +", //
-				"Forigint3", //
-				"label", "  c", //
-				// end of grid
-				"endenable", //e2, // 
-				"label", "\n", //
-				"ccifmovie", //
-				"label", "Make CIF movie", //
-				"enable", //e2, //
-				"grid", "5", "2", //
-				"label", "       minimum amplitude:", //
-				"dampmincifmovie", //
-				"label", "       maximum amplitude:", //
-				"dampmaxcifmovie", //
-				"label", "        number of frames:", //
-				"inframescifmovie", //
-				"label", " fractional # of periods:", //
-				"fperiodscifmovie", //
-				"label", "     amplitude variation:", //
-				"rvarcifmovie", "linear", "linear", //
-				"rvarcifmovie", "sine", "sine-wave", //
-				"endenable", //e2,
-				"endenable", //e1,
 		};
 
 	}
@@ -434,6 +400,11 @@ public abstract class IsoDialog extends JDialog {
 	}
 
 	private static class TOPASDialog extends IsoDialog {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
 
 		static void openDialog(IsoApp app, Map<String, Object> formData) {
 			if (topasDialog == null) {

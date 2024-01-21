@@ -14,7 +14,7 @@ in realtime.
 public class Renderer
 {
 
-private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+//private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 /**
  Flag controls table lookup mode for materials, true means on.
@@ -530,10 +530,10 @@ int anaglyphEye = 0;
 
 //PACK RGB INTO ONE WORD
 
-private void pack(int px[], int i, int rgb)
-{
- pack(px, i, getR(rgb), getG(rgb), getB(rgb));
-}
+//private void pack(int px[], int i, int rgb)
+//{
+// pack(px, i, getR(rgb), getG(rgb), getB(rgb));
+//}
 
 private void pack(int px[], int i, int r, int g, int b)
 {
@@ -554,14 +554,14 @@ private static int pack(int r, int g, int b)
  return r << 16 | g << 8 | b | 0xff000000;
 }
 
-//UNPACK RGB OUT OF ONE WORD
-
-private static void unpack(int rgb[], int packed)
-{
- rgb[0] = (packed >> 16) & 255;
- rgb[1] = (packed >> 8) & 255;
- rgb[2] = (packed) & 255;
-}
+////UNPACK RGB OUT OF ONE WORD
+//
+//private static void unpack(int rgb[], int packed)
+//{
+// rgb[0] = (packed >> 16) & 255;
+// rgb[1] = (packed >> 8) & 255;
+// rgb[2] = (packed) & 255;
+//}
 
 private static int getR(int packed)
 {
@@ -1053,10 +1053,10 @@ private void clip2Vert(Geometry s, int clip1, int clip2, int c)
  fillTriangle(s, tv1, tv2, t[c]);
 
 }
-private static double lerp(double t, double a, double b)
-{
- return a + t * (b - a);
-}
+//private static double lerp(double t, double a, double b)
+//{
+// return a + t * (b - a);
+//}
 private void clip(double[] n, double[] a, double[] b)
 {
  n[2] = FL - epsilonPlane;
@@ -1472,8 +1472,6 @@ public void xf(Matrix m, double x, double y, double z, double w, double v[])
 //I ALSO NEED TO ADD IN EXTENDED LIGHT SOURCES (JUST LOWER THE POWER
 //WHEN DOING SHINY CALCULATION). -KEN
 
-private static double v[] = { 0, 0, 0, 0, 0, 0 };
-
 /**
  Renders vertex i ( packed x,y,z) with material m.
  @param i vertex to be rendered 
@@ -1667,17 +1665,17 @@ private static double noiseTexture(Material m, double x, double y, double z)
     return 1;
 }
 
-//COMPUTE DIRECTION OF SPECULAR REFLECTION, THEN DOT PRODUCT WITH LIGHT
-
-private static double computeHilite(double x, double y, double z, double nx, double ny, double nz, double L[])
-{
- double d = 2 * (x * nx + y * ny + z * nz);
- double rx = d * nx - x;
- double ry = d * ny - y;
- double rz = d * nz - z;
- return L[0] * rx + L[1] * ry + L[2] * rz;
-}
-
+////COMPUTE DIRECTION OF SPECULAR REFLECTION, THEN DOT PRODUCT WITH LIGHT
+//
+//private static double computeHilite(double x, double y, double z, double nx, double ny, double nz, double L[])
+//{
+// double d = 2 * (x * nx + y * ny + z * nz);
+// double rx = d * nx - x;
+// double ry = d * ny - y;
+// double rz = d * nz - z;
+// return L[0] * rx + L[1] * ry + L[2] * rz;
+//}
+//
 //FASTER VERSION OF HILITE, WHICH ASSUMES CAMERA IS IN Z DIRECTION
 
 private static double computeFastHilite(double nx, double ny, double nz, double L[])
@@ -1709,10 +1707,7 @@ private double normal[] = new double[3]; // VERTEX NORMAL
 private Matrix normat = new Matrix(); // NORMAL MATRIX XFORM
 private double transparency; // TRANSPARENCY FOR CURRENT OBJECT
 private final int NB = 14; // PRECISION FOR FIXED PT PIXEL OPS
-private int NBPower = (int) Math.pow(2, this.NB);
 private int a[], b[], c[] = new int[6], d[];
-//TEMPS FOR FILLING TRIANGLE
-private double refl[] = new double[3]; // TEMP TO COMPUTE REFL VECTOR
 private final int UNRENDERED = 1234567; // RENDERING PHASE
 
 private static int nLights = 0; // NUM. OF LIGHT SOURCES DEFINED

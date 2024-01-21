@@ -2,8 +2,6 @@
 //Copyright 2001 Ken Perlin
 
 package org.byu.isodistort0.render;
-import org.byu.isodistort0.jama.EigenvalueDecomposition;
-import org.byu.isodistort0.jama.Matrix;
 
 /**
 Provides functionality to manipulate vectors.
@@ -324,22 +322,21 @@ Calculates the description used to render an ellipsoid -- Branton Campbell
 public static void calculateellipstuff(double[][] matrixform, double[] ellipstuff)
 {
 	int wx=0, wy=1, wz=2, dx=3, dy=4, dz=5, ang=6;
-	double trc = 0, det = 0, lensq=0, rotangle=0;
+	double trc = 0, rotangle=0;
 	double rotaxis[] = new double[3];
 	double widths[] = new double[3];
-	double NV[][] = new double[3][3];
-	double ND[][] = new double[3][3];
+	
 
 //    System.out.println ("ellipmat: "+matrixform[0][0]+", "+matrixform[0][1]+", "+matrixform[0][2]+", "+matrixform[1][0]+", "+matrixform[1][1]+", "+matrixform[1][2]+", "+matrixform[2][0]+", "+matrixform[2][1]+", "+matrixform[2][2]);
 
 	trc = mattrace(matrixform);
-	det = matdeterminant(matrixform);
+	matdeterminant(matrixform);
 	for(int i=0; i<3; i++)
 		for(int j=0; j<3; j++)
-			lensq += Math.pow(matrixform[i][j],2);
+			Math.pow(matrixform[i][j],2);
 
-	if ( (Math.sqrt(lensq) < 0.000001) || (det < 0.000001) || true) // "true" temporarily bypasses the ellipoidal analysis.
-	{
+//	if ( (Math.sqrt(lensq) < 0.000001) || (det < 0.000001) || true) // "true" temporarily bypasses the ellipoidal analysis.
+//	{
 		double avgrad = Math.sqrt(Math.abs(trc)/3.0);
 		widths[0] = avgrad;
 		widths[1] = avgrad;
@@ -348,24 +345,24 @@ public static void calculateellipstuff(double[][] matrixform, double[] ellipstuf
 		rotaxis[1] = 0;
 		rotaxis[2] = 1;
 		rotangle = 0;
-	}
-	else
-	{
-		Matrix jamat = new Matrix(matrixform);
-		EigenvalueDecomposition E = new EigenvalueDecomposition(jamat, true);
-		Matrix D = E.getD();
-		Matrix V = E.getV();
-		NV = V.getArray();
-		ND = D.getArray();
-		
-		widths[0] = Math.sqrt((ND[0][0]));
-		widths[1] = Math.sqrt((ND[1][1]));
-		widths[2] = Math.sqrt((ND[2][2]));
-		rotangle = Math.acos(.5*(NV[0][0]+NV[1][1]+NV[2][2]-1));
-		rotaxis[0] = (NV[2][1]-NV[1][2])/(2*Math.sin(rotangle));
-		rotaxis[1] = (NV[0][2]-NV[2][0])/(2*Math.sin(rotangle));
-		rotaxis[2] = (NV[1][0]-NV[0][1])/(2*Math.sin(rotangle));
-	}
+//	}
+//	else
+//	{
+//		Matrix jamat = new Matrix(matrixform);
+//		EigenvalueDecomposition E = new EigenvalueDecomposition(jamat, true);
+//		Matrix D = E.getD();
+//		Matrix V = E.getV();
+//		NV = V.getArray();
+//		ND = D.getArray();
+//		
+//		widths[0] = Math.sqrt((ND[0][0]));
+//		widths[1] = Math.sqrt((ND[1][1]));
+//		widths[2] = Math.sqrt((ND[2][2]));
+//		rotangle = Math.acos(.5*(NV[0][0]+NV[1][1]+NV[2][2]-1));
+//		rotaxis[0] = (NV[2][1]-NV[1][2])/(2*Math.sin(rotangle));
+//		rotaxis[1] = (NV[0][2]-NV[2][0])/(2*Math.sin(rotangle));
+//		rotaxis[2] = (NV[1][0]-NV[0][1])/(2*Math.sin(rotangle));
+//	}
 //	System.out.println(ND[0][0]+" "+ND[0][1]+" "+ND[0][2]+" "+ND[1][0]+" "+ND[1][1]+" "+ND[1][2]+" "+ND[2][0]+" "+ND[2][1]+" "+ND[2][2]);
 //	System.out.println(NV[0][0]+" "+NV[0][1]+" "+NV[0][2]+" "+NV[1][0]+" "+NV[1][1]+" "+NV[1][2]+" "+NV[2][0]+" "+NV[2][1]+" "+NV[2][2]);
 //	System.out.println("lensq="+lensq+", det="+det+", w0="+widths[0]+", w1="+widths[1]+", w2="+widths[2]+", r0="+rotaxis[0]+", r1="+rotaxis[1]+", r2="+rotaxis[2]);

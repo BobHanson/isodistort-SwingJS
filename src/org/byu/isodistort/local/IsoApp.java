@@ -87,6 +87,10 @@ public abstract class IsoApp {
 	
 	public static class IsoFrame extends JFrame {
 
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
 		private JComponent contentPane;
 		private JTabbedPane tabbedPane;
 
@@ -187,6 +191,11 @@ public abstract class IsoApp {
 	}
 
 	private class StatusPanel extends JScrollPane {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
 
 		JTextArea area;
 

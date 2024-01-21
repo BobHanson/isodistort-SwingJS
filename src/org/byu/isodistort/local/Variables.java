@@ -7,7 +7,6 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -2409,6 +2408,7 @@ public class Variables {
 		final Font pointerFont = new Font(Font.SANS_SERIF, Font.PLAIN, 8);
 		private JPanel[][] typePanels = new JPanel[MODE_COUNT][];
 
+		@SuppressWarnings("serial")
 		class IsoSlider extends JSlider implements ChangeListener {
 
 			private int min; // 0 or -SliderMax

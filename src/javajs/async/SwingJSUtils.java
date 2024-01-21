@@ -771,6 +771,7 @@ public class SwingJSUtils {
 		}
 	}
 
+	@SuppressWarnings("serial")
 	public static class Timeout extends Timer implements SingletonI {
 
 		private static int timeoutID = 0;

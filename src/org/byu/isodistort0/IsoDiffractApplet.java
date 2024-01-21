@@ -1227,7 +1227,7 @@ public class IsoDiffractApplet extends Applet implements Runnable
 	 */
 	public boolean checkPeakEquiv(double[] suphkla, double[] suphklb)
 	{
-		boolean hexCheck = false, sameCheck = false, fullCheck;
+		boolean sameCheck = false, fullCheck;
 		int[] sa = new int[3], sb = new int[3], comp = new int[6];
 		double[] parhkla = new double[3], parhklb = new double[3], pa = new double[3], pb = new double[3];
 		int tempi;
@@ -1292,8 +1292,6 @@ public class IsoDiffractApplet extends Applet implements Runnable
 									if ((jjj!=j)&&(jjj!=jj))
 										for (int k=0; k<6; k++)
 											if (sb[jjj]==comp[k]){
-												//System.out.println(i+","+ii+","+j+","+jj+": "+jjj+","+tb[jjj]+","+comp[k]);
-												hexCheck = true;
 											}
 		}
 
@@ -1995,9 +1993,9 @@ public class IsoDiffractApplet extends Applet implements Runnable
 	 */
 		private void readFile()
 		{			
-			if (false && readMode)
-				dataString = getParameter("isoData");
-			else
+//			if (false && readMode)
+//				dataString = getParameter("isoData");
+//			else
 			{
 				try
 				{

@@ -27,6 +27,8 @@ class Mode {
 	final static int STRAIN = 5;
 	final static int IRREP = 6; // irreducible representations
 	final static int MODE_COUNT = 7;
+	
+	static final Color COLOR_STRAIN = Color.DARK_GRAY;
 
 	/**
 	 * DISP, IRREP, ....
@@ -351,7 +353,7 @@ class Mode {
 			brightness = 0.40f;
 			break;
 		case STRAIN:
-			colorT[0] = Color.DARK_GRAY;
+			colorT[0] = COLOR_STRAIN;
 			return;
 		case IRREP:
 			colorT[0] = new Color(0xA0A0A0); // BH a bit darker than LIGHT_GRAY C0C0C0

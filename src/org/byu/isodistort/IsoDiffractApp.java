@@ -82,6 +82,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 *
 	 * 
 	 */
+	@SuppressWarnings("serial")
 	private static class RenderPanel extends JPanel {
 
 		private IsoDiffractApp app;
@@ -254,10 +255,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 */
 	double[][] rotcart2slatt = new double[3][3];
 
-	/**
-	 * distance (in pixels) to the nearest peak from the center
-	 */
-	double crystalNearestDistanceToOrigin;
 	/**
 	 * maximum peak radius
 	 */
@@ -471,8 +468,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	void drawCrystPeaks(Graphics gr) {
 		for (int p = 0; p < peakCount; p++) {
-			if (peakIntensity[p] < MIN_PEAK_INTENSITY)
-				continue;
 			drawCrystalCircle(gr, crystalPeakXY[p][0], crystalPeakXY[p][1], crystalPeakRadius[p], crystalMaxPeakRadius,
 					peakColor[p]);
 		}
@@ -600,13 +595,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		double tol2 = (isPowder ? 2 * 2 : 6 * 6);
 		int thisPeak = -1, currentcolor = 5;
 		String mouseovertext, valuestring = "", specifictext = "";
-		boolean isPowder = (this.isPowder || isBoth && y > drawHeight - shortPowderHeight);
+		boolean isPowder = this.isPowder && (!isBoth || y > drawHeight - shortPowderHeight);
 		for (int p = 0; p < peakCount; p++) {
 			if (peakIntensity[p] < MIN_PEAK_INTENSITY)
 				continue;
 			if (isPowder) {
 				if (approxEqual(x, powderPeakX[p], tol2)
-						&& (Math.abs(y - (drawHeight - powderStickYOffset)) < 1.25 * normalTickLength)
+						&& (!isBoth || (Math.abs(y - (drawHeight - powderStickYOffset)) < 1.25 * normalTickLength))
 						&& (peakColor[p] < currentcolor)) {
 					thisPeak = p;
 					currentcolor = peakColor[p];
@@ -892,15 +887,15 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		MathUtil.mat3copy(variables.Tmat, slatt2platt);
 		MathUtil.mat3inverse(slatt2platt, platt2slatt, tempvec, tempmat);
 
-		hklO[0] = getText(hOTxt,hklO[0], 2);
-		hklO[1] = getText(kOTxt,hklO[1], 2);
-		hklO[2] = getText(lOTxt,hklO[2], 2);
-		hklH[0] = getText(hHTxt,hklH[0], 2);
-		hklH[1] = getText(kHTxt,hklH[1], 2);
-		hklH[2] = getText(lHTxt,hklH[2], 2);
-		hklV[0] = getText(hVTxt,hklV[0], 2);
-		hklV[1] = getText(kVTxt,hklV[1], 2);
-		hklV[2] = getText(lVTxt,hklV[2], 2);
+		hklO[0] = getText(hOTxt, hklO[0], 2);
+		hklO[1] = getText(kOTxt, hklO[1], 2);
+		hklO[2] = getText(lOTxt, hklO[2], 2);
+		hklH[0] = getText(hHTxt, hklH[0], 2);
+		hklH[1] = getText(kHTxt, hklH[1], 2);
+		hklH[2] = getText(lHTxt, hklH[2], 2);
+		hklV[0] = getText(hVTxt, hklV[0], 2);
+		hklV[1] = getText(kVTxt, hklV[1], 2);
+		hklV[2] = getText(lVTxt, hklV[2], 2);
 
 		crystalDInvRange = getText(qTxt, crystalDInvRange * (2 * Math.PI), 2) / (2 * Math.PI);
 
@@ -920,7 +915,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// Identify the direct-space direction perpendicular to display plane.
 		double[] uvw = new double[3];
 		MathUtil.cross3(crystalHkldirections[0], crystalHkldirections[1], uvw);
-
 		variables.readSliders(); // Get the latest strain information
 		variables.recalcDistortion(); // Update the distortion
 		recalcStrainMetrics(); // Get updat ed slatt2rotcart transformation
@@ -931,7 +925,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
 		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[0]);
 		MathUtil.scale3(limits[0], -1, limits[1]);
-		
+
 		MathUtil.set3(tempvec0, 0, crystalDInvRange, 0);
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
 		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[2]);
@@ -946,12 +940,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
 		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[5]);
 		MathUtil.scale3(limits[5], -1, limits[6]);
-
 		for (int ii = 0; ii < 3; ii++) {
 			double tempmin = 1000;
 			double tempmax = -1000;
 			for (int nn = 0; nn < 8; nn++) {
-				double d = limits[nn][ii]; 
+				double d = limits[nn][ii];
 				if (d > tempmax)
 					tempmax = d;
 				if (d < tempmin)
@@ -963,37 +956,33 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		// Identify the peaks to display.
 		peakCount = 0;
-		crystalNearestDistanceToOrigin = drawHalfWidth;
+		double r2max = drawHalfWidth * drawHalfWidth;
+		double f2 = r2max / crystalDInvRange / crystalDInvRange;
 		double[] childHKL = new double[3], childHKLcart = new double[3];
 		for (int H = hklrange[0][0]; H <= hklrange[0][1]; H++)
 			for (int K = hklrange[1][0]; K <= hklrange[1][1]; K++)
 				for (int L = hklrange[2][0]; L <= hklrange[2][1]; L++) {
-					boolean planeQ = false;
-					boolean rangeQ = false;
 					MathUtil.set3(childHKL, H, K, L);
 					MathUtil.vecaddN(childHKL, -1.0, crystalHklCenter, tempvec0);
 					MathUtil.mat3mul(slatt2rotcart, tempvec0, childHKLcart);
-
-					double inplanetest = Math.abs(MathUtil.dot3(tempvec0, uvw));
-					if (inplanetest < ztolerance)
-						planeQ = true; // HKL point lies in the display plane
-					if ((Math.abs(childHKLcart[0]) < crystalDInvRange)
-							&& (Math.abs(childHKLcart[1]) < crystalDInvRange))
-						rangeQ = true; // HKL point lies in q range of display
-					if (planeQ && rangeQ) {
-						// Save the XY coords of a good peak.
-						MathUtil.copy3(childHKL, crystalPeakHKL[peakCount]);
-						peakMultiplicity[peakCount] = 1;
-						double tempscalar = (childHKLcart[0] * childHKLcart[0] + childHKLcart[1] * childHKLcart[1])
-								* (drawHalfWidth / crystalDInvRange);
-						if ((Math.abs(tempscalar) > 0.1) && (tempscalar < crystalNearestDistanceToOrigin))
-							crystalNearestDistanceToOrigin = tempscalar;
-						peakCount++;
+					if (Math.abs(MathUtil.dot3(tempvec0, uvw)) >= ztolerance
+							|| Math.abs(childHKLcart[0]) >= crystalDInvRange
+							|| Math.abs(childHKLcart[1]) >= crystalDInvRange)
+						continue;
+					// HKL point lies in q range of display
+					// HKL point lies in the display plane
+					// Save the XY coords of a good peak.
+					MathUtil.copy3(childHKL, crystalPeakHKL[peakCount]);
+					peakMultiplicity[peakCount] = 1;
+					double r2 = (childHKLcart[0] * childHKLcart[0] + childHKLcart[1] * childHKLcart[1])	* f2;
+					if ((Math.abs(r2) > 0.01) && (r2 < r2max)) {
+						r2max = r2;
 					}
+					peakCount++;
 				}
 
 		// Set the max peak radius
-		crystalMaxPeakRadius = Math.min(crystalNearestDistanceToOrigin / 2, 40);
+		crystalMaxPeakRadius = Math.min(Math.sqrt(r2max) / 2, 40);
 
 		// Identify the tickmark locations along axis0.
 		// cycle over the two axes

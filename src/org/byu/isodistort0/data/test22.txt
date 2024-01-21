@@ -1,0 +1,228 @@
+# combination of displacive, occupational, magnetic, rotational, and ellipsoidal modes.
+#isodistort_version_number 
+!isoversion 6.1
+ 
+#atom_sphere_radius_in_angstroms 
+!atommaxradius    0.40000
+#angstroms_per_magneton 
+!angstromspermagneton    0.50000
+ 
+#angstroms_per_radian 
+!angstromsperradian    0.50000
+ 
+#maximum_bond_length_in_angstroms 
+!maxbondlength    2.31000
+ 
+#applet_width_in_pixels 
+!appletwidth   1024
+ 
+#parentcell_parameters_in_angstroms_and_radians 
+!parentcell 
+        4.20000        4.20000        4.20000        1.57080        1.57080        1.57080
+ 
+#parent_origin_in_supercell_units 
+!parentorigin 
+   0.33333   0.66667   0.66667
+ 
+#rows_are_parent_basis_vectors_in_supercell_units 
+!parentbasis 
+   0.33333   0.66667  -0.33333
+   0.33333  -0.33333  -0.33333
+  -0.66667  -0.33333  -0.33333
+ 
+#parentatom/label/element 
+!atomtypelist 
+   1 Sr Sr 
+   2 Ti Ti 
+   3 O O 
+ 
+#parentatom/subatom/label 
+!atomsubtypelist 
+   1   1 Sr_1 
+   2   1 Ti_1 
+   3   1 O_1 
+ 
+#parentatom/type/subatom/x/y/z/occupation/mx/my/mz_for_each_subatom 
+!atomcoordlist 
+    1    1    1   0.00000   0.00000   0.50000 
+    1    1    2   0.33333   0.66667   0.16667 
+    1    1    3   0.66667   0.33333   0.83333 
+    1    1    4   0.00000   1.00000   0.50000 
+    1    1    5   1.00000   0.00000   0.50000 
+    1    1    6   1.00000   1.00000   0.50000 
+    2    1    1   0.00000   0.00000   0.00000 
+    2    1    2   0.33333   0.66667   0.66667 
+    2    1    3   0.66667   0.33333   0.33333 
+    2    1    4   0.00000   0.00000   1.00000 
+    2    1    5   0.00000   1.00000   0.00000 
+    2    1    6   0.00000   1.00000   1.00000 
+    2    1    7   1.00000   0.00000   0.00000 
+    2    1    8   1.00000   0.00000   1.00000 
+    2    1    9   1.00000   1.00000   0.00000 
+    2    1   10   1.00000   1.00000   1.00000 
+    3    1    1   0.16667   0.33333   0.83333 
+    3    1    2   0.50000   0.00000   0.50000 
+    3    1    3   0.83333   0.66667   0.16667 
+    3    1    4   0.66667   0.83333   0.83333 
+    3    1    5   0.00000   0.50000   0.50000 
+    3    1    6   0.33333   0.16667   0.16667 
+    3    1    7   0.16667   0.83333   0.83333 
+    3    1    8   0.50000   0.50000   0.50000 
+    3    1    9   0.83333   0.16667   0.16667 
+    3    1   10   0.50000   1.00000   0.50000 
+    3    1   11   1.00000   0.50000   0.50000 
+ 
+#parentatom1/type1/subatom1/parentatom2/type2/subatom2_for_each_bond 
+!bondlist 
+    1    1    1      3    1    1 
+    1    1    1      3    1    2 
+    1    1    1      3    1    5 
+    1    1    1      3    1    6 
+    1    1    1      3    1    8 
+    1    1    2      3    1    3 
+    1    1    2      3    1    5 
+    1    1    2      3    1    6 
+    1    1    2      3    1    8 
+    1    1    2      3    1   10 
+    1    1    3      3    1    1 
+    1    1    3      3    1    2 
+    1    1    3      3    1    4 
+    1    1    3      3    1    8 
+    1    1    3      3    1   11 
+    1    1    4      3    1    5 
+    1    1    4      3    1    7 
+    1    1    4      3    1   10 
+    1    1    5      3    1    2 
+    1    1    5      3    1    9 
+    1    1    5      3    1   11 
+    1    1    6      3    1    3 
+    1    1    6      3    1    4 
+    1    1    6      3    1    8 
+    1    1    6      3    1   10 
+    1    1    6      3    1   11 
+    2    1    1      3    1    6 
+    2    1    2      3    1    1 
+    2    1    2      3    1    4 
+    2    1    2      3    1    5 
+    2    1    2      3    1    7 
+    2    1    2      3    1    8 
+    2    1    2      3    1   10 
+    2    1    3      3    1    2 
+    2    1    3      3    1    3 
+    2    1    3      3    1    6 
+    2    1    3      3    1    8 
+    2    1    3      3    1    9 
+    2    1    3      3    1   11 
+    2    1    4      3    1    1 
+    2    1    6      3    1    7 
+    2    1    7      3    1    9 
+    2    1    9      3    1    3 
+    2    1   10      3    1    4 
+    3    1    1      3    1    4 
+    3    1    1      3    1    5 
+    3    1    1      3    1    7 
+    3    1    1      3    1    8 
+    3    1    2      3    1    6 
+    3    1    2      3    1    8 
+    3    1    2      3    1    9 
+    3    1    2      3    1   11 
+    3    1    3      3    1    6 
+    3    1    3      3    1    8 
+    3    1    3      3    1    9 
+    3    1    3      3    1   11 
+    3    1    4      3    1    7 
+    3    1    4      3    1    8 
+    3    1    4      3    1   10 
+    3    1    5      3    1    7 
+    3    1    5      3    1    8 
+    3    1    5      3    1   10 
+    3    1    6      3    1    8 
+    3    1    6      3    1    9 
+    3    1    7      3    1   10 
+    3    1    8      3    1   10 
+    3    1    8      3    1   11 
+    3    1    9      3    1   11 
+#irrepnum/irreplabel_for_each_contributing_irrep 
+!irreplist 
+  1 GM4+     
+  2 GM4-     
+  3 mGM4+     
+  4 GM1+     
+  5 GM5+     
+ 
+#strainmodenum/amp/maxamp/irrepnum/modelabel/modevector_for_each_mode 
+!strainmodelist 
+  1    0.00000   0.10000    4 GM1+strain(a) 
+   0.57735   0.57735   0.57735   0.00000   0.00000   0.00000 
+  2    0.00000   0.10000    5 GM5+strain(a) 
+   0.00000   0.00000   0.00000   0.81650   0.81650   0.81650 
+ 
+#parentatom/dispmodenum/amp/maxamp/irrepnum/modelabel/(modevector_for_each_subatom)_for_each_mode 
+!displacivemodelist 
+    2    1   0.00000   1.00000    2 GM4-[Ti:a]T1u(a) 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+ 
+#parentatom/magmodenum/amp/maxamp/irrepnum/modelabel/(modevector_for_each_subatom)_for_each_mode 
+!magneticmodelist 
+    2    1   0.00000   4.00000    3 [0,0,0]mGM4+[Ti:a]T1g(a) 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+ 
+#parentatom/rotmodenum/amp/maxamp/irrepnum/modelabel/(modevector_for_each_subatom)_for_each_mode 
+!rotationalmodelist 
+    2    1   0.00000   4.00000    3 [0,0,0]GM4+[Ti:a]T1g(a) 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   0.00000   0.00000  -0.13746 
+   
+#parentatom/ellipmodenum/amp/maxamp/irrepnum/modelabel/(modevector_for_each_subatom)_for_each_mode 
+!ellipsoidmodelist 
+    2    1   0.00000   1.00000    3 [0,0,0]GM4+[Ti:a]TEST 
+   0.10000   0.10000   0.10000   0.00000   0.00000   0.00000 
+   0.10000   0.10000   0.10000   0.00000   0.00000   0.00000 
+   0.10000   0.10000   0.10000   0.00000   0.00000   0.00000 
+   0.10000   0.10000   0.10000   0.00000   0.00000   0.00000 
+   0.10000   0.10000   0.10000   0.00000   0.00000   0.00000 
+   0.10000   0.10000   0.10000   0.00000   0.00000   0.00000 
+   0.10000   0.10000   0.10000   0.00000   0.00000   0.00000 
+   0.10000   0.10000   0.10000   0.00000   0.00000   0.00000 
+   0.10000   0.10000   0.10000   0.00000   0.00000   0.00000 
+   0.10000   0.10000   0.10000   0.00000   0.00000   0.00000 
+ 
+#parentatom/scalarmodenum/amp/maxamp/irrepnum/modelabel/(modevector_for_each_subatom)_for_each_mode 
+!scalarmodelist 
+    2    1   0.00000   1.00000    4 GM1+[Ti:a]order(a) 
+   1.00000 
+   1.00000 
+   1.00000 
+   1.00000 
+   1.00000 
+   1.00000 
+   1.00000 
+   1.00000 
+   1.00000 
+   1.00000 

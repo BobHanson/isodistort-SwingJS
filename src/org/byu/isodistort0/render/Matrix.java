@@ -14,7 +14,7 @@ It's thread-safe.
 public class Matrix
 {
 
-private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+//private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 private static double identity[] = new double[16];
 static

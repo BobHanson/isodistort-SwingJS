@@ -37,6 +37,7 @@ public class IsoSymmetryApp extends Iso3DApp {
 	Viewer viewer;
 	private JmolPanel rpJmol;
 
+	@SuppressWarnings("serial")
 	class JmolPanel extends JPanel implements IsoRenderPanel {
 
 		private final Dimension currentSize = new Dimension();

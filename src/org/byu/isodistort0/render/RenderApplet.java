@@ -46,7 +46,7 @@ public abstract class RenderApplet extends Applet implements Runnable
 		fov = FOV;
 	}
 
-	private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
+	//private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 	// --- PUBLIC DATA FIELDS
 

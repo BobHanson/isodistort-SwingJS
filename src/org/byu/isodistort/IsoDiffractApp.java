@@ -1556,7 +1556,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		variables.resetSliders();
 		variables.selectAllSubtypes();
 		needsRecalc = true;
-		clrBox.setSelected(false);
+		colorBox.setSelected(false);
 		updateDisplay();
 	}
 
@@ -1735,7 +1735,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		crystalButton.setVisible(!isMouseOver);
 		powderButton.setVisible(!isMouseOver);
 		bothButton.setVisible(!isMouseOver);
-		clrBox.setVisible(!isMouseOver && variables.needSimpleColor);
+		colorBox.setVisible(!isMouseOver && variables.needSimpleColor);
 	}
 
 	@Override

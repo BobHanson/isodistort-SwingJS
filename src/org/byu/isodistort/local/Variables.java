@@ -83,6 +83,14 @@ public class Variables {
 
 	public Atom[] atoms;
 
+	/**
+	 * a bitset used in IsoDiffractApp to
+	 * filter atoms and atom properties. It is provides an option to display
+	 * only primitive atoms in IsoDistortApp.
+	 * 
+	 */
+	BitSet bsPrimitive = null;
+
 	Mode[] modes = new Mode[MODE_COUNT];
 
 	public String isoversion;
@@ -1638,17 +1646,9 @@ public class Variables {
 				defaultUiso = d * d;
 			}
 
-			/**
-			 * this temporary bitset only for diffraction. It is read first and then used to
-			 * filter atoms and atom properties
-			 * 
-			 */
-			BitSet bsPrimitive = null;
-
-			if (isDiffraction) {
-				bsPrimitive = vt.getBitSet("atomsinunitcell");
+				Variables.this.bsPrimitive = vt.getBitSet("atomsinunitcell");
+				BitSet bsPrimitive = (isDiffraction ? Variables.this.bsPrimitive : null);
 				numAtoms = (bsPrimitive == null ? 0 : bsPrimitive.cardinality());
-			}
 
 			// Get all the atom type information and return the number of subtype atoms for
 			// each type.
@@ -1661,7 +1661,7 @@ public class Variables {
 			// will replace numSubAtoms with numSubPrimitiveAtoms
 			int[][] numPrimitiveSubAtoms = null;
 
-			if (bsPrimitive != null) {
+			if (numAtoms > 0) {
 				numPrimitiveSubAtoms = new int[numTypes][];
 				for (int i = 0; i < numTypes; i++) {
 					numPrimitiveSubAtoms[i] = new int[numSubTypeAtomsRead[i].length];
@@ -2113,9 +2113,9 @@ public class Variables {
 
 		void updateColorScheme(boolean isSimple) {
 			simpleColor = isSimple;
-			app.clrBox.setEnabled(false);
-			app.clrBox.setSelected(isSimple);
-			app.clrBox.setEnabled(true);
+			app.colorBox.setEnabled(false);
+			app.colorBox.setSelected(isSimple);
+			app.colorBox.setEnabled(true);
 			setColors(isSimple);
 			for (int t = 0; t < numTypes; t++) {
 				Color c = getDefaultModeColor(t);
@@ -2637,6 +2637,16 @@ public class Variables {
 		subTypeName = null;
 		numSubAtoms = null;
 		numSubTypes = null;
+	}
+
+	/**
+	 * Checks for the presence of primitive atoms and also for 
+	 * @param i
+	 * @return
+	 */
+	public boolean isPrimitive(int i) {
+		return (i < 0 || bsPrimitive == null ? bsPrimitive != null 
+				: bsPrimitive.get(i));
 	}
 
 }

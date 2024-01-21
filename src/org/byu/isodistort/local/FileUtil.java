@@ -422,7 +422,7 @@ public class FileUtil {
 		/**
 		 * @j2sNative
 		 * 
-		 * 	  window.open(URL.createObjectURL(new Blob(html, { type: "text/html" })));
+		 * 	  window.open(URL.createObjectURL(new Blob([html], { type: "text/html" })));
 		 *    return;
 		 */
 		{

@@ -799,7 +799,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			double f = (pppNR == 0 ? 0 
 					: (pppNR * pppNR + pppNI * pppNI + (isXray ? 0 : MathUtil.lenSq3(pppM)))
 						/ (zzzNR * zzzNR + zzzNI * zzzNI + (isXray ? 0 : MathUtil.lenSq3(zzzM))));			
-			peakIntensity[p] = (f < MIN_PEAK_INTENSITY ? MIN_PEAK_INTENSITY / 2 : thermal * f);
+			peakIntensity[p] = (f > 0 && f < MIN_PEAK_INTENSITY ? MIN_PEAK_INTENSITY / 2 : thermal * f);
 		}
 	}
 

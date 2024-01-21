@@ -2349,7 +2349,6 @@ public class Variables {
 				cell.labels[n] = newWhiteLabel("", JLabel.LEFT);
 				cell.labels[n] = newWhiteLabel("", JLabel.LEFT);
 			}
-			System.out.println(Arrays.toString(COLOR_CHILD_CELL.getComponents(null)));
 			cell.title = newWhiteLabel(cell.isChild ? "  Ccell" : "  Pcell", JLabel.LEFT);
 			cell.title.setForeground(cell.isChild ? COLOR_CHILD_CELL : COLOR_PARENT_CELL);
 		}

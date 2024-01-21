@@ -767,6 +767,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				double[] atomScatFac = Elements.getScatteringFactor(a.getAtomTypeSymbol(), isXray);
 				double phase = 2 * Math.PI * MathUtil.dot3(crystalPeakHKL[p], supxyz);
 				double cos = Math.cos(phase);
+				if (Math.abs(cos) < 1e-13) {
+					// BH correcting for cos (Math.PI/2) == 6.123233995736766E-17, not zero
+					cos = 0;
+				}
 				double sin = Math.sin(phase);
 
 				double occ0 = a.getInitialOccupancy();

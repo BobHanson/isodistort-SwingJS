@@ -1810,9 +1810,10 @@ public class Variables {
 			}
 
 			numSubTypes = new int[n];
-			int[][] numSubTypeAtomsRead = new int[n][];
+			// start this off with one implicit subtype.
+			int[][] numSubTypeAtomsRead = new int[n][1];
 
-			// find atom subtypes
+			// find atom subtypes (optional)
 			int numSubTypeEntries = checkSizeN("atomsubtypelist", 3, false);
 			if (numSubTypeEntries > 0) {
 				int curType = 0, curSubType = 0;
@@ -1856,7 +1857,6 @@ public class Variables {
 						subTypeName[t][s] = atomTypeName[t] + "_" + (s + 1);
 					}
 				}
-				numSubTypeAtomsRead[0] = new int[1];
 			}
 			return numSubTypeAtomsRead;
 		}

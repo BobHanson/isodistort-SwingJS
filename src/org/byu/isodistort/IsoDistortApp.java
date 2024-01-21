@@ -213,8 +213,10 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		parentCellMaterial = rp3.newMaterial();
 		childCellMaterial = rp3.newMaterial();
 		// parent cell slightly red
+		// note that this color is also in Variable.GUI.COLOR_PARENT_CELL
 		parentCellMaterial.setColor(.8, .5, .5, 1.5, 1.5, 1.5, 20, .30, .30, .30);
 		// child cell slightly blue
+		// note that this color is also in Variable.GUI.COLOR_CHILD_CELL
 		childCellMaterial.setColor(.5, .5, .8, 1.5, 1.5, 1.5, 20, .30, .30, .30);
 
 		bondMaterial = rp3.newMaterial();

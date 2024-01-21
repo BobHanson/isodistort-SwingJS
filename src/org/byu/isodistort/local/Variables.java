@@ -7,6 +7,7 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -2028,6 +2029,9 @@ public class Variables {
 
 	} // end of IsoParser
 
+	static final Color COLOR_CHILD_CELL = new Color(128, 128, 204);
+	static final Color COLOR_PARENT_CELL = new Color(204, 128, 128);
+
 	/**
 	 * The SliderPanelGUI inner class of Variables creates all GUI elements for
 	 * IsoApp.sliderPanel and handles all synchronization of JSlider and JCheckbox
@@ -2040,7 +2044,6 @@ public class Variables {
 
 		private final static int subTypeWidth = 210;
 		private final static int barheight = 22;
-	//	private final static int mainSliderLabelWidth = 66;
 
 		/**
 		 * Master (top most) slider bar controls all slider bars for superpositioning of
@@ -2232,13 +2235,15 @@ public class Variables {
 
 			// Master Slider Panel
 			mainSliderLabel = new JLabel("child");
-			mainSliderLabel.setForeground(Color.BLACK);
+			mainSliderLabel.setForeground(COLOR_CHILD_CELL);
 			mainSliderLabel.setHorizontalAlignment(JLabel.CENTER);
 			mainSliderLabel.setVerticalAlignment(JLabel.CENTER);
 			mainSlider = new IsoSlider(-1, "child", 0, 1, 1, Color.WHITE);
 
 			masterSliderPanel.add(Box.createHorizontalGlue());
-			masterSliderPanel.add(new JLabel("parent "));
+			JLabel pl = new JLabel("parent ");
+			pl.setForeground(COLOR_PARENT_CELL);
+			masterSliderPanel.add(pl);
 			masterSliderPanel.add(mainSlider);
 			masterSliderPanel.add(Box.createRigidArea(new Dimension(1, 1)));
 			masterSliderPanel.add(mainSliderLabel);
@@ -2344,7 +2349,9 @@ public class Variables {
 				cell.labels[n] = newWhiteLabel("", JLabel.LEFT);
 				cell.labels[n] = newWhiteLabel("", JLabel.LEFT);
 			}
-			cell.title = newWhiteLabel("  Pcell", JLabel.LEFT);
+			System.out.println(Arrays.toString(COLOR_CHILD_CELL.getComponents(null)));
+			cell.title = newWhiteLabel(cell.isChild ? "  Ccell" : "  Pcell", JLabel.LEFT);
+			cell.title.setForeground(cell.isChild ? COLOR_CHILD_CELL : COLOR_PARENT_CELL);
 		}
 
 		/**

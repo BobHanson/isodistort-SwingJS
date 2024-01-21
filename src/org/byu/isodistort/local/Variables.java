@@ -83,6 +83,14 @@ public class Variables {
 
 	public Atom[] atoms;
 
+	/**
+	 * a bitset used in IsoDiffractApp to
+	 * filter atoms and atom properties. It is provides an option to display
+	 * only primitive atoms in IsoDistortApp.
+	 * 
+	 */
+	BitSet bsPrimitive = null;
+
 	Mode[] modes = new Mode[MODE_COUNT];
 
 	public String isoversion;
@@ -1638,17 +1646,9 @@ public class Variables {
 				defaultUiso = d * d;
 			}
 
-			/**
-			 * this temporary bitset only for diffraction. It is read first and then used to
-			 * filter atoms and atom properties
-			 * 
-			 */
-			BitSet bsPrimitive = null;
-
-			if (isDiffraction) {
-				bsPrimitive = vt.getBitSet("atomsinunitcell");
+				Variables.this.bsPrimitive = vt.getBitSet("atomsinunitcell");
+				BitSet bsPrimitive = (isDiffraction ? Variables.this.bsPrimitive : null);
 				numAtoms = (bsPrimitive == null ? 0 : bsPrimitive.cardinality());
-			}
 
 			// Get all the atom type information and return the number of subtype atoms for
 			// each type.
@@ -1661,7 +1661,7 @@ public class Variables {
 			// will replace numSubAtoms with numSubPrimitiveAtoms
 			int[][] numPrimitiveSubAtoms = null;
 
-			if (bsPrimitive != null) {
+			if (numAtoms > 0) {
 				numPrimitiveSubAtoms = new int[numTypes][];
 				for (int i = 0; i < numTypes; i++) {
 					numPrimitiveSubAtoms[i] = new int[numSubTypeAtomsRead[i].length];
@@ -1678,9 +1678,6 @@ public class Variables {
 
 			// number of atoms in the file, before filtering for primitives
 			int numAtomsRead = getNumberOfAtomsRead(nData);
-			if (numSubTypeAtomsRead.length == 1)
-				numSubTypeAtomsRead[0] = new int[] { numAtomsRead };
-
 			int ncol = nData / numAtomsRead;
 
 			// numAtoms may be the number of primitive atoms only
@@ -1689,17 +1686,14 @@ public class Variables {
 			atoms = new Atom[numAtoms];
 
 			// Find number of subatoms for each subtype
-			// Set up numSubAtom and numPrimitiveSubAtoms if this is for IsoDiffract
+			// Set up numSubAtom (and numPrimitiveSubAtoms if this is for IsoDiffract)
 
 			// BH 2023.12
 			// firstAtomOfType is an array containing pointers in the overall list of atoms
-			// read
-			// (element 0) and the filtered primitive list (element 1)
+			// read (element 0) and the filtered primitive list (element 1)
 			// by type. firstAtomOfType[0] is always [0, 0], and we add an addition element
-			// at the
-			// end that is [numAtomsRead, numAtoms]. These are useful in the mode listings,
-			// where we
-			// need to catalog atom mode vectors from lists involving type indices only
+			// at the end that is [numAtomsRead, numAtoms]. These are useful in the mode listings,
+			// where we need to catalog atom mode vectors from lists involving type indices only
 			int[][] firstAtomOfType = new int[numTypes + 1][2];
 			firstAtomOfType[0] = new int[2];
 			firstAtomOfType[numTypes] = new int[] { numAtomsRead, numAtoms };
@@ -1861,6 +1855,7 @@ public class Variables {
 						subTypeName[t][s] = atomTypeName[t] + "_" + (s + 1);
 					}
 				}
+				numSubTypeAtomsRead[0] = new int[1];
 			}
 			return numSubTypeAtomsRead;
 		}
@@ -2113,9 +2108,9 @@ public class Variables {
 
 		void updateColorScheme(boolean isSimple) {
 			simpleColor = isSimple;
-			app.clrBox.setEnabled(false);
-			app.clrBox.setSelected(isSimple);
-			app.clrBox.setEnabled(true);
+			app.colorBox.setEnabled(false);
+			app.colorBox.setSelected(isSimple);
+			app.colorBox.setEnabled(true);
 			setColors(isSimple);
 			for (int t = 0; t < numTypes; t++) {
 				Color c = getDefaultModeColor(t);
@@ -2233,12 +2228,10 @@ public class Variables {
 
 			masterSliderPanel = new JPanel();
 			masterSliderPanel.setLayout(new BoxLayout(masterSliderPanel, BoxLayout.LINE_AXIS));
-			//masterSliderPanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
 			masterSliderPanel.setBackground(Color.WHITE);
 
 			// Master Slider Panel
 			mainSliderLabel = new JLabel("child");
-			//mainSliderLabel.setPreferredSize(new Dimension(mainSliderLabelWidth, barheight));
 			mainSliderLabel.setForeground(Color.BLACK);
 			mainSliderLabel.setHorizontalAlignment(JLabel.CENTER);
 			mainSliderLabel.setVerticalAlignment(JLabel.CENTER);
@@ -2267,20 +2260,17 @@ public class Variables {
 				tp.setLayout(new BoxLayout(tp, BoxLayout.Y_AXIS));
 				tp.setBorder(new EmptyBorder(2, 2, 5, 2));
 				tp.setBackground(c); // important
-				//tp.setOpaque(true);
 				subTypeCheckBoxes[t] = new JCheckBox[numSubTypes[t]];
 				subTypeLabels[t] = new JLabel[numSubTypes[t]];
 				typeLabel[t] = newWhiteLabel("" + atomTypeName[t] + " Modes", JLabel.CENTER);
 				typeNamePanels[t] = new JPanel(new GridLayout(1, 1, 0, 0));
 				typeNamePanels[t].setName("typeNamePanel_" + t + " " + atomTypeName[t]);
-//				typeNamePanels[t].setPreferredSize(new Dimension(sliderPanelWidth, barheight));
 				typeNamePanels[t].add(typeLabel[t]);
 				typeNamePanels[t].setBackground(c); // important
 				tp.add(typeNamePanels[t]);
-				
+
 				// typeDataPanel
 				typeDataPanels[t] = new JPanel(new GridLayout(numSubRows[t], subTypesPerRow[t], 0, 0));
-//				typeDataPanels[t].setPreferredSize(new Dimension(sliderPanelWidth, numSubRows[t] * barheight));
 				typeDataPanels[t].setName("typeDataPanel_" + t);
 				int nst = numSubTypes[t];
 				for (int s = 0; s < nst; s++) {
@@ -2299,7 +2289,7 @@ public class Variables {
 					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
 					p.setName("subtypeFillerPanel_" + s);
 					p.setBackground(c);
-					//p.add(new JLabel(""));
+					// p.add(new JLabel(""));
 					typeDataPanels[t].add(p);
 				}
 				tp.add(typeDataPanels[t]);
@@ -2310,15 +2300,12 @@ public class Variables {
 				}
 				if (n == 0) {
 					tp = new JPanel(new GridLayout(1, 1, 0, 0));
-					//tp.setPreferredSize(new Dimension(sliderPanelWidth, 5));
 					tp.setBackground(c);
 					addPanel(sliderPanel, tp, "typeFiller_" + t);
 				}
-
 			}
-			Color c = modes[STRAIN].colorT[0];
+			Color c = Mode.COLOR_STRAIN;
 			JPanel strainTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
-			//strainTitlePanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
 			strainTitlePanel.setBackground(c);
 			JLabel strainTitle = newWhiteLabel("Strain Modes", JLabel.CENTER);
 			strainTitlePanel.add(strainTitle);
@@ -2328,7 +2315,6 @@ public class Variables {
 			initCell(childCell, c);
 			initCell(parentCell, c);
 			JPanel strainDataPanel = new JPanel(new GridLayout(2, 6, 0, 0));
-			//strainDataPanel.setPreferredSize(new Dimension(sliderPanelWidth, 2 * barheight));
 			strainDataPanel.setBackground(c);
 			strainDataPanel.add(parentCell.title);
 			for (int n = 0; n < 6; n++)
@@ -2339,15 +2325,16 @@ public class Variables {
 			addPanel(sliderPanel, strainDataPanel, "strainDataPanel");
 			initModeGUI(sliderPanel, modes[STRAIN], 0);
 
-			c = modes[IRREP].colorT[0];
-			JPanel irrepTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
-			//irrepTitlePanel.setPreferredSize(new Dimension(sliderPanelWidth, barheight));
-			irrepTitlePanel.setBackground(c);
-			JLabel irrepTitle = newWhiteLabel("Single-Irrep Master Amplitudes", JLabel.CENTER);
-			irrepTitlePanel.add(irrepTitle);
-			addPanel(sliderPanel, irrepTitlePanel, "irrepTitlePanel");
-			initModeGUI(sliderPanel, modes[IRREP], 0);
-			// this Glue is nice, because it adds just a bit of 
+			if (isModeActive(modes[IRREP])) {
+				c = modes[IRREP].colorT[0];
+				JPanel irrepTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
+				irrepTitlePanel.setBackground(c);
+				JLabel irrepTitle = newWhiteLabel("Single-Irrep Master Amplitudes", JLabel.CENTER);
+				irrepTitlePanel.add(irrepTitle);
+				addPanel(sliderPanel, irrepTitlePanel, "irrepTitlePanel");
+				initModeGUI(sliderPanel, modes[IRREP], 0);
+			}
+			// this Glue is nice, because it adds just a bit of
 			// vertical padding around the sliders
 			sliderPanel.add(Box.createVerticalGlue());
 		}
@@ -2551,8 +2538,6 @@ public class Variables {
 			sliderTM[type][t] = new IsoSlider[nModes];
 			mode.values[t] = new double[nModes];
 			JPanel tp = typePanels[type][t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
-			//not necessary! int h = (int) (mode.modesPerType[t] * barheight);
-			//tp.setPreferredSize(new Dimension(sliderPanelWidth, h));
 			tp.setBackground(c);
 			for (int m = 0; m < nModes; m++) {
 				sliderTM[type][t][m] = new IsoSlider(mode.type, getInputName(mode.type, t, m), min,
@@ -2637,6 +2622,16 @@ public class Variables {
 		subTypeName = null;
 		numSubAtoms = null;
 		numSubTypes = null;
+	}
+
+	/**
+	 * Checks for the presence of primitive atoms and also for 
+	 * @param i
+	 * @return
+	 */
+	public boolean isPrimitive(int i) {
+		return (i < 0 || bsPrimitive == null ? bsPrimitive != null 
+				: bsPrimitive.get(i));
 	}
 
 }

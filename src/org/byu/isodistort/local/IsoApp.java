@@ -357,7 +357,7 @@ public abstract class IsoApp {
 	// saveImage, saveISOVIZ,
 	// openOther;
 
-	protected JCheckBox clrBox;
+	protected JCheckBox colorBox;
 	
 	public int initializing = 5; // lead needed to get first display. Why?
 
@@ -434,8 +434,8 @@ public abstract class IsoApp {
 	protected ItemListener buttonListener = new ItemListener() {
 		@Override
 		public void itemStateChanged(ItemEvent event) {
-			if (event.getSource() == clrBox) {
-				variables.updateColorScheme(clrBox.isSelected());
+			if (event.getSource() == colorBox) {
+				variables.updateColorScheme(colorBox.isSelected());
 			}
 			if (!isAdjusting)
 				updateViewOptions();
@@ -564,9 +564,9 @@ public abstract class IsoApp {
 	 * @param top
 	 */
 	protected void addTopButtons(JPanel top) {
-		clrBox = newJCheckBox("Color", false);
-		clrBox.setVisible(variables.needSimpleColor);
-		top.add(clrBox);
+		colorBox = newJCheckBox("Color", false);
+		colorBox.setVisible(variables.needSimpleColor);
+		top.add(colorBox);
 	}
 
 	/**

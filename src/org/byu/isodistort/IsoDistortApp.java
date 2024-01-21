@@ -125,6 +125,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	@Override
 	protected void enableSelectedObjects() {
 		atomObjects.setEnabled(showAtoms);
+		apBox.setEnabled(variables.isPrimitive(-1));
 		cellObjects[0].setEnabled(showParentCell);
 		cellObjects[1].setEnabled(showChildCell);
 		bondObjects.setEnabled(showBonds);
@@ -269,6 +270,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		for (int i = 0, n = variables.numAtoms; i < n; i++) {
 			double[][] info = variables.getAtomInfo(i);
 			Geometry a = atomObjects.child(i);
+			a.setEnabled(!showPrimitiveAtoms || variables.isPrimitive(i));
 			renderScaledAtom(a, info[DIS], info[OCC][0] * variables.atomMaxRadius);
 			renderArrow(a.child(MAG - 2), info[MAG], momentMultiplier, variables.angstromsPerMagneton);
 			renderArrow(a.child(ROT - 2), info[ROT], rotationMultiplier, variables.angstromsPerRadian);
@@ -348,7 +350,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		double minBondOcc = variables.minBondOcc;
 		for (int a1 = 0, n = variables.numAtoms; a1 < n; a1++) {
 			Atom a = variables.getAtom(a1);
-			if (a.getOccupancy() < minBondOcc)
+			if (a.getOccupancy() < minBondOcc || showPrimitiveAtoms && !variables.isPrimitive(a1))
 				continue;
 			double[] center = a.getCartesianCoord();
 			String key1 = a1 + "_";
@@ -360,7 +362,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 				Atom b = variables.getAtom(a2);
 				double d2;
 				if (a2 <= a1 || (d2 = iterator.foundDistance2()) < 0.000000000001 || d2 > r2
-						|| b.getOccupancy() < minBondOcc)
+						|| b.getOccupancy() < minBondOcc 
+						|| showPrimitiveAtoms && !variables.isPrimitive(a2))
 					continue;
 				String key12 = key1 + a2;
 				double[] ab = getBondinfoFromKey(key12);
@@ -557,6 +560,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		animAmp = 1;
 		showAtoms = showAtoms0;
 		aBox.setSelected(showAtoms);
+		showPrimitiveAtoms = showPrimitiveAtoms0;
+		apBox.setSelected(showPrimitiveAtoms);
 		showBonds = showBonds0;
 		bBox.setSelected(showBonds);
 		showParentCell = showParentCell0;
@@ -567,7 +572,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		axesBox.setSelected(showAxes);
 		animBox.setSelected(false);
 		spinBox.setSelected(false);
-		clrBox.setSelected(false);
+		colorBox.setSelected(false);
 //		nButton.setSelected(true);
 		uView.setText("0");
 		vView.setText("0");
@@ -595,23 +600,9 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	protected void handleButtonEvent(Object src) {
 		if (!((JToggleButton) src).isSelected())
 			return;
-//		if (src == nButton) {
-//			rp3.clearAngles();
-//			rp3.setRotationAxis(0);
-//		} else if (src == xButton) {
-//			rp3.clearAngles();
-//			rp3.setRotationAxis(1);
-//		} else if (src == yButton) {
-//			rp3.clearAngles();
-//			rp3.setRotationAxis(2);
-//		} else if (src == zButton) {
-//			rp3.clearAngles();
-//			rp3.setRotationAxis(3);
-//		} else if (src == zoomButton) {
-//			rp3.clearAngles();
-//			rp3.setRotationAxis(4);
-//		} else 
-			if (src == childHKL) {
+		if (src == apBox) {
+			needsRecalc = true;
+		} else if (src == childHKL) {
 			resetViewDirection(VIEW_TYPE_CHILD_HKL);
 		} else if (src == childUVW) {
 			resetViewDirection(VIEW_TYPE_CHILD_UVW);
@@ -627,13 +618,14 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	@Override
 	protected void updateViewOptions() {
 		showAtoms = aBox.isSelected();
+		showPrimitiveAtoms = apBox.isSelected();
 		showBonds = bBox.isSelected();
 		showParentCell = cpBox.isSelected();
 		showChildCell = ccBox.isSelected();
 		showAxes = axesBox.isSelected();
 		boolean spin = spinBox.isSelected();
 		isAnimateSelected = animBox.isSelected();
-		clrBox.setVisible(variables.needSimpleColor);
+		colorBox.setVisible(variables.needSimpleColor);
 		isMaterialTainted = true;
 		rp3.setSpinning(spin);
 		if (isAnimateSelected || spin) {
@@ -651,6 +643,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	private void buildControls() {
 
 		aBox = newJCheckBox("Atoms", showAtoms);
+		apBox = newJCheckBox("Primitive Only", showPrimitiveAtoms);
 		bBox = newJCheckBox("Bonds", showBonds);
 		cpBox = newJCheckBox("Parent Cell", showParentCell);
 		ccBox = newJCheckBox("Child Cell", showChildCell);
@@ -685,6 +678,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 //		top.add(zoomButton);
 		top.add(new JLabel("       "));
 		top.add(aBox);
+		top.add(apBox);
 		top.add(bBox);
 		top.add(cpBox);
 		top.add(ccBox);

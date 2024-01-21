@@ -66,13 +66,15 @@ public abstract class Iso3DApp extends IsoApp {
 	/**
 	 * Initially show bonds or not
 	 */
-	protected boolean showBonds0 = true, showAtoms0 = true, 
+	protected boolean showBonds0 = true, showAtoms0 = true, showPrimitiveAtoms0 = false,
 			showParentCell0 = true, showChildCell0 = true, 
 			showAxes0 = false;
 	/**
 	 * Currently show bonds or not
 	 */
-	protected boolean showBonds, showAtoms, showParentCell, showChildCell, showAxes;
+	protected boolean showBonds, showAtoms, showPrimitiveAtoms,
+		showParentCell, showChildCell, showAxes;
+
 	/**
 	 * Which type of view direction: childHKL, childUVW, parentHKL, parentUVW
 	 */
@@ -82,7 +84,7 @@ public abstract class Iso3DApp extends IsoApp {
 	 * Check boxes for zoom, spin, anim toggles
 	 * 
 	 */
-	protected JCheckBox aBox, bBox, cpBox, ccBox, spinBox, animBox, axesBox;
+	protected JCheckBox aBox, apBox, bBox, cpBox, ccBox, spinBox, animBox, axesBox;
 
 	/**
 	 * Buttons to use child or parent cell for view vectors

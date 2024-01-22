@@ -483,17 +483,17 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 		double[][] tempmat = null;
 		switch (viewType) {
-		case VIEW_TYPE_CHILD_HKL:
-			tempmat = variables.childCell.getTempTransposedReciprocalBasis();
-			break;
 		case VIEW_TYPE_CHILD_UVW:
 			tempmat = variables.childCell.getTempTransposedCartesianBasis();
 			break;
-		case VIEW_TYPE_PARENT_HKL:
-			tempmat = variables.parentCell.getTempTransposedReciprocalBasis();
-			break;
 		case VIEW_TYPE_PARENT_UVW:
 			tempmat = variables.parentCell.getTempTransposedCartesianBasis();
+			break;
+		case VIEW_TYPE_CHILD_HKL:
+			tempmat = variables.childCell.getTempTransposedReciprocalBasis();
+			break;
+		case VIEW_TYPE_PARENT_HKL:
+			tempmat = variables.parentCell.getTempTransposedReciprocalBasis();
 			break;
 		}
 		MathUtil.mat3mul(tempmat, viewIndices, viewDir);

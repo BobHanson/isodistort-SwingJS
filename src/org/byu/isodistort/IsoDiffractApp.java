@@ -236,7 +236,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	/**
 	 * List of types of peaks contained within the display
 	 */
-	int[] peakColor = new int[maxPeaks];
+	int[] peakType = new int[maxPeaks];
 
 	/**
 	 * unstrained dinverse-space metric tensor
@@ -249,11 +249,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	/**
 	 * transforms childHKL to properly-rotated XYZ cartesian
 	 */
-	double[][] slatt2rotcart = new double[3][3];
+	double[][] matChildReciprocal2rotatedCartesian = new double[3][3];
 	/**
 	 * transforms properly-rotated XYZ cartesian to childHKL
 	 */
-	double[][] rotcart2slatt = new double[3][3];
+	double[][] matRotatedCartesian2ChildReciprocal = new double[3][3];
 
 	/**
 	 * maximum peak radius
@@ -469,7 +469,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	void drawCrystPeaks(Graphics gr) {
 		for (int p = 0; p < peakCount; p++) {
 			drawCrystalCircle(gr, crystalPeakXY[p][0], crystalPeakXY[p][1], crystalPeakRadius[p], crystalMaxPeakRadius,
-					peakColor[p]);
+					peakType[p]);
 		}
 	}
 
@@ -550,7 +550,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			// draw one color at at time with
 			// red and green last and on top
 			for (int p = 0; p < peakCount; p++) {
-				if (peakColor[p] != c || peakIntensity[p] < MIN_PEAK_INTENSITY)
+				if (peakType[p] != c || peakIntensity[p] < MIN_PEAK_INTENSITY)
 					continue;
 				drawDash(gr, powderPeakX[p], y, 0, 1, tickLength, lineThickness, c);
 			}
@@ -602,9 +602,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			if (isPowder) {
 				if (approxEqual(x, powderPeakX[p], tol2)
 						&& (!isBoth || (Math.abs(y - (drawHeight - powderStickYOffset)) < 1.25 * normalTickLength))
-						&& (peakColor[p] < currentcolor)) {
+						&& (peakType[p] < currentcolor)) {
 					thisPeak = p;
-					currentcolor = peakColor[p];
+					currentcolor = peakType[p];
 					valuestring = trim00(powderPeakY[p]);
 					switch (powderPatternType) {
 					case POWDER_PATTERN_TYPE_2THETA:
@@ -629,14 +629,14 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			}
 		}
 		if (thisPeak >= 0) {
-			double[] hklp = new double[3];
-			double[] hkls = crystalPeakHKL[thisPeak];
-			MathUtil.mat3mul(variables.Tmat, crystalPeakHKL[thisPeak], hklp);
+			double[] childHKL = crystalPeakHKL[thisPeak];
+			double[] parentHKL = new double[3];
+			MathUtil.mat3mul(variables.Tmat, childHKL, parentHKL);
 			String intensity = toIntensityString(peakIntensity[thisPeak]);
-			mouseovertext = "Parent HKL = (" + trim00(hklp[0]) + ", "
-					+ trim00(hklp[1]) + ", " + trim00(hklp[2])
-					+ ")       Child HKL = (" + trim00(hkls[0]) + ", "
-					+ trim00(hkls[1]) + ", " + trim00(hkls[2]) + ")     "
+			mouseovertext = "Parent HKL = (" + trim00(parentHKL[0]) + ", "
+					+ trim00(parentHKL[1]) + ", " + trim00(parentHKL[2])
+					+ ")       Child HKL = (" + trim00(childHKL[0]) + ", "
+					+ trim00(childHKL[1]) + ", " + trim00(childHKL[2]) + ")     "
 					+ specifictext
 					+ "   I = " + intensity
 					+ (isPowder ? "   M = " + (int) peakMultiplicity[thisPeak] : "");
@@ -682,19 +682,40 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * 
 	 */
 	private void recalcStrainMetrics() {
-		double[][] slatt2cart = new double[3][3]; // transforms childHKL to XYZ cartesian
-		double[][] rotmat = new double[3][3];// Rotates cartesian q-space so as to place axes1 along +x and axes2 in +y
-												// hemi-plane
+		/**
+		 * transforms childHKL to XYZ cartesian
+		 */
+		double[][] hkl2cart = new double[3][3];
+		variables.childCell.setMetricTensor(hkl2cart, metric0, false);
+		variables.childCell.setMetricTensor(hkl2cart, metric, true);
 
-		variables.childCell.setMetricTensor(false, slatt2cart, metric0);
-		variables.childCell.setMetricTensor(true, slatt2cart, metric);
-		
-		// Create an orthonormal rotation matrix that moves axis 1 to the +x direction,
-		// while keeping axis 2 in the +y quadrant. First transform both axes into
-		// cartesian
-		// coords. Then take 1.cross.2 to get axis 3, and 3.cross.1 to get the new axis
-		// 2.
-		// Normalize all three and place them in the rows of the transformation matrix.
+		// Create an orthonormal rotation matrix that moves axis 1 to the +x 
+		// direction, while keeping axis 2 in the +y quadrant.
+		double[][] rotmat = getNormalRotation(hkl2cart);
+
+		// Combine the rotation and the cartesian conversion 
+		// to get the overall childHKL to cartesian transformation.
+		MathUtil.mat3product(rotmat, hkl2cart, matChildReciprocal2rotatedCartesian, tempmat);
+		// and its inverse
+		MathUtil.mat3inverse(matChildReciprocal2rotatedCartesian, matRotatedCartesian2ChildReciprocal, tempvec, tempmat);
+
+	}
+
+	/**
+	 * Create an orthonormal rotation matrix that moves axis 1 to the +x direction,
+	 * while keeping axis 2 in the +y quadrant.
+	 * 
+	 * First transform both axes into cartesian coords. Then take 1.cross.2 to get
+	 * axis 3, and 3.cross.1 to get the new axis 2.
+	 * 
+	 * Normalize all three and place them in the rows of the transformation matrix.
+	 * 
+	 * Rotates cartesian q-space so as to place axes1 along +x and axes2 in +y
+	 * hemi-plane.
+	 */
+	private double[][] getNormalRotation(double[][] slatt2cart) {
+		double[][] rotmat = new double[3][3];
+
 		MathUtil.mat3mul(slatt2cart, crystalHkldirections[0], rotmat[0]);
 		MathUtil.mat3mul(slatt2cart, crystalHkldirections[1], rotmat[1]);
 		MathUtil.cross3(rotmat[0], rotmat[1], rotmat[2]);
@@ -702,14 +723,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		MathUtil.norm3(rotmat[0]);
 		MathUtil.norm3(rotmat[1]);
 		MathUtil.norm3(rotmat[2]);
-
-		// Combine the rotation and the cartesian conversion to get the overall childHKL
-		// to cartesian transformation.
-		MathUtil.mat3product(rotmat, slatt2cart, slatt2rotcart, tempmat);
-
-		// Invert to get the overall cartesian to childHKL tranformation.
-		MathUtil.mat3inverse(slatt2rotcart, rotcart2slatt, tempvec, tempmat);
-
+		return rotmat;
 	}
 
 	/**
@@ -814,7 +828,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// update the peak drawing coordinates
 		for (int p = 0; p < peakCount; p++) {
 			MathUtil.vecaddN(crystalPeakHKL[p], -1.0, crystalHklCenter, t03);
-			MathUtil.mat3mul(slatt2rotcart, t03, t3);
+			MathUtil.mat3mul(matChildReciprocal2rotatedCartesian, t03, t3);
 			crystalPeakXY[p][0] = (1 + t3[0] / crystalDInvRange) * drawHalfWidth;
 			crystalPeakXY[p][1] = (1 - t3[1] / crystalDInvRange) * drawHalfHeight; 
 		}
@@ -828,7 +842,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// Update the axis and tickmark plot parameters
 		for (int n = 0; n < 2; n++) // cycle over the two axes
 		{
-			MathUtil.mat3mul(slatt2rotcart, crystalHkldirections[n], t3);
+			MathUtil.mat3mul(matChildReciprocal2rotatedCartesian, crystalHkldirections[n], t3);
 			MathUtil.norm3(t3);
 			double dirX = t3[0];
 			double dirY = t3[1];
@@ -841,7 +855,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 					: drawHalfHeight / Math.abs(dirY));
 
 			for (int m = 0; m < crystalTickCount[n]; m++) {
-				MathUtil.mat3mul(slatt2rotcart, crystalTickHKL[n][m], t3);
+				MathUtil.mat3mul(matChildReciprocal2rotatedCartesian, crystalTickHKL[n][m], t3);
 				
 				crystalTickXY2[n][m][0] = (1 + t3[0] / crystalDInvRange) * drawHalfWidth;
 				crystalTickXY2[n][m][1] = (1 - t3[1] / crystalDInvRange) * drawHalfHeight; 
@@ -880,12 +894,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		double ztolerance = 0.001; // z-axis tolerance that determines whether or not a peak is in the display
 									// plane
 
-		int[][] hklrange = new int[3][2];
-
 		double[][] platt2slatt = new double[3][3]; // transforms parentHKL to childHKL
-		double[][] slatt2platt = new double[3][3]; // transforms childHKL to parentHKL
-		MathUtil.mat3copy(variables.Tmat, slatt2platt);
-		MathUtil.mat3inverse(slatt2platt, platt2slatt, tempvec, tempmat);
+		MathUtil.mat3inverse(variables.Tmat, platt2slatt, tempvec, tempmat);
 
 		hklO[0] = getText(hOTxt, hklO[0], 2);
 		hklO[1] = getText(kOTxt, hklO[1], 2);
@@ -919,52 +929,26 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		variables.recalcDistortion(); // Update the distortion
 		recalcStrainMetrics(); // Get updat ed slatt2rotcart transformation
 
-		double[][] limits = new double[8][3]; // HKL search limits
+		int[] min = new int[] { 1000, 1000, 1000 };
+		int[] max = new int[] { -1000, -1000, -1000 };
 		// Find out the childHKL range covered within the Qrange specified.
-		MathUtil.set3(tempvec0, crystalDInvRange, 0, 0);
-		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[0]);
-		MathUtil.scale3(limits[0], -1, limits[1]);
 
-		MathUtil.set3(tempvec0, 0, crystalDInvRange, 0);
-		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[2]);
-		MathUtil.scale3(limits[2], -1, limits[3]);
-
-		MathUtil.set3(tempvec0, crystalDInvRange, crystalDInvRange, 0);
-		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[4]);
-		MathUtil.scale3(limits[4], -1, limits[7]);
-
-		MathUtil.set3(tempvec0, -crystalDInvRange, crystalDInvRange, 0);
-		MathUtil.mat3mul(rotcart2slatt, tempvec0, tempvec);
-		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limits[5]);
-		MathUtil.scale3(limits[5], -1, limits[6]);
-		for (int ii = 0; ii < 3; ii++) {
-			double tempmin = 1000;
-			double tempmax = -1000;
-			for (int nn = 0; nn < 8; nn++) {
-				double d = limits[nn][ii];
-				if (d > tempmax)
-					tempmax = d;
-				if (d < tempmin)
-					tempmin = d;
-			}
-			hklrange[ii][0] = (int) Math.floor(tempmin);
-			hklrange[ii][1] = (int) Math.ceil(tempmax);
-		}
+		checkDisplayRange(crystalDInvRange, 0, min, max);
+		checkDisplayRange(0, crystalDInvRange, min, max);
+		checkDisplayRange(crystalDInvRange, crystalDInvRange, min, max);
+		checkDisplayRange(-crystalDInvRange, crystalDInvRange, min, max);
 
 		// Identify the peaks to display.
 		peakCount = 0;
 		double r2max = drawHalfWidth * drawHalfWidth;
 		double f2 = r2max / crystalDInvRange / crystalDInvRange;
 		double[] childHKL = new double[3], childHKLcart = new double[3];
-		for (int H = hklrange[0][0]; H <= hklrange[0][1]; H++)
-			for (int K = hklrange[1][0]; K <= hklrange[1][1]; K++)
-				for (int L = hklrange[2][0]; L <= hklrange[2][1]; L++) {
+		for (int H = min[0]; H <= max[0]; H++)
+			for (int K = min[1]; K <= max[1]; K++)
+				for (int L = min[2]; L <= max[2]; L++) {
 					MathUtil.set3(childHKL, H, K, L);
 					MathUtil.vecaddN(childHKL, -1.0, crystalHklCenter, tempvec0);
-					MathUtil.mat3mul(slatt2rotcart, tempvec0, childHKLcart);
+					MathUtil.mat3mul(matChildReciprocal2rotatedCartesian, tempvec0, childHKLcart);
 					if (Math.abs(MathUtil.dot3(tempvec0, uvw)) >= ztolerance
 							|| Math.abs(childHKLcart[0]) >= crystalDInvRange
 							|| Math.abs(childHKLcart[1]) >= crystalDInvRange)
@@ -974,7 +958,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 					// Save the XY coords of a good peak.
 					MathUtil.copy3(childHKL, crystalPeakHKL[peakCount]);
 					peakMultiplicity[peakCount] = 1;
-					double r2 = (childHKLcart[0] * childHKLcart[0] + childHKLcart[1] * childHKLcart[1])	* f2;
+					double r2 = (childHKLcart[0] * childHKLcart[0] + childHKLcart[1] * childHKLcart[1]) * f2;
 					if ((Math.abs(r2) > 0.01) && (r2 < r2max)) {
 						r2max = r2;
 					}
@@ -987,7 +971,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// Identify the tickmark locations along axis0.
 		// cycle over the two axes
 		for (int n = 0; n < 2; n++) {
-			MathUtil.mat3mul(slatt2rotcart, crystalHkldirections[n], tempvec);
+			MathUtil.mat3mul(matChildReciprocal2rotatedCartesian, crystalHkldirections[n], tempvec);
 			int t = (int) Math.floor(crystalDInvRange / MathUtil.len3(tempvec));
 			crystalTickCount[n] = 2 * t + 1;
 			for (int count = 0, m = -t; m < t + 1; m++) {
@@ -997,6 +981,24 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		assignPeakTypes();
 		recalcCrystal(); // recalculate intensities and positions
+	}
+
+	private void checkDisplayRange(double x, double y, int[] min, int[] max) {
+		double[] limit = tempvec0;
+		MathUtil.set3(limit, x, y, 0);
+		MathUtil.mat3mul(matRotatedCartesian2ChildReciprocal, limit, tempvec);
+		MathUtil.scaleAdd3(tempvec, 1, crystalHklCenter, limit);
+		for (int ii = 0; ii < 3; ii++) {
+			double d = limit[ii];
+			if (d < min[ii])
+				min[ii] = (int) Math.floor(d);
+			else if (-d < min[ii])
+				min[ii] = (int) Math.floor(-d);
+			if (d > max[ii])
+				max[ii] = (int) Math.ceil(d);
+			else if (-d > max[ii])
+				max[ii] = (int) Math.ceil(-d);
+		}
 	}
 
 	/**
@@ -1132,32 +1134,32 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		double[] dinvlist0 = new double[maxPeaks];// unstrained list of dinverse values
 		double[] dinvlist1 = new double[maxPeaks];// randomly strained list of dinverse values
 		double[] dinvlist2 = new double[maxPeaks];// randomly strained list of dinverse values
-		double[] childHKL = new double[3];
+		double[] testHKL = new double[3];
 
 		for (int h = -limH; h <= limH; h++) {
 			for (int k = -limK; k <= limK; k++) {
 				for (int l = -limL; l <= limL; l++) {
-					MathUtil.set3(childHKL, h, k, l);
+					MathUtil.set3(testHKL, h, k, l);
 					// Generate the standard metric and two randomized metrics.
-					MathUtil.mat3mul(metric0, childHKL, tempvec);
-					double dinv0 = Math.sqrt(MathUtil.dot3(childHKL, tempvec));
-					MathUtil.mat3mul(randommetric1, childHKL, tempvec);
-					double dinv1 = Math.sqrt(MathUtil.dot3(childHKL, tempvec));
-					MathUtil.mat3mul(randommetric2, childHKL, tempvec);
-					double dinv2 = Math.sqrt(MathUtil.dot3(childHKL, tempvec));
+					MathUtil.mat3mul(metric0, testHKL, tempvec);
+					double dinv0 = Math.sqrt(MathUtil.dot3(testHKL, tempvec));
+					MathUtil.mat3mul(randommetric1, testHKL, tempvec);
+					double dinv1 = Math.sqrt(MathUtil.dot3(testHKL, tempvec));
+					MathUtil.mat3mul(randommetric2, testHKL, tempvec);
+					double dinv2 = Math.sqrt(MathUtil.dot3(testHKL, tempvec));
 
 					boolean isinrange = (powderDinvmin <= dinv0) && (dinv0 <= powderDinvmax);
 					if (isinrange) {
 						boolean createNewPeak = true;
 						for (int p = 0; p < peakCount; p++) {
-							double[] hkl = crystalPeakHKL[p];
+							double[] peakHKL = crystalPeakHKL[p];
 							boolean isrobustlycoincident = approxEqual(dinv0, dinvlist0[p], tol)
 									&& approxEqual(dinv1, dinvlist1[p], tol) && approxEqual(dinv2, dinvlist2[p], tol);
 							if (isrobustlycoincident) {
-								boolean isequivalent = checkPowderPeakEquiv(childHKL, hkl, tmat);
+								boolean isequivalent = checkPowderPeakEquiv(testHKL, peakHKL, tmat);
 								if (isequivalent) {
-									if (comparePowderHKL(childHKL, hkl)) {
-										MathUtil.copy3(childHKL, hkl);
+									if (comparePowderHKL(testHKL, peakHKL)) {
+										MathUtil.copy3(testHKL, peakHKL);
 									}
 									peakMultiplicity[p] += 1;
 									createNewPeak = false;
@@ -1165,17 +1167,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 								}
 							}
 						}
-
 						if (createNewPeak) {
-							crystalPeakHKL[peakCount][0] = h;
-							crystalPeakHKL[peakCount][1] = k;
-							crystalPeakHKL[peakCount][2] = l;
+							MathUtil.set3(crystalPeakHKL[peakCount], h, k, l);
 							dinvlist0[peakCount] = dinv0;
 							dinvlist1[peakCount] = dinv1;
 							dinvlist2[peakCount] = dinv2;
 							peakMultiplicity[peakCount] = 1;
-							peakCount++;
-							if (peakCount >= maxPeaks)
+							if (++peakCount >= maxPeaks)
 								return;
 						}
 					}
@@ -1188,6 +1186,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		if (peakCount > powderMaxVisiblePeaks)
 			peakCount = powderMaxVisiblePeaks;
 
+		// temporariy set to parent and xray
 		child0 = variables.getSetChildFraction(0);
 		boolean isXrayTemp = isXray;
 		isXray = true;
@@ -1208,7 +1207,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * an ordered list of integers -- [0, 1, 2, 3, 4, ...], which are 
 	 * indices into the HKLs array. 
 	 * 
-	 * @author hanso
+	 * @author Bob Hanson
 	 *
 	 */
 	private static class PowderPeakSorter implements Comparator<Integer> {
@@ -1278,7 +1277,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			break;
 		}
 	}
-
 	
 	private void setPowderScaleFactor() {
 		powderScaleFactor = 0;
@@ -1427,36 +1425,43 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * child structure.
 	 * 
 	 */
-	private boolean checkPowderPeakEquiv(double[] suphkla, double[] suphklb, double[][] tmat) {
+	private boolean checkPowderPeakEquiv(double[] childHKLa, double[] childHKLb, double[][] tmat) {
 		double tol = 0.0001;
-		int[] sa = new int[3];
-		int[] sb = new int[3];
-		double[] parhkla = new double[3];
-		double[] parhklb = new double[3];
-		double[] pa = new double[3];
-		double[] pb = new double[3];
-		MathUtil.mat3mul(tmat, suphkla, parhkla);
-		MathUtil.mat3mul(tmat, suphklb, parhklb);
+		double[] parentHKLa = new double[3];
+		double[] parentHKLb = new double[3];
+		MathUtil.mat3mul(tmat, childHKLa, parentHKLa);
+		MathUtil.mat3mul(tmat, childHKLb, parentHKLb);
+		double[] parentAbsA = new double[3];
+		double[] parentAbsB = new double[3];
+		int[] childAbsA = new int[3];
+		int[] childAbsB = new int[3];
 		for (int i = 0; i < 3; i++) {
-			sa[i] = (int) Math.abs(suphkla[i]);
-			sb[i] = (int) Math.abs(suphklb[i]);
-			pa[i] = Math.abs(parhkla[i]);
-			pb[i] = Math.abs(parhklb[i]);
+			childAbsA[i] = (int) Math.abs(childHKLa[i]);
+			childAbsB[i] = (int) Math.abs(childHKLb[i]);
+			parentAbsA[i] = Math.abs(parentHKLa[i]);
+			parentAbsB[i] = Math.abs(parentHKLb[i]);
 		}
 
 		// BH: let Java do the sort
-		Arrays.sort(sa);
-		Arrays.sort(sb);
-		Arrays.sort(pa);
-		Arrays.sort(pb);
-		return ((sa[0] == sb[0]) && (sa[1] == sb[1]) && (sa[2] == sb[2]) && approxEqual(pa[0], pb[0], tol)
-				&& approxEqual(pa[1], pb[1], tol) && approxEqual(pa[2], pb[2], tol));
+		Arrays.sort(childAbsA);
+		Arrays.sort(childAbsB);
+		Arrays.sort(parentAbsA);
+		Arrays.sort(parentAbsB);
+		return ((childAbsA[0] == childAbsB[0]) && (childAbsA[1] == childAbsB[1]) && (childAbsA[2] == childAbsB[2]) 
+				&& approxEqual(parentAbsA[0], parentAbsB[0], tol)
+				&& approxEqual(parentAbsA[1], parentAbsB[1], tol) 
+				&& approxEqual(parentAbsA[2], parentAbsB[2], tol));
 	}
 
 	private static boolean approxEqual(double a, double b, double tol) {
 		return (Math.abs(a - b) < tol);
 	}
 
+	private final static int PEAK_TYPE_BRAGG = 1;
+	private final static int PEAK_TYPE_BRAGG_NOT_GM1 = 2;
+	private final static int PEAK_TYPE_NOT_BRAGG = 3;
+	private final static int PEAK_TYPE_GM1_NOT_BRAGG = 4;
+	
 	/**
 	 * identifies parent and super-lattice peaks that are systematically absent
 	 * Called by resetCrystalPeaks and resetPowderPeaks.
@@ -1465,40 +1470,42 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	public void assignPeakTypes() {
 		// Set the peak type to 1 for parent Bragg peaks, and 3 otherwise.
 
-		double[] parenthkl = new double[3];
-		double ptolerance = 0.01; // Determines whether or not a peak is a parent Bragg peak
+		double[] parentHKL = new double[3];
+		double ptolerance = 0.01; 
+		// Determines whether or not a peak is a parent Bragg peak (h k l all integral)
 		for (int p = 0; p < peakCount; p++) {
-			MathUtil.mat3mul(variables.Tmat, crystalPeakHKL[p], parenthkl); // transform super hkl into parent hkl
-			peakColor[p] = 3;
+			MathUtil.mat3mul(variables.Tmat, crystalPeakHKL[p], parentHKL); // transform super hkl into parent hkl
+			peakType[p] = PEAK_TYPE_NOT_BRAGG; // 3
 			double d = 0;
 			for (int j = 0; j < 3; j++)
-				d += Math.abs(parenthkl[j] - Math.rint(parenthkl[j]));
+				d += Math.abs(parentHKL[j] - Math.rint(parentHKL[j]));
 			if (d < ptolerance)
-				peakColor[p] = 1;
+				peakType[p] = PEAK_TYPE_BRAGG; // 1
 		}
 
-		// Calculate all peak intensities and set zero-intensity peaks to type 2.
 		// Save and zero all displacive, scalar and magnetic mode values
-		// Randomize all GM1 mode values
 		double child0 = variables.getSetChildFraction(1);
-		variables.saveModeValues();
 		Random rval = new Random();
+		variables.saveModeValues();
+
+		// Randomize all GM1 mode values to remove them from the peak
 		variables.randomizeGM1Values(rval);
 		variables.recalcDistortion();
 		recalcIntensities();
+		// Calculate all peak intensities and set (now) zero-intensity Bragg peaks to type 2.
 		for (int p = 0; p < peakCount; p++)
-			if ((peakColor[p] == 1) && (Math.abs(peakIntensity[p]) < 0.00000001))
-				peakColor[p] = 2;
+			if ((peakType[p] == PEAK_TYPE_BRAGG) && (Math.abs(peakIntensity[p]) < 0.00000001))
+				peakType[p] = PEAK_TYPE_BRAGG_NOT_GM1; // 2
+		
+		// Now randomize all Non-GM1 mode values to remove them from the peaks
 		variables.randomizeNonGM1Values(rval);
 		variables.recalcDistortion();
 		recalcIntensities();
 		for (int p = 0; p < peakCount; p++)
-			if ((peakColor[p] == 3) && (Math.abs(peakIntensity[p]) < 0.00000001))
-				peakColor[p] = 4;
+			if ((peakType[p] == PEAK_TYPE_NOT_BRAGG) && (Math.abs(peakIntensity[p]) < 0.00000001))
+				peakType[p] = PEAK_TYPE_GM1_NOT_BRAGG; // 4
 
 		// Restore all displacement and scalar mode values to their original values.
-
-		
 		variables.restoreModeValues();
 		variables.getSetChildFraction(child0);
 		variables.recalcDistortion();

@@ -57,6 +57,9 @@ public class Variables {
 
 	public final static int RX = 3, RY = 4, L_2 = 5;
 
+	static final Color COLOR_CHILD_CELL = new Color(128, 128, 204);
+	static final Color COLOR_PARENT_CELL = new Color(204, 128, 128);
+
 	/**
 	 * BH added -- allows showing of zero-value and IRREP-adjusted slider pointers
 	 */
@@ -176,12 +179,12 @@ public class Variables {
 	 * cell for the child, aka "super" cell
 	 * 
 	 */
-	public Cell childCell = new Cell(true);
+	public ChildCell childCell = new ChildCell();
 
 	/**
 	 * cell for the parent
 	 */
-	public Cell parentCell = new Cell(false);
+	public ParentCell parentCell = new ParentCell();
 
 	/**
 	 * Row matrix of parent basis vectors on the unitless childlattice basis [basis
@@ -386,13 +389,7 @@ public class Variables {
 		double[][] pStrainPlusIdentity = (modes[STRAIN] == null
 				? MathUtil.voigt2matrix(new double[6], new double[3][3], 1)
 				: modes[STRAIN].getVoigtStrainTensor(childFraction, modes[IRREP]));
-		parentCell.setStrainedCartesianBasis(pStrainPlusIdentity);
-		parentCell.transformParentToChild(childCell, true);
-		parentCell.setStrainedCartesianOrigin(childCell.toTempCartesian(parentCell.originUnitless));
-		parentCell.setStrainedVertices();
-		parentCell.setLatticeParameterLabels();
-		childCell.setStrainedVertices();
-		childCell.setLatticeParameterLabels();
+		parentCell.setStrained(pStrainPlusIdentity, childCell);
 		recenterLattice();
 
 		// pass an array to the modes that tracks the
@@ -864,7 +861,7 @@ public class Variables {
 		 * @param t
 		 * @return [cartX, cartY, cartZ, index]
 		 */
-		private double[] setDisplacementInfo(Cell child, double[] center) {
+		private double[] setDisplacementInfo(ChildCell child, double[] center) {
 			double[] t3 = child.toTempCartesian(vector1[DIS]);
 			MathUtil.scaleAdd3(t3, -1, center, info[DIS]);
 			return info[DIS];
@@ -879,7 +876,7 @@ public class Variables {
 		 * @param type  is MAG or ROT
 		 * @param child is the child cell
 		 */
-		public void setArrowInfo(int type, Cell child) {
+		public void setArrowInfo(int type, ChildCell child) {
 			double[] info = this.info[type];
 			double[] t = child.toTempCartesian(vector1[type]);
 			double lensq = MathUtil.lenSq3(t);
@@ -905,7 +902,7 @@ public class Variables {
 		 * 
 		 * @param child is the child cell.
 		 */
-		public void setEllipsoidInfo(Cell child) {
+		public void setEllipsoidInfo(ChildCell child) {
 			double[] info = this.info[ELL];
 
 			double[][] mat = child.getTempStrainedCartesianBasis(get(ELL));
@@ -962,7 +959,15 @@ public class Variables {
 
 	} // end of Atom
 
-	public static class Cell {
+	/**
+	 * The superclass of ParentCell and ChildCell
+	 * 
+	 * @author hanso
+	 *
+	 */
+	public abstract static class Cell {
+
+		protected final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
 
 		private final static int[] buildCell = new int[] { 0, 1, //
 				2, 3, //
@@ -982,22 +987,6 @@ public class Variables {
 		JLabel[] labels = new JLabel[6];
 
 		/**
-		 * cell origin relative to child cell origin on the unitless child lattice basis.
-		 * [x, y, z];
-		 * 
-		 * for parent, from ISOVIZ file "parentorigin"
-		 * 
-		 */
-		double[] originUnitless = new double[3];
-
-		/**
-		 * Original unstrained cell parameters [A, B, C, ALPHA, BETA, GAMMA];
-		 * 
-		 * set by parser for parent, from ISOVIZ file "parentcell"
-		 */
-		double[] latt0 = new double[6];
-
-		/**
 		 * Array of Cartesian vertices of strained window-centered cell. [edge
 		 * number][x, y, z]
 		 * 
@@ -1009,7 +998,7 @@ public class Variables {
 		 * Angstrom coords. [x, y, z]; will be (0,0,0) for child
 		 * 
 		 */
-		private double[] originCart = new double[3];
+		protected double[] originCart = new double[3];
 
 		/**
 		 * Matrix of unstrained basis vectors in cartesian Angstrom coords [basis
@@ -1019,7 +1008,7 @@ public class Variables {
 		 * set by parser
 		 * 
 		 */
-		private double[][] basisCart0 = new double[3][3];
+		protected double[][] basisCart0 = new double[3][3];
 
 		/**
 		 * Matrix of strained basis vectors in cartesian Angstrom coords [basis
@@ -1027,28 +1016,7 @@ public class Variables {
 		 * into cartesian Angstrom coords [basis vector][x,y,z]
 		 * 
 		 */
-		private double[][] basisCart = new double[3][3];
-
-		/**
-		 * InverseTranspose of Tmat:
-		 * 
-		 * parentCell.basisCart * Tmat^t*i = childCell.basisCart
-		 * 
-		 * only for the parent; based on the parsed value of Tmat ("parentbasis")
-		 * 
-		 */
-		private double[][] TmatInverseTranspose;
-
-		/**
-		 * Inverse of basisCart in Inverse-Angstrom units [basis vector][x,y,z]
-		 */
-		private double[][] basisCartInverse = new double[3][3];
-
-		// temporary vector and matrices
-
-		private double[] t3 = new double[3];
-
-		private double[][] t = new double[3][3], t2 = new double[3][3], t4 = new double[3][3];
+		protected double[][] basisCart = new double[3][3];
 
 		/**
 		 * Final information needed to render the cell (last 12). [edge number][x, y, z,
@@ -1064,46 +1032,28 @@ public class Variables {
 		 */
 		private double[][] axesInfo = new double[3][6];
 
-		private boolean isChild;;
+		public String labelText;
 
-		Cell(boolean isChild) {
-			this.isChild = isChild;
-			if (!isChild) {
-				// parent only
-				TmatInverseTranspose = new double[3][3];
-			}
+		public Color color;;
+
+		// temporary vector and matrices
+
+		protected double[] t3 = new double[3];
+
+		protected double[][] t = new double[3][3], t2 = new double[3][3], t4 = new double[3][3];
+
+		Cell() {
 		}
-
 		/**
-		 * Convert the fractional coords to cartesian, placing the result in a temporary
-		 * variable.
+		 * Query the cell for its vertices, adding them to max variable;
+		 * used for determining the field of view that keeps the full unit cell in view
+		 * when rotating with the mouse.
 		 * 
-		 * @param xyz fractional coordinates, unchanged
-		 * @return TEMPORARY [x,y,z]
-		 */
-		public double[] toTempCartesian(double[] fxyz) {
-			MathUtil.mat3mul(basisCart, fxyz, t3);
-			return t3;
-		}
-
-		/**
-		 * Calculate the strained or unstrained metric tensor along with the
-		 * lattice-to-cartesian matrix.
+		 * parent and child
 		 * 
-		 * @param isStrained
-		 * @param metric
-		 * @param tempmat
-		 * @param slatt2cart
+		 * @param d2 current max
+		 * @return  adjusted max
 		 */
-
-		public void setMetricTensor(boolean isStrained, double[][] slatt2cart, double[][] metric) {
-			double[][] cart = (isStrained ? basisCart : basisCart0);
-			// Determine the unstrained metric tensor
-			MathUtil.mat3inverse(cart, t, t3, t2);
-			MathUtil.mat3transpose(t, slatt2cart);// B* = Transpose(Inverse(B))
-			MathUtil.mat3product(t, slatt2cart, metric, t4); // G* = Transpose(B*).(B*)
-		}
-
 		public double addRange2(double d2) {
 			for (int i = 8; --i >= 0;) {
 				d2 = MathUtil.maxlen2(cartesianVertices[i], d2);
@@ -1111,64 +1061,201 @@ public class Variables {
 			return d2;
 		}
 
-		public double getIsotropicParameter(double[] v1) {
-			MathUtil.voigt2matrix(v1, t, 0);
-			MathUtil.mat3product(basisCart, t, t, t2);
-			MathUtil.mat3product(t, basisCartInverse, t, t2);
-			// ellipsoid in cartesian coords
-			double d = 0;
-			for (int i = 0; i < 3; i++) {
-				for (int j = 0; j < 3; j++) {
-					d += t[i][j] * t[i][j];
-				}
-			}
-			return d;
-		}
-
+		/**
+		 * Get the transpose of the strained Cartesian basis.
+		 * The product of this matrix with [u v w] provides the desired camera direction.
+		 * 
+		 * parent and child
+		 * 
+		 * @return transpose of strained Cartesian basis
+		 */
 		public double[][] getTempTransposedCartesianBasis() {
 			MathUtil.mat3transpose(basisCart, t);
 			return t;
 		}
 
+		/**
+		 * Get the transpose of the inverse of the strained Cartesian basis.
+		 * The product of this matrix with [h k l] provides the desired camera direction.
+		 * 
+		 * parent and child
+		 * 
+		 * @return transpose of the inverse of the strained Cartesian basis
+		 */
 		public double[][] getTempTransposedReciprocalBasis() {
 			MathUtil.mat3inverse(basisCart, t, t3, t2);
 			MathUtil.mat3transpose(t, t2);
 			return t2;
 		}
 
+		/**
+		 * parent and child
+		 * 
+		 * @param i
+		 * @return cellInfo[i]
+		 */
 		public double[] getCellInfo(int i) {
 			return cellInfo[i];
 		}
 
+		/**
+		 * parent and child
+		 * 
+		 * @param i
+		 * @return axisInfo[i]
+		 */
 		public double[] getAxisInfo(int i) {
 			return axesInfo[i];
 		}
 
-		private final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
-
-		void setStrainedCartesianOrigin(double[] o) {
-			MathUtil.set3(originCart, o);
-		}
-
-		void setStrainedCartesianBasis(double[][] strain) {
-			MathUtil.mat3product(strain, basisCart0, basisCart, t);
+		/**
+		 * parent and child
+		 */
+		protected void setVertices() {
+			for (int ix = 0; ix < 2; ix++) {
+				for (int iy = 0; iy < 2; iy++) {
+					for (int iz = 0; iz < 2; iz++) {
+						for (int i = 0; i < 3; i++) {
+							cartesianVertices[ix + 2 * iy + 4 * iz][i] = originCart[i] + ix * basisCart[i][0]
+									+ iy * basisCart[i][1] + iz * basisCart[i][2];
+						}
+					}
+				}
+			}
 		}
 
 		/**
-		 * returns a TEMPORARY matrix
+		 * Place the center of the cell at the origin.
 		 * 
-		 * @param info
-		 * @return
+		 * parent and child
+		 * 
 		 */
-		double[][] getTempStrainedCartesianBasis(double[] info) {
-			MathUtil.voigt2matrix(info, t, 0);
-			MathUtil.mat3product(basisCart, t, t2, t4);
-			MathUtil.mat3copy(t2, t);
-			MathUtil.mat3product(t, basisCartInverse, t2, t4);
-			return t2;
+		void setRelativeTo(double[] c) {
+			for (int j = 0; j < 8; j++) {
+				double[] v = cartesianVertices[j];
+				MathUtil.scaleAdd3(v, -1, c, v);
+			}
 		}
 
-		void setUnstrainedCartsianBasis(boolean isRhomb, double[][] Tmat) {
+		/**
+		 * parent and child
+		 * 
+		 * @param minmax
+		 */
+		void rangeCheckVertices(double[][] minmax) {
+			for (int i = 8; --i >= 0;) {
+				MathUtil.rangeCheck(cartesianVertices[i], minmax);
+			}
+		}
+
+		/**
+		 * parent and child
+		 */
+		protected void setLatticeParameterLabels() {
+			double[][] t = new double[3][3];
+			double[] v = new double[6];
+			MathUtil.mat3transpose(basisCart, t);
+			v[A] = Math.sqrt(MathUtil.dot3(t[A], t[A]));
+			v[B] = Math.sqrt(MathUtil.dot3(t[B], t[B]));
+			v[C] = Math.sqrt(MathUtil.dot3(t[C], t[C]));
+			v[ALPHA] = Math.acos(MathUtil.dot3(t[B], t[C]) / Math.max(v[B] * v[C], 0.001));
+			v[BETA] = Math.acos(MathUtil.dot3(t[A], t[C]) / Math.max(v[A] * v[C], 0.001));
+			v[GAMMA] = Math.acos(MathUtil.dot3(t[A], t[B]) / Math.max(v[A] * v[B], 0.001));
+			for (int n = 0; n < 3; n++) {
+				labels[n].setText(MathUtil.varToString(v[n], 2, -5));
+				labels[n + 3].setText(MathUtil.varToString((180 / Math.PI) * v[n + 3], 2, -5));
+			}
+		}
+
+		/**
+		 * Measure distance from center for the axes of this cell.
+		 * 
+		 * parent and child
+		 * 
+		 * @param axis
+		 * @param center
+		 * @param tempvec
+		 * @param tB
+		 * @param d2
+		 * @param tA
+		 * @param d1
+		 */
+		double[] getAxisExtents(int axis, double[] center, double d1, double[] tA, double d2, double[] tB,
+				double[] tempvec) {
+			for (int i = 0; i < 3; i++) {
+				tempvec[i] = originCart[i] + (t3[i] = basisCart[i][axis]) - center[i];
+			}
+			MathUtil.norm3(t3);
+			MathUtil.vecaddN(tempvec, d1, t3, tA);
+			MathUtil.vecaddN(tempvec, d2, t3, tB);
+			return axesInfo[axis];
+		}
+
+	} // end of Cell
+
+	public static class ParentCell extends Cell{
+
+		/**
+		 * InverseTranspose of Tmat:
+		 * 
+		 * parentCell.basisCart * Tmat^t*i = childCell.basisCart
+		 * 
+		 * only for the parent; based on the parsed value of Tmat ("parentbasis")
+		 * 
+		 */
+		private double[][] TmatInverseTranspose;
+
+		/**
+		 * cell origin relative to child cell origin on the unitless child lattice basis.
+		 * [x, y, z];
+		 * 
+		 * for parent, from ISOVIZ file "parentorigin"
+		 * 
+		 */
+		double[] originUnitless = new double[3];
+
+		/**
+		 * Original unstrained cell parameters [A, B, C, ALPHA, BETA, GAMMA];
+		 * 
+		 * set by parser for parent, from ISOVIZ file "parentcell"
+		 */
+		double[] latt0 = new double[6];
+
+		ParentCell() {
+			TmatInverseTranspose = new double[3][3];
+			labelText = "  Pcell";
+			color = COLOR_PARENT_CELL;
+		}
+
+		/**
+		 * parent cell only
+		 * 
+		 * @param pStrainPlusIdentity
+		 * @param child
+		 */
+		void setStrained(double[][] strain, ChildCell child) {
+			MathUtil.mat3product(strain, basisCart0, basisCart, t);
+			transformParentToChild(child, true);
+			MathUtil.set3(originCart, child.toTempCartesian(originUnitless));
+			setVertices();
+			setLatticeParameterLabels();
+			child.setVertices();
+			child.setLatticeParameterLabels();
+		}
+
+		/**
+		 * Generate the Cartesian basis matrix from the 3x3 Tmat matrix
+		 * and transfer that to the child.
+		 * 
+		 * From parser.
+		 * 
+		 * parent cell only
+		 * 
+		 * @param isRhomb
+		 * @param Tmat
+		 * @param childCell 
+		 */
+		void setUnstrainedCartsianBasis(boolean isRhomb, double[][] Tmat, ChildCell childCell) {
 			// parent only
 			MathUtil.mat3transpose(Tmat, t);
 			MathUtil.mat3inverse(t, TmatInverseTranspose, t3, t2);
@@ -1201,11 +1288,18 @@ public class Variables {
 				basisCart0[1][2] = latt0[C] * temp1;
 				basisCart0[2][2] = latt0[C] * temp2;
 			}
-			
-
+			transformParentToChild(childCell, false);
 		}
 
-		void transformParentToChild(Cell child, boolean isStrained) {
+		/**
+		 * Right-multiply the child basis with Tmat-inv-transpose
+		 * 
+		 * parent only
+		 * 
+		 * @param child
+		 * @param isStrained
+		 */
+		void transformParentToChild(ChildCell child, boolean isStrained) {
 			double[][] cart = (isStrained ? basisCart : basisCart0);
 			double[][] dest = (isStrained ? child.basisCart : child.basisCart0);
 			MathUtil.mat3product(cart, TmatInverseTranspose, dest, t4);
@@ -1213,79 +1307,113 @@ public class Variables {
 				MathUtil.mat3inverse(child.basisCart, child.basisCartInverse, t3, t2);
 		}
 
-		void setStrainedVertices() {
-			for (int ix = 0; ix < 2; ix++) {
-				for (int iy = 0; iy < 2; iy++) {
-					for (int iz = 0; iz < 2; iz++) {
-						for (int i = 0; i < 3; i++) {
-							cartesianVertices[ix + 2 * iy + 4 * iz][i] = originCart[i] + ix * basisCart[i][0]
-									+ iy * basisCart[i][1] + iz * basisCart[i][2];
-						}
-					}
+		@Override
+		public String toString() {
+			return "[ParentCell]";
+		}
+
+	}
+	
+	public static class ChildCell extends Cell{
+
+		/**
+		 * Inverse of basisCart in Inverse-Angstrom units [basis vector][x,y,z]
+		 */
+		private double[][] basisCartInverse = new double[3][3];
+
+
+		ChildCell() {
+			labelText = "  Ccell";
+			color = COLOR_CHILD_CELL; 
+		}
+
+		/**
+		 * Calculate the strained or unstrained metric tensor along
+		 * with the lattice-to-cartesian matrix.
+		 * 
+		 * child only
+		 * 
+		 * @param slatt2cart
+		 * @param metric
+		 * @param isStrained
+		 * @param tempmat
+		 */
+
+		public void setMetricTensor(double[][] slatt2cart, double[][] metric, boolean isStrained) {
+			double[][] cart = (isStrained ? basisCart : basisCart0);
+			// Determine the unstrained metric tensor
+			MathUtil.mat3inverse(cart, t, t3, t2);    			// cart^-1 -> t
+			MathUtil.mat3transpose(t, slatt2cart);				// B* = Transpose(Inverse(B))
+			MathUtil.mat3product(t, slatt2cart, metric, t4); // G* = Transpose(B*).(B*)
+		}
+
+		/**
+		 * Convert the fractional coords to cartesian, placing the result in a temporary
+		 * variable.
+		 * 
+		 * child only
+		 * 
+		 * @param xyz fractional coordinates, unchanged
+		 * @return TEMPORARY [x,y,z]
+		 */
+		public double[] toTempCartesian(double[] fxyz) {
+			MathUtil.mat3mul(basisCart, fxyz, t3);
+			return t3;
+		}
+
+		/**
+		 * returns a TEMPORARY matrix
+		 * 
+		 * child only
+		 * 
+		 * @param info
+		 * @return
+		 */
+		double[][] getTempStrainedCartesianBasis(double[] info) {
+			MathUtil.voigt2matrix(info, t, 0);
+			MathUtil.mat3product(basisCart, t, t2, t4);
+			MathUtil.mat3copy(t2, t);
+			MathUtil.mat3product(t, basisCartInverse, t2, t4);
+			return t2;
+		}
+
+		
+		/**
+		 * Used only for labels in the String panel. 
+		 * 
+		 * Convert a Voigt array to matrix format (V). Then apply 
+		 * 
+		 * StrainedCartBasis * V * StrainedCartBasis^-1
+		 * 
+		 * and return the sum of the squares of the nine elements of this matrix.
+		 * 
+		 * child cell only
+		 * 
+		 * @param v1
+		 * @return isotropic parameter
+		 */
+		public double getIsotropicParameter(double[] v1) {
+			MathUtil.voigt2matrix(v1, t, 0);
+			MathUtil.mat3product(basisCart, t, t, t2);
+			MathUtil.mat3product(t, basisCartInverse, t, t2);
+			// ellipsoid in cartesian coords
+			double d = 0;
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					d += t[i][j] * t[i][j];
 				}
 			}
-		}
-
-		/**
-		 * Place the center of the cell at the origin.
-		 */
-		void setRelativeTo(double[] c) {
-			for (int j = 0; j < 8; j++) {
-				double[] v = cartesianVertices[j];
-				MathUtil.scaleAdd3(v, -1, c, v);
-			}
-		}
-
-		void rangeCheckVertices(double[][] minmax) {
-			for (int i = 8; --i >= 0;) {
-				MathUtil.rangeCheck(cartesianVertices[i], minmax);
-			}
-		}
-
-		void setLatticeParameterLabels() {
-			double[][] t = new double[3][3];
-			double[] v = new double[6];
-			MathUtil.mat3transpose(basisCart, t);
-			v[A] = Math.sqrt(MathUtil.dot3(t[A], t[A]));
-			v[B] = Math.sqrt(MathUtil.dot3(t[B], t[B]));
-			v[C] = Math.sqrt(MathUtil.dot3(t[C], t[C]));
-			v[ALPHA] = Math.acos(MathUtil.dot3(t[B], t[C]) / Math.max(v[B] * v[C], 0.001));
-			v[BETA] = Math.acos(MathUtil.dot3(t[A], t[C]) / Math.max(v[A] * v[C], 0.001));
-			v[GAMMA] = Math.acos(MathUtil.dot3(t[A], t[B]) / Math.max(v[A] * v[B], 0.001));
-			for (int n = 0; n < 3; n++) {
-				labels[n].setText(MathUtil.varToString(v[n], 2, -5));
-				labels[n + 3].setText(MathUtil.varToString((180 / Math.PI) * v[n + 3], 2, -5));
-			}
-		}
-
-		/**
-		 * Measure distance from center for the axes of this cell.
-		 * 
-		 * @param axis
-		 * @param center
-		 * @param tempvec
-		 * @param tB
-		 * @param d2
-		 * @param tA
-		 * @param d1
-		 */
-		double[] getAxisExtents(int axis, double[] center, double d1, double[] tA, double d2, double[] tB,
-				double[] tempvec) {
-			for (int i = 0; i < 3; i++) {
-				tempvec[i] = originCart[i] + (t3[i] = basisCart[i][axis]) - center[i];
-			}
-			MathUtil.norm3(t3);
-			MathUtil.vecaddN(tempvec, d1, t3, tA);
-			MathUtil.vecaddN(tempvec, d2, t3, tB);
-			return axesInfo[axis];
+			return d;
 		}
 
 		@Override
 		public String toString() {
-			return "[" + (isChild ? "childCell" : "parentCell") + "]";
+			return "[ChildCell]";
 		}
 
-	} // end of Cell
+
+	}
+	
 
 	/**
 	 * The IsoParser class is an inner class of Variables that loads Variable and
@@ -1629,8 +1757,7 @@ public class Variables {
 					Tmat[j][i] = vt.getDouble(pt);
 				}
 			}
-			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, Tmat);
-			parentCell.transformParentToChild(childCell, false);
+			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, Tmat, childCell);
 		}
 
 		private void parseAtoms() {
@@ -2028,9 +2155,6 @@ public class Variables {
 
 	} // end of IsoParser
 
-	static final Color COLOR_CHILD_CELL = new Color(128, 128, 204);
-	static final Color COLOR_PARENT_CELL = new Color(204, 128, 128);
-
 	/**
 	 * The SliderPanelGUI inner class of Variables creates all GUI elements for
 	 * IsoApp.sliderPanel and handles all synchronization of JSlider and JCheckbox
@@ -2348,8 +2472,8 @@ public class Variables {
 				cell.labels[n] = newWhiteLabel("", JLabel.LEFT);
 				cell.labels[n] = newWhiteLabel("", JLabel.LEFT);
 			}
-			cell.title = newWhiteLabel(cell.isChild ? "  Ccell" : "  Pcell", JLabel.LEFT);
-			cell.title.setForeground(cell.isChild ? COLOR_CHILD_CELL : COLOR_PARENT_CELL);
+			cell.title = newWhiteLabel(cell.labelText, JLabel.LEFT);
+			cell.title.setForeground(cell.color);
 		}
 
 		/**

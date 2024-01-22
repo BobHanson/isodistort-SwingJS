@@ -80,9 +80,9 @@ public abstract class IsoApp {
 			// "data/test22.txt";
 			// "data/tbmno3-distortion.iso.txt"; // distortion file
 			//"data/tbmno3-distortion.isoviz"; // isoviz [3D+1] magnetic 
-	"data/data.isoviz";
+	//"data/data.isoviz";
 	// "data/ZrP2O7-sg205-sg61-distort.isoviz"; // very large file
-	// "data/test28.txt"; // small file
+	 "data/test28.txt"; // small file
 
 	
 	public static class IsoFrame extends JFrame {

@@ -424,7 +424,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		if (needsRecalc || variables.isChanged) {
 			isAdjusting = true;
 			variables.readSliders();
-			variables.enableSubtypeSelection(allowSubtypeSelection  && (isBoth || isPowder));
+			variables.enableSubtypeSelection(allowSubtypeSelection);//  && (isBoth || isPowder));
 			if (isBoth || isPowder)
 				resetPowderPeaks();
 			if (isBoth || !isPowder)

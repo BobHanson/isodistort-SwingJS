@@ -683,19 +683,19 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 */
 	private void recalcStrainMetrics() {
 		/**
-		 * transforms childHKL to XYZ cartesian
+		 * transforms childReciprocol to XYZ cartesian
 		 */
-		double[][] hkl2cart = new double[3][3];
-		variables.childCell.setMetricTensor(hkl2cart, metric0, false);
-		variables.childCell.setMetricTensor(hkl2cart, metric, true);
+		double[][] reciprocol2cartesian = new double[3][3];
+		variables.childCell.setMetricTensor(reciprocol2cartesian, metric0, false);
+		variables.childCell.setMetricTensor(reciprocol2cartesian, metric, true);
 
 		// Create an orthonormal rotation matrix that moves axis 1 to the +x 
 		// direction, while keeping axis 2 in the +y quadrant.
-		double[][] rotmat = getNormalRotation(hkl2cart);
+		double[][] rotmat = getNormalRotation(reciprocol2cartesian);
 
 		// Combine the rotation and the cartesian conversion 
 		// to get the overall childHKL to cartesian transformation.
-		MathUtil.mat3product(rotmat, hkl2cart, matChildReciprocal2rotatedCartesian, tempmat);
+		MathUtil.mat3product(rotmat, reciprocol2cartesian, matChildReciprocal2rotatedCartesian, tempmat);
 		// and its inverse
 		MathUtil.mat3inverse(matChildReciprocal2rotatedCartesian, matRotatedCartesian2ChildReciprocal, tempvec, tempmat);
 

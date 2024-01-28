@@ -1,5 +1,6 @@
 // isodistor.js
 // Bob Hanson 2023.12.08
+// BH 2024.01.28 removed html injection
 
 appletCount = 0;
 
@@ -58,39 +59,3 @@ clickIsoDistort = function() {
 	fetchIsoDistort("isovizdistortion", function(data, formData) { createIsoDistortApp("isovizdistortion", data, formData)});
 }
 
-/* BH 2024.01.19
-
-findRadio = function(value) {
-	var r;
-	$("input").each(function(i,e) {
-		if (e.value == value) {
-			r = e;
-			return false;
-		}
-	});
-	return r;	
-}
-
-clickIsoDiffract = function() {
-	fetchIsoDistort("isovizdiffraction", function(data, formData) { createIsoDistortApp("isovizdiffraction", data, formData)});
-}
-*/
-
-fixHTML = function() {	
-	$("p").first().after("<input type=button name='appbtn' value='interactive viewer' onclick='clickIsoDistort()'>");  
-
-
-  /* BH 2024.01.19
-
-  var r = findRadio("isovizdistortion");
-  r.nextSibling.remove();
-  $(r).after("<input type=button name='appbtn' value='Interactive distortion' onclick='clickIsoDistort()'>");  
-  r = findRadio("isovizdiffraction");
-  r.nextSibling.remove();
-  $(r).after("<input type=button name='appbtn' value='Interactive diffraction' onclick='clickIsoDiffract()'>");
-  
-  */
-}
-
-
-fixHTML();

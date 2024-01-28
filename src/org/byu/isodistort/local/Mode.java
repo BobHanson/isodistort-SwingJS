@@ -209,9 +209,6 @@ class Mode {
 			case MAG:
 			case ROT:
 				d = MathUtil.len3(v.childCell.toTempCartesian(v1));
-				if (type == 0)
-					System.out.println(
-							"Mode " + ia + " " + t + " " + s + " " + v1[0] + " " + v1[1] + " " + v1[2] + " " + d);
 				if (d > m[type])
 					m[type] = d;
 				break;

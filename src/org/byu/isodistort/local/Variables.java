@@ -1300,11 +1300,12 @@ public class Variables {
 		 * @param isStrained
 		 */
 		void transformParentToChild(ChildCell child, boolean isStrained) {
-			double[][] cart = (isStrained ? basisCart : basisCart0);
-			double[][] dest = (isStrained ? child.basisCart : child.basisCart0);
-			MathUtil.mat3product(cart, TmatInverseTranspose, dest, t4);
-			if (isStrained)
-				MathUtil.mat3inverse(child.basisCart, child.basisCartInverse, t3, t2);
+			if (isStrained) {
+				MathUtil.mat3product(basisCart, TmatInverseTranspose, child.basisCart, t4);
+				MathUtil.mat3inverse(child.basisCart, child.basisCartInverse, t3, t2);				
+			} else {
+				MathUtil.mat3product(basisCart0, TmatInverseTranspose, child.basisCart0, t4);
+			}
 		}
 
 		@Override
@@ -1331,20 +1332,23 @@ public class Variables {
 		 * Calculate the strained or unstrained metric tensor along
 		 * with the lattice-to-cartesian matrix.
 		 * 
+		 * Also fill the reciprocol-to-Cartesian matrix
+		 * 
 		 * child only
 		 * 
-		 * @param slatt2cart
+		 * @param matChildReciprocal2cart
 		 * @param metric
 		 * @param isStrained
 		 * @param tempmat
 		 */
 
-		public void setMetricTensor(double[][] slatt2cart, double[][] metric, boolean isStrained) {
-			double[][] cart = (isStrained ? basisCart : basisCart0);
-			// Determine the unstrained metric tensor
-			MathUtil.mat3inverse(cart, t, t3, t2);    			// cart^-1 -> t
-			MathUtil.mat3transpose(t, slatt2cart);				// B* = Transpose(Inverse(B))
-			MathUtil.mat3product(t, slatt2cart, metric, t4); // G* = Transpose(B*).(B*)
+		public void setMetricTensor(double[][] matChildReciprocal2cart, double[][] metric, boolean isStrained) {
+			// Determine the unstrained or strained metric tensor
+			MathUtil.mat3inverse((isStrained ? basisCart : basisCart0), t, t3, t2);
+			// cart^-1 -> t
+			MathUtil.mat3transpose(t, matChildReciprocal2cart);				
+			// B* = Transpose(Inverse(B))
+			MathUtil.mat3product(t, matChildReciprocal2cart, metric, t4); // G* = Transpose(B*).(B*)
 		}
 
 		/**

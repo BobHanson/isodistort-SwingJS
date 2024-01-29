@@ -1,49 +1,3 @@
-/**
-	@Override
-	protected void frameResized() {
-		if (rp == null)
-			return;
-		rp.im = null;
-		drawPanel.setBackground(Color.red);
-		needsRecalc = true;
-		updateDisplay();
-	}
-
- * Bob Hanson 2023.12.08
- * 
- * Reconfigured java.applet.Applet as Swing JPanel
- * allowing for simpler creation of external (draggable) JFrame.
- * 
- * Updated rendering to not use thread sleep and instead
- * use javax.swing.Timer so as to be compatible with JavaScript.
- * 
- * Refactored to have the simple hierarchy:
- * 
- *   IsoDistortApp > IsoPanel
- *  
- *  
- *  Branton Campbell, David Tanner Andrew Zimmerman, 
- *  June 2006
- * 
- * This applet takes the data from the IsoDistort web page 
- * and uses it to render atoms and bonds and cells that represent various atomic crystal structures.
- * 
- 
-*/
-
-//	http://stokes.byu.edu/isodistort.html is isodistort website
-
-//	import all the needed java classes for this program
-
-/**
- 11111111111111111111111111111111111111111111111111111111111111111111111111111111
- 1																				1
- 1 In the first section we import needed classes and instantiate the variables. 1
- 1																				1
- 11111111111111111111111111111111111111111111111111111111111111111111111111111111
- 
-*/
-
 package org.byu.isodistort;
 
 import java.awt.Color;
@@ -72,6 +26,41 @@ import org.byu.isodistort.local.MathUtil;
 import org.byu.isodistort.local.Variables.Atom;
 
 import javajs.util.PT;
+
+/**
+*  
+*  Branton Campbell, David Tanner Andrew Zimmerman, 
+*  June 2006
+* 
+* This applet takes the data from the IsoDistort web page 
+* and uses it to render atoms and bonds and cells that represent various atomic crystal structures.
+* 
+* Bob Hanson 2023.12.08
+* 
+* Reconfigured java.applet.Applet as Swing JPanel
+* allowing for simpler creation of external (draggable) JFrame.
+* 
+* Updated rendering to not use thread sleep and instead
+* use javax.swing.Timer so as to be compatible with JavaScript.
+* 
+* Refactored to have the simple hierarchy:
+* 
+*   IsoDistortApp > IsoPanel
+*  
+*/
+
+//http://stokes.byu.edu/isodistort.html is isodistort website
+
+//import all the needed java classes for this program
+
+/**
+11111111111111111111111111111111111111111111111111111111111111111111111111111111
+1																				1
+1 In the first section we import needed classes and instantiate the variables. 1
+1																				1
+11111111111111111111111111111111111111111111111111111111111111111111111111111111
+
+*/
 
 public class IsoDiffractApp extends IsoApp implements KeyListener {
 
@@ -542,10 +531,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		// BH Q: Why the duplicate ? Maybe older screens had trouble?
 
-//		for (int J = 0; J < (Math.random() > 0.5 ? 1 : 2); J++) {
 		double y = drawHeight - stickYOffset;
 		gr.setColor(colorMap[0]);
 		drawDash(gr, drawHalfWidth, drawHeight - axisYOffset, 1, 0, drawHalfWidth, lineThickness, 0);
+		for (int p = 0; p < peakCount; p++) {
+			if (peakIntensity[p] < MIN_PEAK_INTENSITY)
+				drawDash(gr, powderPeakX[p], y, 0, 1, tickLength, lineThickness, peakType[p]);
+		}
 		for (int c = 4; c > 0; c--) {
 			// draw one color at at time with
 			// red and green last and on top
@@ -561,7 +553,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			drawDash(gr, powderAxisTickX[n], drawHeight - axisYOffset, 0, 1, tickLength, lineThickness, 0);
 			gr.drawString(powderAxisTickLabel[n], (int) powderAxisTickX[n] - 15, ytick);
 		}
-		// }
 	}
 
 	private static void drawDash(Graphics gr, double cx, double cy, double dirx, double diry, double halflength,
@@ -585,8 +576,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	/**
 	 * mousePeak determines which Bragg peak, if any, is under the mouse.
 	 * 
-	 * @param x      is the x-coordinate of the mouse in the Applet window
-	 * @param y      is the y-coordinate of the mouse in the Applet window
+	 * @param x is the x-coordinate of the mouse in the Applet window
+	 * @param y is the y-coordinate of the mouse in the Applet window
 	 * @return which peak is under the mouse
 	 * 
 	 */
@@ -597,8 +588,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		String mouseovertext, valuestring = "", specifictext = "";
 		boolean isPowder = this.isPowder && (!isBoth || y > drawHeight - shortPowderHeight);
 		for (int p = 0; p < peakCount; p++) {
-			if (peakIntensity[p] < MIN_PEAK_INTENSITY)
-				continue;
 			if (isPowder) {
 				if (approxEqual(x, powderPeakX[p], tol2)
 						&& (!isBoth || (Math.abs(y - (drawHeight - powderStickYOffset)) < 1.25 * normalTickLength))
@@ -633,13 +622,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			double[] parentHKL = new double[3];
 			MathUtil.mat3mul(variables.Tmat, childHKL, parentHKL);
 			String intensity = toIntensityString(peakIntensity[thisPeak]);
-			mouseovertext = "Parent HKL = (" + trim00(parentHKL[0]) + ", "
-					+ trim00(parentHKL[1]) + ", " + trim00(parentHKL[2])
-					+ ")       Child HKL = (" + trim00(childHKL[0]) + ", "
-					+ trim00(childHKL[1]) + ", " + trim00(childHKL[2]) + ")     "
-					+ specifictext
-					+ "   I = " + intensity
-					+ (isPowder ? "   M = " + (int) peakMultiplicity[thisPeak] : "");
+			mouseovertext = "Parent HKL = (" + trim00(parentHKL[0]) + ", " + trim00(parentHKL[1]) + ", "
+					+ trim00(parentHKL[2]) + ")       Child HKL = (" + trim00(childHKL[0]) + ", " + trim00(childHKL[1])
+					+ ", " + trim00(childHKL[2]) + ")     " + specifictext
+
+					+ (peakIntensity[thisPeak] < MIN_PEAK_INTENSITY ? ""
+							: "   I = " + intensity + (isPowder ? "   M = " + (int) peakMultiplicity[thisPeak] : ""));
+
 			isMouseOver = true;
 		} else {
 			mouseovertext = "";

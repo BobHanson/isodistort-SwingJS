@@ -136,7 +136,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		// Adjustable resolution based on field of view
 		rp3.initializeSettings(modelRadius);
 		showAtoms = showAtoms0;
-		int n = variables.numAtoms;
+		int n = variables.nAtoms;
 		atomObjects.clear(0);
 		int res =  (n < 200 ? 7 : (int) Math.min(8, Math.max(2, 50 / modelRadius)));
 		addStatus("atom shape resolution set to " + res);
@@ -157,7 +157,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	 */
 	private void initBonds() {
 		showBonds = showBonds0;
-		int n = numBonds;
+		int n = nBonds;
 		bsBondsEnabled = new BitSet();
 		bondObjects.clear(0);
 		if (n > 0) {
@@ -229,12 +229,12 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		yAxisMaterial.setColor(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 20, 0.5, 0.5, 0.5);// bonds are black
 		zAxisMaterial.setColor(0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 20, 0.25, 0.25, 0.25);// bonds are black
 
-		subMaterial = new Material[variables.numTypes][];
+		subMaterial = new Material[variables.nTypes][];
 
 		// Create the subMaterial array;
-		for (int t = 0, nt = variables.numTypes; t < nt; t++) {
-			subMaterial[t] = new Material[variables.numSubTypes[t]];
-			for (int s = 0, nst = variables.numSubTypes[t]; s < nst; s++)// iterate over number-of-subtypes
+		for (int t = 0, nt = variables.nTypes; t < nt; t++) {
+			subMaterial[t] = new Material[variables.nSubTypes[t]];
+			for (int s = 0, nst = variables.nSubTypes[t]; s < nst; s++)// iterate over number-of-subtypes
 				subMaterial[t][s] = rp3.newMaterial();
 		}
 	}
@@ -269,7 +269,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 	@Override
 	protected void renderAtoms() {
-		for (int i = 0, n = variables.numAtoms; i < n; i++) {
+		for (int i = 0, n = variables.nAtoms; i < n; i++) {
 			double[][] info = variables.getAtomInfo(i);
 			Geometry a = atomObjects.child(i);
 			a.setEnabled(!showPrimitiveAtoms || variables.isPrimitive(i));
@@ -343,14 +343,14 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		if (bondInfo == null)
 			bondInfo = new double[64][];
 		bsBondsEnabled.clear();
-		for (int i = 0; i < numBonds; i++)
+		for (int i = 0; i < nBonds; i++)
 			bondObjects.child(i).setEnabled(false);
 		CubeIterator iterator = variables.getCubeIterator();
 		double r = variables.halfMaxBondLength * 2;
 		double r2 = r * r;
 		double range = variables.halfMaxBondLength * 2;
 		double minBondOcc = variables.minBondOcc;
-		for (int a1 = 0, n = variables.numAtoms; a1 < n; a1++) {
+		for (int a1 = 0, n = variables.nAtoms; a1 < n; a1++) {
 			Atom a = variables.getAtom(a1);
 			if (a.getOccupancy() < minBondOcc || showPrimitiveAtoms && !variables.isPrimitive(a1))
 				continue;
@@ -384,7 +384,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	/**
 	 * Total number of bonds
 	 */
-	public int numBonds;
+	public int nBonds;
 	/**
 	 * bondInfo[bond index] = {avx, avy, avz, angleX, angleY, len^2, atom1 index,
 	 * atom2 index, bond index} reference atomInfo (below)
@@ -406,21 +406,21 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 
 	public double[] addBond(String key12, int a1, int a2) {
-		if (numBonds == bondInfo.length) {
-			double[][] bi = new double[numBonds * 2][];
-			for (int j = numBonds; --j >= 0;)
+		if (nBonds == bondInfo.length) {
+			double[][] bi = new double[nBonds * 2][];
+			for (int j = nBonds; --j >= 0;)
 				bi[j] = bondInfo[j];
 			bondInfo = bi;
 		}
 		double[] ab = new double[9];
 		ab[6] = a1;
 		ab[7] = a2;
-		ab[8] = numBonds;
-		bondInfo[numBonds] = ab;
+		ab[8] = nBonds;
+		bondInfo[nBonds] = ab;
 		if (knownBonds == null)
 			knownBonds = new HashMap<>();
 		knownBonds.put(key12, ab);
-		numBonds++;
+		nBonds++;
 		return ab;
 	}
 
@@ -445,9 +445,9 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	@Override
 	protected void recalcAtomColors() {
 		double[] rgb = new double[3];
-		for (int t = variables.numTypes; --t >= 0;) {
+		for (int t = variables.nTypes; --t >= 0;) {
 			variables.getColors(t, rgb);
-			for (int s = variables.numSubTypes[t]; --s >= 0;) {
+			for (int s = variables.nSubTypes[t]; --s >= 0;) {
 				// BH reversing this action
 				if (!variables.isSubTypeSelected(t, s)) {
 					// a darkish shade of gray

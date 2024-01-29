@@ -116,7 +116,6 @@ import java.util.TreeMap;
  * @author Bob Hanson
  *
  */
-@SuppressWarnings("serial")
 public class IsoTokenizer extends TreeMap<String, int[]> {
 
 	/**

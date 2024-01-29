@@ -116,24 +116,24 @@ public class Variables {
 	/**
 	 * Total number of atoms after filtering for primitive.
 	 */
-	public int numAtoms;
+	public int nAtoms;
 
 	/**
 	 * Number of different atom types
 	 */
-	public int numTypes;
+	public int nTypes;
 
 	/**
 	 * Number of subtypes for each atom type.
 	 */
-	public int[] numSubTypes;
+	public int[] nSubTypes;
 
 	/**
 	 * the final public number of atoms for specific type and subtype; either
-	 * numSubTypeAtomsRead or numPrimitiveSubAtoms
+	 * nSubTypeAtomsRead or nPrimitiveSubAtoms
 	 * 
 	 */
-	int[][] numSubAtoms;
+	int[][] nSubAtoms;
 
 	/**
 	 * Names for each atom type; [type]
@@ -296,14 +296,14 @@ public class Variables {
 	}
 
 	public void enableSubtypeSelection(boolean tf) {
-		for (int t = 0; t < numTypes; t++)
-			for (int s = 0; s < numSubTypes[t]; s++)
+		for (int t = 0; t < nTypes; t++)
+			for (int s = 0; s < nSubTypes[t]; s++)
 				gui.subTypeCheckBoxes[t][s].setEnabled(tf);// was false
 	}
 
 	public void selectAllSubtypes() {
-		for (int t = 0; t < numTypes; t++)
-			for (int s = 0; s < numSubTypes[t]; s++)
+		for (int t = 0; t < nTypes; t++)
+			for (int s = 0; s < nSubTypes[t]; s++)
 				gui.subTypeCheckBoxes[t][s].setSelected(true);// was false
 	}
 
@@ -396,13 +396,13 @@ public class Variables {
 		// max values that will be used in the labels
 		// just easier to use a single oversize array
 
-		int numSubMax = 0;
-		for (int t = 0; t < numTypes; t++) {
-			int n = numSubTypes[t];
-			if (n > numSubMax)
-				numSubMax = n;
+		int nSubMax = 0;
+		for (int t = 0; t < nTypes; t++) {
+			int n = nSubTypes[t];
+			if (n > nSubMax)
+				nSubMax = n;
 		}
-		double[][][] max = new double[numTypes][numSubMax][MODE_ATOMIC_COUNT];
+		double[][][] max = new double[nTypes][nSubMax][MODE_ATOMIC_COUNT];
 
 		modes[DIS].calcDistortion(this, max, tempvec, null);
 		modes[OCC].calcDistortion(this, max, null, null);
@@ -410,8 +410,8 @@ public class Variables {
 		modes[ROT].calcDistortion(this, max, tempvec, null);
 		modes[ELL].calcDistortion(this, max, tempvec, tempmat);
 
-		for (int t = 0; t < numTypes; t++) {
-			for (int s = 0; s < numSubTypes[t]; s++) {
+		for (int t = 0; t < nTypes; t++) {
+			for (int s = 0; s < nSubTypes[t]; s++) {
 				gui.setSubTypeText(t, s, max[t][s]);
 			}
 		}
@@ -427,7 +427,7 @@ public class Variables {
 		MathUtil.set3(minmax[0], 1E6, 1e6, 1e6);
 		MathUtil.set3(minmax[1], -1E6, -1e6, -1e6);
 		childCell.rangeCheckVertices(minmax);
-		for (int i = numAtoms; --i >= 0;) {
+		for (int i = nAtoms; --i >= 0;) {
 			MathUtil.rangeCheck(childCell.toTempCartesian(atoms[i].vectorBest[DIS]), minmax);
 		}
 		MathUtil.average3(minmax[0], minmax[1], cartesianCenter);
@@ -575,7 +575,7 @@ public class Variables {
 		if (getBspt) {
 			bspt = new Bspt();
 		}
-		for (int ia = 0, n = numAtoms; ia < n; ia++) {
+		for (int ia = 0, n = nAtoms; ia < n; ia++) {
 			Atom a = atoms[ia];
 			double[][] info = a.info;
 			if (info[OCC] == null) {
@@ -1497,7 +1497,7 @@ public class Variables {
 
 				parseAtoms();
 				parseBonds();
-				System.out.println("Variables: " + numAtoms + " atoms were read");
+				System.out.println("Variables: " + nAtoms + " atoms were read");
 
 				parseStrainModes();
 				parseIrrepList();
@@ -1544,7 +1544,7 @@ public class Variables {
 		 * Load a Type/SubType, SubAtom [t][s][a] list with ncol or a default
 		 * 
 		 * @param def          a default value or NaN to skip if key is not present
-		 * @param numAtomsRead
+		 * @param nAtomsRead
 		 * @param bsPrimitive
 		 * @param bsPrimitive
 		 * @param string
@@ -1552,12 +1552,12 @@ public class Variables {
 		 * @param ncol
 		 * 
 		 */
-		boolean getAtomTSAn(String key, int mode, double def, int numAtomsRead, BitSet bsPrimitive) {
+		boolean getAtomTSAn(String key, int mode, double def, int nAtomsRead, BitSet bsPrimitive) {
 			boolean isDefault = (vt.setData(key) == 0);
 			if (isDefault && Double.isNaN(def))
 				return false;
 			int ncol = modes[mode].columnCount;
-			for (int pt = 0, ia = 0, iread = 0, n = numAtomsRead; iread < n; iread++, pt += ncol) {
+			for (int pt = 0, ia = 0, iread = 0, n = nAtomsRead; iread < n; iread++, pt += ncol) {
 				if (bsPrimitive != null && !bsPrimitive.get(iread))
 					continue;
 				double[] data = atoms[ia++].vectorBest[mode] = new double[ncol];
@@ -1610,11 +1610,11 @@ public class Variables {
 			int nData = vt.setData(key);
 			if (nData == 0 && !isRequired)
 				return 0;
-			int numRows = nData / ncol;
-			int n = numRows * ncol;
+			int nRows = nData / ncol;
+			int n = nRows * ncol;
 			if (nData != n)
 				parseError(nData, n);
-			return numRows;
+			return nRows;
 		}
 
 		/**
@@ -1777,65 +1777,69 @@ public class Variables {
 				defaultUiso = d * d;
 			}
 
-				Variables.this.bsPrimitive = vt.getBitSet("atomsinunitcell");
-				BitSet bsPrimitive = (isDiffraction ? Variables.this.bsPrimitive : null);
-				numAtoms = (bsPrimitive == null ? 0 : bsPrimitive.cardinality());
+			BitSet bsPrimitive = vt.getBitSet("atomsinunitcell");
+			
+			int nData = vt.setData("atomcoordlist");
+			// number of atoms in the file, before filtering for primitives
+			int nAtomsRead = getNumberOfAtomsRead(nData);
+			int ncol = nData / nAtomsRead;
+			if (isDiffraction && bsPrimitive == null)
+				bsPrimitive = createBSPrimitive(nAtomsRead, ncol);
+			Variables.this.bsPrimitive = bsPrimitive;
+			if (!isDiffraction)
+				bsPrimitive = null;
+			nAtoms = (bsPrimitive == null ? 0 : bsPrimitive.cardinality());
 
 			// Get all the atom type information and return the number of subtype atoms for
 			// each type.
 			// Just for reading the file.
 
-			int[][] numSubTypeAtomsRead = parseAtomTypes();
+			int[][] nSubTypeAtomsRead = parseAtomTypes();
 
 			// the number of primitive atoms,
 			// if this is for IsoDifrract; in the end, we
-			// will replace numSubAtoms with numSubPrimitiveAtoms
-			int[][] numPrimitiveSubAtoms = null;
+			// will replace nSubAtoms with nSubPrimitiveAtoms
+			int[][] nPrimitiveSubAtoms = null;
 
-			if (numAtoms > 0) {
-				numPrimitiveSubAtoms = new int[numTypes][];
-				for (int i = 0; i < numTypes; i++) {
-					numPrimitiveSubAtoms[i] = new int[numSubTypeAtomsRead[i].length];
+			if (nAtoms > 0) {
+				nPrimitiveSubAtoms = new int[nTypes][];
+				for (int i = 0; i < nTypes; i++) {
+					nPrimitiveSubAtoms[i] = new int[nSubTypeAtomsRead[i].length];
 				}
 			}
-
-			//boolean haveBonds = (vt.setData("bondlist") > 0);
-
 			// find atomic coordinates of parent
-			int nData = vt.setData("atomcoordlist");
 			if (nData == 0) {
 				parseError("atomcoordlist is missing", 3);
 			}
 
-			// number of atoms in the file, before filtering for primitives
-			int numAtomsRead = getNumberOfAtomsRead(nData);
-			int ncol = nData / numAtomsRead;
-
-			// numAtoms may be the number of primitive atoms only
-			if (numAtoms == 0)
-				numAtoms = numAtomsRead;
-			atoms = new Atom[numAtoms];
+			// nAtoms may be the number of primitive atoms only
+			if (nAtoms == 0)
+				nAtoms = nAtomsRead;
+			atoms = new Atom[nAtoms];
 
 			// Find number of subatoms for each subtype
-			// Set up numSubAtom (and numPrimitiveSubAtoms if this is for IsoDiffract)
+			// Set up nSubAtom (and nPrimitiveSubAtoms if this is for IsoDiffract)
 
 			// BH 2023.12
 			// firstAtomOfType is an array containing pointers in the overall list of atoms
 			// read (element 0) and the filtered primitive list (element 1)
 			// by type. firstAtomOfType[0] is always [0, 0], and we add an addition element
-			// at the end that is [numAtomsRead, numAtoms]. These are useful in the mode listings,
-			// where we need to catalog atom mode vectors from lists involving type indices only
-			int[][] firstAtomOfType = new int[numTypes + 1][2];
+			// at the end that is [nAtomsRead, nAtoms]. These are useful in the mode
+			// listings,
+			// where we need to catalog atom mode vectors from lists involving type indices
+			// only
+			int[][] firstAtomOfType = new int[nTypes + 1][2];
 			firstAtomOfType[0] = new int[2];
-			firstAtomOfType[numTypes] = new int[] { numAtomsRead, numAtoms };
+			firstAtomOfType[nTypes] = new int[] { nAtomsRead, nAtoms };
 
-			readAtomCoordinates(ncol, numAtomsRead, numSubTypeAtomsRead, bsPrimitive, numPrimitiveSubAtoms,
+			vt.setData("atomcoordlist");
+			readAtomCoordinates(ncol, nAtomsRead, nSubTypeAtomsRead, bsPrimitive, nPrimitiveSubAtoms,
 					firstAtomOfType);
 
-			numSubAtoms = (bsPrimitive == null ? numSubTypeAtomsRead : numPrimitiveSubAtoms);
+			nSubAtoms = (bsPrimitive == null ? nSubTypeAtomsRead : nPrimitiveSubAtoms);
 			for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 				// (STRAIN and IRRED are handled later)
-				modes[i] = new Mode(i, numTypes, numSubTypes, numSubAtoms);
+				modes[i] = new Mode(i, nTypes, nSubTypes, nSubAtoms);
 			}
 			modes[DIS].isActive = true;
 
@@ -1844,36 +1848,56 @@ public class Variables {
 
 			if (ncol == 10) {
 				// old format t s a x y z occ mx my mz
-				getAtomsOccMag10Line(OCC, numAtomsRead, bsPrimitive);
-				getAtomsOccMag10Line(MAG, numAtomsRead, bsPrimitive);
+				getAtomsOccMag10Line(OCC, nAtomsRead, bsPrimitive);
+				getAtomsOccMag10Line(MAG, nAtomsRead, bsPrimitive);
 			} else {
-				getAtomTSAn("atomocclist", OCC, 1.0, numAtomsRead, bsPrimitive);
-				getAtomTSAn("atommaglist", MAG, 0.0, numAtomsRead, bsPrimitive);
+				getAtomTSAn("atomocclist", OCC, 1.0, nAtomsRead, bsPrimitive);
+				getAtomTSAn("atommaglist", MAG, 0.0, nAtomsRead, bsPrimitive);
 			}
-			getAtomTSAn("atomrotlist", ROT, 0.0, numAtomsRead, bsPrimitive);
-			if (!getAtomTSAn("atomelplist", ELL, Double.NaN, numAtomsRead, bsPrimitive)) {
+			getAtomTSAn("atomrotlist", ROT, 0.0, nAtomsRead, bsPrimitive);
+			if (!getAtomTSAn("atomelplist", ELL, Double.NaN, nAtomsRead, bsPrimitive)) {
 				// default to [0.04 0.04 0.04 0 0 0]
 				double[] def = new double[] { defaultUiso, defaultUiso, defaultUiso, 0, 0, 0 };
 				for (int ia = 0; ia < atoms.length; ia++)
 					atoms[ia].vectorBest[ELL] = def;
 			}
 
-			if (bsPrimitive != null)
-				System.out.println("Variables: primitive: " + bsPrimitive);
-
 			// now get all the symmetry-related arrays
-			parseAtomicMode(DIS, "displacivemodelist", 3, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
-			parseAtomicMode(OCC, "scalarmodelist", 1, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
-			parseAtomicMode(MAG, "magneticmodelist", 3, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
-			parseAtomicMode(ROT, "rotmodelist", 3, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
-			parseAtomicMode(ELL, "ellipmodelist", 3, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
+			parseAtomicMode(DIS, "displacivemodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
+			parseAtomicMode(OCC, "scalarmodelist", 1, firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
+			parseAtomicMode(MAG, "magneticmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
+			parseAtomicMode(ROT, "rotmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
+			parseAtomicMode(ELL, "ellipmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
 
 		}
 
-		private void readAtomCoordinates(int ncol, int numAtomsRead, int[][] numSubTypeAtomsRead, BitSet bsPrimitive,
-				int[][] numPrimitiveSubAtoms, int[][] firstAtomOfType) {
+		/**
+		 * Just filtering out atoms with coord 1.000
+		 * @param nAtomsRead
+		 * @param ncol
+		 * @return
+		 */
+		private BitSet createBSPrimitive(int nAtomsRead, int ncol) {
+			BitSet bs = new BitSet(nAtomsRead);
+			bs.set(0, nAtomsRead);
+			for (int i = 0; i < nAtomsRead; i++) {
+				int pt = ncol * i + 3;
+				//System.out.println(MathUtil.a2s(new double[] {vt.getDouble(pt), vt.getDouble(pt+ 1), vt.getDouble(pt+2)}));
+				for (int j = 0; j < 3; j++) {
+					double p = vt.getDouble(pt++);
+					if (MathUtil.approxEqual(p, 1, 0.001)) {
+						bs.clear(i);
+						break;
+					}
+				}
+			}
+			System.out.println("bsPrimitive " + bs.cardinality() + "/" + nAtomsRead);
+			return bs;
+		}
+		private void readAtomCoordinates(int ncol, int nAtomsRead, int[][] nSubTypeAtomsRead, BitSet bsPrimitive,
+				int[][] nPrimitiveSubAtoms, int[][] firstAtomOfType) {
 			int lastT = 0;
-			for (int i = 0, ia = 0; i < numAtomsRead; i++) {
+			for (int i = 0, ia = 0; i < nAtomsRead; i++) {
 				int pt = ncol * i;
 				int t = vt.getInt(pt++) - 1;
 				if (t != lastT) {
@@ -1886,14 +1910,14 @@ public class Variables {
 					int a = vt.getInt(pt++) - 1;
 					double[] coord = new double[] { vt.getDouble(pt++), vt.getDouble(pt++), vt.getDouble(pt++) };
 					if (bsPrimitive != null) {
-						numPrimitiveSubAtoms[t][s]++;
+						nPrimitiveSubAtoms[t][s]++;
 					}
 					atoms[ia] = new Atom(ia, t, s, a, coord, atomTypeSymbol[t]);
 //					if (haveBonds)
 //						atomMap.put(getKeyTSA(t + 1, s + 1, a + 1), atom);
 					ia++;
 				}
-				numSubTypeAtomsRead[t][s]++;
+				nSubTypeAtomsRead[t][s]++;
 			}
 
 		}
@@ -1925,7 +1949,7 @@ public class Variables {
 		 */
 		private int[][] parseAtomTypes() {
 			// find atom types
-			int n = numTypes = checkSizeN("atomtypelist", 3, true);
+			int n = nTypes = checkSizeN("atomtypelist", 3, true);
 
 			atomTypeName = new String[n];
 			atomTypeSymbol = new String[n];
@@ -1939,20 +1963,20 @@ public class Variables {
 				atomTypeSymbol[i] = s.substring(0, 1).toUpperCase() + (s.length() == 1 ? "" : s.substring(1,2).toLowerCase());
 			}
 
-			numSubTypes = new int[n];
+			nSubTypes = new int[n];
 			// start this off with one implicit subtype.
-			int[][] numSubTypeAtomsRead = new int[n][1];
+			int[][] nSubTypeAtomsRead = new int[n][1];
 
 			// find atom subtypes (optional)
-			int numSubTypeEntries = checkSizeN("atomsubtypelist", 3, false);
-			if (numSubTypeEntries > 0) {
+			int nSubTypeEntries = checkSizeN("atomsubtypelist", 3, false);
+			if (nSubTypeEntries > 0) {
 				int curType = 0, curSubType = 0;
-				for (int i = 0; i < numSubTypeEntries; i++) {
+				for (int i = 0; i < nSubTypeEntries; i++) {
 					int itype = vt.getInt(3 * i);
 					if (itype != curType) {
 						if (curSubType != 0) {
 							// close out previous type's pointers
-							numSubTypeAtomsRead[curType - 1] = new int[curSubType];
+							nSubTypeAtomsRead[curType - 1] = new int[curSubType];
 						}
 						curType++;
 						curSubType = 0;
@@ -1961,19 +1985,19 @@ public class Variables {
 					}
 					int subtype = vt.getInt(3 * i + 1);
 					if (subtype != curSubType) {
-						numSubTypes[curType - 1]++;
+						nSubTypes[curType - 1]++;
 						curSubType++;
 						if (subtype != curSubType)
 							parseError("The subtypes in the atom subtype list are out of order", 2);
 					}
 				}
-				numSubTypeAtomsRead[curType - 1] = new int[curSubType];
+				nSubTypeAtomsRead[curType - 1] = new int[curSubType];
 
 				// Assign the subtype names
 				subTypeName = new String[n][];
 				for (int pt = 0, t = 0; t < n; t++) {
-					subTypeName[t] = new String[numSubTypes[t]];
-					for (int s = 0; s < numSubTypes[t]; s++) {
+					subTypeName[t] = new String[nSubTypes[t]];
+					for (int s = 0; s < nSubTypes[t]; s++) {
 						subTypeName[t][s] = vt.getString(3 * pt++ + 2);
 					}
 				}
@@ -1981,14 +2005,14 @@ public class Variables {
 				// This code is used in ISOCIF, where there are no subtypes defined.
 				subTypeName = new String[n][];
 				for (int t = 0; t < n; t++) {
-					numSubTypes[t] = 1;
-					subTypeName[t] = new String[numSubTypes[t]];
-					for (int s = 0; s < numSubTypes[t]; s++) {
+					nSubTypes[t] = 1;
+					subTypeName[t] = new String[nSubTypes[t]];
+					for (int s = 0; s < nSubTypes[t]; s++) {
 						subTypeName[t][s] = atomTypeName[t] + "_" + (s + 1);
 					}
 				}
 			}
-			return numSubTypeAtomsRead;
+			return nSubTypeAtomsRead;
 		}
 
 		/**
@@ -2016,13 +2040,13 @@ public class Variables {
 		 * @param firstAtomOfType
 		 */
 		private void parseAtomicMode(int mode, String key, int ncol, int[][] firstAtomOfType,
-				int[][] numSubTypeAtomsRead, BitSet bsPrimitive) {
-			int[] perType = new int[numTypes];
+				int[][] nSubTypeAtomsRead, BitSet bsPrimitive) {
+			int[] perType = new int[nTypes];
 			int n = getAtomModeNumbers(key, mode, perType, ncol, firstAtomOfType);
 			if (n == 0)
 				return;
 			modes[mode].initArrays(perType, n);
-			getAtomModeData(modes[mode], firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
+			getAtomModeData(modes[mode], firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
 		}
 
 		/**
@@ -2064,7 +2088,7 @@ public class Variables {
 				pt += 6 + nAtoms * ncol;
 			}
 			// initialize the atom mode[] arrays now that we have the perType information.
-			for (int ia = numAtoms; --ia >= 0;) {
+			for (int ia = nAtoms; --ia >= 0;) {
 				Atom a = atoms[ia];
 				a.modes[mode] = (perType[a.type] == 0 ? null : new double[perType[a.type]][]);
 			}
@@ -2075,7 +2099,7 @@ public class Variables {
 		 * Parse and save all mode-related data.
 		 * 
 		 * @param firstAtomOfType
-		 * @param numSubTypeAtomsRead
+		 * @param nSubTypeAtomsRead
 		 * 
 		 * @param isoParser
 		 * @param bsPrimitive
@@ -2085,7 +2109,7 @@ public class Variables {
 		 * @param parser
 		 * 
 		 */
-		private void getAtomModeData(Mode mode, int[][] firstAtomOfType, int[][] numSubTypeAtomsRead,
+		private void getAtomModeData(Mode mode, int[][] firstAtomOfType, int[][] nSubTypeAtomsRead,
 				BitSet bsPrimitive) {
 
 //        t    m   calcAmp   maxAmp  irrep  name
@@ -2093,7 +2117,7 @@ public class Variables {
 
 			int type = mode.type;
 			int ncol = mode.columnCount;
-			int[] modeTracker = new int[numTypes];
+			int[] modeTracker = new int[nTypes];
 			for (int pt = 0, m = 0; m < mode.count; m++) {
 				int atomType = vt.getInt(pt++) - 1;
 				int iread = firstAtomOfType[atomType][0];
@@ -2106,8 +2130,8 @@ public class Variables {
 				mode.irrepTM[atomType][mt] = vt.getInt(pt++) - 1;
 				mode.setModeName(atomType, mt, vt.getString(pt++));
 				
-				for (int s = 0; s < numSubTypes[atomType]; s++) {
-					for (int a = 0; a < numSubTypeAtomsRead[atomType][s]; a++, iread++, pt += ncol) {
+				for (int s = 0; s < nSubTypes[atomType]; s++) {
+					for (int a = 0; a < nSubTypeAtomsRead[atomType][s]; a++, iread++, pt += ncol) {
 						if (bsPrimitive != null && !bsPrimitive.get(iread))
 							continue;
 						double[] array = atoms[ia++].modes[type][mt] = new double[ncol];
@@ -2222,7 +2246,7 @@ public class Variables {
 		/**
 		 * Total number of unique parent atom types.
 		 */
-		int numUniques;
+		int nUniques;
 
 		/**
 		 * Integer index that identifies each parent atom type as one of several unique
@@ -2242,11 +2266,11 @@ public class Variables {
 			app.colorBox.setSelected(isSimple);
 			app.colorBox.setEnabled(true);
 			setColors(isSimple);
-			for (int t = 0; t < numTypes; t++) {
+			for (int t = 0; t < nTypes; t++) {
 				Color c = getDefaultModeColor(t);
 				typeNamePanels[t].setBackground(c);
 				typeNamePanels[t].getParent().setBackground(c);
-				for (int s = 0; s < numSubTypes[t]; s++) {
+				for (int s = 0; s < nSubTypes[t]; s++) {
 					Component p;
 					while ((p  = subTypeLabels[t][s].getParent()) != null && !p.isOpaque())
 					{}
@@ -2263,7 +2287,7 @@ public class Variables {
 		void setColors(boolean simpleColor) {
 			for (int i = 0; i < MODE_COUNT; i++) {
 				if (isModeActive(modes[i])) {
-					modes[i].setColors(simpleColor ? atomTypeUnique : null, numUniques);
+					modes[i].setColors(simpleColor ? atomTypeUnique : null, nUniques);
 				}
 			}
 		}
@@ -2302,7 +2326,7 @@ public class Variables {
 			mainSlider.setValue(v.gui.mainSlider.getValue());
 			for (int i = 0; i < MODE_COUNT; i++) {
 				if (isModeActive(modes[i])) {
-					int n = (i >= MODE_ATOMIC_COUNT ? 1 : numTypes);
+					int n = (i >= MODE_ATOMIC_COUNT ? 1 : nTypes);
 					for (int t = 0; t < n; t++) {
 						for (int m = 0; m < v.modes[i].modesPerType[t]; m++) {
 							sliderTM[i][t][m].setValue((int) v.gui.sliderTM[i][t][m].getValue());
@@ -2345,12 +2369,12 @@ public class Variables {
 			 */
 			int maxSubTypesPerRow = width / subTypeWidth;
 
-			int[] numSubRows = new int[numTypes];
-			int[] subTypesPerRow = new int[numTypes];
-			for (int t = 0; t < numTypes; t++) {
+			int[] nSubRows = new int[nTypes];
+			int[] subTypesPerRow = new int[nTypes];
+			for (int t = 0; t < nTypes; t++) {
 				// iterate over types
-				subTypesPerRow[t] = Math.min(maxSubTypesPerRow, numSubTypes[t]);
-				numSubRows[t] = (int) Math.ceil((double) numSubTypes[t] / subTypesPerRow[t]);
+				subTypesPerRow[t] = Math.min(maxSubTypesPerRow, nSubTypes[t]);
+				nSubRows[t] = (int) Math.ceil((double) nSubTypes[t] / subTypesPerRow[t]);
 			}
 			needSimpleColor = identifyUniqueAtoms(atomTypeSymbol);
 
@@ -2378,22 +2402,22 @@ public class Variables {
 			addPanel(sliderPanel, masterSliderPanel, "masterPanel");
 
 			// Initialize type-specific subpanels of scrollPanel
-			typeLabel = new JLabel[numTypes];
-			typeNamePanels = new JPanel[numTypes];
-			typeDataPanels = new JPanel[numTypes];
-			subTypeCheckBoxes = new JCheckBox[numTypes][];
-			subTypeLabels = new JLabel[numTypes][];
+			typeLabel = new JLabel[nTypes];
+			typeNamePanels = new JPanel[nTypes];
+			typeDataPanels = new JPanel[nTypes];
+			subTypeCheckBoxes = new JCheckBox[nTypes][];
+			subTypeLabels = new JLabel[nTypes][];
 
 			// The big loop over types
-			for (int t = 0; t < numTypes; t++) {
+			for (int t = 0; t < nTypes; t++) {
 				Color c = getDefaultModeColor(t);
 				JPanel tp = new JPanel();
 				tp.setName("typeOuterPanel_" + t);
 				tp.setLayout(new BoxLayout(tp, BoxLayout.Y_AXIS));
 				tp.setBorder(new EmptyBorder(2, 2, 5, 2));
 				tp.setBackground(c); // important
-				subTypeCheckBoxes[t] = new JCheckBox[numSubTypes[t]];
-				subTypeLabels[t] = new JLabel[numSubTypes[t]];
+				subTypeCheckBoxes[t] = new JCheckBox[nSubTypes[t]];
+				subTypeLabels[t] = new JLabel[nSubTypes[t]];
 				typeLabel[t] = newWhiteLabel("" + atomTypeName[t] + " Modes", JLabel.CENTER);
 				typeNamePanels[t] = new JPanel(new GridLayout(1, 1, 0, 0));
 				typeNamePanels[t].setName("typeNamePanel_" + t + " " + atomTypeName[t]);
@@ -2402,9 +2426,9 @@ public class Variables {
 				tp.add(typeNamePanels[t]);
 
 				// typeDataPanel
-				typeDataPanels[t] = new JPanel(new GridLayout(numSubRows[t], subTypesPerRow[t], 0, 0));
+				typeDataPanels[t] = new JPanel(new GridLayout(nSubRows[t], subTypesPerRow[t], 0, 0));
 				typeDataPanels[t].setName("typeDataPanel_" + t);
-				int nst = numSubTypes[t];
+				int nst = nSubTypes[t];
 				for (int s = 0; s < nst; s++) {
 					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
 					p.setName("subtypePanel_" + s);
@@ -2417,7 +2441,7 @@ public class Variables {
 					typeDataPanels[t].add(p);
 				}
 				// Makes sure that each subtype row is full for alignment purposes
-				for (int s = nst; s < numSubRows[t] * subTypesPerRow[t]; s++) {
+				for (int s = nst; s < nSubRows[t] * subTypesPerRow[t]; s++) {
 					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
 					p.setName("subtypeFillerPanel_" + s);
 					p.setBackground(c);
@@ -2491,10 +2515,10 @@ public class Variables {
 		private boolean identifyUniqueAtoms(String[] symT) {
 			// Determine the unique atoms types.
 			boolean unique;
-			String uniquetypes[] = new String[numTypes];
-			int[] uniqueT = new int[numTypes];
+			String uniquetypes[] = new String[nTypes];
+			int[] uniqueT = new int[nTypes];
 			int n = 0;
-			for (int t = 0; t < numTypes; t++) {
+			for (int t = 0; t < nTypes; t++) {
 				unique = true;
 				for (int u = 0; u < n; u++) {
 					if (uniquetypes[u].equals(symT[t])) {
@@ -2507,11 +2531,11 @@ public class Variables {
 					uniqueT[t] = n++;
 				}
 			}
-			if (n == numTypes)
+			if (n == nTypes)
 				return false;
 			atomTypeUnique = uniqueT;
-			numUniques = n;
-			return (n < numTypes);
+			nUniques = n;
+			return (n < nTypes);
 		}
 
 		private JLabel newWhiteLabel(String text, int hAlign) {
@@ -2536,7 +2560,6 @@ public class Variables {
 		final Font pointerFont = new Font(Font.SANS_SERIF, Font.PLAIN, 8);
 		private JPanel[][] typePanels = new JPanel[MODE_COUNT][];
 
-		@SuppressWarnings("serial")
 		class IsoSlider extends JSlider implements ChangeListener {
 
 			private int min; // 0 or -SliderMax
@@ -2661,10 +2684,10 @@ public class Variables {
 				return 0;
 			int type = mode.type;
 			if (t == 0) {
-				int numTypes = mode.numTypes;
-				typePanels[type] = new JPanel[numTypes];
-				sliderTM[type] = new IsoSlider[numTypes][];
-				mode.values = new double[numTypes][];
+				int nTypes = mode.nTypes;
+				typePanels[type] = new JPanel[nTypes];
+				sliderTM[type] = new IsoSlider[nTypes][];
+				mode.values = new double[nTypes][];
 			}
 			Color c = (mode.colorT == null ? Color.PINK : mode.colorT[t]);
 			int min = (mode.type == IRREP ? 0 : -sliderMax);
@@ -2741,7 +2764,7 @@ public class Variables {
 	 * @return a gray shade between 0.2 and 0.5, roughly
 	 */
 	public double getSelectedSubTypeShade(int t, int s) {
-		return 0.2 + 0.3 * s / numSubTypes[t];
+		return 0.2 + 0.3 * s / nSubTypes[t];
 	}
 
 	public void dispose() {
@@ -2754,8 +2777,8 @@ public class Variables {
 			modes[i] = null;
 		atomTypeName = null;
 		subTypeName = null;
-		numSubAtoms = null;
-		numSubTypes = null;
+		nSubAtoms = null;
+		nSubTypes = null;
 	}
 
 	/**

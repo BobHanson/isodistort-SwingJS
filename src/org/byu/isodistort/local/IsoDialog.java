@@ -105,12 +105,72 @@ public abstract class IsoDialog extends JDialog {
 	private static PrefsDialog prefsDialog;
 	private static TOPASDialog topasDialog;
 	private static TreeDialog treeDialog;
+	private static ISOVIZDialog isovizDialog;
 
 	protected IsoApp app;
 
-	private Map<String, Object> formData;
+	protected Map<String, Object> formData;
 
 	private String[] args;
+
+	public static void openIsovizDialog(IsoApp app, Map<String, Object> formData) {
+		ISOVIZDialog.openDialog(app, formData);
+	}
+
+	private static class ISOVIZDialog extends IsoDialog {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+
+		static void openDialog(IsoApp app, Map<String, Object> formData) {
+			// we do not save the old values, because 
+			isovizDialog = new ISOVIZDialog(app, formData);
+			isovizDialog.setApp(app, () -> {
+				app.saveIsoviz(isovizDialog.getValues());
+			});
+			isovizDialog.setVisible(true);
+		}
+
+		ISOVIZDialog(IsoApp app, Map<String, Object> formData) {
+			super(app, formData, isoviz, "Save ISOVIZ file", true);
+			init();
+		}
+		
+		@Override
+		protected void init() {
+			super.init();
+			boolean isOriginal = "original".equals(this.formData.get("slidersetting"));
+			for (int i = 0, n = this.items.size(); i < n; i++) {
+				JComponent c = items.get(i);
+				if (c instanceof JLabel) {
+					String text = ((JLabel) c).getText();
+					switch (text) {
+					case "TEXT":
+						((JLabel) c).setText(isOriginal ? "Only the original ISOVIZ file can be saved." : "");
+						break;
+					default:
+						c.setVisible(!isOriginal);
+						break;
+					}
+				} else if (c instanceof JRadioButton) {
+					c.setVisible(!c.getName().equals("original") && !isOriginal);					
+				}
+			}
+			
+		}
+		
+		private static String[] isoviz = { //
+				"label", "\nTEXT",//
+				"label", "\nCoordinates:", //
+				"rslidersetting", "original", "original", //
+				"rslidersetting", "current", "current", //
+				"rslidersetting", "parent", "parent", //
+				"rslidersetting", "child", "child", //
+		};
+
+	}
 
 	public static void openCIFDialog(IsoApp app, Map<String, Object> formData) {
 		CIFDialog.openDialog(app, formData);
@@ -436,6 +496,8 @@ public abstract class IsoDialog extends JDialog {
 
 	protected Runnable callback;
 
+	protected List<JComponent> items = new ArrayList<JComponent>();
+	
 	IsoDialog(IsoApp app, Map<String, Object> formData, String[] args, String title, boolean isModal) {
 		super(app.frame, title);
 		this.app = app;
@@ -523,6 +585,7 @@ public abstract class IsoDialog extends JDialog {
 						l.setFont(new Font(l.getFont().getFamily(), Font.BOLD, (int) (l.getFont().getSize() * 1.2)));
 					}
 					p.add(l);
+					items.add(l);
 				}
 				break;
 			case 'r':
@@ -543,6 +606,7 @@ public abstract class IsoDialog extends JDialog {
 				r.setSize(20, 20);
 				group.add(r);
 				r.setName(val);
+				items.add(r);
 				objects.add(item);
 				objects.add(r);
 				if (radioValue != null) {
@@ -555,7 +619,9 @@ public abstract class IsoDialog extends JDialog {
 					radioValue = v;
 				r.setSelected(val.equals(radioValue));
 				rp.add(r);
-				rp.add(new JLabel(rtext));
+				JLabel rl = new JLabel(rtext);
+				rp.add(rl);
+				items.add(rl);
 				break;
 			case 'c':
 				// "cxxxx"
@@ -567,6 +633,7 @@ public abstract class IsoDialog extends JDialog {
 				cb.setName(key);
 				objects.add(item);
 				objects.add(cb);
+				items.add(cb);
 				break;
 			case 'b':
 				// "bXXX", "5,6,7,8,9,10,11,12,13,14,15,16",//
@@ -595,6 +662,7 @@ public abstract class IsoDialog extends JDialog {
 				p.add(pad2);
 				objects.add(item);
 				objects.add(t);
+				items.add(t);
 				break;
 			}
 		}
@@ -656,7 +724,7 @@ public abstract class IsoDialog extends JDialog {
 		this.callback = okCallback;
 	}
 
-	private List<Object> objects = new ArrayList<>();
+	protected List<Object> objects = new ArrayList<>();
 	private Map<String, Object> values;
 
 	Map<String, Object> getValues() throws RuntimeException {

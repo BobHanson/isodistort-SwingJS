@@ -466,6 +466,13 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	 */
 	private double[] viewIndices = new double[3];
 
+
+	/**
+	 * Not really of any interest if it is just atoms in the unit cell and not 
+	 * actually a primitive atom set.
+	 */
+	private boolean showPrimitiveBox = false;
+
 	/**
 	 * resets the viewing direction without changing anything else
 	 */
@@ -646,6 +653,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 		aBox = newJCheckBox("Atoms", showAtoms);
 		apBox = newJCheckBox("Primitive Only", showPrimitiveAtoms);
+		apBox.setVisible(showPrimitiveBox );
 		bBox = newJCheckBox("Bonds", showBonds);
 		cpBox = newJCheckBox("Parent Cell", showParentCell);
 		ccBox = newJCheckBox("Child Cell", showChildCell);

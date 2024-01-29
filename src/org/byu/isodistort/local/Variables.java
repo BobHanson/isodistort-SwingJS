@@ -1777,9 +1777,18 @@ public class Variables {
 				defaultUiso = d * d;
 			}
 
-				Variables.this.bsPrimitive = vt.getBitSet("atomsinunitcell");
-				BitSet bsPrimitive = (isDiffraction ? Variables.this.bsPrimitive : null);
-				numAtoms = (bsPrimitive == null ? 0 : bsPrimitive.cardinality());
+			BitSet bsPrimitive = vt.getBitSet("atomsinunitcell");
+			
+			int nData = vt.setData("atomcoordlist");
+			// number of atoms in the file, before filtering for primitives
+			int numAtomsRead = getNumberOfAtomsRead(nData);
+			int ncol = nData / numAtomsRead;
+			if (isDiffraction && bsPrimitive == null)
+				bsPrimitive = createBSPrimitive(numAtomsRead, ncol);
+			Variables.this.bsPrimitive = bsPrimitive;
+			if (!isDiffraction)
+				bsPrimitive = null;
+			numAtoms = (bsPrimitive == null ? 0 : bsPrimitive.cardinality());
 
 			// Get all the atom type information and return the number of subtype atoms for
 			// each type.
@@ -1798,18 +1807,10 @@ public class Variables {
 					numPrimitiveSubAtoms[i] = new int[numSubTypeAtomsRead[i].length];
 				}
 			}
-
-			//boolean haveBonds = (vt.setData("bondlist") > 0);
-
 			// find atomic coordinates of parent
-			int nData = vt.setData("atomcoordlist");
 			if (nData == 0) {
 				parseError("atomcoordlist is missing", 3);
 			}
-
-			// number of atoms in the file, before filtering for primitives
-			int numAtomsRead = getNumberOfAtomsRead(nData);
-			int ncol = nData / numAtomsRead;
 
 			// numAtoms may be the number of primitive atoms only
 			if (numAtoms == 0)
@@ -1823,12 +1824,15 @@ public class Variables {
 			// firstAtomOfType is an array containing pointers in the overall list of atoms
 			// read (element 0) and the filtered primitive list (element 1)
 			// by type. firstAtomOfType[0] is always [0, 0], and we add an addition element
-			// at the end that is [numAtomsRead, numAtoms]. These are useful in the mode listings,
-			// where we need to catalog atom mode vectors from lists involving type indices only
+			// at the end that is [numAtomsRead, numAtoms]. These are useful in the mode
+			// listings,
+			// where we need to catalog atom mode vectors from lists involving type indices
+			// only
 			int[][] firstAtomOfType = new int[numTypes + 1][2];
 			firstAtomOfType[0] = new int[2];
 			firstAtomOfType[numTypes] = new int[] { numAtomsRead, numAtoms };
 
+			vt.setData("atomcoordlist");
 			readAtomCoordinates(ncol, numAtomsRead, numSubTypeAtomsRead, bsPrimitive, numPrimitiveSubAtoms,
 					firstAtomOfType);
 
@@ -1858,9 +1862,6 @@ public class Variables {
 					atoms[ia].vectorBest[ELL] = def;
 			}
 
-			if (bsPrimitive != null)
-				System.out.println("Variables: primitive: " + bsPrimitive);
-
 			// now get all the symmetry-related arrays
 			parseAtomicMode(DIS, "displacivemodelist", 3, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
 			parseAtomicMode(OCC, "scalarmodelist", 1, firstAtomOfType, numSubTypeAtomsRead, bsPrimitive);
@@ -1870,6 +1871,22 @@ public class Variables {
 
 		}
 
+		private BitSet createBSPrimitive(int numAtomsRead, int ncol) {
+			BitSet bs = new BitSet(numAtomsRead);
+			bs.set(0, numAtomsRead);
+			for (int i = 0; i < numAtomsRead; i++) {
+				int pt = ncol * i + 3;
+				System.out.println(MathUtil.a2s(new double[] {vt.getDouble(pt), vt.getDouble(pt+ 1), vt.getDouble(pt+2)}));
+				for (int j = 0; j < 3; j++) {
+					double p = vt.getDouble(pt++);
+					if (MathUtil.approxEqual(p, 1, 0.001)) {
+						bs.clear(i);
+						break;
+					}
+				}
+			}
+			return bs;
+		}
 		private void readAtomCoordinates(int ncol, int numAtomsRead, int[][] numSubTypeAtomsRead, BitSet bsPrimitive,
 				int[][] numPrimitiveSubAtoms, int[][] firstAtomOfType) {
 			int lastT = 0;
@@ -2536,7 +2553,6 @@ public class Variables {
 		final Font pointerFont = new Font(Font.SANS_SERIF, Font.PLAIN, 8);
 		private JPanel[][] typePanels = new JPanel[MODE_COUNT][];
 
-		@SuppressWarnings("serial")
 		class IsoSlider extends JSlider implements ChangeListener {
 
 			private int min; // 0 or -SliderMax

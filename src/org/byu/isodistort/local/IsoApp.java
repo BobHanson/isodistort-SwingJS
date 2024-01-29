@@ -20,7 +20,6 @@ import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,10 +67,6 @@ public abstract class IsoApp {
 
 	final static String minorVersion = ".11_2024.01.28";
 
-	static boolean isJS = (/** @j2sNative true || */false);
-	
-	static boolean addJmol = false; // BH experimental
-
 	/**
 	 * the datafile to use for startup
 	 */
@@ -85,6 +80,10 @@ public abstract class IsoApp {
 	 "data/test28.txt"; // small file
 
 	
+	static boolean isJS = (/** @j2sNative true || */false);
+	
+	static boolean addJmol = false; // BH experimental
+
 	public static class IsoFrame extends JFrame {
 
 		/**
@@ -1213,8 +1212,13 @@ public abstract class IsoApp {
 	}
 
 	private void sayNotPossible(String msg) {
-		JOptionPane.showMessageDialog(frame, "This feature is not available " + msg);
+		say("This feature is not available " + msg);
 	}
+
+	protected void say(String msg) {
+		JOptionPane.showMessageDialog(frame, msg);
+	}
+
 
 	protected String sendFormDataToServer(Map<String, Object> formData, boolean checkIncommensurate) {
 		Map<String, Object> mapFormData = setServerFormOriginType(formData, "isovizdistortion");
@@ -1374,9 +1378,5 @@ public abstract class IsoApp {
 		}
 	}
 
-	public static String a2s(double[] a) {
-		return Arrays.toString(a);
-	}
-	
 
 }

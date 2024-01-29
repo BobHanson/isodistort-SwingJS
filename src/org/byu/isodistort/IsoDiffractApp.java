@@ -589,7 +589,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		boolean isPowder = this.isPowder && (!isBoth || y > drawHeight - shortPowderHeight);
 		for (int p = 0; p < peakCount; p++) {
 			if (isPowder) {
-				if (approxEqual(x, powderPeakX[p], tol2)
+				if (MathUtil.approxEqual(x, powderPeakX[p], tol2)
 						&& (!isBoth || (Math.abs(y - (drawHeight - powderStickYOffset)) < 1.25 * normalTickLength))
 						&& (peakType[p] < currentcolor)) {
 					thisPeak = p;
@@ -1142,8 +1142,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 						boolean createNewPeak = true;
 						for (int p = 0; p < peakCount; p++) {
 							double[] peakHKL = crystalPeakHKL[p];
-							boolean isrobustlycoincident = approxEqual(dinv0, dinvlist0[p], tol)
-									&& approxEqual(dinv1, dinvlist1[p], tol) && approxEqual(dinv2, dinvlist2[p], tol);
+							boolean isrobustlycoincident = MathUtil.approxEqual(dinv0, dinvlist0[p], tol)
+									&& MathUtil.approxEqual(dinv1, dinvlist1[p], tol) && MathUtil.approxEqual(dinv2, dinvlist2[p], tol);
 							if (isrobustlycoincident) {
 								boolean isequivalent = checkPowderPeakEquiv(testHKL, peakHKL, tmat);
 								if (isequivalent) {
@@ -1215,7 +1215,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		public int compare(Integer o1, Integer o2) {
 			int i = o1.intValue();
 			int j = o2.intValue();
-			boolean sameDinv = approxEqual(dinv[i], dinv[j], tol);
+			boolean sameDinv = MathUtil.approxEqual(dinv[i], dinv[j], tol);
 			boolean firstHigher = !sameDinv && dinv[i] > dinv[j];
 			boolean firstHKLnicerThanSecond = comparePowderHKL(hkls[i], hkls[j]);
 			// we must return -1 if order is OK, 0 if equal, and 1 if they need switching
@@ -1437,13 +1437,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		Arrays.sort(parentAbsA);
 		Arrays.sort(parentAbsB);
 		return ((childAbsA[0] == childAbsB[0]) && (childAbsA[1] == childAbsB[1]) && (childAbsA[2] == childAbsB[2]) 
-				&& approxEqual(parentAbsA[0], parentAbsB[0], tol)
-				&& approxEqual(parentAbsA[1], parentAbsB[1], tol) 
-				&& approxEqual(parentAbsA[2], parentAbsB[2], tol));
-	}
-
-	private static boolean approxEqual(double a, double b, double tol) {
-		return (Math.abs(a - b) < tol);
+				&& MathUtil.approxEqual(parentAbsA[0], parentAbsB[0], tol)
+				&& MathUtil.approxEqual(parentAbsA[1], parentAbsB[1], tol) 
+				&& MathUtil.approxEqual(parentAbsA[2], parentAbsB[2], tol));
 	}
 
 	private final static int PEAK_TYPE_BRAGG = 1;

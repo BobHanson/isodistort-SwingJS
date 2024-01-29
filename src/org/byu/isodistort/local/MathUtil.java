@@ -3,6 +3,8 @@
 
 package org.byu.isodistort.local;
 
+import java.util.Arrays;
+
 /**
  * Provides functionality to manipulate vectors.
  */
@@ -409,6 +411,14 @@ public class MathUtil {
 			sep = ",";
 		}
 		return s+"]";
+	}
+
+	public static boolean approxEqual(double a, double b, double tol) {
+		return (Math.abs(a - b) < tol);
+	}
+
+	public static String a2s(double[] a) {
+		return Arrays.toString(a);
 	}
 
 

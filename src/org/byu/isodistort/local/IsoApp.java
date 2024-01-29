@@ -184,7 +184,7 @@ public abstract class IsoApp {
 				invalidate();
 				repaint();
 			} else {
-				currentApp.openApplication(type, currentApp.isovisData, null, false);
+				currentApp.openApplication(type, currentApp.isovizData, null, false);
 			}
 		}
 
@@ -426,7 +426,7 @@ public abstract class IsoApp {
 	 * the ISOVIZ data associated with this app in byte[] form
 	 * 
 	 */
-	protected byte[] isovisData = new byte[0];
+	protected byte[] isovizData = new byte[0];
 
 	/**
 	 * the distortion file data associated with this app in byte[] form
@@ -693,7 +693,8 @@ public abstract class IsoApp {
 						path + whichDataFile.replace("txt", "json").replace("isoviz", "json"));
 			}
 		}
-		Map<String, Object> mapData = ServerUtil.json2Map(formData, asClone);
+		Map<String, Object> mapData = (formData instanceof String && ((String) formData).length() == 0 ? null
+				: ServerUtil.json2Map(formData, asClone));
 		if (mapData == null) {
 			// if all we have is an isoviz file, how can we update it?
 			if (!silent)
@@ -913,7 +914,7 @@ public abstract class IsoApp {
 		app.args = args;
 		app.addStatus(null);
 		int fileType = app.readFile();
-		data = app.isovisData;
+		data = app.isovizData;
 		if (app.handleNonIsoVizFile(fileType, data))
 			return false;
 		boolean isSwitch = (!isDrop && fromApp != null);
@@ -1020,15 +1021,15 @@ public abstract class IsoApp {
 			formData = args[1]; // String or Map
 			// Fall through //
 		case 1:
-			isovisData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
+			isovizData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
 			whichDataFile = null;
 			break;
 		default:
 			String path = getClass().getName();
 			path = path.substring(0, path.lastIndexOf('.') + 1).replace('.', '/');
-			isovisData = FileUtil.readFileData(this, path + whichDataFile);
+			isovizData = FileUtil.readFileData(this, path + whichDataFile);
 		}
-		return FileUtil.getIsoFileTypeFromContents(isovisData);
+		return FileUtil.getIsoFileTypeFromContents(isovizData);
 	}
 
 	abstract public void recalcCellColors();
@@ -1082,22 +1083,7 @@ public abstract class IsoApp {
 	// <input name="toProcess" type="file" size="30">
 	// </form>
 
-	/**
-	 * If we have form data, clone it, adjust its values, and pass the clone to the
-	 * server with a request to construct a new ISOVIZ file
-	 */
-	public void saveCurrent() {
-		createIsovizFromFormData(null, new Consumer<byte[]>() {
-
-			@Override
-			public void accept(byte[] data) {
-				FileUtil.saveDataFile(frame, data, "isoviz", false);
-			}
-
-		});
-	}
-
-	public void saveDistortionFile(Map<String, Object> values) {
+		public void saveDistortionFile(Map<String, Object> values) {
 		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
@@ -1163,8 +1149,43 @@ public abstract class IsoApp {
 		FileUtil.saveDataFile(frame, getImage(), "png", false);
 	}
 
-	public void saveOriginal() {
-		FileUtil.saveDataFile(frame, isovisData, "isoviz", false);
+	public void saveIsoviz(Map<String, Object> values) {
+		// if we loaded some other form of file, we should have formData, and 
+		// we can create a new isoviz file on the fly.
+		
+		Map<String, Object> map = null;
+		if (isovizData != null) {
+			// if we loaded an ISOVIZ file we can save it directly, and isovizData will not be null.
+			// but then there are no options to save the current settings. 
+			map = new LinkedHashMap<String, Object>();
+			map.put("slidersetting",  "original");
+		} else { 
+			map = ensureMapData(formData == null ? "" : formData, true, false);
+		}
+		if (map == null)
+			return;
+		if (values == null) {
+			IsoDialog.openIsovizDialog(this, map);
+		} else {
+			// after dialog
+			String setting = (String) map.get("slidersetting");
+			if (setting.equals("original")) {
+				FileUtil.saveDataFile(frame, isovizData, "isoviz", false);
+				return;
+			}
+			updateFormData(map, values, "isoviz");
+			setStatus("...fetching ISOVIZ file from iso.byu...");
+			ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, map, new Consumer<byte[]>() {
+				@Override
+				public void accept(byte[] b) {
+					if (b == null) {
+						addStatus("upload failed");
+						return;
+					}
+					FileUtil.saveDataFile(frame, b, "isoviz", false);
+				}
+			}, 20);
+		}
 	}
 
 	public void saveTOPAS(Map<String, Object> values) {

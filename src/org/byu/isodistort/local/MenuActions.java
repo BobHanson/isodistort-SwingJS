@@ -133,8 +133,8 @@ public class MenuActions {
 
 		});
 
-		actions.put("File.Save.saveOriginal",
-				new IsoAction("saveOriginal", "Original ISOVIZ", "Save original values as an isoviz file.", 0) {
+		actions.put("File.Save.saveIsoviz",
+				new IsoAction("saveIsoviz", "ISOVIZ", "Save values as an isoviz file.", 0) {
 					/**
 					 * 
 					 */
@@ -142,20 +142,7 @@ public class MenuActions {
 
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						app.saveOriginal();
-					}
-				});
-
-		actions.put("File.Save.saveCurrent",
-				new IsoAction("saveCurrent", "Current ISOVIZ", "Save current values as an isoviz file.", 0) {
-					/**
-					 * 
-					 */
-					private static final long serialVersionUID = 1L;
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						app.saveCurrent();
+						app.saveIsoviz(null);
 					}
 				});
 

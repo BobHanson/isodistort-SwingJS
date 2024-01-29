@@ -32,7 +32,6 @@ import org.byu.isodistort.local.Iso3DApp.IsoRenderPanel;
  * @author Ken Perlin 2001
  */
 
-@SuppressWarnings("serial")
 public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
 	// APS (April 2009): edits thanks to: http://www.dgp.toronto.edu/~mjmcguff/learn/java/04-mouseInput/

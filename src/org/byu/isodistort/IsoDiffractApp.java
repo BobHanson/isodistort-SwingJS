@@ -71,7 +71,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 *
 	 * 
 	 */
-	@SuppressWarnings("serial")
 	private static class RenderPanel extends JPanel {
 
 		private IsoDiffractApp app;
@@ -745,7 +744,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			double d = 2 * Math.PI * peakDInv[p];
 			double thermal = Math.exp(-0.5 * uiso * d * d);
 			
-			for (int ia = 0, n = variables.numAtoms; ia < n; ia++) {
+			for (int ia = 0, n = variables.nAtoms; ia < n; ia++) {
 				Atom a = variables.getAtom(ia);
 				if (allowSubtypeSelection && !variables.isSubTypeSelected(a.type, a.subType))
 					continue;

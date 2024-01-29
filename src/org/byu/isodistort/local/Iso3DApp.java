@@ -129,7 +129,7 @@ public abstract class Iso3DApp extends IsoApp {
 		// Calculate the maximum distance from applet center (used to determine FOV).
 		double d2 = variables.parentCell.addRange2(variables.childCell.addRange2(0.0));
 		
-		for (int i = 0, n = variables.numAtoms; i < n; i++) {
+		for (int i = 0, n = variables.nAtoms; i < n; i++) {
 			d2 = MathUtil.maxlen2(variables.atoms[i].getCartesianCoord(), d2);
 		}
 // BH: this does not have to be so exact. Just adding 2 * variables.atomMaxRadius for this.

@@ -130,7 +130,6 @@ public class FileUtil {
 		}
 	}
 
-	@SuppressWarnings("serial")
 	public static class FileDropHandler extends TransferHandler {
 
 //		static DataFlavor uriListFlavor; // for Linux

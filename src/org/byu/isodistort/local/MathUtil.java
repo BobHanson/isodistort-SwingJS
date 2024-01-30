@@ -421,5 +421,30 @@ public class MathUtil {
 		return Arrays.toString(a);
 	}
 
+	/**
+	 * Unitize a point IN PLACE and return the point
+	 * integerized and scaled by 1/tol. 
+	 * For example, [-0.4, 0.0, 1.0] becomes [600, 0, 0]
+	 * @param p
+	 * @param tol
+	 * @return point with range [0,1/tol)
+	 */
+	public static double[] unitize3(double[] p, double tol) {
+		for (int i = 0; i < 3; i++) {
+			double x = (p[i] - Math.floor(p[i]));
+		    if (x > 1 - tol || x < tol)
+			      x = 0;
+			p[i] = Math.round(x/tol);
+		}
+		return p;
+	}
+
+//	  static {
+//		  System.out.println(a2s(unitize3(new double[] {-0.4, 1.001, 1.1}, 0.001)));
+//		  System.out.println(a2s(unitize3(new double[] {-0.0001, 0.999, 1.1}, 0.001)));
+//		  System.out.println(a2s(unitize3(new double[] {-1, 0, 1}, 0.001)));
+//		  System.out.println(a2s(unitize3(new double[] {-0.4, 1.001, 1.1}, 0.001)));
+//	  }
 
 }
+

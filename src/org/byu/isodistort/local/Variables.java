@@ -1778,11 +1778,18 @@ public class Variables {
 			}
 
 			BitSet bsPrimitive = vt.getBitSet("atomsinunitcell");
+
 			
 			int nData = vt.setData("atomcoordlist");
 			// number of atoms in the file, before filtering for primitives
 			int nAtomsRead = getNumberOfAtomsRead(nData);
 			int ncol = nData / nAtomsRead;
+
+			// testing only here -- remove this if satisfied
+			BitSet bs = createBSPrimitive(nAtomsRead, ncol);
+			System.out.println(bsPrimitive);
+			System.out.println(bs);
+
 			if (isDiffraction && bsPrimitive == null)
 				bsPrimitive = createBSPrimitive(nAtomsRead, ncol);
 			Variables.this.bsPrimitive = bsPrimitive;
@@ -1880,15 +1887,19 @@ public class Variables {
 		private BitSet createBSPrimitive(int nAtomsRead, int ncol) {
 			BitSet bs = new BitSet(nAtomsRead);
 			bs.set(0, nAtomsRead);
+			StringBuffer sb = new StringBuffer();
 			for (int i = 0; i < nAtomsRead; i++) {
 				int pt = ncol * i + 3;
-				//System.out.println(MathUtil.a2s(new double[] {vt.getDouble(pt), vt.getDouble(pt+ 1), vt.getDouble(pt+2)}));
-				for (int j = 0; j < 3; j++) {
-					double p = vt.getDouble(pt++);
-					if (MathUtil.approxEqual(p, 1, 0.001)) {
-						bs.clear(i);
-						break;
-					}
+				double[] p = new double[] {vt.getDouble(pt), vt.getDouble(pt+ 1), vt.getDouble(pt+2)+0.25};
+				String s0= MathUtil.a2s(p);
+				String spt = MathUtil.a2s(MathUtil.unitize3(p, 0.001d));
+				if (sb.indexOf(spt) >= 0) {
+					bs.clear(i);					
+					MathUtil.scale3(p, 0.001, p);
+					//System.out.println("- " + s0);
+				} else {
+					sb.append(spt);
+					//System.out.println("+ " + s0);
 				}
 			}
 			System.out.println("bsPrimitive " + bs.cardinality() + "/" + nAtomsRead);

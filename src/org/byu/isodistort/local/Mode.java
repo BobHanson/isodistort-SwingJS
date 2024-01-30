@@ -316,9 +316,11 @@ class Mode {
 		boolean isIrrep = (type == IRREP);
 		for (int t = 0; t < nTypes; t++) {
 			for (int m = modesPerType[t]; --m >= 0;) {
-				double max = maxAmpTM[t][m];
-				double val = values[t][m] = max * sliders[t][m].getValue() / maxJSliderIntVal;
-				sliders[t][m].setLabelValue(val * (isIrrep ? 1 : irreps.values[0][irrepTM[t][m]]), max, nameTM[t][m]);
+				double maxAmp = maxAmpTM[t][m];
+				double f = sliders[t][m].getValue() / maxJSliderIntVal;
+				double val = values[t][m] = maxAmp * f;
+				double irrepValue = (isIrrep ? 1 : irreps.values[0][irrepTM[t][m]]);				
+				sliders[t][m].setLabelValue(val * irrepValue, nameTM[t][m]);
 			}
 		}
 	}

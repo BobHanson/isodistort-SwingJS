@@ -224,6 +224,7 @@ public abstract class Iso3DApp extends IsoApp {
 		}
 		isAdjusting = false;
 		rp.updateForDisplay(true);
+		super.updateDisplay();
 	}
 
 

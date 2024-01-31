@@ -1368,7 +1368,9 @@ public abstract class IsoApp {
 	/**
 	 * Something has changed.
 	 */
-	abstract public void updateDisplay();
+	public void updateDisplay() {
+	    variables.updateSliderPointers();
+	}
 
 	abstract protected void updateViewOptions();
 

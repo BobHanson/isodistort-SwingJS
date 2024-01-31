@@ -464,7 +464,7 @@ public class Variables {
 				for (int t = vals.length; --t >= 0;) {
 					for (int m = vals[t].length; --m >= 0;) {
 						String name = getInputName(mode, t, m);
-						double d = (toZero ? 0 : toBest ? modes[mode].calcAmpTM[t][m] : vals[t][m]);
+						double d = (toZero ? 0 : toBest ? vals[t][m] / mainSliderChildFraction : vals[t][m]);
 						setModeFormValue(name, d, mapFormData, null);
 					}
 				}
@@ -1891,7 +1891,7 @@ public class Variables {
 			for (int i = 0; i < nAtomsRead; i++) {
 				int pt = ncol * i + 3;
 				double[] p = new double[] {vt.getDouble(pt), vt.getDouble(pt+ 1), vt.getDouble(pt+2)+0.25};
-				String s0= MathUtil.a2s(p);
+				//String s0= MathUtil.a2s(p);
 				String spt = MathUtil.a2s(MathUtil.unitize3(p, 0.001d));
 				if (sb.indexOf(spt) >= 0) {
 					bs.clear(i);					

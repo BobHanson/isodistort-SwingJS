@@ -1186,6 +1186,13 @@ public abstract class IsoApp {
 				FileUtil.saveDataFile(frame, isovizData, "isoviz", false);
 				return;
 			}
+			if (isovizData != null) {
+				byte[] data = new byte[isovizData.length];
+				System.arraycopy(isovizData, 0, data, 0, data.length);
+				variables.setIsovizFileData(data, setting);
+				FileUtil.saveDataFile(frame, data, "isoviz", false);
+				return;
+			}
 			updateFormData(map, values, "isovizdistortion");
 			setStatus("...fetching ISOVIZ file from iso.byu...");
 			ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, map, new Consumer<byte[]>() {
@@ -1263,7 +1270,11 @@ public abstract class IsoApp {
 	}
 
 	public void setFormData(Map<String, Object> formData, String sliderSetting) {
-		variables.setModeFormData(formData, sliderSetting);
+		variables.setWebFormData(formData, sliderSetting);
+	}
+
+	public void setIsovizData(byte[] isovizData, String sliderSetting) {
+		variables.setIsovizFileData(isovizData, sliderSetting);
 	}
 
 

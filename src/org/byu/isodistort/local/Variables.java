@@ -92,7 +92,7 @@ public class Variables {
 	 * only primitive atoms in IsoDistortApp.
 	 * 
 	 */
-	BitSet bsPrimitive = null;
+	BitSet bsPeriodic = null;
 
 	Mode[] modes = new Mode[MODE_COUNT];
 
@@ -319,7 +319,7 @@ public class Variables {
 	}
 
 	public double[] getStrainmodeSliderValues() {
-		return (modes[STRAIN] == null ? new double[0] : modes[STRAIN].values[0]);
+		return (modes[STRAIN] == null ? new double[0] : modes[STRAIN].valuesTM[0]);
 	}
 
 	public void getColors(int t, double[] rgb) {
@@ -403,12 +403,12 @@ public class Variables {
 				nSubMax = n;
 		}
 		double[][][] max = new double[nTypes][nSubMax][MODE_ATOMIC_COUNT];
-
-		modes[DIS].calcDistortion(this, max, tempvec, null);
-		modes[OCC].calcDistortion(this, max, null, null);
-		modes[MAG].calcDistortion(this, max, tempvec, null);
-		modes[ROT].calcDistortion(this, max, tempvec, null);
-		modes[ELL].calcDistortion(this, max, tempvec, tempmat);
+		double f = mainSliderChildFraction;
+		modes[DIS].calcDistortion(this, max, tempvec, null, f);
+		modes[OCC].calcDistortion(this, max, null, null, f);
+		modes[MAG].calcDistortion(this, max, tempvec, null, f);
+		modes[ROT].calcDistortion(this, max, tempvec, null, f);
+		modes[ELL].calcDistortion(this, max, tempvec, tempmat, f);
 
 		for (int t = 0; t < nTypes; t++) {
 			for (int s = 0; s < nSubTypes[t]; s++) {
@@ -454,39 +454,19 @@ public class Variables {
 		return -1;
 	}
 
-	public void setModeFormData(Map<String, Object> mapFormData, String sliderSetting) {
-		boolean toZero = "parent".equals(sliderSetting);
-		boolean toBest = "child".equals(sliderSetting);
-		// otherwise current
-		for (int mode = 0; mode < MODE_ATOMIC_COUNT; mode++) {
-			if (isModeActive(modes[mode])) {
-				double[][] vals = modes[mode].values;
-				for (int t = vals.length; --t >= 0;) {
-					for (int m = vals[t].length; --m >= 0;) {
-						String name = getInputName(mode, t, m);
-						double d = (toZero ? 0 : toBest ? vals[t][m] / mainSliderChildFraction : vals[t][m]);
-						setModeFormValue(name, d, mapFormData, null);
-					}
-				}
-			}
-		}
-		if (isModeActive(modes[STRAIN])) {
-			double[] vals = modes[STRAIN].values[0];
-			for (int m = vals.length; --m >= 0;) {
-				String name = getInputName(STRAIN, 0, m);
-				double d = (toZero ? 0 : toBest ? modes[STRAIN].calcAmpTM[0][m] : vals[m]);
-				setModeFormValue(name, d, mapFormData, null);
-			}
-		}
+	public void setWebFormData(Map<String, Object> mapFormData, String sliderSetting) {
+		gui.replaceData(mapFormData, null, sliderSetting, mainSliderChildFraction);
 	}
 
+	public void setIsovizFileData(byte[] isovizData, String sliderSetting) {
+		gui.replaceData(null, isovizData, sliderSetting, mainSliderChildFraction);
+	}
+
+
 	public void updateModeFormData(Map<String, Object> mapFormData, Object document) {
-
-		// working here
-
 		for (int mode = 0; mode < MODE_ATOMIC_COUNT; mode++) {
 			if (isModeActive(modes[mode])) {
-				double[][] vals = modes[mode].values;
+				double[][] vals = modes[mode].valuesTM;
 				for (int t = vals.length; --t >= 0;) {
 					for (int m = vals[t].length; --m >= 0;) {
 						String name = getInputName(mode, t, m);
@@ -496,7 +476,7 @@ public class Variables {
 			}
 		}
 		if (isModeActive(modes[STRAIN])) {
-			double[] vals = modes[STRAIN].values[0];
+			double[] vals = modes[STRAIN].valuesTM[0];
 			for (int m = vals.length; --m >= 0;) {
 				String name = getInputName(STRAIN, 0, m);
 				setModeFormValue(name, vals[m], mapFormData, document);
@@ -1543,22 +1523,20 @@ public class Variables {
 		/**
 		 * Load a Type/SubType, SubAtom [t][s][a] list with ncol or a default
 		 * 
+		 * @param key
+		 * @param mode
 		 * @param def          a default value or NaN to skip if key is not present
 		 * @param nAtomsRead
-		 * @param bsPrimitive
-		 * @param bsPrimitive
-		 * @param string
-		 * @param atomProp
-		 * @param ncol
+		 * @param bsPeriodic
 		 * 
 		 */
-		boolean getAtomTSAn(String key, int mode, double def, int nAtomsRead, BitSet bsPrimitive) {
+		boolean getAtomTSAn(String key, int mode, double def, int nAtomsRead, BitSet bsPeriodic) {
 			boolean isDefault = (vt.setData(key) == 0);
 			if (isDefault && Double.isNaN(def))
 				return false;
 			int ncol = modes[mode].columnCount;
 			for (int pt = 0, ia = 0, iread = 0, n = nAtomsRead; iread < n; iread++, pt += ncol) {
-				if (bsPrimitive != null && !bsPrimitive.get(iread))
+				if (bsPeriodic != null && !bsPeriodic.get(iread))
 					continue;
 				double[] data = atoms[ia++].vectorBest[mode] = new double[ncol];
 				for (int i = 0; i < ncol; i++) {
@@ -1573,13 +1551,13 @@ public class Variables {
 		 * 
 		 * @param mode
 		 * @param nAtomsRead
-		 * @param bsPrimitive
+		 * @param bsPeriodic
 		 */
-		void getAtomsOccMag10Line(int mode, int nAtomsRead, BitSet bsPrimitive) {
+		void getAtomsOccMag10Line(int mode, int nAtomsRead, BitSet bsPeriodic) {
 			int ncol = modes[mode].columnCount;
 			int offset = (mode == OCC ? 6 : 7);
 			for (int pt = 0, ia = 0, iread = 0; iread < nAtomsRead; iread++, pt += 10) {
-				if (bsPrimitive != null && !bsPrimitive.get(iread))
+				if (bsPeriodic != null && !bsPeriodic.get(iread))
 					continue;
 				double[] data = atoms[ia++].vectorBest[mode] = new double[ncol];
 				for (int i = 0; i < ncol; i++)
@@ -1777,7 +1755,7 @@ public class Variables {
 				defaultUiso = d * d;
 			}
 
-			BitSet bsPrimitive = vt.getBitSet("atomsinunitcell");
+			BitSet bsPeriodic = vt.getBitSet("atomsinunitcell");
 
 			
 			int nData = vt.setData("atomcoordlist");
@@ -1786,16 +1764,16 @@ public class Variables {
 			int ncol = nData / nAtomsRead;
 
 			// testing only here -- remove this if satisfied
-			BitSet bs = createBSPrimitive(nAtomsRead, ncol);
-			System.out.println(bsPrimitive);
+			BitSet bs = createBSPeriodic(nAtomsRead, ncol);
+			System.out.println(bsPeriodic);
 			System.out.println(bs);
 
-			if (isDiffraction && bsPrimitive == null)
-				bsPrimitive = createBSPrimitive(nAtomsRead, ncol);
-			Variables.this.bsPrimitive = bsPrimitive;
+			if (isDiffraction && bsPeriodic == null)
+				bsPeriodic = createBSPeriodic(nAtomsRead, ncol);
+			Variables.this.bsPeriodic = bsPeriodic;
 			if (!isDiffraction)
-				bsPrimitive = null;
-			nAtoms = (bsPrimitive == null ? 0 : bsPrimitive.cardinality());
+				bsPeriodic = null;
+			nAtoms = (bsPeriodic == null ? 0 : bsPeriodic.cardinality());
 
 			// Get all the atom type information and return the number of subtype atoms for
 			// each type.
@@ -1840,10 +1818,10 @@ public class Variables {
 			firstAtomOfType[nTypes] = new int[] { nAtomsRead, nAtoms };
 
 			vt.setData("atomcoordlist");
-			readAtomCoordinates(ncol, nAtomsRead, nSubTypeAtomsRead, bsPrimitive, nPrimitiveSubAtoms,
+			readAtomCoordinates(ncol, nAtomsRead, nSubTypeAtomsRead, bsPeriodic, nPrimitiveSubAtoms,
 					firstAtomOfType);
 
-			nSubAtoms = (bsPrimitive == null ? nSubTypeAtomsRead : nPrimitiveSubAtoms);
+			nSubAtoms = (bsPeriodic == null ? nSubTypeAtomsRead : nPrimitiveSubAtoms);
 			for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 				// (STRAIN and IRRED are handled later)
 				modes[i] = new Mode(i, nTypes, nSubTypes, nSubAtoms);
@@ -1855,14 +1833,14 @@ public class Variables {
 
 			if (ncol == 10) {
 				// old format t s a x y z occ mx my mz
-				getAtomsOccMag10Line(OCC, nAtomsRead, bsPrimitive);
-				getAtomsOccMag10Line(MAG, nAtomsRead, bsPrimitive);
+				getAtomsOccMag10Line(OCC, nAtomsRead, bsPeriodic);
+				getAtomsOccMag10Line(MAG, nAtomsRead, bsPeriodic);
 			} else {
-				getAtomTSAn("atomocclist", OCC, 1.0, nAtomsRead, bsPrimitive);
-				getAtomTSAn("atommaglist", MAG, 0.0, nAtomsRead, bsPrimitive);
+				getAtomTSAn("atomocclist", OCC, 1.0, nAtomsRead, bsPeriodic);
+				getAtomTSAn("atommaglist", MAG, 0.0, nAtomsRead, bsPeriodic);
 			}
-			getAtomTSAn("atomrotlist", ROT, 0.0, nAtomsRead, bsPrimitive);
-			if (!getAtomTSAn("atomelplist", ELL, Double.NaN, nAtomsRead, bsPrimitive)) {
+			getAtomTSAn("atomrotlist", ROT, 0.0, nAtomsRead, bsPeriodic);
+			if (!getAtomTSAn("atomelplist", ELL, Double.NaN, nAtomsRead, bsPeriodic)) {
 				// default to [0.04 0.04 0.04 0 0 0]
 				double[] def = new double[] { defaultUiso, defaultUiso, defaultUiso, 0, 0, 0 };
 				for (int ia = 0; ia < atoms.length; ia++)
@@ -1870,11 +1848,11 @@ public class Variables {
 			}
 
 			// now get all the symmetry-related arrays
-			parseAtomicMode(DIS, "displacivemodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
-			parseAtomicMode(OCC, "scalarmodelist", 1, firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
-			parseAtomicMode(MAG, "magneticmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
-			parseAtomicMode(ROT, "rotmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
-			parseAtomicMode(ELL, "ellipmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
+			parseAtomicMode(DIS, "displacivemodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
+			parseAtomicMode(OCC, "scalarmodelist", 1, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
+			parseAtomicMode(MAG, "magneticmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
+			parseAtomicMode(ROT, "rotmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
+			parseAtomicMode(ELL, "ellipmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
 
 		}
 
@@ -1884,7 +1862,7 @@ public class Variables {
 		 * @param ncol
 		 * @return
 		 */
-		private BitSet createBSPrimitive(int nAtomsRead, int ncol) {
+		private BitSet createBSPeriodic(int nAtomsRead, int ncol) {
 			BitSet bs = new BitSet(nAtomsRead);
 			bs.set(0, nAtomsRead);
 			StringBuffer sb = new StringBuffer();
@@ -1902,10 +1880,10 @@ public class Variables {
 					//System.out.println("+ " + s0);
 				}
 			}
-			System.out.println("bsPrimitive " + bs.cardinality() + "/" + nAtomsRead);
+			System.out.println("bsPeriodic " + bs.cardinality() + "/" + nAtomsRead);
 			return bs;
 		}
-		private void readAtomCoordinates(int ncol, int nAtomsRead, int[][] nSubTypeAtomsRead, BitSet bsPrimitive,
+		private void readAtomCoordinates(int ncol, int nAtomsRead, int[][] nSubTypeAtomsRead, BitSet bsPeriodic,
 				int[][] nPrimitiveSubAtoms, int[][] firstAtomOfType) {
 			int lastT = 0;
 			for (int i = 0, ia = 0; i < nAtomsRead; i++) {
@@ -1916,11 +1894,11 @@ public class Variables {
 					lastT = t;
 				}
 				int s = vt.getInt(pt++) - 1;
-				boolean isOK = (bsPrimitive == null || bsPrimitive.get(i));
+				boolean isOK = (bsPeriodic == null || bsPeriodic.get(i));
 				if (isOK) {
 					int a = vt.getInt(pt++) - 1;
 					double[] coord = new double[] { vt.getDouble(pt++), vt.getDouble(pt++), vt.getDouble(pt++) };
-					if (bsPrimitive != null) {
+					if (bsPeriodic != null) {
 						nPrimitiveSubAtoms[t][s]++;
 					}
 					atoms[ia] = new Atom(ia, t, s, a, coord, atomTypeSymbol[t]);
@@ -2051,13 +2029,13 @@ public class Variables {
 		 * @param firstAtomOfType
 		 */
 		private void parseAtomicMode(int mode, String key, int ncol, int[][] firstAtomOfType,
-				int[][] nSubTypeAtomsRead, BitSet bsPrimitive) {
+				int[][] nSubTypeAtomsRead, BitSet bsPeriodic) {
 			int[] perType = new int[nTypes];
 			int n = getAtomModeNumbers(key, mode, perType, ncol, firstAtomOfType);
 			if (n == 0)
 				return;
 			modes[mode].initArrays(perType, n);
-			getAtomModeData(modes[mode], firstAtomOfType, nSubTypeAtomsRead, bsPrimitive);
+			getAtomModeData(modes[mode], firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
 		}
 
 		/**
@@ -2113,7 +2091,7 @@ public class Variables {
 		 * @param nSubTypeAtomsRead
 		 * 
 		 * @param isoParser
-		 * @param bsPrimitive
+		 * @param bsPeriodic
 		 * @param key
 		 * 
 		 * 
@@ -2121,7 +2099,7 @@ public class Variables {
 		 * 
 		 */
 		private void getAtomModeData(Mode mode, int[][] firstAtomOfType, int[][] nSubTypeAtomsRead,
-				BitSet bsPrimitive) {
+				BitSet bsPeriodic) {
 
 //        t    m   calcAmp   maxAmp  irrep  name
 //		    1    1   0.00030   2.82843    3 GM1+[Sr:b:occ]A1g(a) 
@@ -2136,6 +2114,8 @@ public class Variables {
 				int mt = modeTracker[atomType]++;
 				if (mt + 1 != vt.getInt(pt++))
 					parseError("The modes are not given in ascending order", 2);
+				// pick up location of the calculated value start-to-end
+				mode.isovizPtrTM[atomType][mt] = vt.getPosition(pt);
 				mode.calcAmpTM[atomType][mt] = vt.getDouble(pt++);
 				mode.maxAmpTM[atomType][mt] = vt.getDouble(pt++);
 				mode.irrepTM[atomType][mt] = vt.getInt(pt++) - 1;
@@ -2143,7 +2123,7 @@ public class Variables {
 				
 				for (int s = 0; s < nSubTypes[atomType]; s++) {
 					for (int a = 0; a < nSubTypeAtomsRead[atomType][s]; a++, iread++, pt += ncol) {
-						if (bsPrimitive != null && !bsPrimitive.get(iread))
+						if (bsPeriodic != null && !bsPeriodic.get(iread))
 							continue;
 						double[] array = atoms[ia++].modes[type][mt] = new double[ncol];
 						getDoubleArray(null, array, pt, ncol);
@@ -2164,13 +2144,14 @@ public class Variables {
 				// Make sure it divided evenly
 				parseError(nData, n * ncol);
 			}
-			modes[STRAIN] = new Mode(STRAIN, 1, null, null);
+			Mode mode = modes[STRAIN] = new Mode(STRAIN, 1, null, null);
 			modes[STRAIN].initArrays(null, n);
 			for (int m = 0; m < n; m++) {
-				modes[STRAIN].setModeName(0, m, vt.getString(ncol * m + 4));
-				modes[STRAIN].irrepTM[0][m] = vt.getInt(ncol * m + 3) - 1;
-				modes[STRAIN].calcAmpTM[0][m] = vt.getDouble(ncol * m + 1);
-				modes[STRAIN].maxAmpTM[0][m] = vt.getDouble(ncol * m + 2);
+				mode.setModeName(0, m, vt.getString(ncol * m + 4));
+				mode.irrepTM[0][m] = vt.getInt(ncol * m + 3) - 1;
+				mode.isovizPtrTM[0][m] = vt.getPosition(ncol * m + 1);
+				mode.calcAmpTM[0][m] = vt.getDouble(ncol * m + 1);
+				mode.maxAmpTM[0][m] = vt.getDouble(ncol * m + 2);
 				getDoubleArray(null, modes[STRAIN].vector[m], ncol * m + 5, 6);
 			}
 		}
@@ -2183,12 +2164,12 @@ public class Variables {
 			if (nData % 2 != 0)
 				parseError("expected two columns of data (number and name); found " + nData, 1);
 			int n = nData / 2;
-			modes[IRREP] = new Mode(IRREP, 1, null, null);
-			modes[IRREP].initArrays(null, n);
+			Mode mode = modes[IRREP] = new Mode(IRREP, 1, null, null);
+			mode.initArrays(null, n);
 			for (int i = 0; i < n; i++) {
 				if (vt.getInt(2 * i) != i + 1)
 					parseError("Error: irreps are not in ascending order.", 2);
-				modes[IRREP].setModeName(0, i, vt.getString(2 * i + 1));
+				mode.setModeName(0, i, vt.getString(2 * i + 1));
 			}
 		}
 
@@ -2291,6 +2272,47 @@ public class Variables {
 				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 					if (modes[i].isActive())
 						typePanels[i][t].setBackground(modes[i].colorT[t]);
+				}
+			}
+		}
+
+		/**
+		 * Set this web input form map's xxxmode00t00m, scalar00t00m, and strainN values to the desired values 
+		 * or set the isovizData to this information.
+		 * 
+		 * @param mapFormData
+		 * @param isovizData
+		 * @param sliderSetting "current", "parent", or "child"
+		 * @param childFraction
+		 */
+		void replaceData(Map<String, Object> mapFormData, byte[] isovizData, String sliderSetting, double childFraction) {
+			boolean toZero = "parent".equals(sliderSetting);
+			boolean toBest = "child".equals(sliderSetting);
+			// otherwise current
+			for (int mode = 0; mode < MODE_ATOMIC_COUNT; mode++) {
+				if (isModeActive(modes[mode])) {
+					IsoSlider[][] sliders = this.sliderTM[mode];
+					for (int t = sliders.length; --t >= 0;) {
+						for (int m = sliders[t].length; --m >= 0;) {
+							String name = getInputName(mode, t, m);
+							double d = (toZero ? 0 : toBest ? sliders[t][m].childValue : sliders[t][m].childValue * childFraction);
+							if (isovizData == null)
+								setModeFormValue(name, d, mapFormData, null);
+							else
+								IsoTokenizer.replaceIsovizFileValue(isovizData, modes[mode].isovizPtrTM[t][m], d);
+						}
+					}
+				}
+			}
+			if (isModeActive(modes[STRAIN])) {
+				double[] vals = modes[STRAIN].valuesTM[0];
+				for (int m = vals.length; --m >= 0;) {
+					String name = getInputName(STRAIN, 0, m);
+					double d = (toZero ? 0 : toBest ? modes[STRAIN].calcAmpTM[0][m] : vals[m]);
+					if (isovizData == null)
+						setModeFormValue(name, d, mapFormData, null);
+					else
+						IsoTokenizer.replaceIsovizFileValue(isovizData, modes[STRAIN].isovizPtrTM[0][m], d);
 				}
 			}
 		}
@@ -2580,7 +2602,7 @@ public class Variables {
 			private double calcAmp, maxAmp;
 
 			/**
-			 * 0 value
+			 * zero value
 			 */
 			JLabel blackCalcAmpPointer;
 
@@ -2590,11 +2612,14 @@ public class Variables {
 			 */
 			JLabel orangeZeroPointer;
 
+			/**
+			 * Currently displayed value
+			 */
 			JLabel whiteCurrentAmpValuePointer;
 
 			JLabel sliderLabel;
 
-			private double value;
+			private double childValue;
 
 			void setSliderLabel(String text) {
 				sliderLabel.setText(text);
@@ -2655,9 +2680,9 @@ public class Variables {
 			 * @param name
 			 */
 			void setLabelValue(double val, String name) {
-				value = val * mainSliderChildFraction;
+				childValue = val;
 				int prec = (type < MODE_ATOMIC_COUNT ? 2 : 3);
-				setSliderLabel(MathUtil.varToString(value, prec, -8) + "  " + name);
+				setSliderLabel(MathUtil.varToString(childValue, prec, -8) + "  " + name);
 				setSliderPointerPositions();
 			}
 
@@ -2666,7 +2691,7 @@ public class Variables {
 					return;
 				}
 				int w = getWidth();
-				setPointerPosition(whiteCurrentAmpValuePointer, value/maxAmp, w);
+				setPointerPosition(whiteCurrentAmpValuePointer, childValue * mainSliderChildFraction/maxAmp, w);
 				if (orangeZeroPointer != null) {
 					setPointerPosition(orangeZeroPointer, 0, w);
 					setPointerPosition(blackCalcAmpPointer, calcAmp/maxAmp, w);
@@ -2712,13 +2737,11 @@ public class Variables {
 				int nTypes = mode.nTypes;
 				typePanels[type] = new JPanel[nTypes];
 				sliderTM[type] = new IsoSlider[nTypes][];
-				mode.values = new double[nTypes][];
 			}
 			Color c = (mode.colorT == null ? Color.PINK : mode.colorT[t]);
 			int min = (mode.type == IRREP ? 0 : -sliderMax);
 			int nModes = mode.modesPerType[t];
 			sliderTM[type][t] = new IsoSlider[nModes];
-			mode.values[t] = new double[nModes];
 			JPanel tp = typePanels[type][t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
 			tp.setBackground(c);
 			for (int m = 0; m < nModes; m++) {
@@ -2825,8 +2848,8 @@ public class Variables {
 	 * @return
 	 */
 	public boolean isPrimitive(int i) {
-		return (i < 0 || bsPrimitive == null ? bsPrimitive != null 
-				: bsPrimitive.get(i));
+		return (i < 0 || bsPeriodic == null ? bsPeriodic != null 
+				: bsPeriodic.get(i));
 	}
 
 	public void updateSliderPointers() {

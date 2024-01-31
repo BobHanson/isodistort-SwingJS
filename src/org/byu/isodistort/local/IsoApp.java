@@ -686,19 +686,13 @@ public abstract class IsoApp {
 	private Map<String, Object> ensureMapData(Object formData, boolean asClone, boolean silent) {
 		if (formData == null) {
 			formData = this.formData;
-			if (formData == null && whichDataFile != null) {
-				String path = getClass().getName();
-				path = path.substring(0, path.lastIndexOf('.') + 1).replace('.', '/');
-				formData = FileUtil.readFileData(this,
-						path + whichDataFile.replace("txt", "json").replace("isoviz", "json"));
-			}
 		}
 		Map<String, Object> mapData = (formData instanceof String && ((String) formData).length() == 0 ? null
 				: ServerUtil.json2Map(formData, asClone));
 		if (mapData == null) {
 			// if all we have is an isoviz file, how can we update it?
 			if (!silent)
-				sayNotPossible("no form data to process; open a DISTORTION file first.");
+				sayNotPossible("No form data to process; open a DISTORTION file first.");
 			return null;
 		}
 		this.formData = mapData;
@@ -1241,7 +1235,7 @@ public abstract class IsoApp {
 	}
 
 	private void sayNotPossible(String msg) {
-		say("This feature is not available " + msg);
+		say("This feature is not available: " + msg);
 	}
 
 	protected void say(String msg) {

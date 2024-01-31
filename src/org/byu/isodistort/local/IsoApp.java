@@ -750,8 +750,11 @@ public abstract class IsoApp {
 			err = "File type was not recognized.";
 			break;
 		}
-		if (err != null)
+		if (err == null) {
+			setStatusVisible(false);
+		} else {
 			sayNotPossible(err);
+		}
 		return true;
 	}
 
@@ -1077,8 +1080,9 @@ public abstract class IsoApp {
 						addStatus("upload failed");
 						return;
 					}
-					FileUtil.saveDataFile(frame, b, "cif", false);
+					saveDataFileVerbose( b, "cif");
 				}
+
 			}, 20);
 		}
 	}
@@ -1109,7 +1113,7 @@ public abstract class IsoApp {
 						addStatus("upload failed");
 						return;
 					}
-					FileUtil.saveDataFile(frame, b, "iso.txt", false);
+					saveDataFileVerbose( b, "iso.txt");
 				}
 			}, 20);
 		}
@@ -1126,7 +1130,7 @@ public abstract class IsoApp {
 			String sliderSetting = (String) values.remove("slidersetting");
 			map.putAll(values);
 			setFormData(map, sliderSetting);
-			FileUtil.saveDataFile(frame, ServerUtil.toJSON(map), "json", false);
+			saveDataFileVerbose( ServerUtil.toJSON(map), "json");
 		}
 	}
 
@@ -1147,7 +1151,7 @@ public abstract class IsoApp {
 						addStatus("upload failed");
 						return;
 					}
-					FileUtil.saveDataFile(frame, b, "pcr", false);
+					saveDataFileVerbose( b, "pcr");
 				}
 			}, 20);
 		}
@@ -1155,7 +1159,7 @@ public abstract class IsoApp {
 	}
 
 	public void saveImage() {
-		FileUtil.saveDataFile(frame, getImage(), "png", false);
+		saveDataFileVerbose( getImage(), "png");
 	}
 
 	public void saveIsoviz(Map<String, Object> values) {
@@ -1185,14 +1189,14 @@ public abstract class IsoApp {
 			map.remove("slidersetting");
 			String setting = (String) values.get("slidersetting");
 			if (setting.equals("original")) {
-				FileUtil.saveDataFile(frame, isovizData, "isoviz", false);
+				saveDataFileVerbose( isovizData, "isoviz");
 				return;
 			}
 			if (isovizData != null) {
 				byte[] data = new byte[isovizData.length];
 				System.arraycopy(isovizData, 0, data, 0, data.length);
 				variables.setIsovizFileData(data, setting);
-				FileUtil.saveDataFile(frame, data, "isoviz", false);
+				saveDataFileVerbose( data, "isoviz");
 				return;
 			}
 			updateFormData(map, values, "isovizdistortion");
@@ -1204,7 +1208,7 @@ public abstract class IsoApp {
 						addStatus("upload failed");
 						return;
 					}
-					FileUtil.saveDataFile(frame, b, "isoviz", false);
+					saveDataFileVerbose( b, "isoviz");
 				}
 			}, 20);
 		}
@@ -1227,7 +1231,7 @@ public abstract class IsoApp {
 						addStatus("upload failed");
 						return;
 					}
-					FileUtil.saveDataFile(frame, b, "STR", false);
+					saveDataFileVerbose( b, "STR");
 				}
 			}, 20);
 		}
@@ -1405,6 +1409,10 @@ public abstract class IsoApp {
 			updateFormData(map, values, "tree");
 			ServerUtil.displayIsoPage(this, map);
 		}
+	}
+
+	protected void saveDataFileVerbose(Object data, String fileType) {
+		FileUtil.saveDataFile(this, data, fileType, false);
 	}
 
 }

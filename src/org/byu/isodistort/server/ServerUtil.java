@@ -4,7 +4,6 @@ import java.awt.Cursor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;

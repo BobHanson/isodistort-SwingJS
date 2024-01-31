@@ -58,7 +58,11 @@ class Mode {
 	int[][] irrepTM;
 	String[][] nameTM;
 	boolean[][] isGM1TM;
-	double[][] values;
+	int[][][] isovizPtrTM;
+	/**
+	 * These values are before multiplying by childFraction
+	 */
+	double[][] valuesTM;
 
 	private double[][] savedValues;
 
@@ -128,6 +132,8 @@ class Mode {
 		isGM1TM = new boolean[nTypes][];
 		calcAmpTM = new double[nTypes][];
 		maxAmpTM = new double[nTypes][];
+		valuesTM = new double[nTypes][];
+		isovizPtrTM = new int[nTypes][][];
 		irrepTM = new int[nTypes][];
 		for (int t = 0; t < nTypes; t++) {
 			int nmodes = modesPerType[t];
@@ -135,6 +141,8 @@ class Mode {
 			isGM1TM[t] = new boolean[nmodes];
 			calcAmpTM[t] = new double[nmodes];
 			maxAmpTM[t] = new double[nmodes];
+			valuesTM[t] = new double[nmodes];
+			isovizPtrTM[t] = new int[nmodes][];
 			irrepTM[t] = new int[nmodes];
 		}
 
@@ -171,9 +179,8 @@ class Mode {
 	 * @param tempvec
 	 * @param tempmat
 	 */
-	void calcDistortion(Variables v, double[][][] max, double[] tempvec, double[][] tempmat) {
-		double[] irrepVals = (v.modes[IRREP] == null ? null : v.modes[IRREP].values[0]);
-		double f = v.getSetChildFraction(Double.NaN);
+	void calcDistortion(Variables v, double[][][] max, double[] tempvec, double[][] tempmat, double childFraction) {
+		double[] irrepVals = (v.modes[IRREP] == null ? null : v.modes[IRREP].valuesTM[0]);
 		for (int ia = 0, n = v.nAtoms; ia < n; ia++) {
 			Atom a = v.atoms[ia];
 			MathUtil.vecfill(delta, 0);
@@ -182,7 +189,7 @@ class Mode {
 			if (isActive()) {
 				// accumulate distortion deltas
 				for (int m = modesPerType[t]; --m >= 0;) {
-					double d = values[t][m] * irrepVals[irrepTM[t][m]] * f;
+					double d = valuesTM[t][m] * irrepVals[irrepTM[t][m]] * childFraction;
 					MathUtil.vecaddN(delta, d, a.modes[type][m], delta);
 				}
 			}
@@ -236,7 +243,7 @@ class Mode {
 		}
 		for (int t = nTypes; --t >= 0;) {
 			for (int m = modesPerType[t]; --m >= 0;) {
-				savedValues[t][m] = values[t][m];
+				savedValues[t][m] = valuesTM[t][m];
 			}
 		}
 	}
@@ -252,7 +259,7 @@ class Mode {
 			return;
 		for (int t = nTypes; --t >= 0;) {
 			for (int m = modesPerType[t]; --m >= 0;) {
-				values[t][m] = (isGM1TM[t][m] == isGM ? (2 * rval.nextFloat() - 1) * maxAmpTM[t][m] : 0);
+				valuesTM[t][m] = (isGM1TM[t][m] == isGM ? (2 * rval.nextFloat() - 1) * maxAmpTM[t][m] : 0);
 			}
 		}
 	}
@@ -267,7 +274,7 @@ class Mode {
 			return;
 		for (int t = nTypes; --t >= 0;) {
 			for (int m = modesPerType[t]; --m >= 0;) {
-				values[t][m] = savedValues[t][m];
+				valuesTM[t][m] = savedValues[t][m];
 			}
 		}
 	}
@@ -312,14 +319,14 @@ class Mode {
 	 * @param maxJSliderIntVal
 	 * @param irreps
 	 */
-	void readSliders(IsoSlider[][] sliders, double childFraction, double maxJSliderIntVal, Mode irreps) {
+	void readSliders(IsoSlider[][] sliders, double dddchildFraction, double maxJSliderIntVal, Mode irreps) {
 		boolean isIrrep = (type == IRREP);
 		for (int t = 0; t < nTypes; t++) {
 			for (int m = modesPerType[t]; --m >= 0;) {
 				double maxAmp = maxAmpTM[t][m];
 				double f = sliders[t][m].getValue() / maxJSliderIntVal;
-				double val = values[t][m] = maxAmp * f;
-				double irrepValue = (isIrrep ? 1 : irreps.values[0][irrepTM[t][m]]);				
+				double val = valuesTM[t][m] = maxAmp * f;
+				double irrepValue = (isIrrep ? 1 : irreps.valuesTM[0][irrepTM[t][m]]);
 				sliders[t][m].setLabelValue(val * irrepValue, nameTM[t][m]);
 			}
 		}
@@ -373,8 +380,8 @@ class Mode {
 	 * @return the Voigt strain tensor plus Identity
 	 */
 	double[][] getVoigtStrainTensor(double childFraction, Mode irreps) {
-		double[] irrepVals = irreps.values[0];
-		double[] mySliderVals = values[0];
+		double[] irrepVals = irreps.valuesTM[0];
+		double[] mySliderVals = valuesTM[0];
 		int[] myIrreps = irrepTM[0];
 		double[] v = new double[6];
 		for (int n = 6; --n >= 0;) {

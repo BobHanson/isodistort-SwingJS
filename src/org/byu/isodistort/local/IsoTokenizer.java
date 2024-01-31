@@ -88,7 +88,7 @@ import java.util.TreeMap;
  * about 4x faster than converting the bytes to a String and then using
  * Integer.parseInt(String) or Double.parseDouble(String).
  * 
- * The following nine public methods are available:
+ * The following nine methods are available:
  * 
  * 
  * IsoTokenizer(Object data, int verbosity)
@@ -116,7 +116,7 @@ import java.util.TreeMap;
  * @author Bob Hanson
  *
  */
-public class IsoTokenizer extends TreeMap<String, int[]> {
+class IsoTokenizer extends TreeMap<String, int[]> {
 
 	/**
 	 * the file data
@@ -128,7 +128,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * 
 	 * @return the data as a byte array
 	 */
-	public byte[] getBytes() {
+	byte[] getBytes() {
 		return bytes;
 	}
 
@@ -145,14 +145,14 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	/**
 	 * clear the objects in this class to speed garbage collection
 	 */
-	public void dispose() {
+	void dispose() {
 		bytes = null;
 		currentBlock = null;
 	}
 
-	public final static int QUIET = 0;
-	public final static int DEBUG_LOW = 1;
-	public final static int DEBUG_HIGH = 2;
+	final static int QUIET = 0;
+	final static int DEBUG_LOW = 1;
+	final static int DEBUG_HIGH = 2;
 
 	/**
 	 * Initiate the tokenizer.
@@ -162,7 +162,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * @param verbosity QUIET (0) no reporting; DEBUG_LOW (1) key and number of
 	 *                  values only; DEBUG_HIGH (2) full report for each byte parsed
 	 */
-	public IsoTokenizer(byte[] data, String ignore, int verbosity) {
+	IsoTokenizer(byte[] data, String ignore, int verbosity) {
 		//ignore = null;
 		if (ignore == null)
 			ignore = ";bondlist;";
@@ -177,7 +177,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * @param key
 	 * @return
 	 */
-	public int setData(String key) {
+	int setData(String key) {
 		if (key == currentKey)
 			return len();
 		currentBlock = null;
@@ -196,7 +196,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * 
 	 * @return current key
 	 */
-	public String getCurrentTag() {
+	String getCurrentTag() {
 		return currentKey;
 	}
 
@@ -206,7 +206,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * @param pt zero-based nonnegative index into data values
 	 * @return the string, or null if pt past the end of the data
 	 */
-	public String getString(int pt) {
+	String getString(int pt) {
 		return (pt < len() ? asString(bytes, from(pt), to(pt)) : null);
 	}
 
@@ -216,7 +216,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * @param pt zero-based nonnegative index into data values
 	 * @return the value, or Integer.MIN_VALUE if this element is not an integer
 	 */
-	public int getInt(int pt) {
+	int getInt(int pt) {
 		return (pt < len() ? bytesToInt(pt) : Integer.MIN_VALUE);
 	}
 
@@ -226,7 +226,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * @param pt zero-based nonnegative index into data values
 	 * @return the value, or Double.NaN if this element is not an integer
 	 */
-	public double getDouble(int pt) {
+	double getDouble(int pt) {
 		return (pt < len() ? bytesToDouble(pt) : Double.NaN);
 	}
 
@@ -238,7 +238,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * @return Boolean.TRUE (first byte is 't' or 'T') or Boolean.FALSE (anything
 	 *         else)
 	 */
-	public Boolean getBoolean(int i) {
+	Boolean getBoolean(int i) {
 		if (i >= len())
 			return null;
 		byte b = bytes[from(i)];
@@ -252,7 +252,7 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * @param key
 	 * @return a BitSet, or null if the values were not of the form '0' or '1'
 	 */
-	public BitSet getBitSet(String key) {
+	BitSet getBitSet(String key) {
 		int count = 0;
 		BitSet bs = null;
 		int n = setData(key);
@@ -683,9 +683,32 @@ public class IsoTokenizer extends TreeMap<String, int[]> {
 	 * 
 	 * @j2sIgnore
 	 */
-	public static void main(String args[]) {
+	static void main(String args[]) {
 		testViz();
 		testDistort();
+	}
+
+	/**
+	 * Replace the current value in the ISOVIZ file data with the given value.
+	 * 
+	 * @param isovizData  original byte data from the file
+	 * @param pts [start, end] in byte stream for this ASCII value
+	 * @param d the new value
+	 */
+	static void replaceIsovizFileValue(byte[] isovizData, int[] pts, double d) {
+		int w = pts[1] - pts[0];
+		String s = MathUtil.varToString(d, 5, w);
+		for (int i = 0, pt = pts[0]; i < w; i++)
+			isovizData[pt++] = (byte) s.charAt(i);
+	}
+
+	/**
+	 * from beginning of white space before the value to the end of the value
+	 * @param pt
+	 * @return [start, end]
+	 */
+	int[] getPosition(int pt) {
+		return new int[] { to(pt - 1), to(pt) };
 	}
 
 

@@ -101,6 +101,21 @@ public class MenuActions {
 
 		// this list is in the order of how the menu will be created.
 		actions.put("File.", null);
+
+		actions.put("File.Open",
+				new IsoAction("fileOpen", "Open", "Open an ISOVIZ or DISTORTION file.", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						app.openFile();
+					}
+				});
+
+
 		actions.put("File.Save.", null);
 		actions.put("View.", null);
 		actions.put("Set.", new IsoAction("set", "Set", null, 0) {

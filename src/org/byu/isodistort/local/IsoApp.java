@@ -65,7 +65,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".11_2024.01.28";
+	final static String minorVersion = ".12_2024.01.30";
 
 	/**
 	 * the datafile to use for startup
@@ -77,7 +77,8 @@ public abstract class IsoApp {
 			//"data/tbmno3-distortion.isoviz"; // isoviz [3D+1] magnetic 
 	//"data/data.isoviz";
 	// "data/ZrP2O7-sg205-sg61-distort.isoviz"; // very large file
-	 "data/test28.txt"; // small file
+    //"data/test28.txt"; // small file
+	 "data/test25.txt"; // varied settings
 
 	
 	static boolean isJS = (/** @j2sNative true || */false);
@@ -356,7 +357,7 @@ public abstract class IsoApp {
 	/**
 	 * the frame holding this app
 	 */
-	protected IsoFrame frame;
+	public IsoFrame frame;
 	/**
 	 * drawing area width and height
 	 */
@@ -755,7 +756,8 @@ public abstract class IsoApp {
 			err = "File type was not recognized.";
 			break;
 		}
-		sayNotPossible(err);
+		if (err != null)
+			sayNotPossible(err);
 		return true;
 	}
 
@@ -825,11 +827,17 @@ public abstract class IsoApp {
 		return statusPanel.isVisible();
 	}
 
+	public void openFile() {
+		loadFile(FileUtil.openFile(this));
+	}
+
+
+
 	/**
 	 * @param f
 	 * @return
 	 */
-	public void loadDroppedFile(File f) {
+	public void loadFile(File f) {
 		if (f == null)
 			return;
 		byte[] data = FileUtil.readFileData(this, f.getAbsolutePath());
@@ -1150,29 +1158,42 @@ public abstract class IsoApp {
 
 	public void saveIsoviz(Map<String, Object> values) {
 		// if we loaded some other form of file, we should have formData, and 
-		// we can create a new isoviz file on the fly.
-		
+		// we can create a new isoviz file on the fly.		
 		Map<String, Object> map = null;
+		String options = "";
 		if (isovizData != null) {
 			// if we loaded an ISOVIZ file we can save it directly, and isovizData will not be null.
 			// but then there are no options to save the current settings. 
 			map = new LinkedHashMap<String, Object>();
-			map.put("slidersetting",  "original");
-		} else { 
-			map = ensureMapData(formData == null ? "" : formData, true, false);
+			options = "original";
+		} 
+		if (formData != null) {
+			map = ensureMapData(formData, true, false);
+			options += "new";
+		} else if (isovizData == null) { 
+			map = ensureMapData("", true, false); // error 
 		}
 		if (map == null)
 			return;
 		if (values == null) {
+			map.put("slidersetting", options);
 			IsoDialog.openIsovizDialog(this, map);
 		} else {
 			// after dialog
-			String setting = (String) map.get("slidersetting");
+			map.remove("slidersetting");
+			String setting = (String) values.get("slidersetting");
 			if (setting.equals("original")) {
 				FileUtil.saveDataFile(frame, isovizData, "isoviz", false);
 				return;
 			}
-			updateFormData(map, values, "isoviz");
+			if (isovizData != null) {
+				byte[] data = new byte[isovizData.length];
+				System.arraycopy(isovizData, 0, data, 0, data.length);
+				variables.setIsovizFileData(data, setting);
+				FileUtil.saveDataFile(frame, data, "isoviz", false);
+				return;
+			}
+			updateFormData(map, values, "isovizdistortion");
 			setStatus("...fetching ISOVIZ file from iso.byu...");
 			ServerUtil.fetch(this, FileUtil.FILE_TYPE_ISOVIZ, map, new Consumer<byte[]>() {
 				@Override
@@ -1249,7 +1270,11 @@ public abstract class IsoApp {
 	}
 
 	public void setFormData(Map<String, Object> formData, String sliderSetting) {
-		variables.setModeFormData(formData, sliderSetting);
+		variables.setWebFormData(formData, sliderSetting);
+	}
+
+	public void setIsovizData(byte[] isovizData, String sliderSetting) {
+		variables.setIsovizFileData(isovizData, sliderSetting);
 	}
 
 
@@ -1343,7 +1368,9 @@ public abstract class IsoApp {
 	/**
 	 * Something has changed.
 	 */
-	abstract public void updateDisplay();
+	public void updateDisplay() {
+	    variables.updateSliderPointers();
+	}
 
 	abstract protected void updateViewOptions();
 
@@ -1377,6 +1404,5 @@ public abstract class IsoApp {
 			ServerUtil.displayIsoPage(this, map);
 		}
 	}
-
 
 }

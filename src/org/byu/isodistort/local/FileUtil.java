@@ -38,6 +38,8 @@ public class FileUtil {
 	public static final int FILE_TYPE_SUBGROUP_TREE  = 9;
 
 	private static JFileChooser fc;
+	private static JFileChooser fcOpen;
+	private static File currDir;
 
 	/**
 	 * Get a file's final dot-extension and possibly match it against an extension
@@ -87,11 +89,13 @@ public class FileUtil {
 				}
 			});
 		}
-
+		if (currDir != null)
+			fc.setCurrentDirectory(currDir);
 		int okay = fc.showSaveDialog(parent);
 		if (okay == JFileChooser.APPROVE_OPTION) {
 			File file = getSaveSelectedFile(fileType, isSilent);
 			if (file != null) {
+				currDir = fc.getCurrentDirectory();
 				saver.accept(file);
 			}
 		}
@@ -111,7 +115,7 @@ public class FileUtil {
 		return file;
 	}
 
-	private static void write(Component parent, File file, Object data, boolean isSilent) {
+	public static void write(Component parent, File file, Object data, boolean isSilent) {
 		if (data == null || file == null)
 			return;
 		try {
@@ -160,7 +164,7 @@ public class FileUtil {
 				return false;
 			File f = getFileObject(support.getTransferable());
 			new Thread(() -> {
-				app.loadDroppedFile(f);
+				app.loadFile(f);
 			}, "isodistort_file_dropper").start();
 			return true;
 		}
@@ -490,6 +494,23 @@ public class FileUtil {
 			pt = 0;
 		}
 		return false;
+	}
+
+	public static File openFile(IsoApp app) {
+		if (fcOpen == null) {
+			fcOpen = new JFileChooser();
+		}
+		if (currDir != null)
+			fcOpen.setCurrentDirectory(currDir);
+		int okay = fcOpen.showOpenDialog(app.frame);
+		if (okay == JFileChooser.APPROVE_OPTION) {
+			File f = fcOpen.getSelectedFile();
+			if (f != null) {
+				currDir = fcOpen.getCurrentDirectory();
+				return f;
+			}
+		}
+		return null;
 	}
 
 }

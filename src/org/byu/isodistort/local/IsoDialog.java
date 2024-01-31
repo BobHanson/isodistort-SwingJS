@@ -140,29 +140,28 @@ public abstract class IsoDialog extends JDialog {
 		
 		@Override
 		protected void init() {
+			String options = "" + formData.get("slidersetting");
+			boolean isOriginal = (options.indexOf("original") >= 0);
+			boolean isNew = (options.indexOf("new") >= 0);
+			formData.put("slidersetting", (isNew ? "current" : "original"));
 			super.init();
-			boolean isOriginal = "original".equals(this.formData.get("slidersetting"));
 			for (int i = 0, n = this.items.size(); i < n; i++) {
 				JComponent c = items.get(i);
 				if (c instanceof JLabel) {
 					String text = ((JLabel) c).getText();
-					switch (text) {
-					case "TEXT":
-						((JLabel) c).setText(isOriginal ? "Only the original ISOVIZ file can be saved." : "");
-						break;
-					default:
-						c.setVisible(!isOriginal);
-						break;
+					if (text.equals("original")) {
+						c.setVisible(isOriginal);
 					}
 				} else if (c instanceof JRadioButton) {
-					c.setVisible(!c.getName().equals("original") && !isOriginal);					
+					if (c.getName().equals("original")) {
+						c.setVisible(isOriginal);
+					}
 				}
 			}
-			
+
 		}
 		
 		private static String[] isoviz = { //
-				"label", "\nTEXT",//
 				"label", "\nCoordinates:", //
 				"rslidersetting", "original", "original", //
 				"rslidersetting", "current", "current", //

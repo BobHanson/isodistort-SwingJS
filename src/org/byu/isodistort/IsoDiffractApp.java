@@ -423,7 +423,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			rp.requestFocus();
 			isAdjusting = false;
 		}
-
+		super.updateDisplay();
 	}
 
 	/**

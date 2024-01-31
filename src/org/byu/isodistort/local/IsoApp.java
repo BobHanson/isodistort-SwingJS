@@ -827,8 +827,16 @@ public abstract class IsoApp {
 		return statusPanel.isVisible();
 	}
 
+	/**
+	 * Asynchronously open a file.
+	 */
 	public void openFile() {
-		loadFile(FileUtil.openFile(this));
+		SwingUtilities.invokeLater(() -> {
+			FileUtil.openFile(this, (File f)->{
+				if (f != null)
+				loadFile(f);
+			});			
+		});
 	}
 
 

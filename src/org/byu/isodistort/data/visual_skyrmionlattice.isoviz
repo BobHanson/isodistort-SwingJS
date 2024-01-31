@@ -20,7 +20,7 @@
 !appletwidth   1024
  
 #number_of_incommensurate_modulations
-!numberOfModulations 1
+!numberOfModulations 2
  
 #parentcell_parameters_in_angstroms_and_radians 
 !parentcell 

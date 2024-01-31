@@ -119,8 +119,8 @@ public class ServerUtil {
 					request.addHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
 				request.addHeader("Accept", "text/plain, */*; q=0.01");
 				
-				if (testing)
-					FileUtil.write(null, new File("c:/temp/test" + "_out_" + ++ntest + ".json"), toJSON(mapFormData), true);
+//				if (testing)
+//					FileUtil.write(null, new File("c:/temp/test" + "_out_" + ++ntest + ".json"), toJSON(mapFormData), true);
 
 				for (Entry<String, Object> e : mapFormData.entrySet()) {
 					String key = e.getKey();
@@ -257,8 +257,8 @@ public class ServerUtil {
 			 * 
 			 */
 		}
-		if (testing)
-			FileUtil.write(null, new File("c:/temp/test" + "_int_" + ++ntest + ".json"), formData.toString(), true);
+//		if (testing)
+//			FileUtil.write(null, new File("c:/temp/test" + "_int_" + ++ntest + ".json"), formData.toString(), true);
 
 		return new JSJSONParser().parseMap(formData.toString(), false);
 	}

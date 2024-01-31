@@ -216,7 +216,7 @@ public class Variables {
 	/**
 	 * The master slider bar value.
 	 */
-	private double childFraction;
+	private double mainSliderChildFraction;
 
 	/**
 	 * ignore events; we are adjusting and will update when done
@@ -308,9 +308,9 @@ public class Variables {
 	}
 
 	public double getSetChildFraction(double newVal) {
-		double d = childFraction;
+		double d = mainSliderChildFraction;
 		if (!Double.isNaN(newVal))
-			childFraction = newVal;
+			mainSliderChildFraction = newVal;
 		return d;
 	}
 
@@ -388,7 +388,7 @@ public class Variables {
 
 		double[][] pStrainPlusIdentity = (modes[STRAIN] == null
 				? MathUtil.voigt2matrix(new double[6], new double[3][3], 1)
-				: modes[STRAIN].getVoigtStrainTensor(childFraction, modes[IRREP]));
+				: modes[STRAIN].getVoigtStrainTensor(mainSliderChildFraction, modes[IRREP]));
 		parentCell.setStrained(pStrainPlusIdentity, childCell);
 		recenterLattice();
 
@@ -464,7 +464,7 @@ public class Variables {
 				for (int t = vals.length; --t >= 0;) {
 					for (int m = vals[t].length; --m >= 0;) {
 						String name = getInputName(mode, t, m);
-						double d = (toZero ? 0 : toBest ? modes[mode].calcAmpTM[t][m] : vals[t][m]);
+						double d = (toZero ? 0 : toBest ? vals[t][m] / mainSliderChildFraction : vals[t][m]);
 						setModeFormValue(name, d, mapFormData, null);
 					}
 				}
@@ -1891,7 +1891,7 @@ public class Variables {
 			for (int i = 0; i < nAtomsRead; i++) {
 				int pt = ncol * i + 3;
 				double[] p = new double[] {vt.getDouble(pt), vt.getDouble(pt+ 1), vt.getDouble(pt+2)+0.25};
-				String s0= MathUtil.a2s(p);
+				//String s0= MathUtil.a2s(p);
 				String spt = MathUtil.a2s(MathUtil.unitize3(p, 0.001d));
 				if (sb.indexOf(spt) >= 0) {
 					bs.clear(i);					
@@ -2353,16 +2353,16 @@ public class Variables {
 		 * 
 		 */
 		void readSliders() {
-			double f0 = childFraction;
-			childFraction = mainSlider.getValue() / maxJSliderIntVal;
-			if (childFraction != f0) {
+			double f0 = mainSliderChildFraction;
+			mainSliderChildFraction = mainSlider.getValue() / maxJSliderIntVal;
+			if (mainSliderChildFraction != f0) {
 				app.recalcCellColors();
 			}
-			String main = MathUtil.varToString(childFraction, 2, -6) + " child";
+			String main = MathUtil.varToString(mainSliderChildFraction, 2, -6) + " child";
 			mainSliderLabel.setText(main);
 			for (int i = MODE_COUNT; --i >= 0;) {
 				if (isModeActive(modes[i]))
-					modes[i].readSliders(sliderTM[i], childFraction, maxJSliderIntVal, modes[IRREP]);
+					modes[i].readSliders(sliderTM[i], mainSliderChildFraction, maxJSliderIntVal, modes[IRREP]);
 			}
 		}
 
@@ -2579,9 +2579,22 @@ public class Variables {
 
 			private double calcAmp, maxAmp;
 
-			JLabel whitePointer, orangePointer, blackPointer;
+			/**
+			 * 0 value
+			 */
+			JLabel blackCalcAmpPointer;
+
+			/**
+			 * A small orange triangle pointer on atom mode and strain sliders
+			 * only that indicates the zero point.
+			 */
+			JLabel orangeZeroPointer;
+
+			JLabel whiteCurrentAmpValuePointer;
 
 			JLabel sliderLabel;
+
+			private double value;
 
 			void setSliderLabel(String text) {
 				sliderLabel.setText(text);
@@ -2590,6 +2603,7 @@ public class Variables {
 			IsoSlider(int type, String name, int min, double calcAmp, double maxAmp, Color c) {
 				super(JSlider.HORIZONTAL, min, sliderMax, (int) (calcAmp / maxAmp * sliderMax));
 				setName(name);
+				this.type = type;
 				// this setting is important; without it, everything looks shrunk
 				setPreferredSize(new Dimension(sliderWidth, barheight));
 				if (type >= 0 && showSliderPointers) {
@@ -2606,14 +2620,14 @@ public class Variables {
 						// JavaScript paints them first to last CREATED,
 						// while Java paints them last to first PAINTED.
 						// This is not something that can be fixed in SwingJS.
-						blackPointer = getPointer(Color.BLACK);
-						orangePointer = getPointer(Color.ORANGE);
-						whitePointer = getPointer(Color.WHITE);
+						blackCalcAmpPointer = getPointer(Color.BLACK);
+						orangeZeroPointer = getPointer(Color.ORANGE);
+						whiteCurrentAmpValuePointer = getPointer(Color.WHITE);
 					} else {
-						whitePointer = getPointer(Color.WHITE);
+						whiteCurrentAmpValuePointer = getPointer(Color.WHITE);
 						if (min != 0) {
-							orangePointer = getPointer(Color.ORANGE);
-							blackPointer = getPointer(Color.BLACK);
+							orangeZeroPointer = getPointer(Color.ORANGE);
+							blackCalcAmpPointer = getPointer(Color.BLACK);
 						}
 					}
 				}
@@ -2640,30 +2654,30 @@ public class Variables {
 			 * @param max
 			 * @param name
 			 */
-			void setLabelValue(double val, double max, String name) {
-				double d = val * childFraction;
+			void setLabelValue(double val, String name) {
+				value = val * mainSliderChildFraction;
 				int prec = (type < MODE_ATOMIC_COUNT ? 2 : 3);
-				setSliderLabel(MathUtil.varToString(d, prec, -8) + "  " + name);
-				if (whitePointer == null) {
+				setSliderLabel(MathUtil.varToString(value, prec, -8) + "  " + name);
+				setSliderPointerPositions();
+			}
+
+			public void setSliderPointerPositions() {
+				if (whiteCurrentAmpValuePointer == null) {
 					return;
 				}
-				d /= max;
-
-				// slight adjustments for JavaScript Look and Feel
-				// maybe for MacOS as well?
-				double w = getWidth() - (/** @j2sNative 1 ? 20 : */
-				15);
-				int off = (/** @j2sNative 1 ? 8 : */
-				6);
-				int x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
-				whitePointer.setBounds(x + off, 12, 6, 8);
-				if (orangePointer != null) {
-					x = (int) (0.5 * w);
-					orangePointer.setBounds(x + off, 12, 6, 8);
-					d = calcAmp / maxAmp;
-					x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
-					blackPointer.setBounds(x + off, 12, 6, 8);
+				int w = getWidth();
+				setPointerPosition(whiteCurrentAmpValuePointer, value/maxAmp, w);
+				if (orangeZeroPointer != null) {
+					setPointerPosition(orangeZeroPointer, 0, w);
+					setPointerPosition(blackCalcAmpPointer, calcAmp/maxAmp, w);
 				}
+			}
+
+			private void setPointerPosition(JLabel pointer, double d, int w) {
+				w -= (/** @j2sNative 1 ? 20 : */ 15);
+				int off = (/** @j2sNative 1 ? 8 : */ 6);
+				int x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
+				pointer.setBounds(x + off, 12, 6, 8);
 			}
 
 			/**
@@ -2765,6 +2779,19 @@ public class Variables {
 				app.updateDisplay();
 		}
 
+		public void updateSliderPointers() {
+			for (int i = 0; i < MODE_COUNT; i++) {
+				if (isModeActive(modes[i])) {
+					int n = (i >= MODE_ATOMIC_COUNT ? 1 : nTypes);
+					for (int t = 0; t < n; t++) {
+						for (int m = 0; m < modes[i].modesPerType[t]; m++) {
+							sliderTM[i][t][m].setSliderPointerPositions();
+						}
+					}
+				}
+			}
+		}
+
 	}
 
 	/**
@@ -2800,6 +2827,10 @@ public class Variables {
 	public boolean isPrimitive(int i) {
 		return (i < 0 || bsPrimitive == null ? bsPrimitive != null 
 				: bsPrimitive.get(i));
+	}
+
+	public void updateSliderPointers() {
+		gui.updateSliderPointers();
 	}
 
 }

@@ -422,6 +422,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			rp.repaint();
 			rp.requestFocus();
 			isAdjusting = false;
+		} else {
+			variables.updateSliderPointers();
 		}
 
 	}

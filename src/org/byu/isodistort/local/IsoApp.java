@@ -65,7 +65,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".12_2024.01.30";
+	final static String minorVersion = ".12_2024.01.31";
 
 	/**
 	 * the datafile to use for startup
@@ -827,8 +827,16 @@ public abstract class IsoApp {
 		return statusPanel.isVisible();
 	}
 
+	/**
+	 * Asynchronously open a file.
+	 */
 	public void openFile() {
-		loadFile(FileUtil.openFile(this));
+		SwingUtilities.invokeLater(() -> {
+			FileUtil.openFile(this, (File f)->{
+				if (f != null)
+				loadFile(f);
+			});			
+		});
 	}
 
 

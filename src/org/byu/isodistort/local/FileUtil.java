@@ -24,6 +24,8 @@ import javax.swing.JOptionPane;
 import javax.swing.TransferHandler;
 import javax.swing.filechooser.FileFilter;
 
+import javajs.async.AsyncFileChooser;
+
 public class FileUtil {
 
 	public final static int FILE_TYPE_UNKNOWN        = 0;
@@ -38,7 +40,7 @@ public class FileUtil {
 	public static final int FILE_TYPE_SUBGROUP_TREE  = 9;
 
 	private static JFileChooser fc;
-	private static JFileChooser fcOpen;
+	private static AsyncFileChooser fcOpen;
 	private static File currDir;
 
 	/**
@@ -496,21 +498,18 @@ public class FileUtil {
 		return false;
 	}
 
-	public static File openFile(IsoApp app) {
+	public static void openFile(IsoApp app, Consumer<File> whenDone) {
 		if (fcOpen == null) {
-			fcOpen = new JFileChooser();
+			fcOpen = new AsyncFileChooser();
 		}
 		if (currDir != null)
 			fcOpen.setCurrentDirectory(currDir);
-		int okay = fcOpen.showOpenDialog(app.frame);
-		if (okay == JFileChooser.APPROVE_OPTION) {
-			File f = fcOpen.getSelectedFile();
+		fcOpen.showOpenDialog(app.frame, (File f) -> {
 			if (f != null) {
 				currDir = fcOpen.getCurrentDirectory();
-				return f;
+				whenDone.accept(f);
 			}
-		}
-		return null;
+		});
 	}
 
 }

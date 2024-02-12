@@ -2515,7 +2515,7 @@ public class Variables {
 			initModeGUI(sliderPanel, modes[STRAIN], 0);
 
 			if (isModeActive(modes[IRREP])) {
-				c = modes[IRREP].colorT[0];
+				c = Mode.COLOR_IRREP;
 				JPanel irrepTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
 				irrepTitlePanel.setBackground(c);
 				JLabel irrepTitle = newWhiteLabel("Single-Irrep Master Amplitudes", JLabel.CENTER);

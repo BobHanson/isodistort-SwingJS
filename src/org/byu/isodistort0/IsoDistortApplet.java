@@ -55,7 +55,7 @@ public class IsoDistortApplet extends RenderApplet {
 	/** False for datafile and True for html file */
 	boolean readMode = false;
 	/** The datafile to use when readMode is false */
-	String whichdatafile = "data/test28.txt";
+	String whichdatafile = "data/test19.txt";
 	/** Cell-edge tube parameters */
 	int numBondSides = 6, numCellSides = 6, numArrowSides = 8, ballRes = 4;
 	/** Focal length for renderer. */

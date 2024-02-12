@@ -67,9 +67,19 @@ public class FileUtil {
 		return (isOK ? ext : null);
 	}
 
-	public static void saveDataFile(Component parent, Object data, String fileType, boolean isSilent) {
-		getFileFromDialog(parent, fileType, (file) -> {
-			write(parent, file, data, isSilent);
+	public static void saveDataFile(IsoApp app, Object data, String fileType, boolean isSilent) {
+		if (data == null)
+			return;
+		getFileFromDialog(app.frame, fileType, (file) -> {
+			if (file == null) {
+				// canceled
+				return;
+			}
+			if (write(app.frame, file, data, isSilent)) {
+				app.addStatus("File " + file + " saved");
+			} else {
+				app.addStatus("File " + file + " could not be saved");
+			}
 		}, isSilent);
 	}
 
@@ -117,9 +127,9 @@ public class FileUtil {
 		return file;
 	}
 
-	public static void write(Component parent, File file, Object data, boolean isSilent) {
+	public static boolean write(Component parent, File file, Object data, boolean isSilent) {
 		if (data == null || file == null)
-			return;
+			return false;
 		try {
 			if (data instanceof BufferedImage) {
 				ImageIO.write((BufferedImage) data, "png", file);
@@ -133,7 +143,9 @@ public class FileUtil {
 		} catch (Exception e) {
 			if (!isSilent)
 				JOptionPane.showMessageDialog(parent, "File " + file + " could not be saved: " + e.getMessage());
+			return false;
 		}
+		return true;
 	}
 
 	public static class FileDropHandler extends TransferHandler {

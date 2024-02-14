@@ -100,25 +100,30 @@ public class MenuActions {
 	private Map<String, IsoAction> getActions() {
 
 		// this list is in the order of how the menu will be created.
-		actions.put("File.", null);
 
-		actions.put("File.Open",
-				new IsoAction("fileOpen", "Open", "Open an ISOVIZ or DISTORTION file.", 0) {
-					/**
-					 * 
-					 */
-					private static final long serialVersionUID = 1L;
+		actions.put("File.", new IsoAction("file", "File        ", null, 0) {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
 
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						app.openFile();
-					}
-				});
+			// do nothing
+			@Override
+			public void actionPerformed(ActionEvent e) {}
+		});
 
+		actions.put("View.", new IsoAction("view", "View        ", null, 0) {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
 
-		actions.put("File.Save.", null);
-		actions.put("View.", null);
-		actions.put("Set.", new IsoAction("set", "Set", null, 0) {
+			// do nothing
+			@Override
+			public void actionPerformed(ActionEvent e) {}
+		});
+
+		actions.put("Set.", new IsoAction("set", "Set         ", null, 0) {
 			/**
 			 * 
 			 */
@@ -147,6 +152,22 @@ public class MenuActions {
 			}
 
 		});
+
+		actions.put("File.Open",
+				new IsoAction("fileOpen", "Open", "Open an ISOVIZ or DISTORTION file.", 0) {
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						app.openFile();
+					}
+				});
+
+
+		actions.put("File.Save.", null);
 
 		actions.put("File.Save.saveIsoviz",
 				new IsoAction("saveIsoviz", "ISOVIZ", "Save values as an isoviz file.", 0) {

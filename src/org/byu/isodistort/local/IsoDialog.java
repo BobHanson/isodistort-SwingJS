@@ -802,7 +802,7 @@ public abstract class IsoDialog extends JDialog {
 
 	Object validateFractionalOrDouble(String s) throws RuntimeException  {
 		int pt = s.indexOf("/");
-		if (pt > 1) {
+		if (pt > 0) {
 			return validateFractionalOrInt(s);
 		}
 		return validateDouble(s);
@@ -810,7 +810,7 @@ public abstract class IsoDialog extends JDialog {
 
 	Object validateFractionalOrInt(String s) throws RuntimeException  {
 		int pt = s.indexOf("/");
-		if (pt > 1) {
+		if (pt > 0) {
 			return validateInt(s.substring(0, pt)) + "/" + validateInt(s.substring(0, pt + 1));
 		}
 		return validateInt(s);

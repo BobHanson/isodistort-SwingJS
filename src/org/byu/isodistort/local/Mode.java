@@ -28,8 +28,6 @@ class Mode {
 	final static int IRREP = 6; // irreducible representations
 	final static int MODE_COUNT = 7;
 	
-	static final Color COLOR_STRAIN = Color.DARK_GRAY;
-	static final Color COLOR_IRREP = new Color(0xA0A0A0);
 
 	/**
 	 * DISP, IRREP, ....
@@ -337,40 +335,11 @@ class Mode {
 	 * Set colors for the different mode types.
 	 * 
 	 */
-	void setColors(int[] atomTypeUnique, int nUniques) {
-		float brightness;
+	Color[] getColorT() {
 		if (colorT == null) {
 			colorT = new Color[nTypes];
 		}
-		switch (type) {
-		default:
-		case DIS:
-			brightness = 0.80f;
-			break;
-		case OCC:
-			brightness = 0.70f;
-			break;
-		case MAG:
-			brightness = 0.60f;
-			break;
-		case ROT:
-			brightness = 0.50f;
-			break;
-		case ELL:
-			brightness = 0.40f;
-			break;
-		case STRAIN:
-			colorT[0] = COLOR_STRAIN;
-			return;
-		case IRREP:
-			colorT[0] = COLOR_IRREP ; // BH a bit darker than LIGHT_GRAY C0C0C0
-			return;
-		}
-		boolean simpleColor = (atomTypeUnique != null);
-		for (int t = 0; t < nTypes; t++) {
-			float k = (simpleColor ? 1f * atomTypeUnique[t] / nUniques : 1f * t / nTypes);
-			colorT[t] = new Color(Color.HSBtoRGB(k, 1, brightness));
-		}
+		return colorT;
 	}
 
 	/**

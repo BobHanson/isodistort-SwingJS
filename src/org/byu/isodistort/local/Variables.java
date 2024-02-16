@@ -44,6 +44,7 @@ import org.byu.isodistort.local.Bspt.CubeIterator;
  */
 public class Variables {
 
+  public final static int ATOMS = -1; // for colors
 	public final static int DIS = Mode.DIS; // displacive
 	public final static int OCC = Mode.OCC; // occupancy (aka "scalar")
 	public final static int MAG = Mode.MAG; // magnetic
@@ -59,6 +60,10 @@ public class Variables {
 
 	static final Color COLOR_CHILD_CELL = new Color(128, 128, 204);
 	static final Color COLOR_PARENT_CELL = new Color(204, 128, 128);
+
+	static final Color COLOR_STRAIN = Color.DARK_GRAY;
+  static final Color COLOR_IRREP = new Color(0xA0A0A0);
+
 
 	/**
 	 * BH added -- allows showing of zero-value and IRREP-adjusted slider pointers
@@ -323,7 +328,7 @@ public class Variables {
 	}
 
 	public void getColors(int t, double[] rgb) {
-		Color c = getDefaultModeColor(t);
+		Color c = gui.getAtomTypeColor(t);
 		rgb[0] = c.getRed() / 255.0;
 		rgb[1] = c.getGreen() / 255.0;
 		rgb[2] = c.getBlue() / 255.0;
@@ -433,11 +438,6 @@ public class Variables {
 		MathUtil.average3(minmax[0], minmax[1], cartesianCenter);
 		childCell.setRelativeTo(cartesianCenter);
 		parentCell.setRelativeTo(cartesianCenter);
-	}
-
-	Color getDefaultModeColor(int t) {
-		int i = getFirstActiveMode();
-		return i < 0 ? Color.RED : modes[i].colorT[t];
 	}
 
 	/**
@@ -2187,6 +2187,7 @@ public class Variables {
 
 		private final static int subTypeWidth = 210;
 		private final static int barheight = 22;
+		
 
 		/**
 		 * Master (top most) slider bar controls all slider bars for superpositioning of
@@ -2235,46 +2236,17 @@ public class Variables {
 		private int sliderWidth;
 		private int sliderPanelWidth;
 
-		/**
-		 * Total number of unique parent atom types.
-		 */
-		int nUniques;
+    /**
+     * Total number of unique parent atom types.
+     */
+    int nUniques;
 
-		/**
-		 * Integer index that identifies each parent atom type as one of several unique
-		 * parent atom types.
-		 * 
-		 */
-		int[] atomTypeUnique;
-
-		/**
-		 * current static of (no) shading in slider panel
-		 */
-		public boolean simpleColor;
-
-		void updateColorScheme(boolean isSimple) {
-			simpleColor = isSimple;
-			app.colorBox.setEnabled(false);
-			app.colorBox.setSelected(isSimple);
-			app.colorBox.setEnabled(true);
-			setColors(isSimple);
-			for (int t = 0; t < nTypes; t++) {
-				Color c = getDefaultModeColor(t);
-				typeNamePanels[t].setBackground(c);
-				typeNamePanels[t].getParent().setBackground(c);
-				for (int s = 0; s < nSubTypes[t]; s++) {
-					Component p;
-					while ((p  = subTypeLabels[t][s].getParent()) != null && !p.isOpaque())
-					{}
-					p.setBackground(c);
-				}
-				typeDataPanels[t].setBackground(c);
-				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
-					if (modes[i].isActive())
-						typePanels[i][t].setBackground(modes[i].colorT[t]);
-				}
-			}
-		}
+    /**
+     * Integer index that identifies each parent atom type as one of several unique
+     * parent atom types.
+     * 
+     */
+    int[] atomTypeUnique;
 
 		/**
 		 * Set this web input form map's xxxmode00t00m, scalar00t00m, and strainN values to the desired values 
@@ -2317,13 +2289,101 @@ public class Variables {
 			}
 		}
 
-		void setColors(boolean simpleColor) {
-			for (int i = 0; i < MODE_COUNT; i++) {
-				if (isModeActive(modes[i])) {
-					modes[i].setColors(simpleColor ? atomTypeUnique : null, nUniques);
-				}
-			}
-		}
+    /**
+     * current static of (no) shading in slider panel
+     */
+    public boolean simpleColor;
+
+    Color[] atomTypeColors;
+    
+    Color getAtomTypeColor(int t) {
+      return atomTypeColors[t];
+    }
+
+    void setColors() {
+      for (int i = 0; i < MODE_COUNT; i++) {
+        if (isModeActive(modes[i])) {
+          Color[] colors = modes[i].getColorT();
+          setColorScheme(colors, modes[i].type);
+        }
+      }
+      if (atomTypeColors == null)
+        atomTypeColors = new Color[nTypes];
+      setColorScheme(atomTypeColors, -1);
+    }
+
+    void updateColorScheme(boolean isSimple) {
+      simpleColor = isSimple;
+      app.colorBox.setEnabled(false);
+      app.colorBox.setSelected(isSimple);
+      app.colorBox.setEnabled(true);
+      setColors();
+      for (int t = 0; t < nTypes; t++) {
+        Color c = getAtomTypeColor(t);
+        typeNamePanels[t].setBackground(c);
+        typeNamePanels[t].getParent().setBackground(c);
+        for (int s = 0; s < nSubTypes[t]; s++) {
+          Component p;
+          while ((p  = subTypeLabels[t][s].getParent()) != null && !p.isOpaque())
+          {}
+          p.setBackground(c);
+        }
+        typeDataPanels[t].setBackground(c);
+        for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
+          if (modes[i].isActive())
+            typePanels[i][t].setBackground(modes[i].colorT[t]);
+        }
+      }
+    }
+
+    // just placeholders for now -- see 
+    private static final float COLOR_BRIGHTNESS_ATOMS = 1.00f;
+    private static final float COLOR_BRIGHTNESS_DIS   = 0.80f;
+    private static final float COLOR_BRIGHTNESS_OCC   = 0.70f;
+    private static final float COLOR_BRIGHTNESS_ROT   = 0.60f;
+    private static final float COLOR_BRIGHTNESS_MAG   = 0.50f;
+    private static final float COLOR_BRIGHTNESS_ELL   = 0.40f;
+
+    /**
+     * Set the colors of mode slider and title/checkbox backgrounds.
+     * 
+     * @param colors
+     * @param type
+     */
+    private void setColorScheme(Color[] colors, int type) {
+      float saturation = 1.00f;
+      float brightness;
+      switch (type) {
+      default:
+        brightness = 1.00f; // COLOR_BRIGHTNESS_ATOMS; // for titles and checkboxes
+        break;
+      case DIS:
+        brightness = 0.80f; // COLOR_BRIGHTNESS_DIS;
+        break;
+      case OCC:
+        brightness = 0.70f; // COLOR_BRIGHTNESS_OCC;
+        break;
+      case MAG:
+        brightness = 0.60f; // COLOR_BRIGHTNESS_MAG;
+        break;
+      case ROT:
+        brightness = 0.50f; // COLOR_BRIGHTNESS_ROT;
+        break;
+      case ELL:
+        brightness = 0.40f; // COLOR_BRIGHTNESS_ELL;
+        break;
+      case STRAIN:
+        colors[0] = COLOR_STRAIN;
+        return;
+      case IRREP:
+        colors[0] = COLOR_IRREP ; // BH a bit darker than LIGHT_GRAY C0C0C0
+        return;
+      }
+      for (int t = 0; t < nTypes; t++) {
+        float hue = (simpleColor ? 1f * atomTypeUnique[t] / nUniques : 1f * t / nTypes);
+        colors[t] = new Color(Color.HSBtoRGB(hue, saturation, brightness));
+      }
+    }
 
 		void toggleIrrepSliders() {
 			irrepSlidersOn = !irrepSlidersOn;
@@ -2411,7 +2471,7 @@ public class Variables {
 			}
 			needSimpleColor = identifyUniqueAtoms(atomTypeSymbol);
 
-			setColors(false);
+			setColors();
 
 			masterSliderPanel = new JPanel();
 			masterSliderPanel.setLayout(new BoxLayout(masterSliderPanel, BoxLayout.LINE_AXIS));
@@ -2443,7 +2503,7 @@ public class Variables {
 
 			// The big loop over types
 			for (int t = 0; t < nTypes; t++) {
-				Color c = getDefaultModeColor(t);
+				Color c = getAtomTypeColor(t);
 				JPanel tp = new JPanel();
 				tp.setName("typeOuterPanel_" + t);
 				tp.setLayout(new BoxLayout(tp, BoxLayout.Y_AXIS));
@@ -2493,7 +2553,7 @@ public class Variables {
 					addPanel(sliderPanel, tp, "typeFiller_" + t);
 				}
 			}
-			Color c = Mode.COLOR_STRAIN;
+			Color c = COLOR_STRAIN;
 			JPanel strainTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
 			strainTitlePanel.setBackground(c);
 			JLabel strainTitle = newWhiteLabel("Strain Modes", JLabel.CENTER);
@@ -2515,7 +2575,7 @@ public class Variables {
 			initModeGUI(sliderPanel, modes[STRAIN], 0);
 
 			if (isModeActive(modes[IRREP])) {
-				c = Mode.COLOR_IRREP;
+				c = COLOR_IRREP;
 				JPanel irrepTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
 				irrepTitlePanel.setBackground(c);
 				JLabel irrepTitle = newWhiteLabel("Single-Irrep Master Amplitudes", JLabel.CENTER);
@@ -2855,5 +2915,6 @@ public class Variables {
 	public void updateSliderPointers() {
 		gui.updateSliderPointers();
 	}
+
 
 }

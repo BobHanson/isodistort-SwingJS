@@ -2355,6 +2355,7 @@ public class Variables {
       float brightness;
       switch (type) {
       default:
+      case ATOMS:
         brightness = 1.00f; // COLOR_BRIGHTNESS_ATOMS; // for titles and checkboxes
         break;
       case DIS:

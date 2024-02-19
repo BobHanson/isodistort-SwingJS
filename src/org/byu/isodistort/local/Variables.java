@@ -2294,13 +2294,17 @@ public class Variables {
 		 *  
 		 * @param t
 		 * @param s
-		 * @return a number between 0.2 and 0.5 (currently)
+		 * @return a number between low and high
 		 */
 		double getSelectedSubTypeShade(int t, int s) {
-			
-			// adjust these parameters to suite
-			
-			return 0.2 + 0.3 * s / nSubTypes[t];
+			// adjust these parameters as needed		
+			double low = 0.0;
+			double high = 0.8;
+			double step = 0.0;
+			if (nSubTypes[t]>1) {
+				step = (high-low)/(nSubTypes[t]-1);
+			}
+			return low + s*step;
 		}
 
 	    /**
@@ -2351,12 +2355,12 @@ public class Variables {
 	    }
 	
 	    // just placeholders for now -- see 
-	    private static final float COLOR_BRIGHTNESS_ATOMS = 1.00f;
+	    private static final float COLOR_BRIGHTNESS_ATOMS = 0.90f;
 	    private static final float COLOR_BRIGHTNESS_DIS   = 0.80f;
-	    private static final float COLOR_BRIGHTNESS_OCC   = 0.70f;
-	    private static final float COLOR_BRIGHTNESS_ROT   = 0.60f;
-	    private static final float COLOR_BRIGHTNESS_MAG   = 0.50f;
-	    private static final float COLOR_BRIGHTNESS_ELL   = 0.40f;
+	    private static final float COLOR_BRIGHTNESS_OCC   = 0.65f;
+	    private static final float COLOR_BRIGHTNESS_ROT   = 0.50f;
+	    private static final float COLOR_BRIGHTNESS_MAG   = 0.35f;
+	    private static final float COLOR_BRIGHTNESS_ELL   = 0.25f;
 	
 	    /**
 	     * Set the colors of mode slider and title/checkbox backgrounds.
@@ -2370,22 +2374,22 @@ public class Variables {
 	      switch (type) {
 	      default:
 	      case ATOMS:
-	        brightness = 1.00f; // COLOR_BRIGHTNESS_ATOMS; // for titles and checkboxes
+	        brightness = 0.90f; // COLOR_BRIGHTNESS_ATOMS; // for titles and checkboxes
 	        break;
 	      case DIS:
 	        brightness = 0.80f; // COLOR_BRIGHTNESS_DIS;
 	        break;
 	      case OCC:
-	        brightness = 0.70f; // COLOR_BRIGHTNESS_OCC;
+	        brightness = 0.65f; // COLOR_BRIGHTNESS_OCC;
 	        break;
 	      case MAG:
-	        brightness = 0.60f; // COLOR_BRIGHTNESS_MAG;
+	        brightness = 0.50f; // COLOR_BRIGHTNESS_MAG;
 	        break;
 	      case ROT:
-	        brightness = 0.50f; // COLOR_BRIGHTNESS_ROT;
+	        brightness = 0.35f; // COLOR_BRIGHTNESS_ROT;
 	        break;
 	      case ELL:
-	        brightness = 0.40f; // COLOR_BRIGHTNESS_ELL;
+	        brightness = 0.20f; // COLOR_BRIGHTNESS_ELL;
 	        break;
 	      case STRAIN:
 	        colors[0] = COLOR_STRAIN;

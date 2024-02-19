@@ -44,7 +44,7 @@ import org.byu.isodistort.local.Bspt.CubeIterator;
  */
 public class Variables {
 
-  public final static int ATOMS = -1; // for colors
+    public final static int ATOMS = -1; // for colors
 	public final static int DIS = Mode.DIS; // displacive
 	public final static int OCC = Mode.OCC; // occupancy (aka "scalar")
 	public final static int MAG = Mode.MAG; // magnetic
@@ -2289,102 +2289,116 @@ public class Variables {
 			}
 		}
 
-    /**
-     * current static of (no) shading in slider panel
-     */
-    public boolean simpleColor;
+		/**
+		 * Set the shade of gray for subtype atoms.
+		 *  
+		 * @param t
+		 * @param s
+		 * @return a number between 0.2 and 0.5 (currently)
+		 */
+		double getSelectedSubTypeShade(int t, int s) {
+			
+			// adjust these parameters to suite
+			
+			return 0.2 + 0.3 * s / nSubTypes[t];
+		}
 
-    Color[] atomTypeColors;
-    
-    Color getAtomTypeColor(int t) {
-      return atomTypeColors[t];
-    }
-
-    void setColors() {
-      for (int i = 0; i < MODE_COUNT; i++) {
-        if (isModeActive(modes[i])) {
-          Color[] colors = modes[i].getColorT();
-          setColorScheme(colors, modes[i].type);
-        }
-      }
-      if (atomTypeColors == null)
-        atomTypeColors = new Color[nTypes];
-      setColorScheme(atomTypeColors, -1);
-    }
-
-    void updateColorScheme(boolean isSimple) {
-      simpleColor = isSimple;
-      app.colorBox.setEnabled(false);
-      app.colorBox.setSelected(isSimple);
-      app.colorBox.setEnabled(true);
-      setColors();
-      for (int t = 0; t < nTypes; t++) {
-        Color c = getAtomTypeColor(t);
-        typeNamePanels[t].setBackground(c);
-        typeNamePanels[t].getParent().setBackground(c);
-        for (int s = 0; s < nSubTypes[t]; s++) {
-          Component p;
-          while ((p  = subTypeLabels[t][s].getParent()) != null && !p.isOpaque())
-          {}
-          p.setBackground(c);
-        }
-        typeDataPanels[t].setBackground(c);
-        for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
-          if (modes[i].isActive())
-            typePanels[i][t].setBackground(modes[i].colorT[t]);
-        }
-      }
-    }
-
-    // just placeholders for now -- see 
-    private static final float COLOR_BRIGHTNESS_ATOMS = 1.00f;
-    private static final float COLOR_BRIGHTNESS_DIS   = 0.80f;
-    private static final float COLOR_BRIGHTNESS_OCC   = 0.70f;
-    private static final float COLOR_BRIGHTNESS_ROT   = 0.60f;
-    private static final float COLOR_BRIGHTNESS_MAG   = 0.50f;
-    private static final float COLOR_BRIGHTNESS_ELL   = 0.40f;
-
-    /**
-     * Set the colors of mode slider and title/checkbox backgrounds.
-     * 
-     * @param colors
-     * @param type
-     */
-    private void setColorScheme(Color[] colors, int type) {
-      float saturation = 1.00f;
-      float brightness;
-      switch (type) {
-      default:
-      case ATOMS:
-        brightness = 1.00f; // COLOR_BRIGHTNESS_ATOMS; // for titles and checkboxes
-        break;
-      case DIS:
-        brightness = 0.80f; // COLOR_BRIGHTNESS_DIS;
-        break;
-      case OCC:
-        brightness = 0.70f; // COLOR_BRIGHTNESS_OCC;
-        break;
-      case MAG:
-        brightness = 0.60f; // COLOR_BRIGHTNESS_MAG;
-        break;
-      case ROT:
-        brightness = 0.50f; // COLOR_BRIGHTNESS_ROT;
-        break;
-      case ELL:
-        brightness = 0.40f; // COLOR_BRIGHTNESS_ELL;
-        break;
-      case STRAIN:
-        colors[0] = COLOR_STRAIN;
-        return;
-      case IRREP:
-        colors[0] = COLOR_IRREP ; // BH a bit darker than LIGHT_GRAY C0C0C0
-        return;
-      }
-      for (int t = 0; t < nTypes; t++) {
-        float hue = (simpleColor ? 1f * atomTypeUnique[t] / nUniques : 1f * t / nTypes);
-        colors[t] = new Color(Color.HSBtoRGB(hue, saturation, brightness));
-      }
-    }
+	    /**
+	     * current static of (no) shading in slider panel
+	     */
+	    boolean simpleColor;
+	
+	    Color[] atomTypeColors;
+	    
+	    Color getAtomTypeColor(int t) {
+	      return atomTypeColors[t];
+	    }
+	
+	    void setColors() {
+	      for (int i = 0; i < MODE_COUNT; i++) {
+	        if (isModeActive(modes[i])) {
+	          Color[] colors = modes[i].getColorT();
+	          setColorScheme(colors, modes[i].type);
+	        }
+	      }
+	      if (atomTypeColors == null)
+	        atomTypeColors = new Color[nTypes];
+	      setColorScheme(atomTypeColors, -1);
+	    }
+	
+	    void updateColorScheme(boolean isSimple) {
+	      simpleColor = isSimple;
+	      app.colorBox.setEnabled(false);
+	      app.colorBox.setSelected(isSimple);
+	      app.colorBox.setEnabled(true);
+	      setColors();
+	      for (int t = 0; t < nTypes; t++) {
+	        Color c = getAtomTypeColor(t);
+	        typeNamePanels[t].setBackground(c);
+	        typeNamePanels[t].getParent().setBackground(c);
+	        for (int s = 0; s < nSubTypes[t]; s++) {
+	          Component p;
+	          while ((p  = subTypeLabels[t][s].getParent()) != null && !p.isOpaque())
+	          {}
+	          p.setBackground(c);
+	        }
+	        typeDataPanels[t].setBackground(c);
+	        for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
+	          if (modes[i].isActive())
+	            typePanels[i][t].setBackground(modes[i].colorT[t]);
+	        }
+	      }
+	    }
+	
+	    // just placeholders for now -- see 
+	    private static final float COLOR_BRIGHTNESS_ATOMS = 1.00f;
+	    private static final float COLOR_BRIGHTNESS_DIS   = 0.80f;
+	    private static final float COLOR_BRIGHTNESS_OCC   = 0.70f;
+	    private static final float COLOR_BRIGHTNESS_ROT   = 0.60f;
+	    private static final float COLOR_BRIGHTNESS_MAG   = 0.50f;
+	    private static final float COLOR_BRIGHTNESS_ELL   = 0.40f;
+	
+	    /**
+	     * Set the colors of mode slider and title/checkbox backgrounds.
+	     * 
+	     * @param colors
+	     * @param type
+	     */
+	    private void setColorScheme(Color[] colors, int type) {
+	      float saturation = 1.00f;
+	      float brightness;
+	      switch (type) {
+	      default:
+	      case ATOMS:
+	        brightness = 1.00f; // COLOR_BRIGHTNESS_ATOMS; // for titles and checkboxes
+	        break;
+	      case DIS:
+	        brightness = 0.80f; // COLOR_BRIGHTNESS_DIS;
+	        break;
+	      case OCC:
+	        brightness = 0.70f; // COLOR_BRIGHTNESS_OCC;
+	        break;
+	      case MAG:
+	        brightness = 0.60f; // COLOR_BRIGHTNESS_MAG;
+	        break;
+	      case ROT:
+	        brightness = 0.50f; // COLOR_BRIGHTNESS_ROT;
+	        break;
+	      case ELL:
+	        brightness = 0.40f; // COLOR_BRIGHTNESS_ELL;
+	        break;
+	      case STRAIN:
+	        colors[0] = COLOR_STRAIN;
+	        return;
+	      case IRREP:
+	        colors[0] = COLOR_IRREP ; // BH a bit darker than LIGHT_GRAY C0C0C0
+	        return;
+	      }
+	      for (int t = 0; t < nTypes; t++) {
+	        float hue = (simpleColor ? 1f * atomTypeUnique[t] / nUniques : 1f * t / nTypes);
+	        colors[t] = new Color(Color.HSBtoRGB(hue, saturation, brightness));
+	      }
+	    }
 
 		void toggleIrrepSliders() {
 			irrepSlidersOn = !irrepSlidersOn;
@@ -2747,7 +2761,7 @@ public class Variables {
 				setSliderPointerPositions();
 			}
 
-			public void setSliderPointerPositions() {
+			private void setSliderPointerPositions() {
 				if (whiteCurrentAmpValuePointer == null) {
 					return;
 				}
@@ -2863,7 +2877,7 @@ public class Variables {
 				app.updateDisplay();
 		}
 
-		public void updateSliderPointers() {
+		void updateSliderPointers() {
 			for (int i = 0; i < MODE_COUNT; i++) {
 				if (isModeActive(modes[i])) {
 					int n = (i >= MODE_ATOMIC_COUNT ? 1 : nTypes);
@@ -2886,7 +2900,7 @@ public class Variables {
 	 * @return a gray shade between 0.2 and 0.5, roughly
 	 */
 	public double getSelectedSubTypeShade(int t, int s) {
-		return 0.2 + 0.3 * s / nSubTypes[t];
+		return gui.getSelectedSubTypeShade(t, s);
 	}
 
 	public void dispose() {

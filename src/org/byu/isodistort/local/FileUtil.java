@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,16 +29,16 @@ import javajs.async.AsyncFileChooser;
 
 public class FileUtil {
 
-	public final static int FILE_TYPE_UNKNOWN        = 0;
+	public final static int FILE_TYPE_UNKNOWN = 0;
 	public final static int FILE_TYPE_DISTORTION_UPLOAD = 1;
-	public final static int FILE_TYPE_ISOVIZ         = 2;
-	public final static int FILE_TYPE_FORMDATA_JSON  = 3;
+	public final static int FILE_TYPE_ISOVIZ = 2;
+	public final static int FILE_TYPE_FORMDATA_JSON = 3;
 	public final static int FILE_TYPE_DISTORTION_TXT = 4;
-	public final static int FILE_TYPE_FULLPROF_PCR   = 5;
-	public final static int FILE_TYPE_CIF            = 6;
-	public final static int FILE_TYPE_TOPAS_STR      = 7;
-	public final static int FILE_TYPE_PAGE_HTML      = 8;
-	public static final int FILE_TYPE_SUBGROUP_TREE  = 9;
+	public final static int FILE_TYPE_FULLPROF_PCR = 5;
+	public final static int FILE_TYPE_CIF = 6;
+	public final static int FILE_TYPE_TOPAS_STR = 7;
+	public final static int FILE_TYPE_PAGE_HTML = 8;
+	public static final int FILE_TYPE_SUBGROUP_TREE = 9;
 
 	private static JFileChooser fc;
 	private static AsyncFileChooser fcOpen;
@@ -204,35 +205,35 @@ public class FileUtil {
 	}
 
 	public static class HTMLScraper {
-	
+
 		private final String html;
-	
+
 		private final Map<String, Object> map = new LinkedHashMap<>();
 
 		private IsoApp app;
-	
+
 		HTMLScraper(IsoApp app, String html) {
 			// <FORM...> ...... </FORM>
 			this.app = app;
 			this.html = getInnerHTML(html, "FORM");
 		}
-	
+
 		Map<String, Object> scrape() {
 			if (html == null)
 				return null;
 			String[] inputs = html.replace("<input", "<INPUT").split("<INPUT");
 			if (inputs != null)
-			for (int i = 1; i < inputs.length; i++) {
-				addEntry(inputs[i]);
-			}
+				for (int i = 1; i < inputs.length; i++) {
+					addEntry(inputs[i]);
+				}
 			String[] selects = html.replace("select>", "SELECT>").split("SELECT");
 			if (selects != null)
 				for (int i = 1; i < selects.length; i += 2) {
-				addSelect(selects[i]);
-			}
+					addSelect(selects[i]);
+				}
 			return map;
 		}
-	
+
 		private String getInnerHTML(String html, String tag) {
 			System.out.println(html);
 			String[] parts = html.split(tag.toUpperCase());
@@ -241,7 +242,7 @@ public class FileUtil {
 			}
 			return (parts.length > 1 ? parts[1] : null);
 		}
-	
+
 		private void addEntry(String line) {
 			String type = getHTMLAttr(line, "TYPE");
 			if (type == null)
@@ -262,16 +263,16 @@ public class FileUtil {
 			String name = getHTMLAttr(line, "NAME");
 			map.put(name, value.replace('\n', ' ').replace('\r', ' '));
 		}
-	
+
 		private void addSelect(String line) {
-			line.replace("option",  "OPTION");
+			line.replace("option", "OPTION");
 			String[] values = line.split("<OPTION");
 			String value = null;
 			for (int i = 1; i < values.length; i++) {
 				String v = getHTMLAttr(values[i], "VALUE");
 				if (value == null || values[i].indexOf("SELECTED") >= 0) {
 					value = v;
-				}			
+				}
 			}
 			if (value == null)
 				return;
@@ -327,13 +328,12 @@ public class FileUtil {
 		return buf;
 	}
 
-	
 	final static byte[] IRREP_SSGNum = "!irrepSSGNum".getBytes();
-	
+
 	public static boolean checkIncommensurateDFile(byte[] data) {
-	  return bytesContain(data, IRREP_SSGNum);		
+		return bytesContain(data, IRREP_SSGNum);
 	}
-	
+
 	public static boolean checkIncommensurateFormData(Map<String, Object> data) {
 		Object o = data.get("irrepcount");
 		int nrep = (o == null ? 0 : Integer.valueOf(o.toString()));
@@ -344,7 +344,7 @@ public class FileUtil {
 		}
 		return false;
 	}
-		
+
 	public static int getIsoFileTypeFromContents(byte[] data) {
 		int type = FILE_TYPE_UNKNOWN;
 		for (int pt = 0, i = 0, n = Math.min(data.length - 20, 500); i < n; i++) {
@@ -363,9 +363,9 @@ public class FileUtil {
 			case '!':
 				if (i == pt) {
 					if (data[i + 8] == 'i') {
-						//012345678 
-						//!isoversion
-						//!begin distortionFile
+						// 012345678
+						// !isoversion
+						// !begin distortionFile
 						String tag = new String(data, i + 1, 20);
 						if (tag.equals("begin distortionFile")) {
 							type = FILE_TYPE_DISTORTION_TXT;
@@ -382,38 +382,50 @@ public class FileUtil {
 		return type;
 	}
 
-	// boolean asInputStream = true;
-		public static byte[] readFileData(IsoApp app, String path) {
-			app.addStatus("FileUtil.readFileData " + path);
-			try {
-				long t = System.currentTimeMillis();
-				// 33 ms to read 8 MB
-				BufferedInputStream bis = null;
-				try {	
-					File f = new File(path);
-					bis = new BufferedInputStream(new FileInputStream(f));
-				} catch (Exception e) {
-					InputStream is = (InputStream) app.getClass().getResource("/" + path).getContent();
-					if (is == null) {
-						app.addStatus("FileUtil.readFileData could not find resource " + path);
-						return null;					
-					}
-					bis = new BufferedInputStream(is);
+	/**
+	 * Read a file or a resource.
+	 * 
+	 * @param app
+	 * @param path
+	 * @return byte[] data
+	 */
+	public static byte[] readFileOrResource(IsoApp app, String path) {
+		app.addStatus("FileUtil.readFileData " + path);
+		try {
+			BufferedInputStream bis = null;
+			// 33 ms to read 8 MB
+			long t = System.currentTimeMillis();
+			if (path.startsWith("https://")) {
+				bis = new BufferedInputStream(new URL(path).openConnection().getInputStream());
+			} else if (path.startsWith("data")) {
+				String dir = app.getClass().getName();
+				path = "/" + dir.substring(0, dir.lastIndexOf('.') + 1).replace('.', '/') + path;
+				InputStream is = (InputStream) app.getClass().getResource(path).getContent();
+				if (is == null) {
+					app.addStatus("FileUtil.readFileData could not find resource " + path);
+					return null;
 				}
-				byte[] bytes = getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
-				app.addStatus("FileUtil.readFileData " + (System.currentTimeMillis() - t) + " ms for " + bytes.length + " bytes");
-				return bytes;
-	
-	//			// String concatenation (200K+ lines) was 600000+ ms (over 10 minutes) to read 8 MB
-	//			// StringBuffer was 121 ms to read 8 MB
-	//			// getLimitedStreamReader was 33 ms to read 8 MB
-				
-			} catch (IOException exception) {
-				exception.printStackTrace();
-				System.out.println("Oops. File not found. " + path);
+				bis = new BufferedInputStream(is);
+			} else {
+				File f = new File(path);
+				bis = new BufferedInputStream(new FileInputStream(f));
 			}
-			return null;
+			byte[] bytes = getLimitedStreamBytes(bis, Integer.MAX_VALUE, true);
+			app.addStatus(
+					"FileUtil.readFileData " + (System.currentTimeMillis() - t) + " ms for " + bytes.length + " bytes");
+			return bytes;
+
+			// // String concatenation (200K+ lines) was 600000+ ms (over 10 minutes) to
+			// read 8 MB
+			// // StringBuffer was 121 ms to read 8 MB
+			// // getLimitedStreamReader was 33 ms to read 8 MB
+
+		} catch (IOException exception) {
+			exception.printStackTrace();
+			System.out.println("Oops. File not found. " + path);
 		}
+		return null;
+	}
 
 	public static void openURL(IsoApp app, String surl) {
 		try {
@@ -440,15 +452,16 @@ public class FileUtil {
 		/**
 		 * @j2sNative
 		 * 
-		 * 	  window.open(URL.createObjectURL(new Blob([html], { type: "text/html" })));
-		 *    return;
+		 * 			window.open(URL.createObjectURL(new Blob([html], { type:
+		 *            "text/html" }))); return;
 		 */
 		{
 			try {
 				File f = File.createTempFile("isodistort", ".html");
 				write(null, f, html, true);
-				JOptionPane.showMessageDialog(app.frame, html.length() + " bytes received. Check your browser if it does not pop up immediately.");
-				openURL(app, "file://" + f.getAbsolutePath().replace('\\', '/'));				
+				JOptionPane.showMessageDialog(app.frame,
+						html.length() + " bytes received. Check your browser if it does not pop up immediately.");
+				openURL(app, "file://" + f.getAbsolutePath().replace('\\', '/'));
 			} catch (IOException e) {
 				app.addStatus("temp file creation failed: " + e.getMessage());
 				e.printStackTrace();
@@ -460,7 +473,7 @@ public class FileUtil {
 	 * Extract all the INPUT data from the HTML page.
 	 * 
 	 * @param html
-	 * @param app 
+	 * @param app
 	 * @return
 	 */
 	public static Map<String, Object> scrapeHTML(IsoApp app, String html) {
@@ -472,7 +485,7 @@ public class FileUtil {
 		int pt = line.indexOf(key);
 		if (pt < 0)
 			pt = line.indexOf(key.toLowerCase());
-	
+
 		if (pt < 0 || (pt = pt + key.length()) > line.length())
 			return null;
 		int pt1 = line.indexOf("\"", pt);
@@ -480,7 +493,7 @@ public class FileUtil {
 	}
 
 	public static boolean bytesContain(byte[] bytes, byte[] b) {
-	
+
 		int nb = bytes.length, n = b.length;
 		if (nb < n || nb == 0) {
 			return false;

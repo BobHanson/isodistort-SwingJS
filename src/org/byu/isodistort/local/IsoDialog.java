@@ -437,10 +437,6 @@ public abstract class IsoDialog extends JDialog {
 		}
 
 		private static String[] tree = { //
-				"label", "\nCoordinates:", //
-				"rslidersetting", "current", "current", //
-				"rslidersetting", "parent", "parent", //
-				"rslidersetting", "child", "child", //
 				"label", "\n", //
 				"ctreetopas", "label", "Generate TOPAS.STR output for subgroup tree", //
 				"enable", //e1, //

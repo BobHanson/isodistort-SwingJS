@@ -70,15 +70,40 @@ public abstract class IsoApp {
 	/**
 	 * the datafile to use for startup
 	 */
-	protected String whichDataFile = 
-			///"data/tbmno3-distortion.isoviz"; // INCOMMENSURATE
-			// "data/test22.txt";
-			// "data/tbmno3-distortion.iso.txt"; // distortion file
-			//"data/tbmno3-distortion.isoviz"; // isoviz [3D+1] magnetic 
-	//"data/data.isoviz";
-	// "data/ZrP2O7-sg205-sg61-distort.isoviz"; // very large file
-    //"data/test28.txt"; // small file
-	 "data/test25.txt"; // varied settings
+	protected String whichDataFile = "data/test25.txt"; // varied settings
+
+	/**
+	 * The list of menu items in the File.Examples. menu.
+	 * 
+	 * replace null (even-numbered index) with a label for the File.Examples menu item
+	 * 
+	 * or comment out lines to remove them from the menu. 
+	 * 
+	 * Suggest not removing a line completely, as they still could be 
+	 * useful for debugging.
+	 * 
+	 */
+	public final static String[] exampleFiles = {
+			"sample DISTORTION File", "data/data.iso.txt", //	
+			"sample ISOVIS File 1", "data/data29.isoviz", //
+			"sample ISOVIS File 2", "data/test25.txt", //
+			"incommensurate DISTORTION file", "data/tbmno3-distortion.isoviz",//
+			"large ISOVIZ file", "data/ZrP2O7-sg205-sg61-distort.isoviz", //
+			null, "data/visual_bccspiral.isoviz", //
+			null, "data/visual_dymn6ge6.isoviz", //
+			null, "data/visual_la2coruo6-magnetic.isoviz", //
+			null, "data/visual_lamno3_magnetic.isoviz", //
+			null, "data/visual_lamno3_ortho.isoviz", //
+			null, "data/visual_lcmo_magnetic.isoviz", //
+			null, "data/visual_mno.isoviz", //
+			null, "data/visual_pt3cu_L12.isoviz", //
+			null, "data/visual_skyrmionlattice.isoviz", //
+			null, "data/visual_tbmno3_cycloid.isoviz", //
+			null, "data/visual_vortexlattice.isoviz", //
+			null, "data/visual_wo3_RTmono.isoviz", //
+			null, "data/visual_ymno3_afe.isoviz", //
+			"online example", "https://chemapps.stolaf.edu/isodistort/data29.isoviz", //
+	};
 
 	
 	static boolean isJS = (/** @j2sNative true || */false);
@@ -563,6 +588,8 @@ public abstract class IsoApp {
 	 */
 	public Boolean isIncommensurate;
 
+	private String loadingFileName;
+
 	protected IsoApp(int appType) {
 		this.appType = appType;
 		statusPanel = new StatusPanel(new JTextArea());
@@ -615,7 +642,9 @@ public abstract class IsoApp {
 
 	private void clearSettingsForFileDrop() {
 		whichDataFile = null;
+		loadingFileName = null;
 	}
+	
 	private void createIsovizFromFormData(Object formData, Consumer<byte[]> consumer) {
 		// not available if dropped?
 		boolean isSwitch = (formData == null);
@@ -824,36 +853,6 @@ public abstract class IsoApp {
 		return statusPanel.isVisible();
 	}
 
-	/**
-	 * Asynchronously open a file.
-	 */
-	public void openFile() {
-		SwingUtilities.invokeLater(() -> {
-			FileUtil.openFile(this, (File f)->{
-				if (f != null)
-				loadFile(f);
-			});			
-		});
-	}
-
-
-
-	/**
-	 * @param f
-	 * @return
-	 */
-	public void loadFile(File f) {
-		if (f == null)
-			return;
-		byte[] data = FileUtil.readFileData(this, f.getAbsolutePath());
-		if (data == null || handleNonIsoVizFile(FileUtil.getIsoFileTypeFromContents(data), data)) {
-			return;
-		}
-		new Thread(() -> {
-			openApplication(appType, data, null, true);
-		}, "isodistort_file_dropper").start();
-	}
-
 	protected JCheckBox newJCheckBox(String label, boolean selected) {
 		JCheckBox cb = new JCheckBox(label, selected);
 		cb.setName(++buttonID + ":" + label);
@@ -923,9 +922,8 @@ public abstract class IsoApp {
 		}
 		if (args == null || args.length == 0)
 			args = new Object[] { data };
-		app.args = args;
 		app.addStatus(null);
-		int fileType = app.readFile();
+		int fileType = app.readStartupFile(args);
 		data = app.isovizData;
 		if (app.handleNonIsoVizFile(fileType, data))
 			return false;
@@ -935,6 +933,8 @@ public abstract class IsoApp {
 		try {
 			if (!app.variables.parse(vt))
 				return false;
+			if (fromApp != null)
+				app.loadingFileName = fromApp.loadingFileName;
 
 			Variables oldVariables = (isSwitch ? fromApp.variables : null);
 			if (isDrop) {
@@ -992,16 +992,21 @@ public abstract class IsoApp {
 	}
 
 	private void finalizeFrame() {
-		frame.setVisible(true); // #3
 		String title = frame.getTitle();
-		frame.setName(title);
-		frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion);
+		if (title.indexOf(" ") < 0)
+			frame.setName(title);
+		setFrameTitle();
+		frame.setVisible(true);
 		frame.addComponentListener(componentListener);
 		frame.addWindowListener(windowListener);
 		if (frame.actions != null)
 			frame.actions.setApp(this);
 	}
 
+	private void setFrameTitle() {
+		frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion + (loadingFileName == null ? "" : " - " + loadingFileName));		
+		loadingFileName = null;
+	}
 
 
 	/**
@@ -1012,37 +1017,6 @@ public abstract class IsoApp {
 	 * 
 	 */
 	abstract protected boolean prepareToSwapOut();
-
-	/**
-	 * This data reader has two modes of operatinon.
-	 * 
-	 * For data files, it can accept byte[], String, or InputStream data.
-	 * 
-	 * The alternative is to read a single-string data sequence directly from the
-	 * html file that calls the app (injected as isoData).
-	 * 
-	 * The Variables class then has a method that parses the byte[] representation
-	 * of the string.
-	 */
-	protected int readFile() {
-		switch (args == null || args.length == 0 || args[0] == null ? 0 : args.length) {
-		case 3:
-			document = args[2];
-			// Fall through //
-		case 2:
-			formData = args[1]; // String or Map
-			// Fall through //
-		case 1:
-			isovizData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
-			whichDataFile = null;
-			break;
-		default:
-			String path = getClass().getName();
-			path = path.substring(0, path.lastIndexOf('.') + 1).replace('.', '/');
-			isovizData = FileUtil.readFileData(this, path + whichDataFile);
-		}
-		return FileUtil.getIsoFileTypeFromContents(isovizData);
-	}
 
 	abstract public void recalcCellColors();
 
@@ -1413,6 +1387,90 @@ public abstract class IsoApp {
 
 	protected void saveDataFileVerbose(Object data, String fileType) {
 		FileUtil.saveDataFile(this, data, fileType, false);
+	}
+
+	/**
+	 * This data reader has two modes of operation.
+	 * 
+	 * For data files, it can accept byte[], String, or InputStream data.
+	 * 
+	 * The alternative is to read a single-string data sequence directly from the
+	 * html file that calls the app (injected as isoData).
+	 * 
+	 * The Variables class then has a method that parses the byte[] representation
+	 * of the string.
+	 */
+	private int readStartupFile(Object[] args) {
+		this.args = args;
+		switch (args == null || args.length == 0 || args[0] == null ? 0 : args.length) {
+		case 3:
+			document = args[2];
+			// Fall through //
+		case 2:
+			formData = args[1]; // String or Map
+			// Fall through //
+		case 1:
+			isovizData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
+			whichDataFile = null;
+			break;
+		default:
+			isovizData = getExampleFileData(whichDataFile);
+			break;
+		}
+		return FileUtil.getIsoFileTypeFromContents(isovizData);
+	}
+
+
+	/**
+	 * Asynchronously open a file.
+	 */
+	public void openFile() {
+		SwingUtilities.invokeLater(() -> {
+			FileUtil.openFile(this, (File f)->{
+				if (f != null)
+				loadFile(f);
+			});			
+		});
+	}
+
+
+	/**
+	 * @param f
+	 * @return
+	 */
+	public void loadFile(File f) {
+		if (f == null)
+			return;
+		loadingFileName = f.getName();
+		loadFileData(FileUtil.readFileOrResource(this, f.getAbsolutePath()));
+	}
+
+	public void openExampleFile(String exampleFile) {
+		loadFileData(getExampleFileData(exampleFile));
+	}
+
+	/**
+	 * 
+	 * @param exampleFile
+	 * @return
+	 */
+	private byte[] getExampleFileData(String exampleFile) {
+		loadingFileName = new File(exampleFile).getName();
+		return FileUtil.readFileOrResource(this, exampleFile);
+	}
+
+	/**
+	 * Load byte data into the appropriated application.
+	 * 
+	 * @param data
+	 */
+	private void loadFileData(byte[] data) {
+		if (data == null || handleNonIsoVizFile(FileUtil.getIsoFileTypeFromContents(data), data)) {
+			return;
+		}
+		new Thread(() -> {
+			openApplication(appType, data, null, true);
+		}, "isodistort_file_opener").start();
 	}
 
 }

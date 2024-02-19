@@ -109,7 +109,8 @@ public class MenuActions {
 
 			// do nothing
 			@Override
-			public void actionPerformed(ActionEvent e) {}
+			public void actionPerformed(ActionEvent e) {
+			}
 		});
 
 		actions.put("View.", new IsoAction("view", "View        ", null, 0) {
@@ -120,7 +121,8 @@ public class MenuActions {
 
 			// do nothing
 			@Override
-			public void actionPerformed(ActionEvent e) {}
+			public void actionPerformed(ActionEvent e) {
+			}
 		});
 
 		actions.put("Set.", new IsoAction("set", "Set         ", null, 0) {
@@ -153,41 +155,60 @@ public class MenuActions {
 
 		});
 
-		actions.put("File.Open",
-				new IsoAction("fileOpen", "Open", "Open an ISOVIZ or DISTORTION file.", 0) {
-					/**
-					 * 
-					 */
-					private static final long serialVersionUID = 1L;
+		actions.put("File.Open", new IsoAction("fileOpen", "Open", "Open an ISOVIZ or DISTORTION file.", 0) {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
 
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						app.openFile();
-					}
-				});
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				app.openFile();
+			}
+		});
 
+		actions.put("File.Examples.", null);
+
+		String[] exampleFiles = IsoApp.exampleFiles;
+		for (int i = 0; i < exampleFiles.length;) {
+			String label = exampleFiles[i++];
+			String name = exampleFiles[i++];
+			if (label == null)
+				label = name;
+			actions.put("File.Examples.isodistort" + i,
+					new IsoAction("exampleIsodistort" + i, label, "open " + name, 0) {
+						/**
+						 * 
+						 */
+						private static final long serialVersionUID = 1L;
+
+						@Override
+						public void actionPerformed(ActionEvent e) {
+							app.openExampleFile(name);
+						}
+					});
+		}
 
 		actions.put("File.Save.", null);
 
-		actions.put("File.Save.saveIsoviz",
-				new IsoAction("saveIsoviz", "ISOVIZ", "Save values as an isoviz file.", 0) {
-					/**
-					 * 
-					 */
-					private static final long serialVersionUID = 1L;
+		actions.put("File.Save.saveIsoviz", new IsoAction("saveIsoviz", "ISOVIZ", "Save values as an isoviz file.", 0) {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
 
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						app.saveIsoviz(null);
-					}
-				});
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				app.saveIsoviz(null);
+			}
+		});
 
 		actions.put("File.Save.saveDistortionFile", new IsoAction("saveDistortionFile", "Distortion file",
 				"Save current configuration as a distortion file.", 0) {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -243,21 +264,18 @@ public class MenuActions {
 			}
 
 		});
-		
-		actions.put("File.Save.saveImage",
-				new IsoAction("saveImage", "-Save Image", "Save current PNG image.", 0) {
-					/**
-					 * 
-					 */
-					private static final long serialVersionUID = 1L;
 
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						app.saveImage();
-					}
-				});
+		actions.put("File.Save.saveImage", new IsoAction("saveImage", "-Save Image", "Save current PNG image.", 0) {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
 
-
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				app.saveImage();
+			}
+		});
 
 		actions.put("View.domains", new IsoAction("viewDomains", "Domains", "View domains for this distortion.", 0) {
 			/**
@@ -277,7 +295,7 @@ public class MenuActions {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -290,7 +308,7 @@ public class MenuActions {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -303,7 +321,7 @@ public class MenuActions {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -316,21 +334,20 @@ public class MenuActions {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				app.viewPage("irreps");
 			}
 		});
-		
 
 		actions.put("View.subgroupTree", new IsoAction("viewSubgroupTree", "-Subgroup Tree",
 				"View the subgroup tree listing for this distortion.", 0) {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -343,7 +360,7 @@ public class MenuActions {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -356,7 +373,7 @@ public class MenuActions {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -369,7 +386,7 @@ public class MenuActions {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -382,7 +399,7 @@ public class MenuActions {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -460,7 +477,7 @@ public class MenuActions {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -473,7 +490,7 @@ public class MenuActions {
 			/**
 					 * 
 					 */
-					private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {

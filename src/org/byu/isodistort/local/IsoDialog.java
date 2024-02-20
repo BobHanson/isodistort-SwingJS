@@ -635,6 +635,7 @@ public abstract class IsoDialog extends JDialog {
 				JComboBox<String> jc = new JComboBox<>(page[++i].split(","));
 				if (v != null)
 					jc.setSelectedItem(v);
+				jc.setName(key);
 				p.add(jc);
 				objects.add(item);
 				objects.add(jc);
@@ -722,6 +723,7 @@ public abstract class IsoDialog extends JDialog {
 	protected List<Object> objects = new ArrayList<>();
 	private Map<String, Object> values;
 
+	@SuppressWarnings("unchecked")
 	Map<String, Object> getValues() throws RuntimeException {
 		if (this.values != null)
 			return this.values;
@@ -740,6 +742,9 @@ public abstract class IsoDialog extends JDialog {
 				if (((JRadioButton) c).isSelected()) {
 					value = c.getName();
 				}
+				break;
+			case 'b':
+				value = ((JComboBox<String>) c).getSelectedItem();
 				break;
 			case 'c':
 				value = "" + ((JCheckBox) c).isSelected();

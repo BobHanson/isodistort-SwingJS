@@ -65,7 +65,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".13_2024.02.19";
+	final static String minorVersion = ".13_2024.02.20";
 
 	/**
 	 * the datafile to use for startup

@@ -1851,7 +1851,7 @@ public class Variables {
 			parseAtomicMode(DIS, "displacivemodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
 			parseAtomicMode(OCC, "scalarmodelist", 1, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
 			parseAtomicMode(MAG, "magneticmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
-			parseAtomicMode(ROT, "rotmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
+			parseAtomicMode(ROT, "rotationalmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
 			parseAtomicMode(ELL, "ellipmodelist", 3, firstAtomOfType, nSubTypeAtomsRead, bsPeriodic);
 
 		}
@@ -2348,19 +2348,20 @@ public class Variables {
 	        }
 	        typeDataPanels[t].setBackground(c);
 	        for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
-	          if (modes[i].isActive())
+	          if (i == ROT)
+	        	  System.out.println("???");
+	          if (isModeActive(modes[i]))
 	            typePanels[i][t].setBackground(modes[i].colorT[t]);
 	        }
 	      }
 	    }
 	
-	    // just placeholders for now -- see 
 	    private static final float COLOR_BRIGHTNESS_ATOMS = 0.90f;
 	    private static final float COLOR_BRIGHTNESS_DIS   = 0.80f;
 	    private static final float COLOR_BRIGHTNESS_OCC   = 0.65f;
 	    private static final float COLOR_BRIGHTNESS_ROT   = 0.50f;
 	    private static final float COLOR_BRIGHTNESS_MAG   = 0.35f;
-	    private static final float COLOR_BRIGHTNESS_ELL   = 0.25f;
+	    private static final float COLOR_BRIGHTNESS_ELL   = 0.20f;
 	
 	    /**
 	     * Set the colors of mode slider and title/checkbox backgrounds.
@@ -2374,22 +2375,22 @@ public class Variables {
 	      switch (type) {
 	      default:
 	      case ATOMS:
-	        brightness = 0.90f; // COLOR_BRIGHTNESS_ATOMS; // for titles and checkboxes
+	        brightness = COLOR_BRIGHTNESS_ATOMS; // for titles and checkboxes
 	        break;
 	      case DIS:
-	        brightness = 0.80f; // COLOR_BRIGHTNESS_DIS;
+	        brightness = COLOR_BRIGHTNESS_DIS;
 	        break;
 	      case OCC:
-	        brightness = 0.65f; // COLOR_BRIGHTNESS_OCC;
+	        brightness = COLOR_BRIGHTNESS_OCC;
 	        break;
 	      case MAG:
-	        brightness = 0.50f; // COLOR_BRIGHTNESS_MAG;
+	        brightness = COLOR_BRIGHTNESS_MAG;
 	        break;
 	      case ROT:
-	        brightness = 0.35f; // COLOR_BRIGHTNESS_ROT;
+	        brightness = COLOR_BRIGHTNESS_ROT;
 	        break;
 	      case ELL:
-	        brightness = 0.20f; // COLOR_BRIGHTNESS_ELL;
+	        brightness = COLOR_BRIGHTNESS_ELL;
 	        break;
 	      case STRAIN:
 	        colors[0] = COLOR_STRAIN;

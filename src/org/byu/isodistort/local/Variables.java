@@ -1216,7 +1216,7 @@ public class Variables {
 		void setStrained(double[][] strain, ChildCell child) {
 			MathUtil.mat3product(strain, basisCart0, basisCart, t);
 			transformParentToChild(child, true);
-			MathUtil.set3(originCart, child.toTempCartesian(originUnitless));
+			MathUtil.set3(child.toTempCartesian(originUnitless), originCart);
 			setVertices();
 			setLatticeParameterLabels();
 			child.setVertices();
@@ -2348,8 +2348,6 @@ public class Variables {
 	        }
 	        typeDataPanels[t].setBackground(c);
 	        for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
-	          if (i == ROT)
-	        	  System.out.println("???");
 	          if (isModeActive(modes[i]))
 	            typePanels[i][t].setBackground(modes[i].colorT[t]);
 	        }

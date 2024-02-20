@@ -53,17 +53,22 @@ import javax.swing.JCheckBox;
 //import java.io.File;
 
 import org.byu.isodistort0.render.Vec;
+
+import javajs.util.Rdr;
+
 import org.byu.isodistort0.local.Dash;
 import org.byu.isodistort0.local.CommonStuff;
 import org.byu.isodistort0.local.Circle;
 import org.byu.isodistort0.local.ElementParser;
 import org.byu.isodistort0.local.ImageSaver;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.applet.Applet;
 import java.util.Arrays;
 import java.util.Random;
@@ -1999,10 +2004,15 @@ public class IsoDiffractApplet extends Applet implements Runnable
 			{
 				try
 				{
-					File f = new File(whichdatafile);
-					System.out.println (f.getAbsoluteFile());
-					
-					BufferedReader br = new BufferedReader(new FileReader(f));// this reads the data
+					String dir = getClass().getName();
+					String path = "/" + dir.substring(0, dir.lastIndexOf('.') + 1).replace('.', '/') + whichdatafile;
+					System.out.println(path);
+					InputStream is = (InputStream) getClass().getResource(path).getContent();
+					BufferedInputStream bis = new BufferedInputStream(is);
+					BufferedReader br = new BufferedReader(new InputStreamReader(bis));
+//					File f = new File(whichdatafile);
+//					System.out.println (f.getAbsoluteFile());
+					//BufferedReader br = new BufferedReader(new FileReader(f));// this reads the data
 					dataString = br.readLine()+"\n";//scrap the first data line of text
 					while (br.ready())  // previously used `for (int i=1;br.ready();i++)
 						dataString += br.readLine()+"\n";

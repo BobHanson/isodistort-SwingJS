@@ -21,8 +21,8 @@ class Mode {
 
 	final static int DIS = 0; // displacive
 	final static int OCC = 1; // occupancy (aka "scalar")
-	final static int MAG = 2; // magnetic
-	final static int ROT = 3; // rotational
+	final static int ROT = 2; // rotational
+	final static int MAG = 3; // magnetic
 	final static int ELL = 4; // ellipsoidal
 	final static int STRAIN = 5;
 	final static int IRREP = 6; // irreducible representations
@@ -85,11 +85,10 @@ class Mode {
 	int[][] nSubAtoms;
 
 	Mode(int type, int nTypes, int[] nSubTypes, int[][] nSubAtoms) {
+		this.type = type;
 		this.nTypes = nTypes;
 		this.nSubTypes = nSubTypes;
 		this.nSubAtoms = nSubAtoms;
-
-		this.type = type;
 		switch (type) {
 		case DIS:
 		case MAG:

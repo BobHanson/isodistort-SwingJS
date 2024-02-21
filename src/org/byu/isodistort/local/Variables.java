@@ -62,7 +62,7 @@ public class Variables {
 	static final Color COLOR_PARENT_CELL = new Color(204, 128, 128);
 
 	static final Color COLOR_STRAIN = Color.DARK_GRAY;
-  static final Color COLOR_IRREP = new Color(0xA0A0A0);
+    static final Color COLOR_IRREP = new Color(0xA0A0A0);
 
 
 	/**
@@ -174,13 +174,6 @@ public class Variables {
 	public double minBondOcc;
 
 	/**
-	 * If true (when at least two parents have the same element type) show the
-	 * simple-color checkbox.
-	 * 
-	 */
-	public boolean needSimpleColor;
-	
-	/**
 	 * cell for the child, aka "super" cell
 	 * 
 	 */
@@ -241,6 +234,7 @@ public class Variables {
 	 * 0 means not incommensurate
 	 */
 	public int modDim;
+	public boolean needColorBox;
 
 	public Variables(IsoApp app) {
 		this.app = app;
@@ -334,8 +328,8 @@ public class Variables {
 		rgb[2] = c.getBlue() / 255.0;
 	}
 
-	public void updateColorScheme(boolean simpleColor) {
-		gui.updateColorScheme(simpleColor);
+	public void updateColorScheme(boolean byElement) {
+		gui.updateColorScheme(byElement);
 	}
 
 	/**
@@ -350,7 +344,7 @@ public class Variables {
 		gui.setComponentValuesFrom(v);
 		gui.readSliders();
 		isChanged = true;
-		gui.updateColorScheme(v.gui.simpleColor);
+		gui.updateColorScheme(v.gui.colorByElement);
 		isAdjusting = false;
 		app.updateDimensions();
 		app.updateDisplay();
@@ -2188,6 +2182,8 @@ public class Variables {
 		private final static int subTypeWidth = 210;
 		private final static int barheight = 22;
 		
+		private final float[] hsb = new float[3];
+
 
 		/**
 		 * Master (top most) slider bar controls all slider bars for superpositioning of
@@ -2235,18 +2231,6 @@ public class Variables {
 
 		private int sliderWidth;
 		private int sliderPanelWidth;
-
-    /**
-     * Total number of unique parent atom types.
-     */
-    int nUniques;
-
-    /**
-     * Integer index that identifies each parent atom type as one of several unique
-     * parent atom types.
-     * 
-     */
-    int[] atomTypeUnique;
 
 		/**
 		 * Set this web input form map's xxxmode00t00m, scalar00t00m, and strainN values to the desired values 
@@ -2310,7 +2294,7 @@ public class Variables {
 	    /**
 	     * current static of (no) shading in slider panel
 	     */
-	    boolean simpleColor;
+	    boolean colorByElement;
 	
 	    Color[] atomTypeColors;
 	    
@@ -2330,10 +2314,10 @@ public class Variables {
 	      setColorScheme(atomTypeColors, -1);
 	    }
 	
-	    void updateColorScheme(boolean isSimple) {
-	      simpleColor = isSimple;
+	    void updateColorScheme(boolean isByElmeent) {
+	      colorByElement = isByElmeent;
 	      app.colorBox.setEnabled(false);
-	      app.colorBox.setSelected(isSimple);
+	      app.colorBox.setSelected(!isByElmeent);
 	      app.colorBox.setEnabled(true);
 	      setColors();
 	      for (int t = 0; t < nTypes; t++) {
@@ -2360,48 +2344,62 @@ public class Variables {
 	    private static final float COLOR_BRIGHTNESS_ROT   = 0.50f;
 	    private static final float COLOR_BRIGHTNESS_MAG   = 0.35f;
 	    private static final float COLOR_BRIGHTNESS_ELL   = 0.20f;
-	
-	    /**
-	     * Set the colors of mode slider and title/checkbox backgrounds.
-	     * 
-	     * @param colors
-	     * @param type
-	     */
-	    private void setColorScheme(Color[] colors, int type) {
-	      float saturation = 1.00f;
-	      float brightness;
-	      switch (type) {
-	      default:
-	      case ATOMS:
-	        brightness = COLOR_BRIGHTNESS_ATOMS; // for titles and checkboxes
-	        break;
-	      case DIS:
-	        brightness = COLOR_BRIGHTNESS_DIS;
-	        break;
-	      case OCC:
-	        brightness = COLOR_BRIGHTNESS_OCC;
-	        break;
-	      case MAG:
-	        brightness = COLOR_BRIGHTNESS_MAG;
-	        break;
-	      case ROT:
-	        brightness = COLOR_BRIGHTNESS_ROT;
-	        break;
-	      case ELL:
-	        brightness = COLOR_BRIGHTNESS_ELL;
-	        break;
-	      case STRAIN:
-	        colors[0] = COLOR_STRAIN;
-	        return;
-	      case IRREP:
-	        colors[0] = COLOR_IRREP ; // BH a bit darker than LIGHT_GRAY C0C0C0
-	        return;
-	      }
-	      for (int t = 0; t < nTypes; t++) {
-	        float hue = (simpleColor ? 1f * atomTypeUnique[t] / nUniques : 1f * t / nTypes);
-	        colors[t] = new Color(Color.HSBtoRGB(hue, saturation, brightness));
-	      }
-	    }
+
+		/**
+		 * Set the colors of mode slider and title/checkbox backgrounds.
+		 * 
+		 * @param colors
+		 * @param type
+		 */
+		private void setColorScheme(Color[] colors, int type) {
+			float saturation = 1.00f;
+			float brightness;
+			switch (type) {
+			default:
+			case ATOMS:
+				brightness = COLOR_BRIGHTNESS_ATOMS; // for titles and checkboxes
+				break;
+			case DIS:
+				brightness = COLOR_BRIGHTNESS_DIS;
+				break;
+			case OCC:
+				brightness = COLOR_BRIGHTNESS_OCC;
+				break;
+			case MAG:
+				brightness = COLOR_BRIGHTNESS_MAG;
+				break;
+			case ROT:
+				brightness = COLOR_BRIGHTNESS_ROT;
+				break;
+			case ELL:
+				brightness = COLOR_BRIGHTNESS_ELL;
+				break;
+			case STRAIN:
+				colors[0] = COLOR_STRAIN;
+				return;
+			case IRREP:
+				colors[0] = COLOR_IRREP; // BH a bit darker than LIGHT_GRAY C0C0C0
+				return;
+			}
+			if (colorByElement) {
+				for (int t = 0; t < nTypes; t++) {
+					int argb = Elements.getCPKColor(atomTypeSymbol[t]);
+					Color.RGBtoHSB((argb&0xFF0000) >> 16, (argb & 0xFF00) >> 8, argb & 0xFF, hsb);					
+					colors[t] = new Color(Color.HSBtoRGB(hsb[0], hsb[1], brightness));
+					System.out.println("Variables.scs " + colorByElement 
+							+ " " + atomTypeSymbol[t] 
+							+ " rgb=" 
+							+ Integer.toHexString(argb) 
+							+ " h=" + hsb[0] + " s=" + hsb[1]+ " b=" + hsb[2] 
+							+ " br=" + brightness);
+				}
+			} else {
+				for (int t = 0; t < nTypes; t++) {
+					float hue = 1f * t / nTypes;
+					colors[t] = new Color(Color.HSBtoRGB(hue, saturation, brightness));
+				}
+			}
+		}
 
 		void toggleIrrepSliders() {
 			irrepSlidersOn = !irrepSlidersOn;
@@ -2487,8 +2485,8 @@ public class Variables {
 				subTypesPerRow[t] = Math.min(maxSubTypesPerRow, nSubTypes[t]);
 				nSubRows[t] = (int) Math.ceil((double) nSubTypes[t] / subTypesPerRow[t]);
 			}
-			needSimpleColor = identifyUniqueAtoms(atomTypeSymbol);
-
+			needColorBox = true;//haveElementSubtypes();
+			colorByElement = true;
 			setColors();
 
 			masterSliderPanel = new JPanel();
@@ -2613,40 +2611,6 @@ public class Variables {
 			}
 			cell.title = newWhiteLabel(cell.labelText, JLabel.LEFT);
 			cell.title.setForeground(cell.color);
-		}
-
-		/**
-		 * Determines the unique atom type of each non-unique atom type.
-		 * 
-		 * If any type has multiple subtypes, we'll enable the "color" button
-		 * 
-		 * @return true if we need to enable the "color" button to allow "simple" colors
-		 * 
-		 */
-		private boolean identifyUniqueAtoms(String[] symT) {
-			// Determine the unique atoms types.
-			boolean unique;
-			String uniquetypes[] = new String[nTypes];
-			int[] uniqueT = new int[nTypes];
-			int n = 0;
-			for (int t = 0; t < nTypes; t++) {
-				unique = true;
-				for (int u = 0; u < n; u++) {
-					if (uniquetypes[u].equals(symT[t])) {
-						unique = false;
-						uniqueT[t] = u;
-					}
-				}
-				if (unique) {
-					uniquetypes[n] = symT[t];
-					uniqueT[t] = n++;
-				}
-			}
-			if (n == nTypes)
-				return false;
-			atomTypeUnique = uniqueT;
-			nUniques = n;
-			return (n < nTypes);
 		}
 
 		private JLabel newWhiteLabel(String text, int hAlign) {

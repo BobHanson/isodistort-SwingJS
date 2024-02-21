@@ -634,7 +634,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		showAxes = axesBox.isSelected();
 		boolean spin = spinBox.isSelected();
 		isAnimateSelected = animBox.isSelected();
-		colorBox.setVisible(variables.needSimpleColor);
+		colorBox.setVisible(variables.needColorBox);
 		isMaterialTainted = true;
 		rp3.setSpinning(spin);
 		if (isAnimateSelected || spin) {

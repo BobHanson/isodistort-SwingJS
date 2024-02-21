@@ -19,6 +19,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -2221,13 +2222,13 @@ public class Variables {
 		/**
 		 * Panel which holds the parent atom type
 		 */
-		private JPanel typeNamePanels[];
+		private JPanel typeTitlePanel[];
 		/**
 		 * Panel which holds the occupancy check boxes for each atom subtype associated
 		 * with a type
 		 * 
 		 */
-		private JPanel typeDataPanels[];
+		private JPanel subTypePanel[];
 
 		private int sliderWidth;
 		private int sliderPanelWidth;
@@ -2322,18 +2323,18 @@ public class Variables {
 	      setColors();
 	      for (int t = 0; t < nTypes; t++) {
 	        Color c = getAtomTypeColor(t);
-	        typeNamePanels[t].setBackground(c);
-	        typeNamePanels[t].getParent().setBackground(c);
+	        typeTitlePanel[t].setBackground(c);
+	        typeTitlePanel[t].getParent().setBackground(c);
 	        for (int s = 0; s < nSubTypes[t]; s++) {
 	          Component p;
 	          while ((p  = subTypeLabels[t][s].getParent()) != null && !p.isOpaque())
 	          {}
 	          p.setBackground(c);
 	        }
-	        typeDataPanels[t].setBackground(c);
+	        subTypePanel[t].setBackground(c);
 	        for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 	          if (isModeActive(modes[i]))
-	            typePanels[i][t].setBackground(modes[i].colorT[t]);
+	            modeSliderPanelsT[i][t].setBackground(modes[i].colorT[t]);
 	        }
 	      }
 	    }
@@ -2471,7 +2472,7 @@ public class Variables {
 			// Divide the applet area with structure on the left and controls on the right.
 
 			sliderPanelWidth = width;
-			sliderWidth = sliderPanelWidth / 2;
+			sliderWidth = (int) (sliderPanelWidth * 0.6);
 
 			/**
 			 * Maximum number of check boxes per row the GUI will hold
@@ -2491,6 +2492,7 @@ public class Variables {
 
 			masterSliderPanel = new JPanel();
 			masterSliderPanel.setLayout(new BoxLayout(masterSliderPanel, BoxLayout.LINE_AXIS));
+			masterSliderPanel.setBorder(new EmptyBorder(2, 2, 5, 80));
 			masterSliderPanel.setBackground(Color.WHITE);
 
 			// Master Slider Panel
@@ -2512,32 +2514,32 @@ public class Variables {
 
 			// Initialize type-specific subpanels of scrollPanel
 			typeLabel = new JLabel[nTypes];
-			typeNamePanels = new JPanel[nTypes];
-			typeDataPanels = new JPanel[nTypes];
+			typeTitlePanel = new JPanel[nTypes];
+			subTypePanel = new JPanel[nTypes];
 			subTypeCheckBoxes = new JCheckBox[nTypes][];
 			subTypeLabels = new JLabel[nTypes][];
 
 			// The big loop over types
 			for (int t = 0; t < nTypes; t++) {
 				Color c = getAtomTypeColor(t);
-				JPanel tp = new JPanel();
-				tp.setName("typeOuterPanel_" + t);
-				tp.setLayout(new BoxLayout(tp, BoxLayout.Y_AXIS));
-				tp.setBorder(new EmptyBorder(2, 2, 5, 2));
-				tp.setBackground(c); // important
-				subTypeCheckBoxes[t] = new JCheckBox[nSubTypes[t]];
-				subTypeLabels[t] = new JLabel[nSubTypes[t]];
-				typeLabel[t] = newWhiteLabel("" + atomTypeName[t] + " Modes", JLabel.CENTER);
-				typeNamePanels[t] = new JPanel(new GridLayout(1, 1, 0, 0));
-				typeNamePanels[t].setName("typeNamePanel_" + t + " " + atomTypeName[t]);
-				typeNamePanels[t].add(typeLabel[t]);
-				typeNamePanels[t].setBackground(c); // important
-				tp.add(typeNamePanels[t]);
+				JPanel typeInfoPanel = new JPanel();
+				typeInfoPanel.setName("typeOuterPanel_" + t);
+				typeInfoPanel.setLayout(new BoxLayout(typeInfoPanel, BoxLayout.Y_AXIS));
+				typeInfoPanel.setBorder(new EmptyBorder(2, 2, 5, 60));
+				typeInfoPanel.setBackground(c); // important
+				typeLabel[t] = newWhiteLabel("" + atomTypeName[t] + " Modes", JLabel.CENTER);				
+				typeTitlePanel[t] = new JPanel(new GridLayout(1, 1, 0, 0));
+				typeTitlePanel[t].setName("typeNamePanel_" + t + " " + atomTypeName[t]);
+				typeTitlePanel[t].add(typeLabel[t]);
+				typeTitlePanel[t].setBackground(c); // important
+				typeInfoPanel.add(typeTitlePanel[t]);
 
 				// typeDataPanel
-				typeDataPanels[t] = new JPanel(new GridLayout(nSubRows[t], subTypesPerRow[t], 0, 0));
-				typeDataPanels[t].setName("typeDataPanel_" + t);
+				subTypePanel[t] = new JPanel(new GridLayout(nSubRows[t], subTypesPerRow[t], 0, 0));
+				subTypePanel[t].setName("typeDataPanel_" + t);
 				int nst = nSubTypes[t];
+				subTypeCheckBoxes[t] = new JCheckBox[nSubTypes[t]];
+				subTypeLabels[t] = new JLabel[nSubTypes[t]];
 				for (int s = 0; s < nst; s++) {
 					JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
 					p.setName("subtypePanel_" + s);
@@ -2547,7 +2549,7 @@ public class Variables {
 					subTypeLabels[t][s] = newWhiteLabel("", JLabel.LEFT);
 					p.add(b);
 					p.add(subTypeLabels[t][s]);
-					typeDataPanels[t].add(p);
+					subTypePanel[t].add(p);
 				}
 				// Makes sure that each subtype row is full for alignment purposes
 				for (int s = nst; s < nSubRows[t] * subTypesPerRow[t]; s++) {
@@ -2555,22 +2557,23 @@ public class Variables {
 					p.setName("subtypeFillerPanel_" + s);
 					p.setBackground(c);
 					// p.add(new JLabel(""));
-					typeDataPanels[t].add(p);
+					subTypePanel[t].add(p);
 				}
-				tp.add(typeDataPanels[t]);
-				addPanel(sliderPanel, tp, "typePanel_" + t + " " + typeLabel[t].getText());
+				typeInfoPanel.add(subTypePanel[t]);
+				addPanel(sliderPanel, typeInfoPanel, "typeInfoPanel_" + t + " " + typeLabel[t].getText());
 				int n = 0;
 				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 					n += initModeGUI(sliderPanel, modes[i], t);
 				}
 				if (n == 0) {
-					tp = new JPanel(new GridLayout(1, 1, 0, 0));
-					tp.setBackground(c);
-					addPanel(sliderPanel, tp, "typeFiller_" + t);
+					typeInfoPanel = new JPanel(new GridLayout(1, 1, 0, 0));
+					typeInfoPanel.setBackground(c);
+					addPanel(sliderPanel, typeInfoPanel, "typeFiller_" + t);
 				}
 			}
 			Color c = COLOR_STRAIN;
 			JPanel strainTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
+			strainTitlePanel.setBorder(new EmptyBorder(2, 2, 5, 80));
 			strainTitlePanel.setBackground(c);
 			JLabel strainTitle = newWhiteLabel("Strain Modes", JLabel.CENTER);
 			strainTitlePanel.add(strainTitle);
@@ -2593,6 +2596,7 @@ public class Variables {
 			if (isModeActive(modes[IRREP])) {
 				c = COLOR_IRREP;
 				JPanel irrepTitlePanel = new JPanel(new GridLayout(1, 1, 0, 0));
+				irrepTitlePanel.setBorder(new EmptyBorder(2, 2, 5, 80));
 				irrepTitlePanel.setBackground(c);
 				JLabel irrepTitle = newWhiteLabel("Single-Irrep Master Amplitudes", JLabel.CENTER);
 				irrepTitlePanel.add(irrepTitle);
@@ -2633,7 +2637,7 @@ public class Variables {
 		}
 
 		final Font pointerFont = new Font(Font.SANS_SERIF, Font.PLAIN, 8);
-		private JPanel[][] typePanels = new JPanel[MODE_COUNT][];
+		private JPanel[][] modeSliderPanelsT = new JPanel[MODE_COUNT][];
 
 		class IsoSlider extends JSlider implements ChangeListener {
 
@@ -2777,23 +2781,23 @@ public class Variables {
 			int type = mode.type;
 			if (t == 0) {
 				int nTypes = mode.nTypes;
-				typePanels[type] = new JPanel[nTypes];
+				modeSliderPanelsT[type] = new JPanel[nTypes];
 				sliderTM[type] = new IsoSlider[nTypes][];
 			}
 			Color c = (mode.colorT == null ? Color.PINK : mode.colorT[t]);
 			int min = (mode.type == IRREP ? 0 : -sliderMax);
 			int nModes = mode.modesPerType[t];
 			sliderTM[type][t] = new IsoSlider[nModes];
-			JPanel tp = typePanels[type][t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
-			tp.setBackground(c);
+			JPanel modeSliderPanel = modeSliderPanelsT[type][t] = new JPanel(new GridLayout(nModes, 2, 0, 0));
+			modeSliderPanel.setBackground(c);
 			for (int m = 0; m < nModes; m++) {
 				sliderTM[type][t][m] = new IsoSlider(mode.type, getInputName(mode.type, t, m), min,
 						mode.calcAmpTM[t][m], mode.maxAmpTM[t][m], c);
 				sliderTM[type][t][m].sliderLabel = newWhiteLabel("", JLabel.LEFT);
-				tp.add(sliderTM[type][t][m]);
-				tp.add(sliderTM[type][t][m].sliderLabel);
+				modeSliderPanel.add(sliderTM[type][t][m]);
+				modeSliderPanel.add(sliderTM[type][t][m].sliderLabel);
 			}
-			addPanel(sliderPanel, tp, "modeSliderPanelType_" + t);
+			addPanel(sliderPanel, modeSliderPanel, "modeSliderPanelType_" + t);
 			return nModes;
 		}
 

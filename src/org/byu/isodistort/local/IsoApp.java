@@ -65,12 +65,12 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".13_2024.02.20";
+	final static String minorVersion = ".13_2024.02.21";
 
 	/**
 	 * the datafile to use for startup
 	 */
-	protected String whichDataFile = "data/test25.txt"; // varied settings
+	protected String startupDataFile = "data/data29.isoviz"; // varied settings
 
 	/**
 	 * The list of menu items in the File.Examples. menu.
@@ -111,7 +111,10 @@ public abstract class IsoApp {
 	static boolean addJmol = false; // BH experimental
 
 	public static class IsoFrame extends JFrame {
+		
+	    int sliderPanelWidth;
 
+		String loadingFileName;
 		/**
 		 * 
 		 */
@@ -142,12 +145,12 @@ public abstract class IsoApp {
 				tabbedPane = new JTabbedPane();
 				tabbedPane.setFocusable(false);
 				JPanel p = new JPanel();
-				p.setBorder(new EmptyBorder(0, 0, 0, 0));
+//				p.setBorder(new EmptyBorder(0, 0, 0, 0));
 				p.setBackground(Color.WHITE);
 				tabbedPane.addTab("Distortion", p);
 				p = new JPanel();
 				p.setName("DiffPan");
-				p.setBorder(new EmptyBorder(0, 0, 0, 0));
+//				p.setBorder(new EmptyBorder(0, 0, 0, 0));
 				p.setBackground(Color.WHITE);
 				tabbedPane.addTab("Diffraction", p);
 				if (addJmol) {
@@ -213,6 +216,97 @@ public abstract class IsoApp {
 			}
 		}
 
+		private ComponentListener componentListener = new ComponentAdapter() {
+
+			@Override
+			public void componentResized(ComponentEvent e) {
+				invalidate();
+				resizeAppsPriorToValidation();
+				validate();
+				resizeAppsAfterValidation();
+			}
+		};
+
+		private WindowListener windowListener = new WindowAdapter() {
+
+			@Override
+			public void windowActivated(WindowEvent e) {
+			}
+
+			@Override
+			public void windowClosed(WindowEvent e) {
+			}
+
+			@Override
+			public void windowClosing(WindowEvent e) {
+				shutDown();
+			}
+
+			@Override
+			public void windowDeactivated(WindowEvent e) {
+			}
+
+			@Override
+			public void windowDeiconified(WindowEvent e) {
+			}
+
+			@Override
+			public void windowIconified(WindowEvent e) {
+			}
+
+		};
+		
+		void finalizeFrame(IsoApp app) {
+			String title = getTitle();
+			if (title.indexOf(" ") < 0)
+				setName(title);
+			setFrameTitle(app.variables);
+			setVisible(true);
+			addComponentListener(componentListener);
+			addWindowListener(windowListener);
+			if (actions != null)
+				actions.setApp(app);
+		}
+
+		void setFrameTitle(Variables variables) {
+			setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion
+					+ (loadingFileName == null ? "" : " - " + loadingFileName));
+		}
+
+		protected void resizeAppsPriorToValidation() {
+			for (int i = 0; i < 3; i++) {
+				if (apps[i] != null) {
+					apps[i].frameResizing();
+				}
+			}
+		}
+
+		protected void resizeAppsAfterValidation() {
+			for (int i = 0; i < 3; i++) {
+				if (apps[i] != null) {
+					apps[i].updateDimensions();
+					apps[i].frameResized();
+				}
+			}
+		}
+
+		@Override
+		public void dispose() {
+			removeComponentListener(componentListener);
+			removeWindowListener(windowListener);
+		}
+
+		protected void shutDown() {
+			for (int i = 0; i < 3; i++) {
+				if (apps[i] != null) {
+					apps[i].shutDown();
+					apps[i].updateDimensions();
+					apps[i].frameResized();
+				}
+			}
+			
+		}
+
 	}
 
 	private class StatusPanel extends JScrollPane {
@@ -253,11 +347,11 @@ public abstract class IsoApp {
 			}
 		}
 
-		void setDimension(Dimension d) {
-			setPreferredSize(new Dimension(d.width - 2, d.height));
-			area.setPreferredSize(new Dimension(d.width - 10, 1000));
-		}
-
+//		void setDimension(Dimension d) {
+//			setPreferredSize(new Dimension(d.width - 2, d.height));
+//			area.setPreferredSize(new Dimension(d.width - 10, 1000));
+//		}
+//
 		/**
 		 * 
 		 * @param b       true for visible
@@ -316,7 +410,13 @@ public abstract class IsoApp {
 	/**
 	 * a few common parameters for initializing the GUI
 	 */
-	private static final int padding = 0, controlPanelHeight = 75, roomForScrollBar = 20;
+	private static final int padding = 0;
+	
+	private static final int controlPanelHeight = 75;
+	
+	private static final int roomForScrollBar = 10;
+
+	private static final int defaultSliderPanelWidth = 450;
 
 	private static int buttonID = 0;
 
@@ -532,63 +632,11 @@ public abstract class IsoApp {
 		return s.substring(0, n);
 	}
 
-	private ComponentListener componentListener = new ComponentAdapter() {
-
-		@Override
-		public void componentResized(ComponentEvent e) {
-			updateDimensions();
-			frameResized();
-			frame.contentPane.setPreferredSize(frame.contentPane.getSize());
-			frame.tabbedPane.setPreferredSize(frame.contentPane.getPreferredSize());
-			frame.pack();
-			// frame is packed, so OUTER sizes are set now.
-			// but we still have to set the sliderPanel width
-			// and height. We provide a provisional setting here
-			// and let Variables adjust it as necessary.
-//			resetPanelHeights();
-//			frame.pack();
-			updateDisplay();
-		}
-	};
-
-	private WindowListener windowListener = new WindowAdapter() {
-
-		@Override
-		public void windowActivated(WindowEvent e) {
-		}
-
-		@Override
-		public void windowClosed(WindowEvent e) {
-		}
-
-		@Override
-		public void windowClosing(WindowEvent e) {
-			shutDown();
-		}
-
-		@Override
-		public void windowDeactivated(WindowEvent e) {
-		}
-
-		@Override
-		public void windowDeiconified(WindowEvent e) {
-		}
-
-		@Override
-		public void windowIconified(WindowEvent e) {
-		}
-
-	};
-
-	private int sliderPanelWidth;
-
 	/**
 	 * true if Variables.modDim > 0 based on ISOViz !numberOfModulations > 0 or
 	 * FormData "xkparam... presence or DFile "!
 	 */
 	public Boolean isIncommensurate;
-
-	private String loadingFileName;
 
 	protected IsoApp(int appType) {
 		this.appType = appType;
@@ -664,8 +712,6 @@ public abstract class IsoApp {
 			JToggleButton c = listenerList.remove(listenerList.size() - 1);
 			c.removeItemListener(buttonListener);
 		}
-		frame.removeComponentListener(componentListener);
-		frame.removeWindowListener(windowListener);
 		frame = null;
 		if (variables != null)
 			variables.dispose();
@@ -725,22 +771,45 @@ public abstract class IsoApp {
 	}
 
 	/**
+	 * This method is run prior to frame "validation" (when the layout is done, and
+	 * preferred sizes are checked). 
+	 * 
+	 * All we are doing here is setting the control
+	 * (bottom) panel and isoPanel preferred sizes. 
+	 * 
+	 * This sets the overall width and height preferences. 
+	 * SliderPanel width All the other sizes are set automatically from that.
+	 */
+	public void frameResizing() {
+//		System.out.println("frame resizing " + frame.getSize());
+//		System.out.println("contentPane " + frame.contentPane.getSize());
+//		System.out.println("tabbedPane " + frame.tabbedPane.getSize());
+//		System.out.println("sliderScrollPane " + sliderScrollPane.getSize());
+//		System.out.println("sliderPanel " + sliderPanel.getSize());
+		int w = frame.tabbedPane.getWidth();
+		Dimension d = new Dimension(w - 5, controlPanelHeight);
+		controlPanel.setPreferredSize(d);
+		statusPanel.setPreferredSize(new Dimension(w - 5, controlPanelHeight - 5));
+		// not necessary! setPackedHeight();
+		d = new Dimension(frame.getContentPane().getSize().width - frame.sliderPanelWidth - 20,
+				frame.getPanelHeight() - controlPanelHeight);
+		isoPanel.setPreferredSize(new Dimension(w, frame.tabbedPane.getHeight() - 40));
+	}
+
+	/**
 	 * Frame has been resized -- update renderer and display. This will occur
 	 * inititially and upon user resize drag.
 	 * 
 	 */
 	protected void frameResized() {
-//		System.out.println(this.appType + " resized" + isoPanel.getSize());
-//		System.out.println("resized" + controlStatusPanel.getBounds());
-		Dimension d = new Dimension(controlStatusPanel.getWidth() - 5, controlPanelHeight);
-		controlPanel.setPreferredSize(d);
-		statusPanel.setDimension(new Dimension(controlStatusPanel.getWidth(), controlPanelHeight - 5));
-		// not necessary! setPackedHeight();
-		d = new Dimension(frame.getContentPane().getPreferredSize().width - sliderPanelWidth - 20,
-				frame.getPanelHeight() - controlPanelHeight);
-		drawPanel.setPreferredSize(d);
-		sliderScrollPane.setPreferredSize(new Dimension(sliderScrollPane.getWidth(), d.height));
-
+//		System.out.println("frame resized " + frame.getSize());
+//		System.out.println("contentPane " + frame.contentPane.getSize());
+//		System.out.println("tabbedPane " + frame.tabbedPane.getSize());
+//		System.out.println("isopanel " + isoPanel.getSize());
+//		System.out.println("sliderScrollPane " + sliderScrollPane.getSize());
+//		System.out.println("sliderPanel " + sliderPanel.getSize());
+//		System.out.println("controlStatusPanel resized " + controlStatusPanel.getSize());
+//		System.out.println("drawPanel now " + drawPanel.getSize());
 		updateDimensions();
 	}
 
@@ -769,7 +838,7 @@ public abstract class IsoApp {
 			err = sendFormDataToServer(formData, true);
 			break;
 		case FileUtil.FILE_TYPE_DISTORTION_TXT:
-			err = distortionFileToISOVIZ(whichDataFile == null ? "temp.isoviz" : whichDataFile, data);
+			err = distortionFileToISOVIZ(startupDataFile == null ? "temp.isoviz" : startupDataFile, data);
 			break;
 		default:
 			err = "File type was not recognized.";
@@ -790,7 +859,7 @@ public abstract class IsoApp {
 	abstract protected void init();
 
 	/**
-	 * 
+	 * [-tab----tab---------------------------------|
 	 * |------------------isoPanel------------------|
 	 * |.................................|..........|
 	 * |.................................|.slider...|
@@ -831,7 +900,6 @@ public abstract class IsoApp {
 		sliderScrollPane.setBackground(Color.YELLOW);
 		sliderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		sliderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-		sliderScrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 0));
 		isoPanel.add(sliderScrollPane, BorderLayout.EAST);
 		isoPanel.add(controlStatusPanel, BorderLayout.SOUTH);
 		drawPanel = new JPanel(new BorderLayout());
@@ -902,7 +970,6 @@ public abstract class IsoApp {
 
 	private static boolean startApp(IsoApp fromApp, IsoFrame frame, int appType, Object[] args, byte[] data,
 			Map<String, Object> mapFormData, boolean isDrop) {
-		// boolean isIsoDistort = (appType == APP_ISODISTORT);
 		IsoApp app;
 		switch (appType) {
 		default:
@@ -916,6 +983,7 @@ public abstract class IsoApp {
 			app = new IsoSymmetryApp();
 			break;
 		}
+		app.frame = frame;
 		if (args == null || args.length == 0)
 			args = new Object[] { data };
 		app.addStatus(null);
@@ -929,9 +997,6 @@ public abstract class IsoApp {
 		try {
 			if (!app.variables.parse(vt))
 				return false;
-			if (fromApp != null)
-				app.loadingFileName = fromApp.loadingFileName;
-
 			Variables oldVariables = (isSwitch ? fromApp.variables : null);
 			if (isDrop) {
 				frame.disposeApps();
@@ -944,30 +1009,27 @@ public abstract class IsoApp {
 			app.prepareFrame(frame, oldVariables, isDrop);
 			app.updateDimensions();
 			app.init();
-			app.finalizeFrame();
+			frame.finalizeFrame(app);
 			app.addStatus("Time to load: " + (System.currentTimeMillis() - t) + " ms");
 		} catch (Throwable e) {
 			JOptionPane.showMessageDialog(frame, "Error reading input data " + e.getMessage()
-					+ (app.whichDataFile == null ? "" : " for " + app.whichDataFile));
+					+ (app.startupDataFile == null ? "" : " for " + app.startupDataFile));
 			e.printStackTrace();
 			return false;
 		}
 		if (fromApp != null) {
 			app.document = fromApp.document;
 			app.formData = fromApp.formData;
-			app.whichDataFile = fromApp.whichDataFile;
+			app.startupDataFile = fromApp.startupDataFile;
 			app.distortionFileData = fromApp.distortionFileData;
 			app.isIncommensurate = fromApp.isIncommensurate;
 			app.variables.setValuesFrom(fromApp.variables);
 		}
 		app.frameResized();
-		app.updateDisplay();
-		app.frame.repaint();
 		return true;
 	}
 
 	private void prepareFrame(IsoFrame frame, Variables oldVariables, boolean isDrop) {
-		this.frame = frame;
 		initializePanels();
 		boolean haveFrame = (isDrop || oldVariables != null);
 		addStatus(null);
@@ -975,32 +1037,9 @@ public abstract class IsoApp {
 		Dimension d = (haveFrame ? frame.contentPane.getSize()
 				: new Dimension(variables.appletWidth, variables.appletHeight));
 		frame.contentPane.setPreferredSize(d);
-		frame.tabbedPane.setPreferredSize(frame.contentPane.getPreferredSize());
 		frame.pack();
-		// frame is packed, so OUTER sizes are set now.
-		// but we still have to set the sliderPanel width
-		// and height. We provide a provisional setting here
-		// and let Variables adjust it as necessary.
 		resetPanelHeights();
-		variables.initSliderPanel(sliderPanel, sliderPanelWidth);
-		frame.pack();
-	}
-
-	private void finalizeFrame() {
-		String title = frame.getTitle();
-		if (title.indexOf(" ") < 0)
-			frame.setName(title);
-		setFrameTitle();
-		frame.setVisible(true);
-		frame.addComponentListener(componentListener);
-		frame.addWindowListener(windowListener);
-		if (frame.actions != null)
-			frame.actions.setApp(this);
-	}
-
-	private void setFrameTitle() {
-		frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion
-				+ (loadingFileName == null ? "" : " - " + loadingFileName));
+		variables.initSliderPanel(sliderPanel, frame.sliderPanelWidth);
 	}
 
 	/**
@@ -1021,9 +1060,9 @@ public abstract class IsoApp {
 
 	protected void resetPanelHeights() {
 		int sliderPaneHeight = frame.getPanelHeight() - controlPanelHeight - padding;
-		if (sliderPanelWidth <= 0)
-			sliderPanelWidth = frame.contentPane.getWidth() - sliderPaneHeight - roomForScrollBar - padding;
-		sliderScrollPane.setPreferredSize(new Dimension(sliderPanelWidth, sliderPaneHeight));
+		if (frame.sliderPanelWidth <= 0)
+			frame.sliderPanelWidth = defaultSliderPanelWidth;
+		sliderScrollPane.setPreferredSize(new Dimension(frame.sliderPanelWidth + roomForScrollBar, sliderPaneHeight));
 		JScrollBar bar = sliderScrollPane.getVerticalScrollBar();
 		bar.setSize(new Dimension(bar.getWidth(), sliderPaneHeight));
 
@@ -1335,7 +1374,6 @@ public abstract class IsoApp {
 	protected void updateDimensions() {
 		drawWidth = drawPanel.getWidth();
 		drawHeight = drawPanel.getHeight();
-		// System.out.println("IsoA updateDIm" + drawWidth + " " + drawHeight);
 	}
 
 	/**
@@ -1404,10 +1442,10 @@ public abstract class IsoApp {
 			// Fall through //
 		case 1:
 			isovizData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
-			whichDataFile = null;
+			startupDataFile = null;
 			break;
 		default:
-			isovizData = getExampleFileData(whichDataFile);
+			isovizData = getExampleFileData(startupDataFile);
 			break;
 		}
 		return FileUtil.getIsoFileTypeFromContents(isovizData);
@@ -1432,7 +1470,7 @@ public abstract class IsoApp {
 	public void loadFile(File f) {
 		if (f == null)
 			return;
-		loadingFileName = f.getName();
+		frame.loadingFileName = f.getName();
 		loadFileData(FileUtil.readFileOrResource(this, f.getAbsolutePath()));
 	}
 
@@ -1446,7 +1484,7 @@ public abstract class IsoApp {
 	 * @return
 	 */
 	private byte[] getExampleFileData(String exampleFile) {
-		loadingFileName = new File(exampleFile).getName();
+		frame.loadingFileName = new File(exampleFile).getName();
 		return FileUtil.readFileOrResource(this, exampleFile);
 	}
 

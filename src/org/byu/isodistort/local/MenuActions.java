@@ -225,7 +225,7 @@ public class MenuActions {
 //		});
 //
 		actions.put("File.Save.saveCIF",
-				new IsoAction("saveCIF", "-CIF file", "Save current configuration as CIF file.", 0) {
+				new IsoAction("saveCIF", "-CIF file or movie", "Save current configuration as CIF file.", 0) {
 					/**
 					 * 
 					 */

@@ -256,7 +256,10 @@ public abstract class IsoDialog extends JDialog {
 				"ccifmovie", //
 				"label", "Make CIF movie", //
 				"enable", //e1,  //
-				"grid", "5", "2", //
+				"grid", "6", "2", //
+				"label", "        movie file type:", //
+				"rcifmoviezip", "false", "CIF", //
+				"rcifmoviezip", "true", "ZIP", //
 				"label", "        minimum amplitude:", //
 				"dampmincifmovie", //
 				"label", "        maximum amplitude:", //

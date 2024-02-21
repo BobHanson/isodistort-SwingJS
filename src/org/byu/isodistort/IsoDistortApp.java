@@ -99,8 +99,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	@Override
 	protected void init() {
 		setRenderPanel(rp3 = new RenderPanel3D(this));
-		rp3.setPreferredSize(drawPanel.getSize());
-		rp3.setSize(drawPanel.getSize());
+		//rp3.setPreferredSize(drawPanel.getSize());
+		//rp3.setSize(drawPanel.getSize());
 		drawPanel.removeAll();
 		drawPanel.add((JPanel) rp3, BorderLayout.CENTER);
 		rp3.addKeyListener(this);

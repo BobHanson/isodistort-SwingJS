@@ -1719,7 +1719,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		crystalButton.setVisible(!isMouseOver);
 		powderButton.setVisible(!isMouseOver);
 		bothButton.setVisible(!isMouseOver);
-		colorBox.setVisible(!isMouseOver && variables.needSimpleColor);
+		colorBox.setVisible(!isMouseOver && variables.needColorBox);
 	}
 
 	@Override

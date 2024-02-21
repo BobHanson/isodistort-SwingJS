@@ -25,9 +25,12 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 
 import javax.swing.ButtonGroup;
@@ -1247,9 +1250,16 @@ public class IsoDistortApplet extends RenderApplet {
 			dataString = getParameter("isoData");
 		else {
 			try {
-				String path = IsoDistortApplet.class.getName();
-				path = path.substring(0, path.lastIndexOf('.') + 1).replace('.','/');
-				BufferedReader br = new BufferedReader(new FileReader(path + whichdatafile));// this reads the data
+				String dir = getClass().getName();
+				String path = "/" + dir.substring(0, dir.lastIndexOf('.') + 1).replace('.', '/') + whichdatafile;
+				System.out.println(path);
+				InputStream is = (InputStream) getClass().getResource(path).getContent();
+				BufferedInputStream bis = new BufferedInputStream(is);
+				BufferedReader br = new BufferedReader(new InputStreamReader(bis));
+
+//				String path = IsoDistortApplet.class.getName();
+//				path = path.substring(0, path.lastIndexOf('.') + 1).replace('.','/');
+//				BufferedReader br = new BufferedReader(new FileReader(path + whichdatafile));// this reads the data
 				dataString = br.readLine() + "\n";// scrap the first data line of text
 				while (br.ready()) // previously used `for (int i=1;br.ready();i++)
 					dataString += br.readLine() + "\n";

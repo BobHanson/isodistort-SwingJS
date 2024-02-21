@@ -75,19 +75,19 @@ public abstract class IsoApp {
 	/**
 	 * The list of menu items in the File.Examples. menu.
 	 * 
-	 * replace null (even-numbered index) with a label for the File.Examples menu item
+	 * replace null (even-numbered index) with a label for the File.Examples menu
+	 * item
 	 * 
-	 * or comment out lines to remove them from the menu. 
+	 * or comment out lines to remove them from the menu.
 	 * 
-	 * Suggest not removing a line completely, as they still could be 
-	 * useful for debugging.
+	 * Suggest not removing a line completely, as they still could be useful for
+	 * debugging.
 	 * 
 	 */
-	public final static String[] exampleFiles = {
-			"sample DISTORTION File", "data/data.iso.txt", //	
+	public final static String[] exampleFiles = { "sample DISTORTION File", "data/data.iso.txt", //
 			"sample ISOVIS File 1", "data/data29.isoviz", //
 			"sample ISOVIS File 2", "data/test25.txt", //
-			"incommensurate DISTORTION file", "data/tbmno3-distortion.isoviz",//
+			"incommensurate DISTORTION file", "data/tbmno3-distortion.isoviz", //
 			"large ISOVIZ file", "data/ZrP2O7-sg205-sg61-distort.isoviz", //
 			null, "data/visual_bccspiral.isoviz", //
 			null, "data/visual_dymn6ge6.isoviz", //
@@ -105,9 +105,9 @@ public abstract class IsoApp {
 			"online example", "https://chemapps.stolaf.edu/isodistort/data29.isoviz", //
 	};
 
-	
-	static boolean isJS = (/** @j2sNative true || */false);
-	
+	static boolean isJS = (/** @j2sNative true || */
+	false);
+
 	static boolean addJmol = false; // BH experimental
 
 	public static class IsoFrame extends JFrame {
@@ -174,7 +174,7 @@ public abstract class IsoApp {
 		void enableDiffraction(boolean tf) {
 			tabbedPane.setEnabledAt(APP_ISODIFFRACT, tf);
 		}
-		
+
 		void disposeApps() {
 			for (int i = 0; i < 3; i++) {
 				if (apps[i] != null) {
@@ -334,7 +334,8 @@ public abstract class IsoApp {
 		int appType = ("IsoDiffract".equals(type) ? APP_ISODIFFRACT : APP_ISODISTORT);
 		if (!startApp(null, new IsoFrame(type), appType, args, null, null, false)) {
 			System.exit(1);
-		};
+		}
+		;
 	}
 
 	private static JButton newJButton(String text, ViewListener vl) {
@@ -393,7 +394,7 @@ public abstract class IsoApp {
 	// openOther;
 
 	protected JCheckBox colorBox;
-	
+
 	public int initializing = 5; // lead needed to get first display. Why?
 
 	/**
@@ -470,7 +471,7 @@ public abstract class IsoApp {
 		@Override
 		public void itemStateChanged(ItemEvent event) {
 			if (event.getSource() == colorBox) {
-				variables.updateColorScheme(colorBox.isSelected());
+				variables.updateColorScheme(!colorBox.isSelected());
 			}
 			if (!isAdjusting)
 				updateViewOptions();
@@ -490,7 +491,7 @@ public abstract class IsoApp {
 				needsRecalc = true;
 				updateDisplay();
 			}
-			SwingUtilities.invokeLater(()->{
+			SwingUtilities.invokeLater(() -> {
 				((JComponent) e.getSource()).requestFocus();
 			});
 		}
@@ -511,7 +512,7 @@ public abstract class IsoApp {
 		} catch (NumberFormatException e) {
 			val = currentValue;
 			t.setForeground(Color.RED);
-			SwingUtilities.invokeLater(()->{
+			SwingUtilities.invokeLater(() -> {
 				((JComponent) t).requestFocus();
 			});
 		}
@@ -582,9 +583,8 @@ public abstract class IsoApp {
 	private int sliderPanelWidth;
 
 	/**
-	 * true if Variables.modDim > 0 based on ISOViz !numberOfModulations > 0
-	 * or FormData "xkparam... presence
-	 * or DFile "!
+	 * true if Variables.modDim > 0 based on ISOViz !numberOfModulations > 0 or
+	 * FormData "xkparam... presence or DFile "!
 	 */
 	public Boolean isIncommensurate;
 
@@ -598,11 +598,12 @@ public abstract class IsoApp {
 
 	/**
 	 * Add general buttons to the top control panel right side.
+	 * 
 	 * @param top
 	 */
 	protected void addTopButtons(JPanel top) {
-		colorBox = newJCheckBox("Color", false);
-		colorBox.setVisible(variables.needSimpleColor);
+		colorBox = newJCheckBox("Color By Type", false);
+		colorBox.setVisible(variables.needColorBox);
 		top.add(colorBox);
 	}
 
@@ -614,7 +615,7 @@ public abstract class IsoApp {
 	protected void addBottomButtons(JPanel bottom) {
 		ViewListener vl = new ViewListener();
 		applyView = newJButton("Apply View", vl);
-		
+
 		// saveImage = newJButton("Save Image", vl);
 		// saveISOVIZ = newJButton("Save ISOVIZ", vl);
 //		openOther = newJButton((appType == APP_ISODISTORT ? "View Diffraction" : "View Distortion"), vl);
@@ -640,11 +641,6 @@ public abstract class IsoApp {
 	 */
 	abstract public void centerImage();
 
-	private void clearSettingsForFileDrop() {
-		whichDataFile = null;
-		loadingFileName = null;
-	}
-	
 	private void createIsovizFromFormData(Object formData, Consumer<byte[]> consumer) {
 		// not available if dropped?
 		boolean isSwitch = (formData == null);
@@ -744,7 +740,7 @@ public abstract class IsoApp {
 				frame.getPanelHeight() - controlPanelHeight);
 		drawPanel.setPreferredSize(d);
 		sliderScrollPane.setPreferredSize(new Dimension(sliderScrollPane.getWidth(), d.height));
-		
+
 		updateDimensions();
 	}
 
@@ -809,7 +805,7 @@ public abstract class IsoApp {
 	 * |............................................|
 	 * |--------------------------------------------|
 	 */
-	
+
 	protected void initializePanels() {
 		if (frame.tabbedPane == null) {
 			frame.contentPane = (JPanel) frame.getContentPane();
@@ -941,7 +937,6 @@ public abstract class IsoApp {
 				frame.disposeApps();
 				app.formData = mapFormData;
 				if (fromApp != null) {
-					fromApp.clearSettingsForFileDrop();
 					fromApp = null;
 				}
 			}
@@ -1004,10 +999,9 @@ public abstract class IsoApp {
 	}
 
 	private void setFrameTitle() {
-		frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion + (loadingFileName == null ? "" : " - " + loadingFileName));		
-		loadingFileName = null;
+		frame.setTitle("IsoVIZ ver. " + variables.isoversion + minorVersion
+				+ (loadingFileName == null ? "" : " - " + loadingFileName));
 	}
-
 
 	/**
 	 * This method allows the current application to finish up what it is doing
@@ -1054,7 +1048,7 @@ public abstract class IsoApp {
 						addStatus("upload failed");
 						return;
 					}
-					saveDataFileVerbose( b, "cif");
+					saveDataFileVerbose(b, "cif");
 				}
 
 			}, 20);
@@ -1070,7 +1064,7 @@ public abstract class IsoApp {
 	// <input name="toProcess" type="file" size="30">
 	// </form>
 
-		public void saveDistortionFile(Map<String, Object> values) {
+	public void saveDistortionFile(Map<String, Object> values) {
 		Map<String, Object> map = ensureMapData(null, true, false);
 		if (map == null)
 			return;
@@ -1087,7 +1081,7 @@ public abstract class IsoApp {
 						addStatus("upload failed");
 						return;
 					}
-					saveDataFileVerbose( b, "iso.txt");
+					saveDataFileVerbose(b, "iso.txt");
 				}
 			}, 20);
 		}
@@ -1104,7 +1098,7 @@ public abstract class IsoApp {
 			String sliderSetting = (String) values.remove("slidersetting");
 			map.putAll(values);
 			setFormData(map, sliderSetting);
-			saveDataFileVerbose( ServerUtil.toJSON(map), "json");
+			saveDataFileVerbose(ServerUtil.toJSON(map), "json");
 		}
 	}
 
@@ -1125,7 +1119,7 @@ public abstract class IsoApp {
 						addStatus("upload failed");
 						return;
 					}
-					saveDataFileVerbose( b, "pcr");
+					saveDataFileVerbose(b, "pcr");
 				}
 			}, 20);
 		}
@@ -1133,25 +1127,26 @@ public abstract class IsoApp {
 	}
 
 	public void saveImage() {
-		saveDataFileVerbose( getImage(), "png");
+		saveDataFileVerbose(getImage(), "png");
 	}
 
 	public void saveIsoviz(Map<String, Object> values) {
-		// if we loaded some other form of file, we should have formData, and 
-		// we can create a new isoviz file on the fly.		
+		// if we loaded some other form of file, we should have formData, and
+		// we can create a new isoviz file on the fly.
 		Map<String, Object> map = null;
 		String options = "";
 		if (isovizData != null) {
-			// if we loaded an ISOVIZ file we can save it directly, and isovizData will not be null.
-			// but then there are no options to save the current settings. 
+			// if we loaded an ISOVIZ file we can save it directly, and isovizData will not
+			// be null.
+			// but then there are no options to save the current settings.
 			map = new LinkedHashMap<String, Object>();
 			options = "original";
-		} 
+		}
 		if (formData != null) {
 			map = ensureMapData(formData, true, false);
 			options += "new";
-		} else if (isovizData == null) { 
-			map = ensureMapData("", true, false); // error 
+		} else if (isovizData == null) {
+			map = ensureMapData("", true, false); // error
 		}
 		if (map == null)
 			return;
@@ -1163,14 +1158,14 @@ public abstract class IsoApp {
 			map.remove("slidersetting");
 			String setting = (String) values.get("slidersetting");
 			if (setting.equals("original")) {
-				saveDataFileVerbose( isovizData, "isoviz");
+				saveDataFileVerbose(isovizData, "isoviz");
 				return;
 			}
 			if (isovizData != null) {
 				byte[] data = new byte[isovizData.length];
 				System.arraycopy(isovizData, 0, data, 0, data.length);
 				variables.setIsovizFileData(data, setting);
-				saveDataFileVerbose( data, "isoviz");
+				saveDataFileVerbose(data, "isoviz");
 				return;
 			}
 			updateFormData(map, values, "isovizdistortion");
@@ -1182,7 +1177,7 @@ public abstract class IsoApp {
 						addStatus("upload failed");
 						return;
 					}
-					saveDataFileVerbose( b, "isoviz");
+					saveDataFileVerbose(b, "isoviz");
 				}
 			}, 20);
 		}
@@ -1205,7 +1200,7 @@ public abstract class IsoApp {
 						addStatus("upload failed");
 						return;
 					}
-					saveDataFileVerbose( b, "STR");
+					saveDataFileVerbose(b, "STR");
 				}
 			}, 20);
 		}
@@ -1219,7 +1214,6 @@ public abstract class IsoApp {
 	protected void say(String msg) {
 		JOptionPane.showMessageDialog(frame, msg);
 	}
-
 
 	protected String sendFormDataToServer(Map<String, Object> formData, boolean checkIncommensurate) {
 		Map<String, Object> mapFormData = setServerFormOriginType(formData, "isovizdistortion");
@@ -1256,7 +1250,6 @@ public abstract class IsoApp {
 	public void setIsovizData(byte[] isovizData, String sliderSetting) {
 		variables.setIsovizFileData(isovizData, sliderSetting);
 	}
-
 
 //Save for debugging
 //	private void setPackedHeight() {
@@ -1349,7 +1342,7 @@ public abstract class IsoApp {
 	 * Something has changed.
 	 */
 	public void updateDisplay() {
-	    variables.updateSliderPointers();
+		variables.updateSliderPointers();
 	}
 
 	abstract protected void updateViewOptions();
@@ -1420,19 +1413,17 @@ public abstract class IsoApp {
 		return FileUtil.getIsoFileTypeFromContents(isovizData);
 	}
 
-
 	/**
 	 * Asynchronously open a file.
 	 */
 	public void openFile() {
 		SwingUtilities.invokeLater(() -> {
-			FileUtil.openFile(this, (File f)->{
+			FileUtil.openFile(this, (File f) -> {
 				if (f != null)
-				loadFile(f);
-			});			
+					loadFile(f);
+			});
 		});
 	}
-
 
 	/**
 	 * @param f

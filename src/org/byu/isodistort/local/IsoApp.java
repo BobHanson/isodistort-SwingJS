@@ -1389,7 +1389,10 @@ public abstract class IsoApp {
 		String sliderSetting = "current";
 		if (values != null) {
 			sliderSetting = (String) values.remove("slidersetting");
+			System.out.println(map);
+			System.out.println(values);
 			map.putAll(values);
+			System.out.println(map);
 		}
 		setFormData(map, sliderSetting);
 		setServerFormOriginType(map, originType);

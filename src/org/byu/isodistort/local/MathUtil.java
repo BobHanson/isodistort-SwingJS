@@ -329,6 +329,19 @@ public class MathUtil {
 		w = Math.min(Math.abs(w), 12);		
 		val = Math.round (val / decimalScale[nDec]) * decimalScale[nDec];
 		String s = Double.toString(val);
+		boolean isNeg = (s.charAt(0) == '-');
+		int pt = s.indexOf("E");
+		int exp = 0;
+		if (pt > 0) {
+			// presuming this is negative
+			exp = Integer.parseInt(s.substring(pt + 1));
+			// 9.00000000 E-4 to 0.0009000000
+			s = s.substring(isNeg ? 1 : 0, pt);
+			pt = s.indexOf(".");
+			if (exp < 0) {
+				s = (isNeg ? "-" : "") + "0." + "000000000000".substring(0, -1-exp) + s.substring(0, pt) + s.substring(pt+1);
+			}
+		}
 		// ---0.234; len = 5, nInt = 2, nFrac = 3
 		int nInt = s.indexOf('.') + 1;  // includes decimal point
 		int nFrac = s.length() - nInt;

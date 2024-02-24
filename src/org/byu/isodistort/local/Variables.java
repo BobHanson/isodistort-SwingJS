@@ -2357,7 +2357,7 @@ public class Variables {
 	        // recolor the checkbox/label panels as well as 
 	        // the column-filler backgrounds
 	        for (int i = p.getComponentCount(); --i >= 0;) {
-	        //	p.getComponent(i).setBackground(c);
+	        	p.getComponent(i).setBackground(c);
 	        }
 	        for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 	          if (isModeActive(modes[i]))

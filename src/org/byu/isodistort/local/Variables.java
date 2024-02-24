@@ -2438,13 +2438,15 @@ public class Variables {
 		void zeroSliders() {
 			mainSlider.setValue(sliderMax);
 			for (int i = 0; i < MODE_COUNT; i++) {
-				modes[i].setSliders(sliderTM[i], 0);
+				if (isModeActive(modes[i]))
+					modes[i].setSliders(sliderTM[i], 0);
 			}
 		}
 
 		void resetSliders() {
 			mainSlider.setValue(sliderMax);
 			for (int i = 0; i < MODE_COUNT; i++) {
+				if (isModeActive(modes[i]))
 				modes[i].resetSliders(sliderTM[i], sliderMax);
 			}
 		}

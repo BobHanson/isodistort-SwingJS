@@ -1468,28 +1468,28 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			MathUtil.mat3mul(variables.childCell.conv2primTranspose, convChildHKL, primChildHKL); // transform conv-child to prim-child hkl
 			MathUtil.mat3mul(variables.parentCell.conv2primTranspose, convParentHKL, primParentHKL); // transform conv-parent to prim-parent hkl
 		
-			double dcopa = 0;
-			double dprpa = 0;
-			double dcoch = 0;
-			double dprch = 0;
-			int tcoch = 0;
+			double dConvParent = 0;
+			double dPrimParent = 0;
+			double dConvChild = 0;
+			double dPrimChild = 0;
+			int sumConvChild = 0;
 			for (int j = 0; j < 3; j++) {
-				dcopa += Math.abs(convParentHKL[j] - Math.rint(convParentHKL[j]));
-				dprpa += Math.abs(primParentHKL[j] - Math.rint(primParentHKL[j]));
-				dcoch += Math.abs(convChildHKL[j] - Math.rint(convChildHKL[j]));
-				dprch += Math.abs(primChildHKL[j] - Math.rint(primChildHKL[j]));
-				tcoch += Math.abs(convChildHKL[j]);
+				dConvParent += Math.abs(convParentHKL[j] - Math.rint(convParentHKL[j]));
+				dPrimParent += Math.abs(primParentHKL[j] - Math.rint(primParentHKL[j]));
+				dConvChild += Math.abs(convChildHKL[j] - Math.rint(convChildHKL[j]));
+				dPrimChild += Math.abs(primChildHKL[j] - Math.rint(primChildHKL[j]));
+				sumConvChild += Math.abs(convChildHKL[j]);
 			}
-			if(dprpa < ptolerance){
+			if(dPrimParent < ptolerance){
 				peakType[p] = PEAK_TYPE_PARENT_BRAGG; // 1
 			}
-			else if(dcopa < ptolerance){
+			else if(dConvParent < ptolerance){
 				peakType[p] = PEAK_TYPE_PARENT_SYSABS; // 2
 			}  
-			else if(dprch < ptolerance){
+			else if(dPrimChild < ptolerance){
 				peakType[p] = PEAK_TYPE_CHILD_BRAGG; // 3
 			}  
-			else if(dcoch < ptolerance){
+			else if(dConvChild < ptolerance){
 				peakType[p] = PEAK_TYPE_CHILD_SYSABS; // 4 
 			}
 			else {

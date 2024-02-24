@@ -621,7 +621,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		if (thisPeak >= 0) {
 			double[] childHKL = crystalPeakHKL[thisPeak];
 			double[] parentHKL = new double[3];
-			MathUtil.mat3mul(variables.Tmat, childHKL, parentHKL);
+			MathUtil.mat3mul(variables.Pcoch2copaTranspose, childHKL, parentHKL);
 			String intensity = toIntensityString(peakIntensity[thisPeak]);
 			mouseovertext = "Parent HKL = (" + trim00(parentHKL[0]) + ", " + trim00(parentHKL[1]) + ", "
 					+ trim00(parentHKL[2]) + ")       Child HKL = (" + trim00(childHKL[0]) + ", " + trim00(childHKL[1])
@@ -885,7 +885,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 									// plane
 
 		double[][] platt2slatt = new double[3][3]; // transforms parentHKL to childHKL
-		MathUtil.mat3inverse(variables.Tmat, platt2slatt, tempvec, tempmat);
+		MathUtil.mat3inverse(variables.Pcoch2copaTranspose, platt2slatt, tempvec, tempmat);
 
 		hklO[0] = getText(hOTxt, hklO[0], 2);
 		hklO[1] = getText(kOTxt, hklO[1], 2);
@@ -1119,7 +1119,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				* Math.sqrt(Math.abs((metric0[0][0] * metric0[2][2] - metric0[0][2] * metric0[0][2]) / metricdet)));
 		int limL = (int) Math.ceil(powderDinvmax
 				* Math.sqrt(Math.abs((metric0[0][0] * metric0[1][1] - metric0[0][1] * metric0[0][1]) / metricdet)));
-		double[][] tmat = variables.Tmat;
+		double[][] tmat = variables.Pcoch2copaTranspose;
 		peakCount = 0;
 		double[] dinvlist0 = new double[maxPeaks];// unstrained list of dinverse values
 		double[] dinvlist1 = new double[maxPeaks];// randomly strained list of dinverse values
@@ -1443,10 +1443,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				&& MathUtil.approxEqual(parentAbsA[2], parentAbsB[2], tol));
 	}
 
-	private final static int PEAK_TYPE_BRAGG = 1;
-	private final static int PEAK_TYPE_BRAGG_NOT_GM1 = 2;
-	private final static int PEAK_TYPE_NOT_BRAGG = 3;
-	private final static int PEAK_TYPE_GM1_NOT_BRAGG = 4;
+	private final static int PEAK_TYPE_PARENT_BRAGG = 1;
+	private final static int PEAK_TYPE_PARENT_SYSABS = 2;
+	private final static int PEAK_TYPE_CHILD_BRAGG = 3;
+	private final static int PEAK_TYPE_CHILD_SYSABS = 4;
 	
 	/**
 	 * identifies parent and super-lattice peaks that are systematically absent
@@ -1456,17 +1456,60 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	public void assignPeakTypes() {
 		// Set the peak type to 1 for parent Bragg peaks, and 3 otherwise.
 
-		double[] parentHKL = new double[3];
+		double[] primparentHKL = new double[3];
+		double[] convparentHKL = new double[3];
+		double[] primchildHKL= new double[3];
+		double[] convchildHKL= new double[3];
 		double ptolerance = 0.01; 
 		// Determines whether or not a peak is a parent Bragg peak (h k l all integral)
 		for (int p = 0; p < peakCount; p++) {
-			MathUtil.mat3mul(variables.Tmat, crystalPeakHKL[p], parentHKL); // transform super hkl into parent hkl
-			peakType[p] = PEAK_TYPE_NOT_BRAGG; // 3
+			MathUtil.copy3(crystalPeakHKL[p], convchildHKL); // populate conv-child hkl
+			MathUtil.mat3mul(variables.Pcoch2copaTranspose, convchildHKL, convparentHKL); // transform conv-child to conv-parent hkl -- good
+			MathUtil.mat3mul(variables.Pcoch2prchTranspose, convchildHKL, primchildHKL); // transform conv-child to prim-child hkl
+			MathUtil.mat3mul(variables.Pcopa2prpaTranspose, convparentHKL, primparentHKL); // transform conv-parent to prim-parent hkl
+		
+			double dcopa = 0;
+			double dprpa = 0;
+			double dcoch = 0;
+			double dprch = 0;
+			int tcoch = 0;
+			for (int j = 0; j < 3; j++) {
+				dcopa += Math.abs(convparentHKL[j] - Math.rint(convparentHKL[j]));
+				dprpa += Math.abs(primparentHKL[j] - Math.rint(primparentHKL[j]));
+				dcoch += Math.abs(convchildHKL[j] - Math.rint(convchildHKL[j]));
+				dprch += Math.abs(primchildHKL[j] - Math.rint(primchildHKL[j]));
+				tcoch += Math.abs(convchildHKL[j]);
+			}
+			if(dprpa < ptolerance){
+				peakType[p] = PEAK_TYPE_PARENT_BRAGG; // 1
+			}
+			else if(dcopa < ptolerance){
+				peakType[p] = PEAK_TYPE_PARENT_SYSABS; // 2
+			}  
+			else if(dprch < ptolerance){
+				peakType[p] = PEAK_TYPE_CHILD_BRAGG; // 3
+			}  
+			else if(dcoch < ptolerance){
+				peakType[p] = PEAK_TYPE_CHILD_SYSABS; // 4 
+			}
+			else {
+				// Throw an error message of some kind.
+			}
+	}
+			
+			
+/**			
+		for (int p = 0; p < peakCount; p++) {
+			MathUtil.copy3(crystalPeakHKL[p], convchildHKL); // populate conv-child hkl
+			MathUtil.mat3mul(variables.Pcoch2copaTranspose, convchildHKL, convparentHKL); // transform conv-child to conv-parent hkl -- good
+			MathUtil.mat3mul(variables.Pcoch2prchTranspose, convchildHKL, primchildHKL); // transform conv-child to prim-child hkl
+			MathUtil.mat3mul(variables.Pcopa2prpaTranspose, convparentHKL, primparentHKL); // transform conv-parent to prim-parent hkl
+			peakType[p] = PEAK_TYPE_CHILD_BRAGG; // 3
 			double d = 0;
 			for (int j = 0; j < 3; j++)
-				d += Math.abs(parentHKL[j] - Math.rint(parentHKL[j]));
+				d += Math.abs(convparentHKL[j] - Math.rint(convparentHKL[j]));
 			if (d < ptolerance)
-				peakType[p] = PEAK_TYPE_BRAGG; // 1
+				peakType[p] = PEAK_TYPE_PARENT_BRAGG; // 1
 		}
 
 		// Save and zero all displacive, scalar and magnetic mode values
@@ -1480,22 +1523,23 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		recalcIntensities();
 		// Calculate all peak intensities and set (now) zero-intensity Bragg peaks to type 2.
 		for (int p = 0; p < peakCount; p++)
-			if ((peakType[p] == PEAK_TYPE_BRAGG) && (Math.abs(peakIntensity[p]) < 0.00000001))
-				peakType[p] = PEAK_TYPE_BRAGG_NOT_GM1; // 2
+			if ((peakType[p] == PEAK_TYPE_PARENT_BRAGG) && (Math.abs(peakIntensity[p]) < 0.00000001))
+				peakType[p] = PEAK_TYPE_PARENT_SYSABS; // 2
 		
 		// Now randomize all Non-GM1 mode values to remove them from the peaks
 		variables.randomizeNonGM1Values(rval);
 		variables.recalcDistortion();
 		recalcIntensities();
 		for (int p = 0; p < peakCount; p++)
-			if ((peakType[p] == PEAK_TYPE_NOT_BRAGG) && (Math.abs(peakIntensity[p]) < 0.00000001))
-				peakType[p] = PEAK_TYPE_GM1_NOT_BRAGG; // 4
+			if ((peakType[p] == PEAK_TYPE_CHILD_BRAGG) && (Math.abs(peakIntensity[p]) < 0.00000001))
+				peakType[p] = PEAK_TYPE_CHILD_SYSABS; // 4
 
 		// Restore all displacement and scalar mode values to their original values.
 		variables.restoreModeValues();
 		variables.getSetChildFraction(child0);
 		variables.recalcDistortion();
 		recalcIntensities();
+**/
 
 	}
 

@@ -186,11 +186,25 @@ public class Variables {
 	public ParentCell parentCell = new ParentCell();
 
 	/**
-	 * Row matrix of parent basis vectors on the unitless childlattice basis [basis
-	 * vector][x,y,z]; set by parser from ISOVIZ "parentbasis" value
+	 * Row matrix of conventional parent basis vectors on the conventional child unitless-lattice basis 
+	 * [basis vector][x,y,z]; set by parser from ISOVIZ "parentbasis" value
 	 * 
 	 */
-	public double[][] Tmat = new double[3][3];
+	public double[][] Pcoch2copaTranspose = new double[3][3];
+
+	/**
+	 * Row matrix of primitive child basis vectors on the conventional child unitless-lattice basis 
+	 * [basis vector][x,y,z]; set by parser from ISOVIZ "conv2primchildbasis" value
+	 * 
+	 */
+	public double[][] Pcoch2prchTranspose = new double[3][3];
+
+	/**
+	 * Row matrix of primitive parent basis vectors on the conventional parent unitless-lattice basis
+	 * [basis vector][x,y,z]; set by parser from ISOVIZ "conv2primparentbasis" value
+	 * 
+	 */
+	public double[][] Pcopa2prpaTranspose = new double[3][3];
 
 	/**
 	 * Center of cell in strained cartesian Angstrom coords. [x, y, z]
@@ -1171,14 +1185,15 @@ public class Variables {
 	public static class ParentCell extends Cell{
 
 		/**
-		 * InverseTranspose of Tmat:
+		 * InverseTranspose of Pcoch2copaTranspose:
 		 * 
-		 * parentCell.basisCart * Tmat^t*i = childCell.basisCart
+		 * Pcoch2copaTranspose is the transpose of P_convchild2convparent from parsed value of "parentbasis".
+		 * Pcoch2copaTranspose^t*i is P_convparent2convchild.
 		 * 
-		 * only for the parent; based on the parsed value of Tmat ("parentbasis")
+		 * parentCell.basisCart * Pcoch2copaTranspose^t*i = childCell.basisCart
 		 * 
 		 */
-		private double[][] TmatInverseTranspose;
+		private double[][] Pcopa2coch;
 
 		/**
 		 * cell origin relative to child cell origin on the unitless child lattice basis.
@@ -1197,7 +1212,7 @@ public class Variables {
 		double[] latt0 = new double[6];
 
 		ParentCell() {
-			TmatInverseTranspose = new double[3][3];
+			Pcopa2coch = new double[3][3];
 			labelText = "  Pcell";
 			color = COLOR_PARENT_CELL;
 		}
@@ -1219,7 +1234,7 @@ public class Variables {
 		}
 
 		/**
-		 * Generate the Cartesian basis matrix from the 3x3 Tmat matrix
+		 * Generate the Cartesian basis matrix from the 3x3 Pcoch2copaTranspose matrix
 		 * and transfer that to the child.
 		 * 
 		 * From parser.
@@ -1227,13 +1242,13 @@ public class Variables {
 		 * parent cell only
 		 * 
 		 * @param isRhomb
-		 * @param Tmat
+		 * @param Pcoch2copaTranspose
 		 * @param childCell 
 		 */
-		void setUnstrainedCartsianBasis(boolean isRhomb, double[][] Tmat, ChildCell childCell) {
+		void setUnstrainedCartsianBasis(boolean isRhomb, double[][] Pcoch2copaTranspose, ChildCell childCell) {
 			// parent only
-			MathUtil.mat3transpose(Tmat, t);
-			MathUtil.mat3inverse(t, TmatInverseTranspose, t3, t2);
+			MathUtil.mat3transpose(Pcoch2copaTranspose, t);
+			MathUtil.mat3inverse(t, Pcopa2coch, t3, t2);
 			if (isRhomb) {
 				double temp1 = Math.sin(latt0[GAMMA] / 2);
 				double temp2 = Math.sqrt(1 / temp1 / temp1 - 4.0 / 3.0);
@@ -1267,7 +1282,7 @@ public class Variables {
 		}
 
 		/**
-		 * Right-multiply the child basis with Tmat-inv-transpose
+		 * Right-multiply the child basis with Pcopa2coch
 		 * 
 		 * parent only
 		 * 
@@ -1276,10 +1291,10 @@ public class Variables {
 		 */
 		void transformParentToChild(ChildCell child, boolean isStrained) {
 			if (isStrained) {
-				MathUtil.mat3product(basisCart, TmatInverseTranspose, child.basisCart, t4);
+				MathUtil.mat3product(basisCart, Pcopa2coch, child.basisCart, t4);
 				MathUtil.mat3inverse(child.basisCart, child.basisCartInverse, t3, t2);				
 			} else {
-				MathUtil.mat3product(basisCart0, TmatInverseTranspose, child.basisCart0, t4);
+				MathUtil.mat3product(basisCart0, Pcopa2coch, child.basisCart0, t4);
 			}
 		}
 
@@ -1731,10 +1746,22 @@ public class Variables {
 			checkSize("parentbasis", 9);
 			for (int pt = 0, j = 0; j < 3; j++) {
 				for (int i = 0; i < 3; i++, pt++) {
-					Tmat[j][i] = vt.getDouble(pt);
+					Pcoch2copaTranspose[j][i] = vt.getDouble(pt);
 				}
 			}
-			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, Tmat, childCell);
+			checkSize("conv2primchildbasis", 9);
+			for (int pt = 0, j = 0; j < 3; j++) {
+				for (int i = 0; i < 3; i++, pt++) {
+					Pcoch2prchTranspose[j][i] = vt.getDouble(pt);
+				}
+			}
+			checkSize("conv2primparentbasis", 9);
+			for (int pt = 0, j = 0; j < 3; j++) {
+				for (int i = 0; i < 3; i++, pt++) {
+					Pcopa2prpaTranspose[j][i] = vt.getDouble(pt);
+				}
+			}
+			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, Pcoch2copaTranspose, childCell);
 		}
 
 		private void parseAtoms() {

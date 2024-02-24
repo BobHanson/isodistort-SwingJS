@@ -650,7 +650,7 @@ public abstract class IsoApp {
 	 * @param top
 	 */
 	protected void addTopButtons(JPanel top) {
-		colorBox = newJCheckBox("Color By Type", false);
+		colorBox = newJCheckBox("Unique-atom Colors", false);
 		colorBox.setVisible(variables.needColorBox);
 		top.add(colorBox);
 	}

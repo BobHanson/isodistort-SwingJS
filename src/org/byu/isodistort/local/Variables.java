@@ -190,21 +190,21 @@ public class Variables {
 	 * [basis vector][x,y,z]; set by parser from ISOVIZ "parentbasis" value
 	 * 
 	 */
-	public double[][] Pcoch2copaTranspose = new double[3][3];
+	public double[][] pcoch2copaTranspose = new double[3][3];
 
 	/**
 	 * Row matrix of primitive child basis vectors on the conventional child unitless-lattice basis 
 	 * [basis vector][x,y,z]; set by parser from ISOVIZ "conv2primchildbasis" value
 	 * 
 	 */
-	public double[][] Pcoch2prchTranspose = new double[3][3];
+	public double[][] pcoch2prchTranspose = new double[3][3];
 
 	/**
 	 * Row matrix of primitive parent basis vectors on the conventional parent unitless-lattice basis
 	 * [basis vector][x,y,z]; set by parser from ISOVIZ "conv2primparentbasis" value
 	 * 
 	 */
-	public double[][] Pcopa2prpaTranspose = new double[3][3];
+	public double[][] pcopa2prpaTranspose = new double[3][3];
 
 	/**
 	 * Center of cell in strained cartesian Angstrom coords. [x, y, z]
@@ -1746,22 +1746,26 @@ public class Variables {
 			checkSize("parentbasis", 9);
 			for (int pt = 0, j = 0; j < 3; j++) {
 				for (int i = 0; i < 3; i++, pt++) {
-					Pcoch2copaTranspose[j][i] = vt.getDouble(pt);
+					pcoch2copaTranspose[j][i] = vt.getDouble(pt);
 				}
 			}
-			checkSize("conv2primchildbasis", 9);
-			for (int pt = 0, j = 0; j < 3; j++) {
-				for (int i = 0; i < 3; i++, pt++) {
-					Pcoch2prchTranspose[j][i] = vt.getDouble(pt);
+			if (vt.setData("conv2primchildbasis") > 0) {
+				checkSize("conv2primchildbasis", 9);
+				for (int pt = 0, j = 0; j < 3; j++) {
+					for (int i = 0; i < 3; i++, pt++) {
+						pcoch2prchTranspose[j][i] = vt.getDouble(pt);
+					}
 				}
 			}
-			checkSize("conv2primparentbasis", 9);
-			for (int pt = 0, j = 0; j < 3; j++) {
-				for (int i = 0; i < 3; i++, pt++) {
-					Pcopa2prpaTranspose[j][i] = vt.getDouble(pt);
+			if (vt.setData("conv2primparentbasis") > 0) {
+				checkSize("conv2primparentbasis", 9);
+				for (int pt = 0, j = 0; j < 3; j++) {
+					for (int i = 0; i < 3; i++, pt++) {
+						pcopa2prpaTranspose[j][i] = vt.getDouble(pt);
+					}
 				}
 			}
-			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, Pcoch2copaTranspose, childCell);
+			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, pcoch2copaTranspose, childCell);
 		}
 
 		private void parseAtoms() {
@@ -2352,13 +2356,13 @@ public class Variables {
 	        Color c = getAtomTypeColor(t);
 	        typeTitlePanel[t].setBackground(c);
 	        typeTitlePanel[t].getParent().setBackground(c);
-	        for (int s = 0; s < nSubTypes[t]; s++) {
-	          Component p;
-	          while ((p  = subTypeLabels[t][s].getParent()) != null && !p.isOpaque())
-	          {}
+	        JPanel p = subTypePanel[t];
 	          p.setBackground(c);
+	        // recolor the checkbox/label panels as well as 
+	        // the column-filler backgrounds
+	        for (int i = p.getComponentCount(); --i >= 0;) {
+	        //	p.getComponent(i).setBackground(c);
 	        }
-	        subTypePanel[t].setBackground(c);
 	        for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
 	          if (isModeActive(modes[i]))
 	            modeSliderPanelsT[i][t].setBackground(modes[i].colorT[t]);

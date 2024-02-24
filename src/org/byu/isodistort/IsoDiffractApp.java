@@ -621,7 +621,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		if (thisPeak >= 0) {
 			double[] childHKL = crystalPeakHKL[thisPeak];
 			double[] parentHKL = new double[3];
-			MathUtil.mat3mul(variables.Pcoch2copaTranspose, childHKL, parentHKL);
+			MathUtil.mat3mul(variables.pcoch2copaTranspose, childHKL, parentHKL);
 			String intensity = toIntensityString(peakIntensity[thisPeak]);
 			mouseovertext = "Parent HKL = (" + trim00(parentHKL[0]) + ", " + trim00(parentHKL[1]) + ", "
 					+ trim00(parentHKL[2]) + ")       Child HKL = (" + trim00(childHKL[0]) + ", " + trim00(childHKL[1])
@@ -885,7 +885,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 									// plane
 
 		double[][] platt2slatt = new double[3][3]; // transforms parentHKL to childHKL
-		MathUtil.mat3inverse(variables.Pcoch2copaTranspose, platt2slatt, tempvec, tempmat);
+		MathUtil.mat3inverse(variables.pcoch2copaTranspose, platt2slatt, tempvec, tempmat);
 
 		hklO[0] = getText(hOTxt, hklO[0], 2);
 		hklO[1] = getText(kOTxt, hklO[1], 2);
@@ -1119,7 +1119,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				* Math.sqrt(Math.abs((metric0[0][0] * metric0[2][2] - metric0[0][2] * metric0[0][2]) / metricdet)));
 		int limL = (int) Math.ceil(powderDinvmax
 				* Math.sqrt(Math.abs((metric0[0][0] * metric0[1][1] - metric0[0][1] * metric0[0][1]) / metricdet)));
-		double[][] tmat = variables.Pcoch2copaTranspose;
+		double[][] tmat = variables.pcoch2copaTranspose;
 		peakCount = 0;
 		double[] dinvlist0 = new double[maxPeaks];// unstrained list of dinverse values
 		double[] dinvlist1 = new double[maxPeaks];// randomly strained list of dinverse values
@@ -1464,9 +1464,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// Determines whether or not a peak is a parent Bragg peak (h k l all integral)
 		for (int p = 0; p < peakCount; p++) {
 			MathUtil.copy3(crystalPeakHKL[p], convchildHKL); // populate conv-child hkl
-			MathUtil.mat3mul(variables.Pcoch2copaTranspose, convchildHKL, convparentHKL); // transform conv-child to conv-parent hkl -- good
-			MathUtil.mat3mul(variables.Pcoch2prchTranspose, convchildHKL, primchildHKL); // transform conv-child to prim-child hkl
-			MathUtil.mat3mul(variables.Pcopa2prpaTranspose, convparentHKL, primparentHKL); // transform conv-parent to prim-parent hkl
+			MathUtil.mat3mul(variables.pcoch2copaTranspose, convchildHKL, convparentHKL); // transform conv-child to conv-parent hkl -- good
+			MathUtil.mat3mul(variables.pcoch2prchTranspose, convchildHKL, primchildHKL); // transform conv-child to prim-child hkl
+			MathUtil.mat3mul(variables.pcopa2prpaTranspose, convparentHKL, primparentHKL); // transform conv-parent to prim-parent hkl
 		
 			double dcopa = 0;
 			double dprpa = 0;

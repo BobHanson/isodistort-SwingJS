@@ -621,7 +621,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		if (thisPeak >= 0) {
 			double[] childHKL = crystalPeakHKL[thisPeak];
 			double[] parentHKL = new double[3];
-			MathUtil.mat3mul(variables.pcoch2copaTranspose, childHKL, parentHKL);
+			MathUtil.mat3mul(variables.childCell.conv2convParentTranspose, childHKL, parentHKL);
 			String intensity = toIntensityString(peakIntensity[thisPeak]);
 			mouseovertext = "Parent HKL = (" + trim00(parentHKL[0]) + ", " + trim00(parentHKL[1]) + ", "
 					+ trim00(parentHKL[2]) + ")       Child HKL = (" + trim00(childHKL[0]) + ", " + trim00(childHKL[1])
@@ -884,8 +884,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		double ztolerance = 0.001; // z-axis tolerance that determines whether or not a peak is in the display
 									// plane
 
-		double[][] platt2slatt = new double[3][3]; // transforms parentHKL to childHKL
-		MathUtil.mat3inverse(variables.pcoch2copaTranspose, platt2slatt, tempvec, tempmat);
+		double[][] parent2childLattice = new double[3][3]; // transforms parentHKL to childHKL
+		MathUtil.mat3inverse(variables.childCell.conv2convParentTranspose, parent2childLattice, tempvec, tempmat);
 
 		hklO[0] = getText(hOTxt, hklO[0], 2);
 		hklO[1] = getText(kOTxt, hklO[1], 2);
@@ -907,9 +907,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			MathUtil.copy3(hklV, crystalHkldirections[1]);
 			MathUtil.copy3(hklO, crystalHklCenter);
 		} else if (hklType == 1) {
-			MathUtil.mat3mul(platt2slatt, hklH, crystalHkldirections[0]);
-			MathUtil.mat3mul(platt2slatt, hklV, crystalHkldirections[1]);
-			MathUtil.mat3mul(platt2slatt, hklO, crystalHklCenter);
+			MathUtil.mat3mul(parent2childLattice, hklH, crystalHkldirections[0]);
+			MathUtil.mat3mul(parent2childLattice, hklV, crystalHkldirections[1]);
+			MathUtil.mat3mul(parent2childLattice, hklO, crystalHklCenter);
 		}
 
 		// Identify the direct-space direction perpendicular to display plane.
@@ -1119,7 +1119,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				* Math.sqrt(Math.abs((metric0[0][0] * metric0[2][2] - metric0[0][2] * metric0[0][2]) / metricdet)));
 		int limL = (int) Math.ceil(powderDinvmax
 				* Math.sqrt(Math.abs((metric0[0][0] * metric0[1][1] - metric0[0][1] * metric0[0][1]) / metricdet)));
-		double[][] tmat = variables.pcoch2copaTranspose;
+		double[][] tmat = variables.childCell.conv2convParentTranspose;
 		peakCount = 0;
 		double[] dinvlist0 = new double[maxPeaks];// unstrained list of dinverse values
 		double[] dinvlist1 = new double[maxPeaks];// randomly strained list of dinverse values
@@ -1456,17 +1456,17 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	public void assignPeakTypes() {
 		// Set the peak type to 1 for parent Bragg peaks, and 3 otherwise.
 
-		double[] primparentHKL = new double[3];
-		double[] convparentHKL = new double[3];
-		double[] primchildHKL= new double[3];
-		double[] convchildHKL= new double[3];
+		double[] primParentHKL = new double[3];
+		double[] convParentHKL = new double[3];
+		double[] primChildHKL= new double[3];
+		double[] convChildHKL= new double[3];
 		double ptolerance = 0.01; 
 		// Determines whether or not a peak is a parent Bragg peak (h k l all integral)
 		for (int p = 0; p < peakCount; p++) {
-			MathUtil.copy3(crystalPeakHKL[p], convchildHKL); // populate conv-child hkl
-			MathUtil.mat3mul(variables.pcoch2copaTranspose, convchildHKL, convparentHKL); // transform conv-child to conv-parent hkl -- good
-			MathUtil.mat3mul(variables.pcoch2prchTranspose, convchildHKL, primchildHKL); // transform conv-child to prim-child hkl
-			MathUtil.mat3mul(variables.pcopa2prpaTranspose, convparentHKL, primparentHKL); // transform conv-parent to prim-parent hkl
+			MathUtil.copy3(crystalPeakHKL[p], convChildHKL); // populate conv-child hkl
+			MathUtil.mat3mul(variables.childCell.conv2convParentTranspose, convChildHKL, convParentHKL); // transform conv-child to conv-parent hkl -- good
+			MathUtil.mat3mul(variables.childCell.conv2primTranspose, convChildHKL, primChildHKL); // transform conv-child to prim-child hkl
+			MathUtil.mat3mul(variables.parentCell.conv2primTranspose, convParentHKL, primParentHKL); // transform conv-parent to prim-parent hkl
 		
 			double dcopa = 0;
 			double dprpa = 0;
@@ -1474,11 +1474,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			double dprch = 0;
 			int tcoch = 0;
 			for (int j = 0; j < 3; j++) {
-				dcopa += Math.abs(convparentHKL[j] - Math.rint(convparentHKL[j]));
-				dprpa += Math.abs(primparentHKL[j] - Math.rint(primparentHKL[j]));
-				dcoch += Math.abs(convchildHKL[j] - Math.rint(convchildHKL[j]));
-				dprch += Math.abs(primchildHKL[j] - Math.rint(primchildHKL[j]));
-				tcoch += Math.abs(convchildHKL[j]);
+				dcopa += Math.abs(convParentHKL[j] - Math.rint(convParentHKL[j]));
+				dprpa += Math.abs(primParentHKL[j] - Math.rint(primParentHKL[j]));
+				dcoch += Math.abs(convChildHKL[j] - Math.rint(convChildHKL[j]));
+				dprch += Math.abs(primChildHKL[j] - Math.rint(primChildHKL[j]));
+				tcoch += Math.abs(convChildHKL[j]);
 			}
 			if(dprpa < ptolerance){
 				peakType[p] = PEAK_TYPE_PARENT_BRAGG; // 1

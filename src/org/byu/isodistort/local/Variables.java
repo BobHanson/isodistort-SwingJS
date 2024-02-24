@@ -19,7 +19,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -184,27 +183,6 @@ public class Variables {
 	 * cell for the parent
 	 */
 	public ParentCell parentCell = new ParentCell();
-
-	/**
-	 * Row matrix of conventional parent basis vectors on the conventional child unitless-lattice basis 
-	 * [basis vector][x,y,z]; set by parser from ISOVIZ "parentbasis" value
-	 * 
-	 */
-	public double[][] pcoch2copaTranspose = new double[3][3];
-
-	/**
-	 * Row matrix of primitive child basis vectors on the conventional child unitless-lattice basis 
-	 * [basis vector][x,y,z]; set by parser from ISOVIZ "conv2primchildbasis" value
-	 * 
-	 */
-	public double[][] pcoch2prchTranspose = new double[3][3];
-
-	/**
-	 * Row matrix of primitive parent basis vectors on the conventional parent unitless-lattice basis
-	 * [basis vector][x,y,z]; set by parser from ISOVIZ "conv2primparentbasis" value
-	 * 
-	 */
-	public double[][] pcopa2prpaTranspose = new double[3][3];
 
 	/**
 	 * Center of cell in strained cartesian Angstrom coords. [x, y, z]
@@ -403,7 +381,14 @@ public class Variables {
 		double[][] pStrainPlusIdentity = (modes[STRAIN] == null
 				? MathUtil.voigt2matrix(new double[6], new double[3][3], 1)
 				: modes[STRAIN].getVoigtStrainTensor(mainSliderChildFraction, modes[IRREP]));
-		parentCell.setStrained(pStrainPlusIdentity, childCell);
+		double[][] temp = new double[3][3];
+		MathUtil.mat3product(pStrainPlusIdentity, parentCell.basisCart0, parentCell.basisCart, temp);
+		transformParentToChild(true);
+		MathUtil.set3(childCell.toTempCartesian(parentCell.originUnitless), parentCell.originCart);
+		parentCell.setVertices();
+		parentCell.setLatticeParameterLabels();
+		childCell.setVertices();
+		childCell.setLatticeParameterLabels();
 		recenterLattice();
 
 		// pass an array to the modes that tracks the
@@ -431,6 +416,27 @@ public class Variables {
 		}
 
 	}
+
+	/**
+	 * Right-multiply the child basis with parentCell.conv2convChild.
+	 * unstrained uses the original bases; strained uses current bases.
+	 * 
+	 * parent only
+	 * 
+	 * @param child
+	 * @param isStrained
+	 */
+	private void transformParentToChild(boolean isStrained) {
+		double[][] t33 = new double[3][3];
+		if (isStrained) {
+			double[] t3 = new double[3];
+			MathUtil.mat3product(parentCell.basisCart, parentCell.conv2convChildTranspose, childCell.basisCart, t33);
+			MathUtil.mat3inverse(childCell.basisCart, childCell.basisCartInverse, t3, t33);				
+		} else {
+			MathUtil.mat3product(parentCell.basisCart0, parentCell.conv2convChildTranspose, childCell.basisCart0, t33);
+		}
+	}
+
 
 	/**
 	 * Calculate the center of the child cell in strained cartesian Angstrom coords.
@@ -976,6 +982,19 @@ public class Variables {
 		JLabel[] labels = new JLabel[6];
 
 		/**
+		 * row matrix of primitive basis vectors 
+		 * on the conventional unitless-lattice basis
+		 * [basis vector][x,y,z];
+		 * 
+		 * set by parser from ISOVIZ "conv2primparentbasis"
+		 * and "conv2primchildbasis" values, respectively. 
+		 *
+		 * used in IsoDiffractApp.assignPeakTypes()
+		 * 
+		 */
+		public double[][] conv2primTranspose = new double[3][3];
+
+		/**
 		 * Array of Cartesian vertices of strained window-centered cell. [edge
 		 * number][x, y, z]
 		 * 
@@ -1033,6 +1052,7 @@ public class Variables {
 
 		Cell() {
 		}
+		
 		/**
 		 * Query the cell for its vertices, adding them to max variable;
 		 * used for determining the field of view that keeps the full unit cell in view
@@ -1185,15 +1205,18 @@ public class Variables {
 	public static class ParentCell extends Cell{
 
 		/**
-		 * InverseTranspose of Pcoch2copaTranspose:
+		 * InverseTranspose of ChildCell.conv2convParentTranspose:
 		 * 
-		 * Pcoch2copaTranspose is the transpose of P_convchild2convparent from parsed value of "parentbasis".
-		 * Pcoch2copaTranspose^t*i is P_convparent2convchild.
+		 * ChildCell.conv2convParentTranspose is the transpose of P_convchild2convparent
+		 * from parsed value of "parentbasis". 
 		 * 
-		 * parentCell.basisCart * Pcoch2copaTranspose^t*i = childCell.basisCart
+		 * ChildCell.conv2convParentTranspose^t*i is
+		 * P_convparent2convchild.
+		 * 
+		 * parentCell.basisCart * ChildCell.conv2convParentTranspose^t*i = childCell.basisCart
 		 * 
 		 */
-		private double[][] Pcopa2coch;
+		private double[][] conv2convChildTranspose;
 
 		/**
 		 * cell origin relative to child cell origin on the unitless child lattice basis.
@@ -1212,43 +1235,27 @@ public class Variables {
 		double[] latt0 = new double[6];
 
 		ParentCell() {
-			Pcopa2coch = new double[3][3];
+			conv2convChildTranspose = new double[3][3];
 			labelText = "  Pcell";
 			color = COLOR_PARENT_CELL;
 		}
 
 		/**
-		 * parent cell only
-		 * 
-		 * @param pStrainPlusIdentity
-		 * @param child
-		 */
-		void setStrained(double[][] strain, ChildCell child) {
-			MathUtil.mat3product(strain, basisCart0, basisCart, t);
-			transformParentToChild(child, true);
-			MathUtil.set3(child.toTempCartesian(originUnitless), originCart);
-			setVertices();
-			setLatticeParameterLabels();
-			child.setVertices();
-			child.setLatticeParameterLabels();
-		}
-
-		/**
-		 * Generate the Cartesian basis matrix from the 3x3 Pcoch2copaTranspose matrix
-		 * and transfer that to the child.
+		 * Generate the Cartesian basis matrix from the 3x3 matrix
+		 * childCell.conv2convParentTranspose.
 		 * 
 		 * From parser.
 		 * 
 		 * parent cell only
 		 * 
 		 * @param isRhomb
-		 * @param Pcoch2copaTranspose
-		 * @param childCell 
+		 * @param convChild2Parent
 		 */
-		void setUnstrainedCartsianBasis(boolean isRhomb, double[][] Pcoch2copaTranspose, ChildCell childCell) {
+		void setUnstrainedCartsianBasis(boolean isRhomb, double[][] convChild2Parent) {
 			// parent only
-			MathUtil.mat3transpose(Pcoch2copaTranspose, t);
-			MathUtil.mat3inverse(t, Pcopa2coch, t3, t2);
+			
+			MathUtil.mat3transpose(convChild2Parent, t);
+			MathUtil.mat3inverse(t, conv2convChildTranspose, t3, t2);
 			if (isRhomb) {
 				double temp1 = Math.sin(latt0[GAMMA] / 2);
 				double temp2 = Math.sqrt(1 / temp1 / temp1 - 4.0 / 3.0);
@@ -1278,24 +1285,6 @@ public class Variables {
 				basisCart0[1][2] = latt0[C] * temp1;
 				basisCart0[2][2] = latt0[C] * temp2;
 			}
-			transformParentToChild(childCell, false);
-		}
-
-		/**
-		 * Right-multiply the child basis with Pcopa2coch
-		 * 
-		 * parent only
-		 * 
-		 * @param child
-		 * @param isStrained
-		 */
-		void transformParentToChild(ChildCell child, boolean isStrained) {
-			if (isStrained) {
-				MathUtil.mat3product(basisCart, Pcopa2coch, child.basisCart, t4);
-				MathUtil.mat3inverse(child.basisCart, child.basisCartInverse, t3, t2);				
-			} else {
-				MathUtil.mat3product(basisCart0, Pcopa2coch, child.basisCart0, t4);
-			}
 		}
 
 		@Override
@@ -1306,6 +1295,18 @@ public class Variables {
 	}
 	
 	public static class ChildCell extends Cell{
+
+		
+		/**
+		 * row matrix of conventional parent basis vectors on the conventional child unitless-lattice basis 
+		 * [basis vector][x,y,z]; 
+		 * 
+		 * set by parser from ISOVIZ "parentbasis" value
+		 * 
+		 * used throughout IsoDiffractApp
+		 * 
+		 */
+		public double[][] conv2convParentTranspose = new double[3][3];
 
 		/**
 		 * Inverse of basisCart in Inverse-Angstrom units [basis vector][x,y,z]
@@ -1743,29 +1744,24 @@ public class Variables {
 			getDoubleArray("parentcell", parentCell.latt0, 0, 6);
 			getDoubleArray("parentorigin", parentCell.originUnitless, 0, 3);
 			boolean isRhombParentSetting = getOneBoolean("rhombparentsetting", false);
-			checkSize("parentbasis", 9);
+			getTransform("parentbasis", childCell.conv2convParentTranspose, true);
+			getTransform("conv2primchildbasis", childCell.conv2primTranspose, false);
+			getTransform("conv2primparentbasis", parentCell.conv2primTranspose, false);
+			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, childCell.conv2convParentTranspose);
+			transformParentToChild(false);
+		}
+
+		private void getTransform(String key, double[][] t, boolean isRequired) {
+			if (isRequired) {
+				checkSize("parentbasis", 9);
+			} else if (vt.setData(key) == 0){
+				return;				
+			}				
 			for (int pt = 0, j = 0; j < 3; j++) {
 				for (int i = 0; i < 3; i++, pt++) {
-					pcoch2copaTranspose[j][i] = vt.getDouble(pt);
+					t[j][i] = vt.getDouble(pt);
 				}
 			}
-			if (vt.setData("conv2primchildbasis") > 0) {
-				checkSize("conv2primchildbasis", 9);
-				for (int pt = 0, j = 0; j < 3; j++) {
-					for (int i = 0; i < 3; i++, pt++) {
-						pcoch2prchTranspose[j][i] = vt.getDouble(pt);
-					}
-				}
-			}
-			if (vt.setData("conv2primparentbasis") > 0) {
-				checkSize("conv2primparentbasis", 9);
-				for (int pt = 0, j = 0; j < 3; j++) {
-					for (int i = 0; i < 3; i++, pt++) {
-						pcopa2prpaTranspose[j][i] = vt.getDouble(pt);
-					}
-				}
-			}
-			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, pcoch2copaTranspose, childCell);
 		}
 
 		private void parseAtoms() {

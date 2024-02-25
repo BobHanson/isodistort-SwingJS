@@ -457,17 +457,18 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	}
 
 	void drawCrystPeaks(Graphics gr) {
+		int max = (int) Math.rint(crystalMaxPeakRadius);
 		for (int p = 0; p < peakCount; p++) {
-			drawCrystalCircle(gr, crystalPeakXY[p][0], crystalPeakXY[p][1], crystalPeakRadius[p], crystalMaxPeakRadius,
+			drawCrystalCircle(gr, crystalPeakXY[p][0], crystalPeakXY[p][1], crystalPeakRadius[p], max,
 					peakType[p]);
 		}
 	}
 
-	private void drawCrystalCircle(Graphics gr, double dx, double dy, double dradius, double max, int color) {
+	private void drawCrystalCircle(Graphics gr, double dx, double dy, double dradius, int max, int color) {
 		boolean tooBig = false;
 		int radius = (int) Math.rint(dradius);
-		if (radius >= (int) Math.rint(max)) {
-			radius = (int) Math.rint(max);
+		if (radius >= max) {
+			radius = max;
 			tooBig = true;
 		}
 		int x = (int) dx;
@@ -1119,13 +1120,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				* Math.sqrt(Math.abs((metric0[0][0] * metric0[2][2] - metric0[0][2] * metric0[0][2]) / metricdet)));
 		int limL = (int) Math.ceil(powderDinvmax
 				* Math.sqrt(Math.abs((metric0[0][0] * metric0[1][1] - metric0[0][1] * metric0[0][1]) / metricdet)));
-		double[][] tmat = variables.childCell.conv2convParentTranspose;
+		double[][] tconv = variables.childCell.conv2convParentTranspose;
 		peakCount = 0;
 		double[] dinvlist0 = new double[maxPeaks];// unstrained list of dinverse values
 		double[] dinvlist1 = new double[maxPeaks];// randomly strained list of dinverse values
 		double[] dinvlist2 = new double[maxPeaks];// randomly strained list of dinverse values
 		double[] testHKL = new double[3];
-
+		double[] ta = new double[3], tb = new double[3];
 		for (int h = -limH; h <= limH; h++) {
 			for (int k = -limK; k <= limK; k++) {
 				for (int l = -limL; l <= limL; l++) {
@@ -1144,17 +1145,18 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 						for (int p = 0; p < peakCount; p++) {
 							double[] peakHKL = crystalPeakHKL[p];
 							boolean isrobustlycoincident = MathUtil.approxEqual(dinv0, dinvlist0[p], tol)
-									&& MathUtil.approxEqual(dinv1, dinvlist1[p], tol) && MathUtil.approxEqual(dinv2, dinvlist2[p], tol);
-							if (isrobustlycoincident) {
-								boolean isequivalent = checkPowderPeakEquiv(testHKL, peakHKL, tmat);
-								if (isequivalent) {
-									if (comparePowderHKL(testHKL, peakHKL)) {
-										MathUtil.copy3(testHKL, peakHKL);
-									}
-									peakMultiplicity[p] += 1;
-									createNewPeak = false;
-									break;
+									&& MathUtil.approxEqual(dinv1, dinvlist1[p], tol)
+									&& MathUtil.approxEqual(dinv2, dinvlist2[p], tol);
+							if (isrobustlycoincident // 
+									&& checkPowderPeakEquiv(testHKL, peakHKL, null, ta, tb) // child
+									&& checkPowderPeakEquiv(testHKL, peakHKL, tconv, ta, tb) // parent
+									) {
+								if (comparePowderHKL(testHKL, peakHKL)) {
+									MathUtil.copy3(testHKL, peakHKL);
 								}
+								peakMultiplicity[p] += 1;
+								createNewPeak = false;
+								break;
 							}
 						}
 						if (createNewPeak) {
@@ -1407,42 +1409,38 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	}
 
 	/**
-	 * This test is only run if two peaks have the same d-spacing. Called by
-	 * resetPowderPeaks. The only reason to do this test is to increase rendering
-	 * efficiency (fewer peaks is faster). The current version is a poor hack --
-	 * symmetry is needed soon. As of Apr 2015, the hexcheck was ignored and the
-	 * samecheck was weakened since it was finding false equivalences in a hexagonal
-	 * child structure.
+	 * This test is only run if two conventional peaks have the same d-spacing both
+	 * for child and parent.
 	 * 
+	 * Called by resetPowderPeaks. The only reason to do this test is to increase
+	 * rendering efficiency (fewer peaks is faster). The current version is a poor
+	 * hack -- symmetry is needed soon. As of Apr 2015, the hexcheck was ignored and
+	 * the samecheck was weakened since it was finding false equivalences in a
+	 * hexagonal child structure.
+	 * 
+	 * @param a first childHKL
+	 * @param b second childHKL
+	 * @param tconv child.conv2convParent, or null if comparing child
+	 * @param ta temporary vector
+	 * @param tb temporary vector
+	 * @return true if approximately equivalent
 	 */
-	private boolean checkPowderPeakEquiv(double[] childHKLa, double[] childHKLb, double[][] tmat) {
+	private boolean checkPowderPeakEquiv(double[] a, double[] b, double[][] tconv, double[] ta, double[] tb) {
 		double tol = 0.0001;
-		double[] parentHKLa = new double[3];
-		double[] parentHKLb = new double[3];
-		MathUtil.mat3mul(tmat, childHKLa, parentHKLa);
-		MathUtil.mat3mul(tmat, childHKLb, parentHKLb);
-		double[] parentAbsA = new double[3];
-		double[] parentAbsB = new double[3];
-		int[] childAbsA = new int[3];
-		int[] childAbsB = new int[3];
-		for (int i = 0; i < 3; i++) {
-			childAbsA[i] = (int) Math.abs(childHKLa[i]);
-			childAbsB[i] = (int) Math.abs(childHKLb[i]);
-			parentAbsA[i] = Math.abs(parentHKLa[i]);
-			parentAbsB[i] = Math.abs(parentHKLb[i]);
+		if (tconv != null) {
+			MathUtil.mat3mul(tconv, a, ta);
+			MathUtil.mat3mul(tconv, b, tb);
+			a = ta;
+			b = tb;
 		}
-
-		// BH: let Java do the sort
-		Arrays.sort(childAbsA);
-		Arrays.sort(childAbsB);
-		Arrays.sort(parentAbsA);
-		Arrays.sort(parentAbsB);
-		return ((childAbsA[0] == childAbsB[0]) && (childAbsA[1] == childAbsB[1]) && (childAbsA[2] == childAbsB[2]) 
-				&& MathUtil.approxEqual(parentAbsA[0], parentAbsB[0], tol)
-				&& MathUtil.approxEqual(parentAbsA[1], parentAbsB[1], tol) 
-				&& MathUtil.approxEqual(parentAbsA[2], parentAbsB[2], tol));
+		MathUtil.abs3(a, ta);
+		MathUtil.abs3(b, tb);
+		Arrays.sort(ta);
+		Arrays.sort(tb);
+		return MathUtil.approxEqual3(ta, tb, tol);
 	}
 
+	private final static int PEAK_TYPE_ERROR = 0;
 	private final static int PEAK_TYPE_PARENT_BRAGG = 1;
 	private final static int PEAK_TYPE_PARENT_SYSABS = 2;
 	private final static int PEAK_TYPE_CHILD_BRAGG = 3;
@@ -1454,102 +1452,82 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * 
 	 */
 	public void assignPeakTypes() {
-		// Set the peak type to 1 for parent Bragg peaks, and 3 otherwise.
+		if (variables.childCell.conv2primTranspose == null) {
+			assignPeakTypesByRandomizing();
+			return;
+		}
+		double[] conventionalHKL = new double[3];
+		double[] primitiveHKL = new double[3];
+		double ptolerance = 0.01;
+		for (int p = 0; p < peakCount; p++) {
+			double[] convChildHKL = crystalPeakHKL[p];
+			MathUtil.mat3mul(variables.childCell.conv2convParentTranspose, convChildHKL, conventionalHKL);
+			MathUtil.mat3mul(variables.parentCell.conv2primTranspose, conventionalHKL, primitiveHKL);
+			if (MathUtil.isIntegral3(primitiveHKL, ptolerance)) {
+				peakType[p] = PEAK_TYPE_PARENT_BRAGG; // 1
+				continue;
+			}
+			if (MathUtil.isIntegral3(conventionalHKL, ptolerance)) {
+				peakType[p] = PEAK_TYPE_PARENT_SYSABS; // 2
+				continue;
+			}
+			MathUtil.mat3mul(variables.childCell.conv2primTranspose, convChildHKL, primitiveHKL);
+			if (MathUtil.isIntegral3(primitiveHKL, ptolerance)) {
+				peakType[p] = PEAK_TYPE_CHILD_BRAGG; // 3
+				continue;
+			}
+			if (MathUtil.isIntegral3(convChildHKL, ptolerance)) {
+				peakType[p] = PEAK_TYPE_CHILD_SYSABS; // 4
+				continue;
+			}
+			peakType[p] = PEAK_TYPE_ERROR;
+			// Throw an error message of some kind.
+		}
+	}
 
-		double[] primParentHKL = new double[3];
-		double[] convParentHKL = new double[3];
-		double[] primChildHKL= new double[3];
-		double[] convChildHKL= new double[3];
+	/**
+	 * fall back to randomizing for older ISOVIZ files
+	 */
+	private void assignPeakTypesByRandomizing() {
+		double[] parentHKL = new double[3];
 		double ptolerance = 0.01; 
+		// Set the peak type to 1 for parent Bragg peaks, and 3 otherwise.
 		// Determines whether or not a peak is a parent Bragg peak (h k l all integral)
 		for (int p = 0; p < peakCount; p++) {
-			MathUtil.copy3(crystalPeakHKL[p], convChildHKL); // populate conv-child hkl
-			MathUtil.mat3mul(variables.childCell.conv2convParentTranspose, convChildHKL, convParentHKL); // transform conv-child to conv-parent hkl -- good
-			MathUtil.mat3mul(variables.childCell.conv2primTranspose, convChildHKL, primChildHKL); // transform conv-child to prim-child hkl
-			MathUtil.mat3mul(variables.parentCell.conv2primTranspose, convParentHKL, primParentHKL); // transform conv-parent to prim-parent hkl
-		
-			double dConvParent = 0;
-			double dPrimParent = 0;
-			double dConvChild = 0;
-			double dPrimChild = 0;
-			int sumConvChild = 0;
-			for (int j = 0; j < 3; j++) {
-				dConvParent += Math.abs(convParentHKL[j] - Math.rint(convParentHKL[j]));
-				dPrimParent += Math.abs(primParentHKL[j] - Math.rint(primParentHKL[j]));
-				dConvChild += Math.abs(convChildHKL[j] - Math.rint(convChildHKL[j]));
-				dPrimChild += Math.abs(primChildHKL[j] - Math.rint(primChildHKL[j]));
-				sumConvChild += Math.abs(convChildHKL[j]);
-			}
-			if(dPrimParent < ptolerance){
-				peakType[p] = PEAK_TYPE_PARENT_BRAGG; // 1
-			}
-			else if(dConvParent < ptolerance){
-				peakType[p] = PEAK_TYPE_PARENT_SYSABS; // 2
-			}  
-			else if(dPrimChild < ptolerance){
-				peakType[p] = PEAK_TYPE_CHILD_BRAGG; // 3
-			}  
-			else if(dConvChild < ptolerance){
-				peakType[p] = PEAK_TYPE_CHILD_SYSABS; // 4 
-			}
-			else {
-				// Throw an error message of some kind.
-			}
-	}
-			
-			
-/**			
-		for (int p = 0; p < peakCount; p++) {
-			MathUtil.copy3(crystalPeakHKL[p], convchildHKL); // populate conv-child hkl
-			MathUtil.mat3mul(variables.Pcoch2copaTranspose, convchildHKL, convparentHKL); // transform conv-child to conv-parent hkl -- good
-			MathUtil.mat3mul(variables.Pcoch2prchTranspose, convchildHKL, primchildHKL); // transform conv-child to prim-child hkl
-			MathUtil.mat3mul(variables.Pcopa2prpaTranspose, convparentHKL, primparentHKL); // transform conv-parent to prim-parent hkl
+			// transform super hkl into parent hkl
+			MathUtil.mat3mul(variables.childCell.conv2convParentTranspose, crystalPeakHKL[p], parentHKL); 
 			peakType[p] = PEAK_TYPE_CHILD_BRAGG; // 3
-			double d = 0;
-			for (int j = 0; j < 3; j++)
-				d += Math.abs(convparentHKL[j] - Math.rint(convparentHKL[j]));
-			if (d < ptolerance)
+			if (MathUtil.isIntegral3(parentHKL, ptolerance)) {
 				peakType[p] = PEAK_TYPE_PARENT_BRAGG; // 1
+			}
 		}
-
 		// Save and zero all displacive, scalar and magnetic mode values
 		double child0 = variables.getSetChildFraction(1);
 		Random rval = new Random();
 		variables.saveModeValues();
-
 		// Randomize all GM1 mode values to remove them from the peak
 		variables.randomizeGM1Values(rval);
 		variables.recalcDistortion();
 		recalcIntensities();
 		// Calculate all peak intensities and set (now) zero-intensity Bragg peaks to type 2.
-		for (int p = 0; p < peakCount; p++)
+		for (int p = 0; p < peakCount; p++) {
 			if ((peakType[p] == PEAK_TYPE_PARENT_BRAGG) && (Math.abs(peakIntensity[p]) < 0.00000001))
 				peakType[p] = PEAK_TYPE_PARENT_SYSABS; // 2
-		
+		}
 		// Now randomize all Non-GM1 mode values to remove them from the peaks
 		variables.randomizeNonGM1Values(rval);
 		variables.recalcDistortion();
 		recalcIntensities();
-		for (int p = 0; p < peakCount; p++)
+		for (int p = 0; p < peakCount; p++) {
 			if ((peakType[p] == PEAK_TYPE_CHILD_BRAGG) && (Math.abs(peakIntensity[p]) < 0.00000001))
 				peakType[p] = PEAK_TYPE_CHILD_SYSABS; // 4
-
+		}
 		// Restore all displacement and scalar mode values to their original values.
 		variables.restoreModeValues();
 		variables.getSetChildFraction(child0);
 		variables.recalcDistortion();
 		recalcIntensities();
-**/
-
 	}
-
-	/**
-	 * 55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555
-	 * 5 5 5 The fifth section has the methods that listen for the sliderbars, the
-	 * keyboard and the viewing buttons. 5 5 5
-	 * 55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555
-	 * 
-	 */
 
 	/**
 	 * keyinputListener responds to keyboard commands.

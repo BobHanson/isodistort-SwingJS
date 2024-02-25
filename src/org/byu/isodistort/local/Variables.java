@@ -992,7 +992,7 @@ public class Variables {
 		 * used in IsoDiffractApp.assignPeakTypes()
 		 * 
 		 */
-		public double[][] conv2primTranspose = new double[3][3];
+		public double[][] conv2primTranspose;
 
 		/**
 		 * Array of Cartesian vertices of strained window-centered cell. [edge
@@ -1235,7 +1235,6 @@ public class Variables {
 		double[] latt0 = new double[6];
 
 		ParentCell() {
-			conv2convChildTranspose = new double[3][3];
 			labelText = "  Pcell";
 			color = COLOR_PARENT_CELL;
 		}
@@ -1253,7 +1252,7 @@ public class Variables {
 		 */
 		void setUnstrainedCartsianBasis(boolean isRhomb, double[][] convChild2Parent) {
 			// parent only
-			
+			conv2convChildTranspose = new double[3][3];
 			MathUtil.mat3transpose(convChild2Parent, t);
 			MathUtil.mat3inverse(t, conv2convChildTranspose, t3, t2);
 			if (isRhomb) {
@@ -1744,24 +1743,26 @@ public class Variables {
 			getDoubleArray("parentcell", parentCell.latt0, 0, 6);
 			getDoubleArray("parentorigin", parentCell.originUnitless, 0, 3);
 			boolean isRhombParentSetting = getOneBoolean("rhombparentsetting", false);
-			getTransform("parentbasis", childCell.conv2convParentTranspose, true);
-			getTransform("conv2primchildbasis", childCell.conv2primTranspose, false);
-			getTransform("conv2primparentbasis", parentCell.conv2primTranspose, false);
+			childCell.conv2convParentTranspose = getTransform("parentbasis", true);
+			childCell.conv2primTranspose = getTransform("conv2primchildbasis", false);
+			parentCell.conv2primTranspose = getTransform("conv2primparentbasis", false);
 			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, childCell.conv2convParentTranspose);
 			transformParentToChild(false);
 		}
 
-		private void getTransform(String key, double[][] t, boolean isRequired) {
+		private double[][] getTransform(String key, boolean isRequired) {
 			if (isRequired) {
 				checkSize("parentbasis", 9);
 			} else if (vt.setData(key) == 0){
-				return;				
+				return null;				
 			}				
+			double[][] t = new double[3][3];
 			for (int pt = 0, j = 0; j < 3; j++) {
 				for (int i = 0; i < 3; i++, pt++) {
 					t[j][i] = vt.getDouble(pt);
 				}
 			}
+			return t;
 		}
 
 		private void parseAtoms() {

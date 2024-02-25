@@ -452,6 +452,32 @@ public class MathUtil {
 		return p;
 	}
 
+	/**
+	 * Check hkl for near-integral values. Fail on any one of
+	 * the three values being non-integral.
+	 * 
+	 * @param hkl
+	 * @param tol
+	 * @return true if all three values are within tol of an integer.
+	 * 
+	 */
+	public static boolean isIntegral3(double[] hkl, double tol) {
+		for (int i = 3; --i >= 0;)
+			if (!approxEqual(hkl[i], Math.rint(hkl[i]), tol))
+				return false;
+		return true;
+	}
+
+	public static boolean approxEqual3(double[] a, double[] b, double tol) {
+		return approxEqual(a[0], b[0], tol) && approxEqual(a[1], b[1], tol) && approxEqual(a[2], b[2], tol);
+	}
+
+	public static void abs3(double[] src, double[] dest) {
+		dest[0] = Math.abs(src[0]);
+		dest[1] = Math.abs(src[1]);
+		dest[2] = Math.abs(src[2]);
+	}
+
 //	  static {
 //		  System.out.println(a2s(unitize3(new double[] {-0.4, 1.001, 1.1}, 0.001)));
 //		  System.out.println(a2s(unitize3(new double[] {-0.0001, 0.999, 1.1}, 0.001)));

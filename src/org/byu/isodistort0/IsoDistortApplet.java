@@ -27,6 +27,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -58,7 +60,7 @@ public class IsoDistortApplet extends RenderApplet {
 	/** False for datafile and True for html file */
 	boolean readMode = false;
 	/** The datafile to use when readMode is false */
-	String whichdatafile = "data/test19.txt";
+	String whichdatafile = "data/data29.isoviz";//"data/test19.txt";
 	/** Cell-edge tube parameters */
 	int numBondSides = 6, numCellSides = 6, numArrowSides = 8, ballRes = 4;
 	/** Focal length for renderer. */
@@ -1251,9 +1253,11 @@ public class IsoDistortApplet extends RenderApplet {
 		else {
 			try {
 				String dir = getClass().getName();
-				String path = "/" + dir.substring(0, dir.lastIndexOf('.') + 1).replace('.', '/') + whichdatafile;
+				String f = new File(getDocumentBase().toString().substring(6)).getParent(); // remove "file:/"
+				String path = f + "/" + dir.substring(0, dir.lastIndexOf('.') + 1).replace('.', '/') + whichdatafile;
+				path = path.replace("isodistort0", "isodistort");
 				System.out.println(path);
-				InputStream is = (InputStream) getClass().getResource(path).getContent();
+				InputStream is = new FileInputStream(path);
 				BufferedInputStream bis = new BufferedInputStream(is);
 				BufferedReader br = new BufferedReader(new InputStreamReader(bis));
 

@@ -33,6 +33,7 @@ import org.byu.isodistort.render.Geometry;
 import org.byu.isodistort.render.Material;
 // import org.byu.isodistort.render.Matrix;
 import org.byu.isodistort.render.RenderPanel3D;
+import org.byu.isodistort0.render.Vec;
 
 /**
  * 
@@ -503,6 +504,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 			tempmat = variables.parentCell.getTempTransposedReciprocalBasis();
 			break;
 		}
+		Vec.mattranspose(tempmat, tempmat = new double[3][3]);
 		MathUtil.mat3mul(tempmat, viewIndices, viewDir);
 		double l2 = MathUtil.lenSq3(viewDir);
 		if (l2 > 0.000000000001) {

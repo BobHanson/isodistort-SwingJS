@@ -65,6 +65,7 @@ import org.byu.isodistort0.local.ImageSaver;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -2005,9 +2006,11 @@ public class IsoDiffractApplet extends Applet implements Runnable
 				try
 				{
 					String dir = getClass().getName();
-					String path = "/" + dir.substring(0, dir.lastIndexOf('.') + 1).replace('.', '/') + whichdatafile;
+					String f = new File(getDocumentBase().toString().substring(6)).getParent(); // remove "file:/"
+					String path = f + "/" + dir.substring(0, dir.lastIndexOf('.') + 1).replace('.', '/') + whichdatafile;
+					path = path.replace("isodistort0", "isodistort");
 					System.out.println(path);
-					InputStream is = (InputStream) getClass().getResource(path).getContent();
+					InputStream is = new FileInputStream(path);
 					BufferedInputStream bis = new BufferedInputStream(is);
 					BufferedReader br = new BufferedReader(new InputStreamReader(bis));
 //					File f = new File(whichdatafile);

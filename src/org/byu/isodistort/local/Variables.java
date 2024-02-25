@@ -418,7 +418,7 @@ public class Variables {
 	}
 
 	/**
-	 * Right-multiply the child basis with parentCell.conv2convChild.
+	 * Right-multiply the child basis with parentCell.conv2convChildTransposeP.
 	 * unstrained uses the original bases; strained uses current bases.
 	 * 
 	 * parent only
@@ -430,10 +430,10 @@ public class Variables {
 		double[][] t33 = new double[3][3];
 		if (isStrained) {
 			double[] t3 = new double[3];
-			MathUtil.mat3product(parentCell.basisCart, parentCell.conv2convChildTranspose, childCell.basisCart, t33);
+			MathUtil.mat3product(parentCell.basisCart, parentCell.conv2convChildTransposeP, childCell.basisCart, t33);
 			MathUtil.mat3inverse(childCell.basisCart, childCell.basisCartInverse, t3, t33);				
 		} else {
-			MathUtil.mat3product(parentCell.basisCart0, parentCell.conv2convChildTranspose, childCell.basisCart0, t33);
+			MathUtil.mat3product(parentCell.basisCart0, parentCell.conv2convChildTransposeP, childCell.basisCart0, t33);
 		}
 	}
 
@@ -992,7 +992,7 @@ public class Variables {
 		 * used in IsoDiffractApp.assignPeakTypes()
 		 * 
 		 */
-		public double[][] conv2primTranspose;
+		public double[][] conv2primTransposeP;
 
 		/**
 		 * Array of Cartesian vertices of strained window-centered cell. [edge
@@ -1205,18 +1205,18 @@ public class Variables {
 	public static class ParentCell extends Cell{
 
 		/**
-		 * InverseTranspose of ChildCell.conv2convParentTranspose:
+		 * InverseTranspose of ChildCell.conv2convParentTransposeP:
 		 * 
-		 * ChildCell.conv2convParentTranspose is the transpose of P_convchild2convparent
+		 * ChildCell.conv2convParentTransposeP is the transpose of P_convchild2convparent
 		 * from parsed value of "parentbasis". 
 		 * 
-		 * ChildCell.conv2convParentTranspose^t*i is
+		 * ChildCell.conv2convParentTransposeP^t*i is
 		 * P_convparent2convchild.
 		 * 
-		 * parentCell.basisCart * ChildCell.conv2convParentTranspose^t*i = childCell.basisCart
+		 * parentCell.basisCart * ChildCell.conv2convParentTransposeP^t*i = childCell.basisCart
 		 * 
 		 */
-		private double[][] conv2convChildTranspose;
+		private double[][] conv2convChildTransposeP;
 
 		/**
 		 * cell origin relative to child cell origin on the unitless child lattice basis.
@@ -1241,7 +1241,7 @@ public class Variables {
 
 		/**
 		 * Generate the Cartesian basis matrix from the 3x3 matrix
-		 * childCell.conv2convParentTranspose.
+		 * childCell.conv2convParentTransposeP.
 		 * 
 		 * From parser.
 		 * 
@@ -1252,9 +1252,9 @@ public class Variables {
 		 */
 		void setUnstrainedCartsianBasis(boolean isRhomb, double[][] convChild2Parent) {
 			// parent only
-			conv2convChildTranspose = new double[3][3];
+			conv2convChildTransposeP = new double[3][3];
 			MathUtil.mat3transpose(convChild2Parent, t);
-			MathUtil.mat3inverse(t, conv2convChildTranspose, t3, t2);
+			MathUtil.mat3inverse(t, conv2convChildTransposeP, t3, t2);
 			if (isRhomb) {
 				double temp1 = Math.sin(latt0[GAMMA] / 2);
 				double temp2 = Math.sqrt(1 / temp1 / temp1 - 4.0 / 3.0);
@@ -1305,7 +1305,7 @@ public class Variables {
 		 * used throughout IsoDiffractApp
 		 * 
 		 */
-		public double[][] conv2convParentTranspose = new double[3][3];
+		public double[][] conv2convParentTransposeP = new double[3][3];
 
 		/**
 		 * Inverse of basisCart in Inverse-Angstrom units [basis vector][x,y,z]
@@ -1743,10 +1743,10 @@ public class Variables {
 			getDoubleArray("parentcell", parentCell.latt0, 0, 6);
 			getDoubleArray("parentorigin", parentCell.originUnitless, 0, 3);
 			boolean isRhombParentSetting = getOneBoolean("rhombparentsetting", false);
-			childCell.conv2convParentTranspose = getTransform("parentbasis", true);
-			childCell.conv2primTranspose = getTransform("conv2primchildbasis", false);
-			parentCell.conv2primTranspose = getTransform("conv2primparentbasis", false);
-			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, childCell.conv2convParentTranspose);
+			childCell.conv2convParentTransposeP = getTransform("parentbasis", true);
+			childCell.conv2primTransposeP = getTransform("conv2primchildbasis", false);
+			parentCell.conv2primTransposeP = getTransform("conv2primparentbasis", false);
+			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, childCell.conv2convParentTransposeP);
 			transformParentToChild(false);
 		}
 

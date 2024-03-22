@@ -400,7 +400,9 @@ public abstract class IsoDialog extends JDialog {
 				"label", "\nNominal atom radius (Angstroms)", //
 				"datomicradius", //
 				"label", "\nMaxium bond length (Angstroms)", //
-				"dbondlength", //
+				"dmaxbondlength", //
+				"label", "\nMinimum bond length (Angstroms)", //
+				"dminbondlength", //
 				"label", "\n<b>Server ISODISTORT values", //
 				"label", "\nViewing range:", //
 				"label", "\nxmin", "dsupercellxmin", "label", "xmax", "dsupercellxmax", //

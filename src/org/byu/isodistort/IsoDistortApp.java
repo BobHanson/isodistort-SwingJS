@@ -342,9 +342,10 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		for (int i = 0; i < nBonds; i++)
 			bondObjects.child(i).setEnabled(false);
 		CubeIterator iterator = variables.getCubeIterator();
-		double r = variables.halfMaxBondLength * 2;
-		double r2 = r * r;
-		double range = variables.halfMaxBondLength * 2;
+		double rMax = variables.maxBondLength;
+		double rMax2 = rMax * rMax;
+		double rMin = variables.minBondLength;
+		double rMin2 = rMin * rMin;
 		double minBondOcc = variables.minBondOcc;
 		for (int a1 = 0, n = variables.nAtoms; a1 < n; a1++) {
 			Atom a = variables.getAtom(a1);
@@ -352,14 +353,16 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 				continue;
 			double[] center = a.getCartesianCoord();
 			String key1 = a1 + "_";
-			iterator.initialize(center, range, false);
+			iterator.initialize(center, rMax, false);
 			while (iterator.hasNext()) {
 				// we store the atom index in the "coordinate" of the atom as the fourth element
 				// of that array.
 				int a2 = (int) iterator.next()[3];
 				Atom b = variables.getAtom(a2);
 				double d2;
-				if (a2 <= a1 || (d2 = iterator.foundDistance2()) < 0.000000000001 || d2 > r2
+				if (a2 <= a1 || 
+						(d2 = iterator.foundDistance2()) < 0.000000000001 
+						|| d2 > rMax2 || d2 < rMin2		
 						|| b.getOccupancy() < minBondOcc 
 						|| showPrimitiveAtoms && !variables.isPrimitive(a2))
 					continue;

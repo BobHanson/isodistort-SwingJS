@@ -165,9 +165,9 @@ public class Variables {
 	 */
 	public double defaultUiso;
 	/**
-	 * Half of the maximum bond length in Angstroms beyond which bonds are not drawn
+	 * maximum and minimum bond lengths in Angstroms beyond which bonds are not drawn
 	 */
-	public double halfMaxBondLength;
+	public double maxBondLength, minBondLength;
 	/**
 	 * Minimum atomic occupancy below which bonds are not drawn
 	 */
@@ -628,7 +628,8 @@ public class Variables {
 	public Map<String, Object> getPreferences() {
 		Map<String, Object> prefs = new HashMap<>();
 		prefs.put("atomicradius", "" + atomMaxRadius);
-		prefs.put("bondlength", "" + (halfMaxBondLength * 2));
+		prefs.put("maxbondlength", "" + maxBondLength);
+		prefs.put("minbondlength", "" + minBondLength);
 		for (int i = 0; i < serverParams.length; i++) {
 			prefs.put(serverParams[i], Double.valueOf(serverParams[++i]));
 		}
@@ -657,7 +658,9 @@ public class Variables {
 	public boolean setPreferences(Map<String, Object> prefs, Map<String, Object> values) {
 		boolean changed = false;
 		try {
-			double r = atomMaxRadius, l = halfMaxBondLength;
+			double r = atomMaxRadius;
+			double lMax = maxBondLength;
+			double lMin = minBondLength;
 			boolean isLocal = (prefs.remove("LOCAL") != null);
 			Object o = values.remove("atomicradius");
 			if (o != null) {
@@ -666,12 +669,21 @@ public class Variables {
 				atomMaxRadius = r;
 				prefs.put("atomicradius", o);
 			}
-			o = values.remove("bondlength");
+			o = values.remove("maxbondlength");
 			if (o != null) {
-				l = (o instanceof Double ? ((Double) o).doubleValue() : Double.parseDouble(o.toString())) / 2;
-				changed |= (l != halfMaxBondLength);
-				halfMaxBondLength = l;
-				prefs.put("bondlength", o);
+				lMax = (o instanceof Double ? ((Double) o).doubleValue() 
+						: Double.parseDouble(o.toString()));
+				changed |= (lMax != maxBondLength);
+				maxBondLength = lMax;
+				prefs.put("maxbondlength", o);
+			}
+			o = values.remove("minbondlength");
+			if (o != null) {
+				lMax = (o instanceof Double ? ((Double) o).doubleValue() : 
+					Double.parseDouble(o.toString()));
+				changed |= (lMin != minBondLength);
+				minBondLength = lMin;
+				prefs.put("minbondlength", o);
 			}
 			if (changed) {
 				isChanged = true;
@@ -2037,7 +2049,9 @@ public class Variables {
 			// figure 1 minimum for a real number, not one that was adjusted
 			if (d < 0.5)
 				d *= 10;
-			halfMaxBondLength = d / 2;
+			maxBondLength = Math.max(0, d);
+			d = getOneDouble("minbondlength", 0);
+			minBondLength = Math.max(0, d);
 			// find minimum atomic occupancy for which bonds should be displayed
 			minBondOcc = getOneDouble("minbondocc", 0.5);
 		}

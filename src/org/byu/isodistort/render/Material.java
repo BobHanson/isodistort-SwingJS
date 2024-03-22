@@ -338,63 +338,63 @@ public class Material {//implements Runnable {
 		amb[3] = ambient[3];
 	}
 
-	/**
-	 * Sets the diffuse color of an object.
-	 * 
-	 * @param dr diffuse red
-	 * @param dg diffuse green
-	 * @param db diffuse blue
-	 * @return the material
-	 */
-	public Material setColor(double dr, double dg, double db) {
-		return setDiffuse(dr, dg, db, 1);
-	}
-
-	/**
-	 * Sets the diffuse color of an object.
-	 * 
-	 * @param dr diffuse red
-	 * @param dg diffuse green
-	 * @param db diffuse blue
-	 * @param dp diffuse exponent
-	 * @return the material
-	 */
-	public Material setColor(double dr, double dg, double db, double dp) {
-		return setDiffuse(dr, dg, db, dp);
-	}
-
-	/**
-	 * Sets the diffuse and specular values of color.
-	 * 
-	 * @param dr diffuse red
-	 * @param dg diffuse green
-	 * @param db diffuse blue
-	 * @param sr specular red
-	 * @param sg specular green
-	 * @param sb specular blue
-	 * @param sp specular exponent
-	 * @return the material
-	 */
-	public Material setColor(double dr, double dg, double db, double sr, double sg, double sb, double sp) {
-		return (setDiffuse(dr, dg, db)).setSpecular(sr, sg, sb, sp);
-	}
-
-	/**
-	 * Sets the diffuse and specular values of color.
-	 * 
-	 * @param dr diffuse red
-	 * @param dg diffuse green
-	 * @param db diffuse blue
-	 * @param dp diffuse exponent
-	 * @param sr specular red
-	 * @param sg specular green
-	 * @param sb specular blue
-	 * @param sp specular exponent
-	 * @return the material
-	 */
-	public Material setColor(double dr, double dg, double db, double dp, double sr, double sg, double sb, double sp) {
-		return (setDiffuse(dr, dg, db)).setSpecular(sr, sg, sb, sp);
-	}
+//	/**
+//	 * Sets the diffuse color of an object.
+//	 * 
+//	 * @param dr diffuse red
+//	 * @param dg diffuse green
+//	 * @param db diffuse blue
+//	 * @return the material
+//	 */
+//	public Material setColor(double dr, double dg, double db) {
+//		return setDiffuse(dr, dg, db, 1);
+//	}
+//
+//	/**
+//	 * Sets the diffuse color of an object.
+//	 * 
+//	 * @param dr diffuse red
+//	 * @param dg diffuse green
+//	 * @param db diffuse blue
+//	 * @param dp diffuse exponent
+//	 * @return the material
+//	 */
+//	public Material setColor(double dr, double dg, double db, double dp) {
+//		return setDiffuse(dr, dg, db, dp);
+//	}
+//
+//	/**
+//	 * Sets the diffuse and specular values of color.
+//	 * 
+//	 * @param dr diffuse red
+//	 * @param dg diffuse green
+//	 * @param db diffuse blue
+//	 * @param sr specular red
+//	 * @param sg specular green
+//	 * @param sb specular blue
+//	 * @param sp specular exponent
+//	 * @return the material
+//	 */
+//	public Material setColor(double dr, double dg, double db, double sr, double sg, double sb, double sp) {
+//		return (setDiffuse(dr, dg, db)).setSpecular(sr, sg, sb, sp);
+//	}
+//
+//	/**
+//	 * Sets the diffuse and specular values of color.
+//	 * 
+//	 * @param dr diffuse red
+//	 * @param dg diffuse green
+//	 * @param db diffuse blue
+//	 * @param dp diffuse exponent
+//	 * @param sr specular red
+//	 * @param sg specular green
+//	 * @param sb specular blue
+//	 * @param sp specular exponent
+//	 * @return the material
+//	 */
+//	public Material setColor(double dr, double dg, double db, double dp, double sr, double sg, double sb, double sp) {
+//		return (setDiffuse(dr, dg, db)).setSpecular(sr, sg, sb, sp);
+//	}
 
 	/**
 	 * Sets the diffuse, specular and ambient values of color.
@@ -416,27 +416,33 @@ public class Material {//implements Runnable {
 		return ((setDiffuse(dr, dg, db)).setSpecular(sr, sg, sb, sp)).setAmbient(ar, ag, ab);
 	}
 
-	/**
-	 * Sets the diffuse, specular and ambient values of color.
-	 * 
-	 * @param dr diffuse red
-	 * @param dg diffuse green
-	 * @param db diffuse blue
-	 * @param dp diffuse exponent
-	 * @param sr specular red
-	 * @param sg specular green
-	 * @param sb specular blue
-	 * @param se specular exponent
-	 * @param ar ambient red
-	 * @param ag ambient green
-	 * @param ab ambient blue
-	 * @return the material
-	 */
-	public Material setColor(double dr, double dg, double db, double dp, double sr, double sg, double sb, double sp,
-			double ar, double ag, double ab) {
-		return ((setDiffuse(dr, dg, db, dp)).setSpecular(sr, sg, sb, sp)).setAmbient(ar, ag, ab);
+	public Material setGrayScale(double diffuse, double specular, double specularPower, double ambient) {
+		return ((setDiffuse(diffuse, diffuse, diffuse))
+				.setSpecular(specular, specular, specular, specularPower))
+				.setAmbient(ambient, ambient, ambient);
 	}
 
+//	/**
+//	 * Sets the diffuse, specular and ambient values of color.
+//	 * 
+//	 * @param dr diffuse red
+//	 * @param dg diffuse green
+//	 * @param db diffuse blue
+//	 * @param dp diffuse exponent
+//	 * @param sr specular red
+//	 * @param sg specular green
+//	 * @param sb specular blue
+//	 * @param se specular exponent
+//	 * @param ar ambient red
+//	 * @param ag ambient green
+//	 * @param ab ambient blue
+//	 * @return the material
+//	 */
+//	public Material setColor(double dr, double dg, double db, double dp, double sr, double sg, double sb, double sp,
+//			double ar, double ag, double ab) {
+//		return ((setDiffuse(dr, dg, db, dp)).setSpecular(sr, sg, sb, sp)).setAmbient(ar, ag, ab);
+//	}
+//
 //	/**
 //	 * Sets the double sided flag true to indicate whether the object is double
 //	 * sided.

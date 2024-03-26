@@ -521,10 +521,11 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 	@Override
 	protected void dispose() {
-		if (rp3 != null)
+		if (rp3 != null) {
 			rp3.removeKeyListener(this);
-		rp3.dispose();
-		rp3 = null;
+			rp3.dispose();
+			rp3 = null;
+		}
 		super.dispose();
 	}
 
@@ -757,7 +758,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		long dt = t1 - ttime;
 		ttime = t1;
 		// System.out.println("IDA timer " + (t1 - ttime));
-		if (!isAnimationRunning)
+		if (!isAnimationRunning || rp3 == null)
 			return;
 		boolean animating = (isAnimateSelected || rp3.isSpinning());
 		if (!animating && --initializing < 0)

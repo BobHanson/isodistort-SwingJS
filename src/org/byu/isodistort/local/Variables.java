@@ -2429,12 +2429,12 @@ public class Variables {
 					int argb = Elements.getCPKColor(atomTypeSymbol[t]);
 					Color.RGBtoHSB((argb&0xFF0000) >> 16, (argb & 0xFF00) >> 8, argb & 0xFF, hsb);					
 					colors[t] = new Color(Color.HSBtoRGB(hsb[0], hsb[1], brightness));
-					System.out.println("Variables.scs " + colorByElement 
-							+ " " + atomTypeSymbol[t] 
-							+ " rgb=" 
-							+ Integer.toHexString(argb) 
-							+ " h=" + hsb[0] + " s=" + hsb[1]+ " b=" + hsb[2] 
-							+ " br=" + brightness);
+//					System.out.println("Variables.scs " + colorByElement 
+//							+ " " + atomTypeSymbol[t] 
+//							+ " rgb=" 
+//							+ Integer.toHexString(argb) 
+//							+ " h=" + hsb[0] + " s=" + hsb[1]+ " b=" + hsb[2] 
+//							+ " br=" + brightness);
 				}
 			} else {
 				for (int t = 0; t < nTypes; t++) {

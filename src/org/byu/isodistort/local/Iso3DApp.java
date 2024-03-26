@@ -113,6 +113,8 @@ public abstract class Iso3DApp extends IsoApp {
 
 	@Override
 	protected void frameResized() {
+		if (variables == null)
+			return;
 		super.frameResized();
 		needsRecalc = true;
 		updateDisplay();

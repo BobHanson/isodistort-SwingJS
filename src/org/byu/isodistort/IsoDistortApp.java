@@ -502,11 +502,10 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 			tempmat = variables.parentCell.getTempTransposedReciprocalBasis();
 			break;
 		}
-		Vec.mattranspose(tempmat, tempmat = new double[3][3]);
 		MathUtil.mat3mul(tempmat, viewIndices, viewDir);
 		double l2 = MathUtil.lenSq3(viewDir);
 		if (l2 > 0.000000000001) {
-			MathUtil.scale3(viewDir, 1 / Math.sqrt(l2), viewDir);
+			MathUtil.norm3(viewDir);
 			double xV = viewDir[0];
 			double yV = viewDir[1];
 			double zV = viewDir[2];

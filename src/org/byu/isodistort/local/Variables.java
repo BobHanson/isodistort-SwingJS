@@ -1176,9 +1176,9 @@ public class Variables {
 			double[][] t = new double[3][3];
 			double[] v = new double[6];
 			MathUtil.mat3transpose(basisCart, t);
-			v[A] = Math.sqrt(MathUtil.dot3(t[A], t[A]));
-			v[B] = Math.sqrt(MathUtil.dot3(t[B], t[B]));
-			v[C] = Math.sqrt(MathUtil.dot3(t[C], t[C]));
+			v[A] = MathUtil.len3(t[A]);
+			v[B] = MathUtil.len3(t[B]);
+			v[C] = MathUtil.len3(t[C]);
 			v[ALPHA] = Math.acos(MathUtil.dot3(t[B], t[C]) / Math.max(v[B] * v[C], 0.001));
 			v[BETA] = Math.acos(MathUtil.dot3(t[A], t[C]) / Math.max(v[A] * v[C], 0.001));
 			v[GAMMA] = Math.acos(MathUtil.dot3(t[A], t[B]) / Math.max(v[A] * v[B], 0.001));

@@ -478,6 +478,10 @@ public class MathUtil {
 		dest[2] = Math.abs(src[2]);
 	}
 
+	public static double dot3Length(double[] a, double[] b) {
+		return Math.sqrt(dot3(a, b));
+	}
+
 //	  static {
 //		  System.out.println(a2s(unitize3(new double[] {-0.4, 1.001, 1.1}, 0.001)));
 //		  System.out.println(a2s(unitize3(new double[] {-0.0001, 0.999, 1.1}, 0.001)));

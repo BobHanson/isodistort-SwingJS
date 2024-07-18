@@ -38,17 +38,17 @@ public abstract class Iso3DApp extends IsoApp {
 		void updateForDisplay(boolean b);
 	}
 
-
-
 	
 
 	/**
-	 * Decimal multiplier to make bond radius and cell radius fractions of atom
-	 * radius
-	 * 
+	 * [0] parent; [1] child
 	 */
-	protected double bondMultiplier = 0.1, axesMultiplier1 = 0.2, axesMultiplier2 = 0.3;
-	protected double cellMultiplier = 0.25, momentMultiplier = 0.4, rotationMultiplier = 0.35;
+	protected double[] axesMultipliers = new double[] { 0.35, 0.25 };
+	
+	/**
+	 * various arrow/line radia
+	 */
+	protected double bondMultiplier = 0.1, cellMultiplier = 0.25, momentMultiplier = 0.4, rotationMultiplier = 0.35;
 
 	/**
 	 * flag to indicate animation is in progress
@@ -59,12 +59,11 @@ public abstract class Iso3DApp extends IsoApp {
 	 * true if the animate checkbox is checked
 	 */
 	protected boolean isAnimateSelected;
-
 	protected double animPhase = Math.PI / 2;
 	protected double animAmp = 1;
 
 	/**
-	 * Initially show bonds or not
+	 * Initially show settings
 	 */
 	protected boolean showBonds0 = true, showAtoms0 = true, showPrimitiveAtoms0 = false,
 			showParentCell0 = true, showChildCell0 = true, 
@@ -114,6 +113,8 @@ public abstract class Iso3DApp extends IsoApp {
 
 	@Override
 	protected void frameResized() {
+		if (variables == null)
+			return;
 		super.frameResized();
 		needsRecalc = true;
 		updateDisplay();

@@ -827,7 +827,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// Update the dinverse list
 		for (int p = 0; p < peakCount; p++) {
 			MathUtil.mat3mul(metric, crystalPeakHKL[p], t3);
-			peakDInv[p] = Math.sqrt(MathUtil.dot3(crystalPeakHKL[p], t3));
+			peakDInv[p] = MathUtil.dot3Length(crystalPeakHKL[p], t3);
 		}
 
 		// Update the axis and tickmark plot parameters
@@ -1013,7 +1013,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	private void recalcPowderPeakPositionsAndValues() {
 		for (int p = 0; p < peakCount; p++) {
 			MathUtil.mat3mul(metric, crystalPeakHKL[p], tempvec);
-			double dinv = Math.sqrt(MathUtil.dot3(crystalPeakHKL[p], tempvec));
+			double dinv = MathUtil.dot3Length(crystalPeakHKL[p], tempvec);
 			peakDInv[p] = dinv;
 			double dval = (dinv > 0 ? 1 / dinv : 0);
 			double v = 0;
@@ -1133,11 +1133,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 					MathUtil.set3(testHKL, h, k, l);
 					// Generate the standard metric and two randomized metrics.
 					MathUtil.mat3mul(metric0, testHKL, tempvec);
-					double dinv0 = Math.sqrt(MathUtil.dot3(testHKL, tempvec));
+					double dinv0 = MathUtil.dot3Length(testHKL, tempvec);
 					MathUtil.mat3mul(randommetric1, testHKL, tempvec);
-					double dinv1 = Math.sqrt(MathUtil.dot3(testHKL, tempvec));
+					double dinv1 = MathUtil.dot3Length(testHKL, tempvec);
 					MathUtil.mat3mul(randommetric2, testHKL, tempvec);
-					double dinv2 = Math.sqrt(MathUtil.dot3(testHKL, tempvec));
+					double dinv2 = MathUtil.dot3Length(testHKL, tempvec);
 
 					boolean isinrange = (powderDinvmin <= dinv0) && (dinv0 <= powderDinvmax);
 					if (isinrange) {

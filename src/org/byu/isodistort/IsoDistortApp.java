@@ -33,7 +33,6 @@ import org.byu.isodistort.render.Geometry;
 import org.byu.isodistort.render.Material;
 // import org.byu.isodistort.render.Matrix;
 import org.byu.isodistort.render.RenderPanel3D;
-import org.byu.isodistort0.render.Vec;
 
 /**
  * 
@@ -70,16 +69,16 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	 * cylinders for the parent and child cell.
 	 * 
 	 */
-	private Geometry atomObjects, bondObjects, axisObjects;
+	private Geometry atomObjects, bondObjects;
 	
-	private Geometry[] cellObjects = new Geometry[2];
+	private Geometry[] cellObjects = new Geometry[2], axisObjects = new Geometry[2];
 
 	/**
 	 * Materials for coloring bonds and cells.
 	 * 
 	 */
-	private Material bondMaterial, parentCellMaterial, childCellMaterial, xAxisMaterial, yAxisMaterial,
-			zAxisMaterial;
+	private Material bondMaterial, parentCellMaterial, childCellMaterial, aAxisMaterial, bAxisMaterial,
+			cAxisMaterial;
 
 	/**
 	 * Array of materials for coloring atoms[type][subtype][regular,highlighted]
@@ -111,7 +110,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		bondObjects = world.add();
 		cellObjects[0] = world.add();
 		cellObjects[1] = world.add();
-		axisObjects = world.add();
+		axisObjects[0] = world.add();
+		axisObjects[1] = world.add();
 		
 		double modelRadius = initFieldOfView();
 		initAtoms(modelRadius);
@@ -130,7 +130,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		cellObjects[0].setEnabled(showParentCell);
 		cellObjects[1].setEnabled(showChildCell);
 		bondObjects.setEnabled(showBonds);
-		axisObjects.setEnabled(showAxes);
+		axisObjects[0].setEnabled(showAxes && (showParentCell || !showChildCell));
+		axisObjects[1].setEnabled(showAxes && (showChildCell || !showParentCell));
 	}
 
 	private void initAtoms(double modelRadius) {
@@ -197,12 +198,12 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	 */
 	private void initAxes() {
 		showAxes = showAxes0;
-		axisObjects.add().arrow(numArrowSides).setMaterial(xAxisMaterial);
-		axisObjects.add().arrow(numArrowSides).setMaterial(yAxisMaterial);
-		axisObjects.add().arrow(numArrowSides).setMaterial(zAxisMaterial);
-		axisObjects.add().arrow(numArrowSides).setMaterial(xAxisMaterial);
-		axisObjects.add().arrow(numArrowSides).setMaterial(yAxisMaterial);
-		axisObjects.add().arrow(numArrowSides).setMaterial(zAxisMaterial);
+		axisObjects[0].add().arrow(numArrowSides).setMaterial(aAxisMaterial);
+		axisObjects[0].add().arrow(numArrowSides).setMaterial(bAxisMaterial);
+		axisObjects[0].add().arrow(numArrowSides).setMaterial(cAxisMaterial);
+		axisObjects[1].add().arrow(numArrowSides).setMaterial(aAxisMaterial);
+		axisObjects[1].add().arrow(numArrowSides).setMaterial(bAxisMaterial);
+		axisObjects[1].add().arrow(numArrowSides).setMaterial(cAxisMaterial);
 	}
 
 	/**
@@ -211,25 +212,20 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	 * 
 	 */
 	protected void initMaterials() {
-		parentCellMaterial = rp3.newMaterial();
-		childCellMaterial = rp3.newMaterial();
 		// parent cell slightly red
 		// note that this color is also in Variable.GUI.COLOR_PARENT_CELL
-		parentCellMaterial.setColor(.8, .5, .5, 1.5, 1.5, 1.5, 20, .30, .30, .30);
 		// child cell slightly blue
 		// note that this color is also in Variable.GUI.COLOR_CHILD_CELL
-		childCellMaterial.setColor(.5, .5, .8, 1.5, 1.5, 1.5, 20, .30, .30, .30);
-
-		bondMaterial = rp3.newMaterial();
-		bondMaterial.setColor(0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 20, 0.2, 0.2, 0.2);// bonds are black
-
-		xAxisMaterial = rp3.newMaterial();
-		yAxisMaterial = rp3.newMaterial();
-		zAxisMaterial = rp3.newMaterial();
-		xAxisMaterial.setColor(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 20, 0.0, 0.0, 0.0);// bonds are black
-		yAxisMaterial.setColor(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 20, 0.5, 0.5, 0.5);// bonds are black
-		zAxisMaterial.setColor(0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 20, 0.25, 0.25, 0.25);// bonds are black
-
+		parentCellMaterial = rp3.newMaterial().setColor(.8, .5, .5, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+		childCellMaterial = rp3.newMaterial().setColor(.5, .5, .8, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+		// bonds are black
+		bondMaterial = rp3.newMaterial().setGrayScale(0.2, 0.2, 20, 0.2);
+		
+		// a axis is black, b is gray, c is in between
+		aAxisMaterial = rp3.newMaterial().setGrayScale(0.0, 0.2, 20, 0.2);
+		bAxisMaterial = rp3.newMaterial().setGrayScale(0.5, 0.2, 20, 0.2);
+		cAxisMaterial = rp3.newMaterial().setGrayScale(0.25,0.2, 20, 0.2);
+		
 		subMaterial = new Material[variables.nTypes][];
 
 		// Create the subMaterial array;
@@ -258,13 +254,11 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 	@Override
 	protected void renderAxes() {
-		double r = variables.atomMaxRadius * axesMultiplier2;
-		for (int a = 0, i = 0; i < 3; i++, a++) {
-			transformCylinder(r, variables.parentCell.getAxisInfo(i), axisObjects.child(a));
-		}
-		r = variables.atomMaxRadius * axesMultiplier1;
-		for (int a = 3, i = 0; i < 3; i++, a++) {
-			transformCylinder(r, variables.childCell.getAxisInfo(i), axisObjects.child(a));
+		double rParent = variables.atomMaxRadius * axesMultipliers[0];
+		double rChild = variables.atomMaxRadius * axesMultipliers[1];
+		for (int i = 0; i < 3; i++) {
+			transformCylinder(rParent, variables.parentCell.getAxisInfo(i), axisObjects[0].child(i));
+			transformCylinder(rChild, variables.childCell.getAxisInfo(i), axisObjects[1].child(i));
 		}
 	}
 
@@ -347,9 +341,10 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		for (int i = 0; i < nBonds; i++)
 			bondObjects.child(i).setEnabled(false);
 		CubeIterator iterator = variables.getCubeIterator();
-		double r = variables.halfMaxBondLength * 2;
-		double r2 = r * r;
-		double range = variables.halfMaxBondLength * 2;
+		double rMax = variables.maxBondLength;
+		double rMax2 = rMax * rMax;
+		double rMin = variables.minBondLength;
+		double rMin2 = rMin * rMin;
 		double minBondOcc = variables.minBondOcc;
 		for (int a1 = 0, n = variables.nAtoms; a1 < n; a1++) {
 			Atom a = variables.getAtom(a1);
@@ -357,14 +352,16 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 				continue;
 			double[] center = a.getCartesianCoord();
 			String key1 = a1 + "_";
-			iterator.initialize(center, range, false);
+			iterator.initialize(center, rMax, false);
 			while (iterator.hasNext()) {
 				// we store the atom index in the "coordinate" of the atom as the fourth element
 				// of that array.
 				int a2 = (int) iterator.next()[3];
 				Atom b = variables.getAtom(a2);
 				double d2;
-				if (a2 <= a1 || (d2 = iterator.foundDistance2()) < 0.000000000001 || d2 > r2
+				if (a2 <= a1 || 
+						(d2 = iterator.foundDistance2()) < 0.000000000001 
+						|| d2 > rMax2 || d2 < rMin2		
 						|| b.getOccupancy() < minBondOcc 
 						|| showPrimitiveAtoms && !variables.isPrimitive(a2))
 					continue;
@@ -453,7 +450,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 				if (!variables.isSubTypeSelected(t, s)) {
 					// a darkish shade of gray
 					double k = variables.getSelectedSubTypeShade(t, s);
-					subMaterial[t][s].setColor(0, 0, 0, k, k, k, 1, k, k, k);
+					subMaterial[t][s].setGrayScale(0, k, 1, k);
 				} else {
 					// makes the atom color same its type color
 					subMaterial[t][s].setColor(rgb[0], rgb[1], rgb[2], 0.3, 0.3, 0.3, 1, 0.0001, 0.0001, 0.0001);
@@ -504,11 +501,10 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 			tempmat = variables.parentCell.getTempTransposedReciprocalBasis();
 			break;
 		}
-		Vec.mattranspose(tempmat, tempmat = new double[3][3]);
 		MathUtil.mat3mul(tempmat, viewIndices, viewDir);
 		double l2 = MathUtil.lenSq3(viewDir);
 		if (l2 > 0.000000000001) {
-			MathUtil.scale3(viewDir, 1 / Math.sqrt(l2), viewDir);
+			MathUtil.norm3(viewDir);
 			double xV = viewDir[0];
 			double yV = viewDir[1];
 			double zV = viewDir[2];
@@ -523,10 +519,11 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 	@Override
 	protected void dispose() {
-		if (rp3 != null)
+		if (rp3 != null) {
 			rp3.removeKeyListener(this);
-		rp3.dispose();
-		rp3 = null;
+			rp3.dispose();
+			rp3 = null;
+		}
 		super.dispose();
 	}
 
@@ -759,7 +756,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		long dt = t1 - ttime;
 		ttime = t1;
 		// System.out.println("IDA timer " + (t1 - ttime));
-		if (!isAnimationRunning)
+		if (!isAnimationRunning || rp3 == null)
 			return;
 		boolean animating = (isAnimateSelected || rp3.isSpinning());
 		if (!animating && --initializing < 0)

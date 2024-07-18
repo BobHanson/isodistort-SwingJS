@@ -33,7 +33,6 @@ import org.byu.isodistort.render.Geometry;
 import org.byu.isodistort.render.Material;
 // import org.byu.isodistort.render.Matrix;
 import org.byu.isodistort.render.RenderPanel3D;
-import org.byu.isodistort0.render.Vec;
 
 /**
  * 

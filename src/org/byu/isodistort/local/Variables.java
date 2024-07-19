@@ -1036,7 +1036,7 @@ public class Variables {
 		 * into cartesian Angstrom coords [basis vector][x,y,z]
 		 * 
 		 */
-		protected double[][] basisCart = new double[3][3];
+		public double[][] basisCart = new double[3][3];
 
 		/**
 		 * Final information needed to render the cell (last 12). [edge number][x, y, z,
@@ -2721,6 +2721,7 @@ public class Variables {
 				this.type = type;
 				// this setting is important; without it, everything looks shrunk
 				setPreferredSize(new Dimension(sliderWidth, barheight));
+				System.out.println("Variables.IsoSlider.setpref " + name + " " + sliderWidth);
 				if (type >= 0 && showSliderPointers) {
 					this.min = min;
 					this.calcAmp = calcAmp;

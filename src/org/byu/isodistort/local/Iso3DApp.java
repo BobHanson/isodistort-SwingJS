@@ -1,6 +1,6 @@
 package org.byu.isodistort.local;
 
-import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 
@@ -32,10 +32,12 @@ public abstract class Iso3DApp extends IsoApp {
 		void reversePanningAction();
 		void setCamera(double tY, double tX);
 		void setPerspective(double[][] params);
-		void setPreferredSize(Dimension size);
-		void setSize(Dimension size);
+//		void setPreferredSize(Dimension size);
+//		void setSize(Dimension size);
 		void setSpinning(boolean spin);
 		void updateForDisplay(boolean b);
+	    void paint(Graphics g);
+
 	}
 
 	

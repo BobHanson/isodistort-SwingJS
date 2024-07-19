@@ -7,7 +7,6 @@
 
 package org.byu.isodistort;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -99,10 +98,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	@Override
 	protected void init() {
 		setRenderPanel(rp3 = new RenderPanel3D(this));
-		//rp3.setPreferredSize(drawPanel.getSize());
-		//rp3.setSize(drawPanel.getSize());
 		drawPanel.removeAll();
-		drawPanel.add((JPanel) rp3, BorderLayout.CENTER);
+		drawPanel.add((JPanel) rp3);
 		rp3.addKeyListener(this);
 		initMaterials();
 		Geometry world = rp3.getWorld();
@@ -222,9 +219,9 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		bondMaterial = rp3.newMaterial().setGrayScale(0.2, 0.2, 20, 0.2);
 		
 		// a axis is black, b is gray, c is in between
-		aAxisMaterial = rp3.newMaterial().setGrayScale(0.0, 0.2, 20, 0.2);
-		bAxisMaterial = rp3.newMaterial().setGrayScale(0.5, 0.2, 20, 0.2);
-		cAxisMaterial = rp3.newMaterial().setGrayScale(0.25,0.2, 20, 0.2);
+		aAxisMaterial = rp3.newMaterial().setDiffuse(1, 0, 0);//.setGrayScale(0.0, 0.2, 20, 0.2);
+		bAxisMaterial = rp3.newMaterial().setDiffuse(0,1,0);//.setGrayScale(0.5, 0.2, 20, 0.2);
+		cAxisMaterial = rp3.newMaterial().setDiffuse(0, 0, 1);//.setGrayScale(0.25,0.2, 20, 0.2);
 		
 		subMaterial = new Material[variables.nTypes][];
 
@@ -489,10 +486,10 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		double[][] tempmat = null;
 		switch (viewType) {
 		case VIEW_TYPE_CHILD_UVW:
-			tempmat = variables.childCell.getTempTransposedCartesianBasis();
+			tempmat = variables.childCell.basisCart;
 			break;
 		case VIEW_TYPE_PARENT_UVW:
-			tempmat = variables.parentCell.getTempTransposedCartesianBasis();
+			tempmat = variables.parentCell.basisCart;
 			break;
 		case VIEW_TYPE_CHILD_HKL:
 			tempmat = variables.childCell.getTempTransposedReciprocalBasis();
@@ -508,11 +505,12 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 			double xV = viewDir[0];
 			double yV = viewDir[1];
 			double zV = viewDir[2];
-			double tX = Math.asin(yV);
-			double tY = (Math.abs(Math.cos(tX)) < 0.000001 ? 0
-					: Math.abs(zV) < 0.000001 ? -Math.PI / 2 * (xV / Math.abs(xV)) : -Math.atan2(xV, zV));
+			double phi = Math.asin(yV);
+			double theta = (Math.abs(Math.cos(phi)) < 0.000001 ? 0
+					: Math.abs(zV) < 0.000001 ? -Math.PI / 2 * (xV / Math.abs(xV)) 
+					: -Math.atan2(xV, zV));
 			rp3.clearAngles();
-			rp3.setCamera(tY, tX);
+			rp3.setCamera(theta, phi);
 			updateDisplay();
 		}
 	}

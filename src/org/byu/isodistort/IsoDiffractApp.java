@@ -90,7 +90,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		public void paint(Graphics gr) {
 			super.paint(gr);
 			Dimension d = getSize();
-			System.out.println("ISODIF app/d" + app.drawWidth + "," + app.drawHeight + " " + d.width + "," + d.height);
+			System.out.println("RenderPanel paint " + app.drawWidth + "," + app.drawHeight + " d=" + d);
 			if (app.needsRecalc || app.drawWidth != d.width || app.drawHeight != d.height) {
 				app.updateDimensions();
 				app.needsRecalc = true;
@@ -1680,7 +1680,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		botControlPanel.add(zoomLabel);
 		botControlPanel.add(zoomTxt);
 
-		//addBottomButtons(botControlPanel); // applyView
+		addBottomButtons(botControlPanel); // applyView
 
 		controlPanel.add(topControlPanel);
 		controlPanel.add(botControlPanel);

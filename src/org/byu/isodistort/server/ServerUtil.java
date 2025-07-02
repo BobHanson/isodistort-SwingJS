@@ -67,12 +67,21 @@ public class ServerUtil {
 		 */
 	}
 	// bh test platform "https://jmol.stolaf.edu/jmol/test/t.php";
-	final static String publicServerURL = "https://iso.byu.edu/iso/";
-	final static String testServerURL = "https://isotest.byu.edu/iso/";
+	private final static String publicServerURL = "https://iso.byu.edu/";
+	private final static String testServerURL = "https://isotest.byu.edu/";
 
-	static boolean testing = true;
+	static boolean isJS = (/** @j2sNative 1 ? true : */ false);
 
-	static String isoUrl = (testing ? testServerURL : publicServerURL);
+	public static String isoUrl = (IsoApp.testing ? testServerURL : publicServerURL);
+	
+	static {
+		if (isJS) {
+			String ref = /** @j2sNative document.location.href || */isoUrl;
+			if (ref.startsWith("https:"))
+				isoUrl = "";
+		}
+		System.err.println("ServerUtil.isoUrl is set to " + isoUrl);
+	}
 
 	static int ntest = 0;
 

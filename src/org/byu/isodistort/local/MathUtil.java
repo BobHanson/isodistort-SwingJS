@@ -426,6 +426,10 @@ public class MathUtil {
 		return s+"]";
 	}
 
+	public static String matToString(double[][] m) {
+		return "[" + vecToString(m[0]) + "\n " + vecToString(m[1]) + "\n " + vecToString(m[2]) + "]";
+	}
+
 	public static boolean approxEqual(double a, double b, double tol) {
 		return (Math.abs(a - b) < tol);
 	}

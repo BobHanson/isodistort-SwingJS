@@ -415,10 +415,14 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 		// long t1 = System.currentTimeMillis();
 		// System.out.println("RP timer " + (t1 - ttime));
 		// ttime = t1;
+
 		if (!isInSync()) {
 			updateForDisplay(true);
 			return;
 		}
+
+		//System.out.println("RenderPanel3D paint " + isInSync() + " " + app.drawWidth + " " + app.drawHeight + " " + getSize());
+		
 		super.paint(g);
 		int dw = im.getWidth();
 		int dh = im.getHeight();

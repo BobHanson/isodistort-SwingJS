@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
@@ -70,7 +71,7 @@ public abstract class IsoApp {
 	/**
 	 * the datafile to use for startup
 	 */
-	protected String startupDataFile = "data/data29.isoviz"; // varied settings
+	protected String startupDataFile = "data/visual_mno.isoviz";//"data/data29.isoviz"; // varied settings
 
 	/**
 	 * The list of menu items in the File.Examples. menu.
@@ -143,18 +144,25 @@ public abstract class IsoApp {
 			this.apps[type] = app;
 			if (tabbedPane == null) {
 				tabbedPane = new JTabbedPane();
+				tabbedPane.setName("tabbedPane");
 				tabbedPane.setFocusable(false);
-				JPanel p = new JPanel();
-//				p.setBorder(new EmptyBorder(0, 0, 0, 0));
+				JPanel p;
+				
+				p = new JPanel();
+				p.setName("distort");
 				p.setBackground(Color.WHITE);
 				tabbedPane.addTab("Distortion", p);
+	
+				
 				p = new JPanel();
-				p.setName("DiffPan");
-//				p.setBorder(new EmptyBorder(0, 0, 0, 0));
+				p.setName("diffract");
 				p.setBackground(Color.WHITE);
 				tabbedPane.addTab("Diffraction", p);
+				
+				
 				if (addJmol) {
 					p = new JPanel();
+					p.setName("jmol");
 					p.setBorder(new EmptyBorder(0, 0, 0, 0));
 					p.setBackground(Color.WHITE);
 					tabbedPane.addTab("Symmetry", p);
@@ -209,7 +217,6 @@ public abstract class IsoApp {
 				currentApp.prepareToSwapOut();
 				((JComponent) getContentPane()).setTransferHandler(new FileUtil.FileDropHandler(newapp));
 				newapp.variables.setValuesFrom(currentApp.variables);
-				invalidate();
 				repaint();
 			} else {
 				currentApp.openApplication(type, currentApp.isovizData, null, false);
@@ -218,12 +225,14 @@ public abstract class IsoApp {
 
 		private ComponentListener componentListener = new ComponentAdapter() {
 
+			Dimension d = new Dimension();
 			@Override
 			public void componentResized(ComponentEvent e) {
-				invalidate();
-				resizeAppsPriorToValidation();
-				validate();
-				resizeAppsAfterValidation();
+				Dimension d1 = getSize();
+				if (d1.equals(d))
+					return;
+				d = d1;
+				resizeMe();
 			}
 		};
 
@@ -266,6 +275,16 @@ public abstract class IsoApp {
 			addWindowListener(windowListener);
 			if (actions != null)
 				actions.setApp(app);
+		}
+
+		protected void resizeMe() {
+			//System.out.println("\nIsoframe resized00 "  + getSize() + " " + apps[thisType].drawPanel.getSize());
+			resizeAppsPriorToValidation();
+			// nothing is happening here.
+			apps[thisType].drawPanel.revalidate();
+			resizeAppsAfterValidation();
+			//System.out.println("Isoframe resized11 " + apps[thisType].drawPanel.getSize() + "\n");
+//			repaint();
 		}
 
 		void setFrameTitle(Variables variables) {
@@ -435,13 +454,12 @@ public abstract class IsoApp {
 		if (!startApp(null, new IsoFrame(type), appType, args, null, null, false)) {
 			System.exit(1);
 		}
-		;
 	}
 
 	private static JButton newJButton(String text, ViewListener vl) {
 		JButton b = new JButton(text);
 		b.setFocusable(false);
-		b.setMargin(new Insets(-3, 3, -2, 4));
+		//b.setMargin(new Insets(-3, 3, -2, 4));
 		b.setHorizontalAlignment(SwingConstants.LEFT);
 		b.setVerticalAlignment(SwingConstants.CENTER);
 		b.addActionListener(vl);
@@ -487,7 +505,7 @@ public abstract class IsoApp {
 	/**
 	 * drawing area width and height
 	 */
-	protected int drawWidth, drawHeight;
+	public int drawWidth, drawHeight;
 
 	protected JButton applyView;// ,
 	// saveImage, saveISOVIZ,
@@ -638,6 +656,8 @@ public abstract class IsoApp {
 	 */
 	public Boolean isIncommensurate;
 
+	public static boolean testing;
+
 	protected IsoApp(int appType) {
 		this.appType = appType;
 		statusPanel = new StatusPanel(new JTextArea());
@@ -653,6 +673,7 @@ public abstract class IsoApp {
 		colorBox = newJCheckBox("Unique-atom Colors", false);
 		colorBox.setVisible(variables.needColorBox);
 		top.add(colorBox);
+		fillLabel(top);
 	}
 
 	/**
@@ -661,17 +682,22 @@ public abstract class IsoApp {
 	 * @param bottom
 	 */
 	protected void addBottomButtons(JPanel bottom) {
-		ViewListener vl = new ViewListener();
-		applyView = newJButton("Apply View", vl);
+		switch (appType) {
+		case APP_ISODIFFRACT:
+			break;
+		case APP_ISODISTORT:
+			ViewListener vl = new ViewListener();
+			applyView = newJButton("Apply View", vl);
+			break;
+		}
+		fillLabel(bottom);
+	}
 
-		// saveImage = newJButton("Save Image", vl);
-		// saveISOVIZ = newJButton("Save ISOVIZ", vl);
-//		openOther = newJButton((appType == APP_ISODISTORT ? "View Diffraction" : "View Distortion"), vl);
-		bottom.add(new JLabel("   "));
-		bottom.add(applyView);
-		// panel.add(saveImage);
-		// panel.add(saveISOVIZ);
-		// panel.add(openOther);
+	private void fillLabel(JPanel p) {
+		JLabel fill = new JLabel("X");
+		fill.setFont(new Font(Font.DIALOG, 0, 24));
+		fill.setOpaque(true);
+		//p.add(fill);
 	}
 
 	public void addStatus(String status) {
@@ -781,19 +807,12 @@ public abstract class IsoApp {
 	 * SliderPanel width All the other sizes are set automatically from that.
 	 */
 	public void frameResizing() {
-//		System.out.println("frame resizing " + frame.getSize());
-//		System.out.println("contentPane " + frame.contentPane.getSize());
-//		System.out.println("tabbedPane " + frame.tabbedPane.getSize());
-//		System.out.println("sliderScrollPane " + sliderScrollPane.getSize());
-//		System.out.println("sliderPanel " + sliderPanel.getSize());
 		int w = frame.tabbedPane.getWidth();
-		Dimension d = new Dimension(w - 5, controlPanelHeight);
-		controlPanel.setPreferredSize(d);
+		controlPanel.setPreferredSize(new Dimension(w - 5, controlPanelHeight));
 		statusPanel.setPreferredSize(new Dimension(w - 5, controlPanelHeight - 5));
-		// not necessary! setPackedHeight();
-		d = new Dimension(frame.getContentPane().getSize().width - frame.sliderPanelWidth - 20,
-				frame.getPanelHeight() - controlPanelHeight);
+		// this next is important because of the scrollbar
 		isoPanel.setPreferredSize(new Dimension(w, frame.tabbedPane.getHeight() - 40));
+		
 	}
 
 	/**
@@ -810,6 +829,7 @@ public abstract class IsoApp {
 //		System.out.println("sliderPanel " + sliderPanel.getSize());
 //		System.out.println("controlStatusPanel resized " + controlStatusPanel.getSize());
 //		System.out.println("drawPanel now " + drawPanel.getSize());
+	
 		updateDimensions();
 	}
 
@@ -864,9 +884,9 @@ public abstract class IsoApp {
 	 * |.................................|..........|
 	 * |.................................|.slider...|
 	 * |..........drawPanel..............|..scroll..|
-	 * |.................................|...pane/..|
-	 * |.................................|.slider...|
-	 * |.................................|...panel..|
+	 * |............/   \................|...pane/..|
+	 * |....RenderPanel..\...............|.slider...|
+	 * |................RenderPanel3D....|...panel..|
 	 * |.................................|..........|
 	 * |.................................|..........|
 	 * |.------------------------------------------.|
@@ -882,16 +902,20 @@ public abstract class IsoApp {
 		}
 		frame.contentPane.setTransferHandler(new FileUtil.FileDropHandler(this));
 		controlStatusPanel = new JPanel(new FlowLayout());
+		controlStatusPanel.setName("controlStatusPanel");
 		controlStatusPanel.setBackground(Color.WHITE);
 		controlPanel = new JPanel();
+		controlPanel.setName("controlPanel");
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
 		controlStatusPanel.add(controlPanel);
 		controlStatusPanel.add(statusPanel);
 		controlStatusPanel.setBorder(controlBorder);
 		isoPanel = new JPanel(new BorderLayout());
+		isoPanel.setName("isoPanel");
 		if (sliderPanel == null) {
 			sliderPanel = new JPanel();
+			sliderPanel.setName("sliderPanel");
 			sliderPanel.setBackground(Color.WHITE);
 			sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.PAGE_AXIS));
 			// sets grid length equal to number of rows.
@@ -903,7 +927,8 @@ public abstract class IsoApp {
 		isoPanel.add(sliderScrollPane, BorderLayout.EAST);
 		isoPanel.add(controlStatusPanel, BorderLayout.SOUTH);
 		drawPanel = new JPanel(new BorderLayout());
-		isoPanel.add(drawPanel, BorderLayout.CENTER);
+		drawPanel.setName("drawPanel");
+		isoPanel.add(drawPanel);
 		frame.addIsoPanel(this, isoPanel);
 		if (appType == APP_ISODISTORT) {
 			boolean isModulated = (variables.modDim != 0);
@@ -937,7 +962,7 @@ public abstract class IsoApp {
 		b.setHorizontalAlignment(JRadioButton.LEFT);
 		b.setVerticalAlignment(JRadioButton.CENTER);
 		b.setFocusable(false);
-		b.setBackground(Color.WHITE);
+		b.setOpaque(false);
 		b.setForeground(Color.BLACK);
 		b.setVisible(true);
 		b.setBorderPainted(false);
@@ -949,7 +974,7 @@ public abstract class IsoApp {
 
 	protected JTextField newTextField(String text, int insetRight) {
 		JTextField t = new JTextField(text, 3);
-		t.setMargin(new Insets(-2, 0, -1, insetRight));
+		//t.setMargin(new Insets(-2, 0, -1, insetRight));
 		t.addActionListener(textBoxListener);
 		return t;
 	}
@@ -1017,7 +1042,10 @@ public abstract class IsoApp {
 			e.printStackTrace();
 			return false;
 		}
-		if (fromApp != null) {
+		if (fromApp == null) {
+			// I can't figure out why IsoDiffract is slightly different size
+			// from IsoDistort until after a tweak of the sizing
+		} else {
 			app.document = fromApp.document;
 			app.formData = fromApp.formData;
 			app.startupDataFile = fromApp.startupDataFile;
@@ -1372,8 +1400,17 @@ public abstract class IsoApp {
 	}
 
 	protected void updateDimensions() {
+//		System.out.println("\nIsoApp.updateDime " + drawPanel.getSize());
 		drawWidth = drawPanel.getWidth();
 		drawHeight = drawPanel.getHeight();
+//		Component c = drawPanel;
+//		while (c != null) {
+//			System.out.println(c.getName() + " " + c.getBounds() + " " + (c instanceof JComponent ? ((JComponent) c).getBorder(): ""));
+//			c = c.getParent();
+//		}
+//		System.out.println(controlStatusPanel.getBounds());
+//		System.out.println(controlPanel.getBounds());
+//		System.out.println(statusPanel.getBounds());
 	}
 
 	/**
@@ -1436,7 +1473,12 @@ public abstract class IsoApp {
 	 */
 	private int readStartupFile(Object[] args) {
 		this.args = args;
-		switch (args == null || args.length == 0 || args[0] == null ? 0 : args.length) {
+		int n = (args == null || args.length == 0 || args[0] == null ? 0 : args.length);
+		if (n > 0 && args[n - 1].equals("-test")) {
+			testing = true;
+			n--;
+		}
+		switch (n) {
 		case 3:
 			document = args[2];
 			// Fall through //

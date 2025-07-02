@@ -1474,7 +1474,7 @@ public abstract class IsoApp {
 	private int readStartupFile(Object[] args) {
 		this.args = args;
 		int n = (args == null || args.length == 0 || args[0] == null ? 0 : args.length);
-		if (n > 0 && args[n - 1].equals("-test")) {
+		if (n > 0 && "-test".equals(args[n - 1])) {
 			testing = true;
 			n--;
 		}

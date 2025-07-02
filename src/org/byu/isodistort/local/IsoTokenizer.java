@@ -698,6 +698,7 @@ class IsoTokenizer extends TreeMap<String, int[]> {
 	static void replaceIsovizFileValue(byte[] isovizData, int[] pts, double d) {
 		int w = pts[1] - pts[0];
 		String s = MathUtil.varToString(d, 5, w);
+	    //System.out.println(">" + new String(isovizData, pts[0], w) + "<\n>" + s + "<= " + d + "/" + w);
 		for (int i = 0, pt = pts[0]; i < w; i++)
 			isovizData[pt++] = (byte) s.charAt(i);
 	}

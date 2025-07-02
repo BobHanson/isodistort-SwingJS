@@ -41,6 +41,8 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.KeyStroke;
 
+import org.byu.isodistort.server.ServerUtil;
+
 /**
  * A class to maintain a map of actions keyed by name. These actions are called
  * by menus or buttons.
@@ -455,7 +457,7 @@ public class MenuActions {
 
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						FileUtil.openURL(app, "https://iso.byu.edu/iso/isodistort.php");
+						FileUtil.openURL(app, ServerUtil.isoUrl + "isodistort.php");
 					}
 				});
 
@@ -468,7 +470,7 @@ public class MenuActions {
 
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						FileUtil.openURL(app, "https://stokes.byu.edu/iso/isodistorthelp.php");
+						FileUtil.openURL(app, ServerUtil.isoUrl + "isodistorthelp.php");
 					}
 				});
 
@@ -481,7 +483,7 @@ public class MenuActions {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				FileUtil.openURL(app, "https://iso.byu.edu/iso/isotropy.php");
+				FileUtil.openURL(app, ServerUtil.isoUrl + "isotropy.php");
 			}
 		});
 

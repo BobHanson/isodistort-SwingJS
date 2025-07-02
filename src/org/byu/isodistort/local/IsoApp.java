@@ -656,6 +656,8 @@ public abstract class IsoApp {
 	 */
 	public Boolean isIncommensurate;
 
+	public static boolean testing;
+
 	protected IsoApp(int appType) {
 		this.appType = appType;
 		statusPanel = new StatusPanel(new JTextArea());
@@ -1471,7 +1473,12 @@ public abstract class IsoApp {
 	 */
 	private int readStartupFile(Object[] args) {
 		this.args = args;
-		switch (args == null || args.length == 0 || args[0] == null ? 0 : args.length) {
+		int n = (args == null || args.length == 0 || args[0] == null ? 0 : args.length);
+		if (n > 0 && args[n - 1].equals("-test")) {
+			testing = true;
+			n--;
+		}
+		switch (n) {
 		case 3:
 			document = args[2];
 			// Fall through //

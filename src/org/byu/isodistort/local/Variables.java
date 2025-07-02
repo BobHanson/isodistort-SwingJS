@@ -44,6 +44,8 @@ import org.byu.isodistort.local.Bspt.CubeIterator;
  */
 public class Variables {
 
+	
+	public final static String parentText = "parent";
     public final static int ATOMS = -1; // for colors
 	public final static int DIS = Mode.DIS; // displacive
 	public final static int OCC = Mode.OCC; // occupancy (aka "scalar")
@@ -513,6 +515,7 @@ public class Variables {
 		String err = null;
 		if (mapFormData.containsKey(name)) {
 			String s = MathUtil.varToString(val, 5, 0);
+			//System.out.println("V.setModeFormVal " + name + "=" + s);
 			mapFormData.put(name, s);
 			if (document != null) {
 				/**
@@ -1798,10 +1801,10 @@ public class Variables {
 			int nAtomsRead = getNumberOfAtomsRead(nData);
 			int ncol = nData / nAtomsRead;
 
-			// testing only here -- remove this if satisfied
-			BitSet bs = createBSPeriodic(nAtomsRead, ncol);
-			System.out.println(bsPeriodic);
-			System.out.println(bs);
+//			// testing only here -- remove this if satisfied
+//			BitSet bs = createBSPeriodic(nAtomsRead, ncol);
+//			System.out.println(bsPeriodic);
+//			System.out.println(bs);
 
 			if (isDiffraction && bsPeriodic == null)
 				bsPeriodic = createBSPeriodic(nAtomsRead, ncol);
@@ -2285,7 +2288,7 @@ public class Variables {
 		 * @param childFraction
 		 */
 		void replaceData(Map<String, Object> mapFormData, byte[] isovizData, String sliderSetting, double childFraction) {
-			boolean toZero = "parent".equals(sliderSetting);
+			boolean toZero = parentText.equals(sliderSetting);
 			boolean toBest = "child".equals(sliderSetting);
 			// otherwise current
 			for (int mode = 0; mode < MODE_ATOMIC_COUNT; mode++) {
@@ -2295,6 +2298,7 @@ public class Variables {
 						for (int m = sliders[t].length; --m >= 0;) {
 							String name = getInputName(mode, t, m);
 							double d = (toZero ? 0 : toBest ? sliders[t][m].childValue : sliders[t][m].childValue * childFraction);
+							System.out.println("VAR " + name + "=" + d);
 							if (isovizData == null)
 								setModeFormValue(name, d, mapFormData, null);
 							else
@@ -2721,7 +2725,7 @@ public class Variables {
 				this.type = type;
 				// this setting is important; without it, everything looks shrunk
 				setPreferredSize(new Dimension(sliderWidth, barheight));
-				System.out.println("Variables.IsoSlider.setpref " + name + " " + sliderWidth);
+				//System.out.println("Variables.IsoSlider.setpref " + name + " " + sliderWidth);
 				if (type >= 0 && showSliderPointers) {
 					this.min = min;
 					this.calcAmp = calcAmp;
@@ -2772,6 +2776,7 @@ public class Variables {
 			 */
 			void setLabelValue(double val, String name) {
 				childValue = val;
+				//System.out.println("V " + name + "=" + val);
 				int prec = (type < MODE_ATOMIC_COUNT ? 2 : 3);
 				setSliderLabel(MathUtil.varToString(childValue, prec, -8) + "  " + name);
 				setSliderPointerPositions();

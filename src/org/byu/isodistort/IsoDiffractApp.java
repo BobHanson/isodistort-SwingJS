@@ -82,6 +82,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			adapter = new Adapter();
 			addMouseMotionListener(adapter);
 			addMouseListener(adapter);
+			addKeyListener(app);
 		}
 
 		private BufferedImage im;
@@ -402,8 +403,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	@Override
 	protected void updateDimensions() {
 		super.updateDimensions();
-		drawHalfWidth = drawWidth / 2;
-		drawHalfHeight = drawHeight / 2;
+		int drawWH2 = Math.min(drawWidth, drawHeight)/ 2;
+		drawHalfWidth = drawWH2;
+		drawHalfHeight = drawWH2;//drawHeight / 2;
 
 	}
 
@@ -471,8 +473,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			radius = max;
 			tooBig = true;
 		}
-		int x = (int) dx;
-		int y = (int) dy;
+		int x = (int) (dx);
+		int y = (int) (dy);
 		gr.setColor(tooBig ? Color.yellow : Color.white);
 		gr.fillOval(x - radius, y - radius, radius * 2, radius * 2);
 		gr.setColor(colorMap[color]);
@@ -535,7 +537,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		double y = drawHeight - stickYOffset;
 		gr.setColor(colorMap[0]);
-		drawDash(gr, drawHalfWidth, drawHeight - axisYOffset, 1, 0, drawHalfWidth, lineThickness, 0);
+		drawDash(gr, drawWidth/2, drawHeight - axisYOffset, 1, 0, drawWidth/2, lineThickness, 0);
 		for (int p = 0; p < peakCount; p++) {
 			if (peakIntensity[p] < MIN_PEAK_INTENSITY)
 				drawDash(gr, powderPeakX[p], y, 0, 1, tickLength, lineThickness, peakType[p]);
@@ -811,17 +813,21 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	private void recalcCrystal() {
 		double[] t03 = new double[3], t3 = new double[3];
 
+		int dw = (int) (drawWidth/2-drawHalfWidth);
+		int dh = (int) (drawHeight/2-drawHalfHeight);
+
 		// update the structure based on current slider values
 		variables.recalcDistortion();
 
 		recalcStrainMetrics();
 
 		// update the peak drawing coordinates
+		double minWH = Math.min(drawHalfWidth, drawHalfHeight);
 		for (int p = 0; p < peakCount; p++) {
 			MathUtil.vecaddN(crystalPeakHKL[p], -1.0, crystalHklCenter, t03);
 			MathUtil.mat3mul(matChildReciprocal2rotatedCartesian, t03, t3);
-			crystalPeakXY[p][0] = (1 + t3[0] / crystalDInvRange) * drawHalfWidth;
-			crystalPeakXY[p][1] = (1 - t3[1] / crystalDInvRange) * drawHalfHeight; 
+			crystalPeakXY[p][0] = (1 + t3[0] / crystalDInvRange) * minWH + dw;
+			crystalPeakXY[p][1] = (1 - t3[1] / crystalDInvRange) * minWH + dh; 
 		}
 
 		// Update the dinverse list
@@ -837,8 +843,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			MathUtil.norm3(t3);
 			double dirX = t3[0];
 			double dirY = t3[1];
-			crystalAxesXYDirXYLen[n][0] = drawHalfWidth;
-			crystalAxesXYDirXYLen[n][1] = drawHalfHeight;
+			crystalAxesXYDirXYLen[n][0] = drawHalfWidth + dw;
+			crystalAxesXYDirXYLen[n][1] = drawHalfHeight + dh;
 			crystalAxesXYDirXYLen[n][2] = dirX;
 			crystalAxesXYDirXYLen[n][3] = -dirY; // minus sign turns the picture upside right.
 			crystalAxesXYDirXYLen[n][4] = (Math.abs(dirX) <= 0.001 ? drawHalfWidth 
@@ -848,8 +854,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			for (int m = 0; m < crystalTickCount[n]; m++) {
 				MathUtil.mat3mul(matChildReciprocal2rotatedCartesian, crystalTickHKL[n][m], t3);
 				
-				crystalTickXY2[n][m][0] = (1 + t3[0] / crystalDInvRange) * drawHalfWidth;
-				crystalTickXY2[n][m][1] = (1 - t3[1] / crystalDInvRange) * drawHalfHeight; 
+				crystalTickXY2[n][m][0] = (1 + t3[0] / crystalDInvRange) * drawHalfWidth + dw;
+				crystalTickXY2[n][m][1] = (1 - t3[1] / crystalDInvRange) * drawHalfHeight + dh; 
 
 				// z = tempvec[2] * (drawHalfWidth / crystalDInvRange); // BH I guess...
 				crystalTickXY2[0][m][2] = crystalAxesXYDirXYLen[1][2];

@@ -218,6 +218,7 @@ public abstract class IsoApp {
 				((JComponent) getContentPane()).setTransferHandler(new FileUtil.FileDropHandler(newapp));
 				newapp.variables.setValuesFrom(currentApp.variables);
 				repaint();
+				requestFocus();				
 			} else {
 				currentApp.openApplication(type, currentApp.isovizData, null, false);
 			}

@@ -284,10 +284,10 @@ public class JSJSONParser {
     boolean isNull = false;
     for (;;) {
       if (isNull) {
-        l.addLast(null);
+        l.add(null);
         isNull = false;
       } else {
-        l.addLast(getValue(false));
+        l.add(getValue(false));
       }
       switch (getChar()) {
       case ',':

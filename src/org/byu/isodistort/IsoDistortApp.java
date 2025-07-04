@@ -338,9 +338,9 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		for (int i = 0; i < nBonds; i++)
 			bondObjects.child(i).setEnabled(false);
 		CubeIterator iterator = variables.getCubeIterator();
-		double rMax = variables.maxBondLength;
+		double rMax = variables.getMaxBondLength();
 		double rMax2 = rMax * rMax;
-		double rMin = variables.minBondLength;
+		double rMin = variables.getMinBondLength();
 		double rMin2 = rMin * rMin;
 		double minBondOcc = variables.minBondOcc;
 		for (int a1 = 0, n = variables.nAtoms; a1 < n; a1++) {

@@ -313,17 +313,17 @@ class Mode {
 	 * values.
 	 * 
 	 * @param sliders
-	 * @param childFraction
 	 * @param maxJSliderIntVal
 	 * @param irreps
 	 */
-	void readSliders(IsoSlider[][] sliders, double dddchildFraction, double maxJSliderIntVal, Mode irreps) {
+	void readSliders(IsoSlider[][] sliders, double maxJSliderIntVal, Mode irreps) {
 		boolean isIrrep = (type == IRREP);
 		for (int t = 0; t < nTypes; t++) {
 			for (int m = modesPerType[t]; --m >= 0;) {
 				double maxAmp = maxAmpTM[t][m];
-				double f = sliders[t][m].getValue() / maxJSliderIntVal;
-				double val = valuesTM[t][m] = maxAmp * f;
+				double val = sliders[t][m].getValue();
+				double f = val / maxJSliderIntVal;
+				val = valuesTM[t][m] = maxAmp * f;
 				double irrepValue = (isIrrep ? 1 : irreps.valuesTM[0][irrepTM[t][m]]);
 				sliders[t][m].setLabelValue(val * irrepValue, nameTM[t][m]);
 			}

@@ -98,6 +98,9 @@ public abstract class IsoDialog extends JDialog {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	
+	public static final String coordinateLabelText = "\nMode Amplitudes:";
+	
 	private static CIFDialog cifDialog;
 	private static DistortionDialog distortionDialog;
 	private static FormDialog formDialog;
@@ -143,7 +146,7 @@ public abstract class IsoDialog extends JDialog {
 			String options = "" + formData.get("slidersetting");
 			boolean isOriginal = (options.indexOf("original") >= 0);
 			boolean isNew = (options.indexOf("new") >= 0);
-			formData.put("slidersetting", (isNew ? "current" : "original"));
+			formData.put("slidersetting", (isNew ? "current" : "child"));
 			super.init();
 			for (int i = 0, n = this.items.size(); i < n; i++) {
 				JComponent c = items.get(i);
@@ -162,11 +165,10 @@ public abstract class IsoDialog extends JDialog {
 		}
 		
 		private static String[] isoviz = { //
-				"label", "\nCoordinates:", //
-				"rslidersetting", "original", "original", //
+				"label", coordinateLabelText, //
+				"rslidersetting", "parent", Variables.parentText.toLowerCase(), //
+				"rslidersetting", "child", Variables.childText.toLowerCase(), //
 				"rslidersetting", "current", "current", //
-				"rslidersetting", "parent", "parent", //
-				"rslidersetting", "child", "child", //
 		};
 
 	}
@@ -198,10 +200,10 @@ public abstract class IsoDialog extends JDialog {
 		}
 
 		private static String[] cif = { //
-				"label", "\nCoordinates:", //
+				"label", coordinateLabelText, //
+				"rslidersetting", "parent", Variables.parentText.toLowerCase(), //
+				"rslidersetting", "child", Variables.childText.toLowerCase(), //
 				"rslidersetting", "current", "current", //
-				"rslidersetting", "parent", "parent", //
-				"rslidersetting", "child", "child", //
 
 				"label", "\nNumber of decimal places in CIF file:", //
 				"bcifdec", " 5, 6, 7, 8, 9,10,11,12,13,14,15,16", //
@@ -338,10 +340,10 @@ public abstract class IsoDialog extends JDialog {
 		}
 
 		private static String[] generic = { 
-				"label", "\nCoordinates:", //
+				"label", coordinateLabelText, //
 				"rslidersetting", "current", "current", //
-				"rslidersetting", "parent", "parent", //
-				"rslidersetting", "child", "child", //
+				"rslidersetting", "parent", Variables.parentText, //
+				"rslidersetting", "child", Variables.childText, //
 		};
 
 	}
@@ -399,10 +401,10 @@ public abstract class IsoDialog extends JDialog {
 				"label", "\n<b>Local ISODISTORT values", //
 				"label", "\nNominal atom radius (Angstroms)", //
 				"datomicradius", //
-				"label", "\nMaxium bond length (Angstroms)", //
-				"dmaxbondlength", //
 				"label", "\nMinimum bond length (Angstroms)", //
 				"dminbondlength", //
+				"label", "\nMaxium bond length (Angstroms)", //
+				"dmaxbondlength", //
 				"label", "\n<b>Server ISODISTORT values", //
 				"label", "\nViewing range:", //
 				"label", "\nxmin", "dsupercellxmin", "label", "xmax", "dsupercellxmax", //
@@ -482,10 +484,10 @@ public abstract class IsoDialog extends JDialog {
 		}
 
 		private static String[] topas = { //
-				"label", "\nCoordinates:", //
+				"label", coordinateLabelText, //
 				"rslidersetting", "current", "current", //
-				"rslidersetting", "parent", "parent", //
-				"rslidersetting", "child", "child", //
+				"rslidersetting", "parent", Variables.parentText, //
+				"rslidersetting", "child", Variables.childText, //
 
 				"label", "\nRemember to add the appropriate peak shape line ",
 				"label", "\nwhen passing this into an input file", //

@@ -379,7 +379,6 @@ org/byu/isodistort/local/MenuActions.js
 org/byu/isodistort/local/Mode.js
 org/byu/isodistort/local/Variables.js
 org/byu/isodistort/render/Geometry.js
-org/byu/isodistort/render/IsoRenderPanel.js
 org/byu/isodistort/render/Material.js
 org/byu/isodistort/render/Matrix3D.js
 org/byu/isodistort/render/RenderPanel3D.js

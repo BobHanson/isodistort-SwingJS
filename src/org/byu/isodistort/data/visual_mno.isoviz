@@ -5,7 +5,10 @@
 !atommaxradius    0.40000
  
 #maximum_bond_length_in_angstroms 
-!maxbondlength    2.00000
+!minbondlength    2.00000
+ 
+#maximum_bond_length_in_angstroms 
+!maxbondlength    4.00000
  
 #applet_width_in_pixels 
 !appletwidth   1024

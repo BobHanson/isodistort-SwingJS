@@ -45,7 +45,13 @@ import org.byu.isodistort.local.Bspt.CubeIterator;
 public class Variables {
 
 	
-	public final static String parentText = "parent";
+	public final static String parentText = "Zero";
+
+	public final static String childText = "Initial";
+
+	protected static final String mainSliderParentName = "parent"; // "undistorted"
+	protected static final String mainSliderChildName = "child"; // "distorted"
+
     public final static int ATOMS = -1; // for colors
 	public final static int DIS = Mode.DIS; // displacive
 	public final static int OCC = Mode.OCC; // occupancy (aka "scalar")
@@ -169,12 +175,29 @@ public class Variables {
 	/**
 	 * maximum and minimum bond lengths in Angstroms beyond which bonds are not drawn
 	 */
-	public double maxBondLength, minBondLength;
+	private double maxBondLength, minBondLength;
+	public double getMaxBondLength() {
+		return maxBondLength; 
+	}
+	public double getMinBondLength() {
+		return minBondLength; 
+	}
+	
+	public void setMaxBondLength(double angstroms) {
+		maxBondLength = angstroms;
+	}
+
+	public void setMinBondLength(double angstroms) {
+		minBondLength = angstroms;
+	}
+
 	/**
 	 * Minimum atomic occupancy below which bonds are not drawn
 	 */
+	
 	public double minBondOcc;
 
+	
 	/**
 	 * cell for the child, aka "super" cell
 	 * 
@@ -2052,9 +2075,9 @@ public class Variables {
 			// figure 1 minimum for a real number, not one that was adjusted
 			if (d < 0.5)
 				d *= 10;
-			maxBondLength = Math.max(0, d);
+			setMaxBondLength(Math.max(0, d));
 			d = getOneDouble("minbondlength", 0);
-			minBondLength = Math.max(0, d);
+			setMinBondLength(Math.max(0, d));
 			// find minimum atomic occupancy for which bonds should be displayed
 			minBondOcc = getOneDouble("minbondocc", 0.5);
 		}
@@ -2279,26 +2302,33 @@ public class Variables {
 		private int sliderPanelWidth;
 
 		/**
-		 * Set this web input form map's xxxmode00t00m, scalar00t00m, and strainN values to the desired values 
-		 * or set the isovizData to this information.
+		 * Set this web input form map's xxxmode00t00m, scalar00t00m, and strainN values
+		 * to the desired values or set the isovizData to this information.
 		 * 
 		 * @param mapFormData
 		 * @param isovizData
-		 * @param sliderSetting "current", "parent", or "child"
+		 * @param sliderID      "current", "parent", or "child"
 		 * @param childFraction
 		 */
-		void replaceData(Map<String, Object> mapFormData, byte[] isovizData, String sliderSetting, double childFraction) {
-			boolean toZero = parentText.equals(sliderSetting);
-			boolean toBest = "child".equals(sliderSetting);
-			// otherwise current
+		void replaceData(Map<String, Object> mapFormData, byte[] isovizData, String sliderID, double childFraction) {
+			boolean toZero = "parent".equals(sliderID);
+			boolean toInitial = "child".equals(sliderID);
+			// otherwise "current"
 			for (int mode = 0; mode < MODE_ATOMIC_COUNT; mode++) {
 				if (isModeActive(modes[mode])) {
 					IsoSlider[][] sliders = this.sliderTM[mode];
 					for (int t = sliders.length; --t >= 0;) {
 						for (int m = sliders[t].length; --m >= 0;) {
 							String name = getInputName(mode, t, m);
-							double d = (toZero ? 0 : toBest ? sliders[t][m].childValue : sliders[t][m].childValue * childFraction);
-							System.out.println("VAR " + name + "=" + d);
+							IsoSlider sm = sliders[t][m];
+							// Here we check to see if the slider label reads its initial value. 
+							// In that case, we use the "initial" value
+							double d = (toZero ? 0
+									: toInitial || childFraction == 1
+											&& sm.childLabelValue == sm.childLabelValue0
+													? sm.calcAmp
+													: sm.childLabelValue * childFraction);
+							//System.out.println("VAR " + name + "=" + d);
 							if (isovizData == null)
 								setModeFormValue(name, d, mapFormData, null);
 							else
@@ -2311,7 +2341,7 @@ public class Variables {
 				double[] vals = modes[STRAIN].valuesTM[0];
 				for (int m = vals.length; --m >= 0;) {
 					String name = getInputName(STRAIN, 0, m);
-					double d = (toZero ? 0 : toBest ? modes[STRAIN].calcAmpTM[0][m] : vals[m]);
+					double d = (toZero ? 0 : toInitial ? modes[STRAIN].calcAmpTM[0][m] : vals[m]);
 					if (isovizData == null)
 						setModeFormValue(name, d, mapFormData, null);
 					else
@@ -2509,7 +2539,7 @@ public class Variables {
 			mainSliderLabel.setText(main);
 			for (int i = MODE_COUNT; --i >= 0;) {
 				if (isModeActive(modes[i]))
-					modes[i].readSliders(sliderTM[i], mainSliderChildFraction, maxJSliderIntVal, modes[IRREP]);
+					modes[i].readSliders(sliderTM[i], maxJSliderIntVal, modes[IRREP]);
 			}
 		}
 
@@ -2548,10 +2578,10 @@ public class Variables {
 			mainSliderLabel.setForeground(COLOR_CHILD_CELL);
 			mainSliderLabel.setHorizontalAlignment(JLabel.CENTER);
 			mainSliderLabel.setVerticalAlignment(JLabel.CENTER);
-			mainSlider = new IsoSlider(-1, "child", 0, 1, 1, Color.WHITE);
+			mainSlider = new IsoSlider(-1, mainSliderChildName, 0, 1, 1, Color.WHITE);
 
 			masterSliderPanel.add(Box.createHorizontalGlue());
-			JLabel pl = new JLabel("parent ");
+			JLabel pl = new JLabel(mainSliderParentName + " ");
 			pl.setForeground(COLOR_PARENT_CELL);
 			masterSliderPanel.add(pl);
 			masterSliderPanel.add(mainSlider);
@@ -2713,7 +2743,7 @@ public class Variables {
 
 			JLabel sliderLabel;
 
-			private double childValue;
+			public double childLabelValue, childLabelValue0 = Double.NaN;
 
 			void setSliderLabel(String text) {
 				sliderLabel.setText(text);
@@ -2775,10 +2805,12 @@ public class Variables {
 			 * @param name
 			 */
 			void setLabelValue(double val, String name) {
-				childValue = val;
-				//System.out.println("V " + name + "=" + val);
+				childLabelValue = val;
+				if (Double.isNaN(childLabelValue0))
+					childLabelValue0 = childLabelValue;
+				//System.out.println("V.setLabelValue " + name + " childValue=" + val);
 				int prec = (type < MODE_ATOMIC_COUNT ? 2 : 3);
-				setSliderLabel(MathUtil.varToString(childValue, prec, -8) + "  " + name);
+				setSliderLabel(MathUtil.varToString(childLabelValue, prec, -8) + "  " + name);
 				setSliderPointerPositions();
 			}
 
@@ -2787,7 +2819,7 @@ public class Variables {
 					return;
 				}
 				int w = getWidth();
-				setPointerPosition(whiteCurrentAmpValuePointer, childValue * mainSliderChildFraction/maxAmp, w);
+				setPointerPosition(whiteCurrentAmpValuePointer, childLabelValue * mainSliderChildFraction/maxAmp, w);
 				if (orangeZeroPointer != null) {
 					setPointerPosition(orangeZeroPointer, 0, w);
 					setPointerPosition(blackCalcAmpPointer, calcAmp/maxAmp, w);

@@ -409,7 +409,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	@Override
 	public synchronized void updateDisplay() {
-		if (isAdjusting || drawHeight < 20)
+		if (isAdjusting || drawHeight < 20 || variables == null)
 			return;
 		if (needsRecalc || variables.isChanged) {
 			isAdjusting = true;

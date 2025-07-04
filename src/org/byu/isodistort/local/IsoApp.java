@@ -1207,7 +1207,7 @@ public abstract class IsoApp {
 			// be null.
 			// but then there are no options to save the current settings.
 			map = new LinkedHashMap<String, Object>();
-			options = "original";
+			options = "child";
 		}
 		if (formData != null) {
 			map = ensureMapData(formData, true, false);

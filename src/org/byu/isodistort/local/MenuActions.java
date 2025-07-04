@@ -357,7 +357,7 @@ public class MenuActions {
 			}
 		});
 
-		actions.put("Set.zero", new IsoAction("setZero", "Reset to Parent",
+		actions.put("Set.zero", new IsoAction("setZero", "Reset to " + Variables.parentText,
 				"Set the sliders to their 0 'parent' positions.", KeyEvent.VK_Z) {
 			/**
 					 * 
@@ -370,7 +370,7 @@ public class MenuActions {
 			}
 		});
 
-		actions.put("Set.resetVariables", new IsoAction("setResetVariables", "Reset to Child",
+		actions.put("Set.resetVariables", new IsoAction("setResetVariables", "Reset to " + Variables.childText,
 				"Reset the sliders to their original 'child' positions.", KeyEvent.VK_I) {
 			/**
 					 * 
@@ -545,6 +545,8 @@ public class MenuActions {
 
 	private static final int SHORTCUT = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
 
+	private static boolean flushHelpRight = false;
+
 	private void add(String menuID, JMenuItem item, JMenuBar menuBar, JMenu menu, IsoAction action) {
 		boolean isTopLevelMenuBarMenu = (menuBar != null && item instanceof JMenu && menuID.lastIndexOf(".", menuID.length() - 2) < 0);
 		boolean hasSpacer = (action != null && action.hasSpacer);
@@ -566,7 +568,7 @@ public class MenuActions {
 				}
 			}
 		}
-		if (menuID.equals("Help.") && menuBar != null) {
+		if (flushHelpRight && menuID.equals("Help.") && menuBar != null) {
 			menuBar.add(Box.createHorizontalGlue());
 		}
 		if (isTopLevelMenuBarMenu) {

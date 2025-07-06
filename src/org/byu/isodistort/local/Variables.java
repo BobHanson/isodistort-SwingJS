@@ -7,8 +7,11 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -992,6 +995,106 @@ public class Variables {
 
 	} // end of Atom
 
+	public static class SymopData {
+		final static double ptol = 0.001;
+		
+		/**
+		 * the 4x4 matrix representation for this operator; null for a centering translation
+		 */
+		protected double[][] op;
+		
+		/**
+		 * We need
+		 * 
+		 * r3t = mat3transpose(op)
+		 * 
+		 * to check that 
+		 * 
+		 * r3t * [h,k,l] == [h,k,l]
+		 * 
+		 * Note that r3t is unnecessary for a centering translation, where m00 == m11 =
+		 * m22 = 1 and all other terms are 0. In that case, [h,k,l] - [h,k,l] == [0,0,0].
+		 * 
+		 * Bob Hanson 2025.07.06
+		 * 
+		 */
+	    protected double[][] r3t;
+	    
+	    /**
+	     * the intrinsic translation for screw axes and glide planes
+	     */
+		protected double[] vi;
+		
+		/**
+		 * potentially useful but not implemented Jones-Faithful description of the operation
+		 */
+		public String opXYZ;
+		
+		protected SymopData(double[] vi) {
+			// centering translation
+			this.vi = vi;
+		}
+		
+		protected SymopData(double[][] op, double[] vi) { 
+			this.op = op;
+			this.vi = vi;
+			r3t = new double[4][4];
+			MathUtil.mat3transpose(op, r3t);
+			System.out.println("adding operator " + this);
+		}
+
+		private static double[] v3 = new double[3];
+		
+		public boolean isSystematicAbsence(double[] hkl) {
+			return (checkVi(hkl) && checkR(hkl));
+		}
+		
+		/**
+		 * Check that vi.dot.hkl.
+		 * 
+		 * @param hkl
+		 * @return true if vi.dot.hkl is nonintegral
+		 */
+		private boolean checkVi(double[] hkl) {
+			double d = MathUtil.dot3(vi, hkl);
+			return !MathUtil.approxEqual(d, Math.rint(d), ptol);
+		}
+
+		private boolean checkR(double[] hkl) {
+			if (r3t == null)
+				return true;
+			MathUtil.mat3mul(r3t, hkl, v3);
+			return MathUtil.approxEqual3(v3, hkl, ptol);
+		}
+
+		@Override
+		public String toString() {
+			return (op == null ? "centering " : "\n" + MathUtil.matToString(op) + "\n with vi=") + Arrays.toString(vi);
+		}
+
+		final static double[][] t1 = new double[4][4];
+		final static double[][] t2 = new double[4][4];
+		final static double[][] t3 = new double[4][4];
+		/**
+		 * given a 4x4 matrix, see if it is a point group operation
+		 * 
+		 * @param op
+		 * @return translation or null
+		 */
+		protected static double[] getIntrinsicTranslation(double[][] op) {
+			// check to see if an operation is a point group operation or not.
+			MathUtil.copyNN(op, t1);
+			int n = 1;
+			while (!MathUtil.mat3isUnit(t1)) {
+				MathUtil.mat4product(t1, op, t2, t3);
+				MathUtil.copyNN(t2, t1);
+				n++;
+			}
+			double[] v = new double[] { t1[0][3] / n, t1[1][3] / n, t1[2][3] / n };
+			return (MathUtil.isIntegral3(v, 0.0001d) ? null : v);
+		}
+		
+	}
 	/**
 	 * The superclass of ParentCell and ChildCell
 	 * 
@@ -1032,6 +1135,17 @@ public class Variables {
 		 */
 		public double[][] conv2primTransposeP;
 
+		/**
+		 * The list of non-point-group symmetry operations for this space group,
+		 * including nCenteringOps at the end of the list.
+		 * 
+		 * Note that if every we wanted to actually list all of the 
+		 * operations, we would need to expand the list by multiplying
+		 * the N-nCenteringOps operations by each centering op.
+		 * 
+		 */
+		public List<SymopData>  symopData;
+		
 		/**
 		 * Array of Cartesian vertices of strained window-centered cell. [edge
 		 * number][x, y, z]
@@ -1238,6 +1352,16 @@ public class Variables {
 			return axesInfo[axis];
 		}
 
+		public SymopData getSystematicallAbsentOp(double[] hkl) {
+			for (int i = 0, n = symopData.size(); i < n; i++) {
+				SymopData data = symopData.get(i);
+				if (data.isSystematicAbsence(hkl)) {
+					return data;
+				}
+			}
+			return null;
+		}
+
 	} // end of Cell
 
 	public static class ParentCell extends Cell{
@@ -1404,7 +1528,7 @@ public class Variables {
 		double[][] getTempStrainedCartesianBasis(double[] info) {
 			MathUtil.voigt2matrix(info, t, 0);
 			MathUtil.mat3product(basisCart, t, t2, t4);
-			MathUtil.mat3copy(t2, t);
+			MathUtil.copyNN(t2, t);
 			MathUtil.mat3product(t, basisCartInverse, t2, t4);
 			return t2;
 		}
@@ -1785,7 +1909,57 @@ public class Variables {
 			childCell.conv2primTransposeP = getTransform("conv2primchildbasis", false);
 			parentCell.conv2primTransposeP = getTransform("conv2primparentbasis", false);
 			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, childCell.conv2convParentTransposeP);
+			parseSymmetryOperations("child");
+			parseSymmetryOperations("parent");
 			transformParentToChild(false);
+		}
+
+		private void parseSymmetryOperations(String type) {
+			Cell cell = (type == "child" ? childCell : parentCell);
+//			!convchildcenteringvecs 
+//			   0.00000   0.00000   0.00000
+//			   0.50000   0.50000   0.50000
+			int nData = vt.setData("conv" + type + "centeringvecs");
+			int nCenteringOps = nData / 3;
+			int ptCenterings = 0;
+			List<SymopData> list = cell.symopData = new ArrayList<SymopData>();
+			double[] dataC = null;
+			if (nCenteringOps != 0) {
+				if (nData % 3 != 0)
+					parseError("expected three columns of data (cx,cy,cz); found " + nData, 1);
+				dataC = new double[nData];
+				getDoubleArray(null, dataC, 0, nData);
+				if (dataC[0] == 0 && dataC[1] == 0 && dataC[2] == 0) {
+					nCenteringOps--;
+					ptCenterings = 3;
+				}				
+				for (int ic = 0, pt = ptCenterings; ic < nCenteringOps; ic++) {
+					list.add(new SymopData(new double[] { dataC[pt++], dataC[pt++], dataC[pt++]}));
+				}
+
+			}
+			nData = vt.setData("conv" + type + "spacegroupops");
+			if (nData == 0)
+				return;
+			if (nData % 16 != 0)
+				parseError("expected 16 columns of data for operations; found " + nData, 1);
+			int nops = nData / 16;
+			double[] dataO = new double[nData];
+			getDoubleArray(null, dataO, 0, nData);
+			for (int pt = 0, iop = 0; iop < nops; iop++) {
+				double[][] op = new double[4][4];
+				for (int r = 0; r < 4; r++) {
+					for (int c = 0; c < 4; c++) {
+						op[r][c] = dataO[pt++];
+					}
+				}
+				double[] vi = SymopData.getIntrinsicTranslation(op);
+				if (vi != null) {
+					// screw axes and glide planes only
+					list.add(new SymopData(op, vi));
+				}
+			}			
+			System.out.println(list.size() + " operations as SymData, including " + nCenteringOps + " centerings");
 		}
 
 		private double[][] getTransform(String key, boolean isRequired) {

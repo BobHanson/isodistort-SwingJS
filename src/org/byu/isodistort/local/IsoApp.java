@@ -88,6 +88,7 @@ public abstract class IsoApp {
 	public final static String[] exampleFiles = { "sample DISTORTION File", "data/data.iso.txt", //
 			"sample ISOVIS File 1", "data/data29.isoviz", //
 			"sample ISOVIS File 2", "data/test25.txt", //
+			"sample ISOVIS File 3(operations)", "data/operations1.isoviz", //
 			"incommensurate DISTORTION file", "data/tbmno3-distortion.iso.txt", //
 			"large ISOVIZ file", "data/ZrP2O7-sg205-sg61-distort.isoviz", //
 			null, "data/visual_bccspiral.isoviz", //

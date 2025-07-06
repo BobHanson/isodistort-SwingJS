@@ -162,11 +162,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		@Override
 		public void paint(Graphics gr) {
-			super.paint(gr);
+//			super.paint(gr);
 			Dimension d = getSize();
-			System.out.println("RenderPanel paint " + drawWidth + "," + drawHeight + " d=" + d);
+			gr.setColor(Color.black);
+			gr.fillRect(0,  0,  d.width, d.height);
+			//System.out.println("RenderPanel paint " + drawWidth + "," + drawHeight + " d=" + d);
 			if (needsRecalc || drawWidth != d.width || drawHeight != d.height) {
-				updateForPaint();
+				IsoDiffractApp.this.updateForPaint();
 				return;
 			}
 			if (im == null || im.getWidth() != d.width || im.getHeight() != d.height)

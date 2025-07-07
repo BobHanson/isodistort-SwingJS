@@ -481,6 +481,15 @@ public class MathUtil {
 		return (Math.abs(a - b) < tol);
 	}
 
+    public static double approx(double f, double n) {
+        f = Math.round (f * n) / n;
+        return (f == 0 ? 0 : f);// removing -0 values
+      }
+
+	public static double approx(double f) {
+		return approx(f, 100);
+	}
+
 	public static String a2s(double[] a) {
 		return Arrays.toString(a);
 	}
@@ -537,6 +546,23 @@ public class MathUtil {
 		return m[0][0] == 1 && m[0][1] == 0 && m[0][2] == 0 && //
 			   m[1][0] == 0 && m[1][1] == 1 && m[1][2] == 0 && //
 			   m[2][0] == 0 && m[2][1] == 0 && m[2][2] == 1;
+	}
+
+	public static String roundVec00(double[] v) {
+			return "(" + trim00(v[0]) + ", " + trim00(v[1]) + ", "
+					+ trim00(v[2]) + ")";
+	}
+
+	public static String trim00(double val) {
+		String s = varToString(val, 2, 0);
+		int n = s.length() - 1;
+		char ch = '0';
+		while ((ch = s.charAt(n)) == '0') {
+			--n;
+		}
+		if (ch != '.')
+			n++;
+		return s.substring(0, n);
 	}
 
 //	  static {

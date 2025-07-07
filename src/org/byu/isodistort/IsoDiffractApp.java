@@ -412,11 +412,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	private double[][][] crystalTickXY2 = new double[2][maxTicks][4];
 
 	/**
-	 * A map of assignment types
-	 */
-	private Map<String, PeakData> mapAssignHKLType = new HashMap<>();
-	
-	/**
 	 * Plot axes for crystal display
 	 */
 	double[][] crystalAxesXYDirXYLen = new double[2][5];
@@ -1641,13 +1636,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		double[] primitiveHKL = new double[3];
 		double ptolerance = 0.01;
 		for (int p = 0; p < peakCount; p++) {
-			String key = peakData[p].crystalPeakHKLString;
-			PeakData data = (mapAssignHKLType.get(key));
-			if (data != null) {
-				peakData[p] = data;
-				continue;
-			}
-			double[] convChildHKL = peakData[p].crystalPeakHKL;
+			PeakData pd = peakData[p];
+			double[] convChildHKL = pd.crystalPeakHKL;
 			MathUtil.mat3mul(variables.childCell.conv2convParentTransposeP, convChildHKL, conventionalHKL);
 			MathUtil.mat3mul(variables.parentCell.conv2primTransposeP, conventionalHKL, primitiveHKL);
 			int itype;
@@ -1666,8 +1656,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 					System.err.println("IsoDiffractApp.assignPeakTypesPrimitive error for " + peakData[p].crystalPeakHKLString);
 				}
 			}
-			peakData[p].setPeakType(itype, null);
-			mapAssignHKLType.put(key, peakData[p]);
+			pd.setPeakType(itype, null);
 		}
 	}
 
@@ -1682,16 +1671,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// Set the peak type to 1 for parent Bragg peaks, and 3 otherwise.
 		// Determines whether or not a peak is a parent Bragg peak (h k l all integral)
 		for (int p = 0; p < peakCount; p++) {
-			PeakData data = (mapAssignHKLType.get(peakData[p].crystalPeakHKLString));
-			if (data != null) {
-				peakData[p] = data;
-				continue;
-			}
+			PeakData pd = peakData[p];
 			// transform super hkl into parent hkl
 			MathUtil.mat3mul(variables.childCell.conv2convParentTransposeP, peakData[p].crystalPeakHKL, parentHKL); 
-			peakData[p].setPeakType(PEAK_TYPE_CHILD_BRAGG, null); // 3
+			pd.setPeakType(PEAK_TYPE_CHILD_BRAGG, null); // 3
 			if (MathUtil.isIntegral3(parentHKL, ptolerance)) {
-				peakData[p].setPeakType(PEAK_TYPE_PARENT_BRAGG, null); // 1
+				pd.setPeakType(PEAK_TYPE_PARENT_BRAGG, null); // 1
 			}
 		}
 		// Save and zero all displacive, scalar and magnetic mode values
@@ -1704,17 +1689,18 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		recalcIntensities();
 		// Calculate all peak intensities and set (now) zero-intensity Bragg peaks to type 2.
 		for (int p = 0; p < peakCount; p++) {
-			if ((peakData[p].peakType == PEAK_TYPE_PARENT_BRAGG) && (Math.abs(peakData[p].peakIntensity) < 0.00000001))
-				peakData[p].peakType = PEAK_TYPE_PARENT_SYSABS; // 2
+			PeakData pd = peakData[p];
+			if ((pd.peakType == PEAK_TYPE_PARENT_BRAGG) && (Math.abs(pd.peakIntensity) < 0.00000001))
+				pd.peakType = PEAK_TYPE_PARENT_SYSABS; // 2
 		}
 		// Now randomize all Non-GM1 mode values to remove them from the peaks
 		variables.randomizeNonGM1Values(rval);
 		variables.recalcDistortion();
 		recalcIntensities();
 		for (int p = 0; p < peakCount; p++) {
-			if ((peakData[p].peakType == PEAK_TYPE_CHILD_BRAGG) && (Math.abs(peakData[p].peakIntensity) < 0.00000001))
-				peakData[p].peakType = PEAK_TYPE_CHILD_SYSABS; // 4
-			mapAssignHKLType.put(peakData[p].crystalPeakHKLString, peakData[p]);
+			PeakData pd = peakData[p];
+			if ((pd.peakType == PEAK_TYPE_CHILD_BRAGG) && (Math.abs(peakData[p].peakIntensity) < 0.00000001))
+				pd.peakType = PEAK_TYPE_CHILD_SYSABS; // 4
 		}
 		// Restore all displacement and scalar mode values to their original values.
 		variables.restoreModeValues();

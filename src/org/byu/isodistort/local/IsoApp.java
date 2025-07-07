@@ -236,11 +236,12 @@ public abstract class IsoApp {
 			@Override
 			public void windowOpened(WindowEvent e) {
 				/**
+				 * 
 				 * @j2sNative
 				 * 
-				 * window.scrollTo(0,0);
-				 * 
+				 * setTimeout(function(){window.scrollTo(0,0)},100);
 				 */
+
 			}
 
 			@Override

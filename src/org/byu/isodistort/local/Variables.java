@@ -7,8 +7,11 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -23,16 +26,16 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import org.byu.isodistort.local.Bspt.CubeIterator;
+import org.byu.isodistort.local.Cell.ChildCell;
 
 /**
- * A class to maintain all aspects of variables for ISODISTORT and ISODIFFRACT.
+ * A class to maintain all aspects of variables that must be maintained for both
+ * ISODISTORT and ISODIFFRACT.
  * 
  * Contains the following inner classes:
  * 
  * 
  * Atom (inner static)
- * 
- * Cell (inner static)
  * 
  * IsoParser (inner)
  * 
@@ -44,7 +47,6 @@ import org.byu.isodistort.local.Bspt.CubeIterator;
  */
 public class Variables {
 
-	
 	public final static String parentText = "Zero";
 
 	public final static String childText = "Initial";
@@ -52,7 +54,7 @@ public class Variables {
 	protected static final String mainSliderParentName = "parent"; // "undistorted"
 	protected static final String mainSliderChildName = "child"; // "distorted"
 
-    public final static int ATOMS = -1; // for colors
+	public final static int ATOMS = -1; // for colors
 	public final static int DIS = Mode.DIS; // displacive
 	public final static int OCC = Mode.OCC; // occupancy (aka "scalar")
 	public final static int MAG = Mode.MAG; // magnetic
@@ -70,8 +72,7 @@ public class Variables {
 	static final Color COLOR_PARENT_CELL = new Color(204, 128, 128);
 
 	static final Color COLOR_STRAIN = Color.DARK_GRAY;
-    static final Color COLOR_IRREP = new Color(0xA0A0A0);
-
+	static final Color COLOR_IRREP = new Color(0xA0A0A0);
 
 	/**
 	 * BH added -- allows showing of zero-value and IRREP-adjusted slider pointers
@@ -100,9 +101,8 @@ public class Variables {
 	public Atom[] atoms;
 
 	/**
-	 * a bitset used in IsoDiffractApp to
-	 * filter atoms and atom properties. It is provides an option to display
-	 * only primitive atoms in IsoDistortApp.
+	 * a bitset used in IsoDiffractApp to filter atoms and atom properties. It is
+	 * provides an option to display only primitive atoms in IsoDistortApp.
 	 * 
 	 */
 	BitSet bsPeriodic = null;
@@ -173,16 +173,19 @@ public class Variables {
 	 */
 	public double defaultUiso;
 	/**
-	 * maximum and minimum bond lengths in Angstroms beyond which bonds are not drawn
+	 * maximum and minimum bond lengths in Angstroms beyond which bonds are not
+	 * drawn
 	 */
 	private double maxBondLength, minBondLength;
+
 	public double getMaxBondLength() {
-		return maxBondLength; 
+		return maxBondLength;
 	}
+
 	public double getMinBondLength() {
-		return minBondLength; 
+		return minBondLength;
 	}
-	
+
 	public void setMaxBondLength(double angstroms) {
 		maxBondLength = angstroms;
 	}
@@ -194,20 +197,20 @@ public class Variables {
 	/**
 	 * Minimum atomic occupancy below which bonds are not drawn
 	 */
-	
+
 	public double minBondOcc;
 
-	
 	/**
-	 * cell for the child, aka "super" cell
+	 * cell for the child, which is missing some number of operations relative to
+	 * the parent.
 	 * 
 	 */
 	public ChildCell childCell = new ChildCell();
 
 	/**
-	 * cell for the parent
+	 * cell for the parent, which contains more symmetry than the child.
 	 */
-	public ParentCell parentCell = new ParentCell();
+	public Cell.ParentCell parentCell = new Cell.ParentCell();
 
 	/**
 	 * Center of cell in strained cartesian Angstrom coords. [x, y, z]
@@ -245,11 +248,10 @@ public class Variables {
 	 * 
 	 */
 	private Bspt bspt;
-	
-	
+
 	/**
-	 * flag to indicate that this is an incommensurately modulated structure;
-	 * 0 means not incommensurate
+	 * flag to indicate that this is an incommensurately modulated structure; 0
+	 * means not incommensurate
 	 */
 	public int modDim;
 	public boolean needColorBox;
@@ -278,7 +280,7 @@ public class Variables {
 	 * instantiates and initializes the scroll and control panels.
 	 * 
 	 * @param sliderPanel
-	 * @param d 
+	 * @param d
 	 * 
 	 */
 	public void initSliderPanel(JPanel sliderPanel, int width) {
@@ -303,7 +305,7 @@ public class Variables {
 		}
 		return true;
 	}
-	
+
 	public Atom getAtom(int ia) {
 		return atoms[ia];
 	}
@@ -400,7 +402,8 @@ public class Variables {
 	 */
 	public void recalcDistortion() {
 
-		// Calculate strained parent and child unit cell basis vectors in cartesian Angstrom
+		// Calculate strained parent and child unit cell basis vectors in cartesian
+		// Angstrom
 		// coordinates.
 
 		double[][] pStrainPlusIdentity = (modes[STRAIN] == null
@@ -456,12 +459,11 @@ public class Variables {
 		if (isStrained) {
 			double[] t3 = new double[3];
 			MathUtil.mat3product(parentCell.basisCart, parentCell.conv2convChildTransposeP, childCell.basisCart, t33);
-			MathUtil.mat3inverse(childCell.basisCart, childCell.basisCartInverse, t3, t33);				
+			MathUtil.mat3inverse(childCell.basisCart, childCell.basisCartInverse, t3, t33);
 		} else {
 			MathUtil.mat3product(parentCell.basisCart0, parentCell.conv2convChildTransposeP, childCell.basisCart0, t33);
 		}
 	}
-
 
 	/**
 	 * Calculate the center of the child cell in strained cartesian Angstrom coords.
@@ -502,7 +504,6 @@ public class Variables {
 		gui.replaceData(null, isovizData, sliderSetting, mainSliderChildFraction);
 	}
 
-
 	public void updateModeFormData(Map<String, Object> mapFormData, Object document) {
 		for (int mode = 0; mode < MODE_ATOMIC_COUNT; mode++) {
 			if (isModeActive(modes[mode])) {
@@ -538,7 +539,7 @@ public class Variables {
 		String err = null;
 		if (mapFormData.containsKey(name)) {
 			String s = MathUtil.varToString(val, 5, 0);
-			//System.out.println("V.setModeFormVal " + name + "=" + s);
+			// System.out.println("V.setModeFormVal " + name + "=" + s);
 			mapFormData.put(name, s);
 			if (document != null) {
 				/**
@@ -697,16 +698,14 @@ public class Variables {
 			}
 			o = values.remove("maxbondlength");
 			if (o != null) {
-				lMax = (o instanceof Double ? ((Double) o).doubleValue() 
-						: Double.parseDouble(o.toString()));
+				lMax = (o instanceof Double ? ((Double) o).doubleValue() : Double.parseDouble(o.toString()));
 				changed |= (lMax != maxBondLength);
 				maxBondLength = lMax;
 				prefs.put("maxbondlength", o);
 			}
 			o = values.remove("minbondlength");
 			if (o != null) {
-				lMax = (o instanceof Double ? ((Double) o).doubleValue() : 
-					Double.parseDouble(o.toString()));
+				lMax = (o instanceof Double ? ((Double) o).doubleValue() : Double.parseDouble(o.toString()));
 				changed |= (lMin != minBondLength);
 				minBondLength = lMin;
 				prefs.put("minbondlength", o);
@@ -992,460 +991,274 @@ public class Variables {
 
 	} // end of Atom
 
-	/**
-	 * The superclass of ParentCell and ChildCell
-	 * 
-	 * @author hanso
-	 *
-	 */
-	public abstract static class Cell {
-
-		protected final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
-
-		private final static int[] buildCell = new int[] { 0, 1, //
-				2, 3, //
-				4, 5, //
-				6, 7, //
-				0, 2, //
-				1, 3, //
-				4, 6, //
-				5, 7, //
-				0, 4, //
-				1, 5, //
-				2, 6, //
-				3, 7 };
-
-		JLabel title;
-
-		JLabel[] labels = new JLabel[6];
+	public static class SymopData {
+		final static double ptol = 0.001;
 
 		/**
-		 * row matrix of primitive basis vectors 
-		 * on the conventional unitless-lattice basis
-		 * [basis vector][x,y,z];
-		 * 
-		 * set by parser from ISOVIZ "conv2primparentbasis"
-		 * and "conv2primchildbasis" values, respectively. 
-		 *
-		 * used in IsoDiffractApp.assignPeakTypes()
-		 * 
+		 * the 4x4 matrix representation for this operator; null for a centering
+		 * translation
 		 */
-		public double[][] conv2primTransposeP;
+		protected double[][] op;
 
 		/**
-		 * Array of Cartesian vertices of strained window-centered cell. [edge
-		 * number][x, y, z]
+		 * We need
+		 * 
+		 * r3t = mat3transpose(op)
+		 * 
+		 * to check that
+		 * 
+		 * r3t * [h,k,l] == [h,k,l]
+		 * 
+		 * Note that r3t is unnecessary for a centering translation, where m00 == m11 =
+		 * m22 = 1 and all other terms are 0. In that case, [h,k,l] - [h,k,l] ==
+		 * [0,0,0].
+		 * 
+		 * Bob Hanson 2025.07.06
 		 * 
 		 */
-		double[][] cartesianVertices = new double[8][3];
+		protected double[][] r3t;
 
 		/**
-		 * Strained cell origin relative to strained child cell origin in cartesian
-		 * Angstrom coords. [x, y, z]; will be (0,0,0) for child
-		 * 
+		 * the intrinsic translation for screw axes and glide planes
 		 */
-		protected double[] originCart = new double[3];
+		public double[] vi;
 
 		/**
-		 * Matrix of unstrained basis vectors in cartesian Angstrom coords [basis
-		 * vector][x,y,z] Transforms unitless unstrained direct-lattice child cell coords
-		 * into cartesian Angstrom coords [basis vector][x,y,z]
-		 * 
-		 * set by parser
-		 * 
+		 * potentially useful but not implemented Jones-Faithful description of the
+		 * operation
 		 */
-		protected double[][] basisCart0 = new double[3][3];
+		public String opXYZ;
 
-		/**
-		 * Matrix of strained basis vectors in cartesian Angstrom coords [basis
-		 * vector][x,y,z] Transforms unitless strained direct-lattice child cell coords
-		 * into cartesian Angstrom coords [basis vector][x,y,z]
-		 * 
-		 */
-		public double[][] basisCart = new double[3][3];
+		public String type;
 
-		/**
-		 * Final information needed to render the cell (last 12). [edge number][x, y, z,
-		 * x-angle orientation, y-angle orientation, length]
-		 * 
-		 */
-		private double[][] cellInfo = new double[12][6];
-
-		/**
-		 * Final information needed to render unit cell axes [axis number][x, y, z,
-		 * x-angle , y-angle, length]
-		 * 
-		 */
-		private double[][] axesInfo = new double[3][6];
-
-		public String labelText;
-
-		public Color color;;
-
-		// temporary vector and matrices
-
-		protected double[] t3 = new double[3];
-
-		protected double[][] t = new double[3][3], t2 = new double[3][3], t4 = new double[3][3];
-
-		Cell() {
+		protected SymopData(String type, double[] vi) {
+			// centering translation
+			this.type = type;
+			this.vi = vi;
+			this.op = new double[][] { 
+				new double[] { 1, 0, 0, vi[0] }, 
+				new double[] { 0, 1, 0, vi[1] },
+				new double[] { 0, 0, 1, vi[2] }, 
+				new double[] { 0, 0, 0, 1 } };
+			opXYZ = getXYZFromMatrixFrac(op, false, false, true, false);
 		}
-		
-		/**
-		 * Query the cell for its vertices, adding them to max variable;
-		 * used for determining the field of view that keeps the full unit cell in view
-		 * when rotating with the mouse.
-		 * 
-		 * parent and child
-		 * 
-		 * @param d2 current max
-		 * @return  adjusted max
-		 */
-		public double addRange2(double d2) {
-			for (int i = 8; --i >= 0;) {
-				d2 = MathUtil.maxlen2(cartesianVertices[i], d2);
-			}
-			return d2;
+
+		protected SymopData(String type, double[][] op, double[] vi) {
+			this.type = type;
+			this.op = op;
+			opXYZ = getXYZFromMatrixFrac(op, false, false, true, false);
+			this.vi = vi;
+			r3t = new double[3][3];
+			MathUtil.mat3transpose(op, r3t);
+			System.out.println(type + " adding operator " + this);
+		}
+
+		private static double[] v3 = new double[3];
+
+		public boolean isSystematicAbsence(double[] hkl) {
+			return (isAbsentVi(hkl) && isAbsentR(hkl));
 		}
 
 		/**
-		 * Get the transpose of the strained Cartesian basis.
-		 * The product of this matrix with [u v w] provides the desired camera direction.
+		 * Check that vi.dot.hkl is not integral in order to
+		 * ensure that K.dot.R = K must hold
 		 * 
-		 * parent and child
-		 * 
-		 * @return transpose of strained Cartesian basis
+		 * @param hkl
+		 * @return true if vi.dot.hkl is nonintegral
 		 */
-		public double[][] getTempTransposedCartesianBasis() {
-			MathUtil.mat3transpose(basisCart, t);
-			return t;
+		private boolean isAbsentVi(double[] hkl) {
+			double d = MathUtil.dot3(vi, hkl);
+			return !MathUtil.approxEqual(d, Math.rint(d), ptol);
 		}
 
 		/**
-		 * Get the transpose of the inverse of the strained Cartesian basis.
-		 * The product of this matrix with [h k l] provides the desired camera direction.
-		 * 
-		 * parent and child
-		 * 
-		 * @return transpose of the inverse of the strained Cartesian basis
-		 */
-		public double[][] getTempTransposedReciprocalBasis() {
-			MathUtil.mat3inverse(basisCart, t, t3, t2);
-			MathUtil.mat3transpose(t, t2);
-			return t2;
-		}
-
-		/**
-		 * parent and child
-		 * 
-		 * @param i
-		 * @return cellInfo[i]
-		 */
-		public double[] getCellInfo(int i) {
-			return cellInfo[i];
-		}
-
-		/**
-		 * parent and child
-		 * 
-		 * @param i
-		 * @return axisInfo[i]
-		 */
-		public double[] getAxisInfo(int i) {
-			return axesInfo[i];
-		}
-
-		/**
-		 * parent and child
-		 */
-		protected void setVertices() {
-			for (int ix = 0; ix < 2; ix++) {
-				for (int iy = 0; iy < 2; iy++) {
-					for (int iz = 0; iz < 2; iz++) {
-						for (int i = 0; i < 3; i++) {
-							cartesianVertices[ix + 2 * iy + 4 * iz][i] = originCart[i] + ix * basisCart[i][0]
-									+ iy * basisCart[i][1] + iz * basisCart[i][2];
-						}
-					}
-				}
-			}
-		}
-
-		/**
-		 * Place the center of the cell at the origin.
-		 * 
-		 * parent and child
-		 * 
-		 */
-		void setRelativeTo(double[] c) {
-			for (int j = 0; j < 8; j++) {
-				double[] v = cartesianVertices[j];
-				MathUtil.scaleAdd3(v, -1, c, v);
-			}
-		}
-
-		/**
-		 * parent and child
-		 * 
-		 * @param minmax
-		 */
-		void rangeCheckVertices(double[][] minmax) {
-			for (int i = 8; --i >= 0;) {
-				MathUtil.rangeCheck(cartesianVertices[i], minmax);
-			}
-		}
-
-		/**
-		 * parent and child
-		 */
-		protected void setLatticeParameterLabels() {
-			double[][] t = new double[3][3];
-			double[] v = new double[6];
-			MathUtil.mat3transpose(basisCart, t);
-			v[A] = MathUtil.len3(t[A]);
-			v[B] = MathUtil.len3(t[B]);
-			v[C] = MathUtil.len3(t[C]);
-			v[ALPHA] = Math.acos(MathUtil.dot3(t[B], t[C]) / Math.max(v[B] * v[C], 0.001));
-			v[BETA] = Math.acos(MathUtil.dot3(t[A], t[C]) / Math.max(v[A] * v[C], 0.001));
-			v[GAMMA] = Math.acos(MathUtil.dot3(t[A], t[B]) / Math.max(v[A] * v[B], 0.001));
-			for (int n = 0; n < 3; n++) {
-				labels[n].setText(MathUtil.varToString(v[n], 2, -5));
-				labels[n + 3].setText(MathUtil.varToString((180 / Math.PI) * v[n + 3], 2, -5));
-			}
-		}
-
-		/**
-		 * Measure distance from center for the axes of this cell.
-		 * 
-		 * parent and child
-		 * 
-		 * @param axis
-		 * @param center
-		 * @param tempvec
-		 * @param tB
-		 * @param d2
-		 * @param tA
-		 * @param d1
-		 */
-		double[] getAxisExtents(int axis, double[] center, double d1, double[] tA, double d2, double[] tB,
-				double[] tempvec) {
-			for (int i = 0; i < 3; i++) {
-				tempvec[i] = originCart[i] + (t3[i] = basisCart[i][axis]) - center[i];
-			}
-			MathUtil.norm3(t3);
-			MathUtil.vecaddN(tempvec, d1, t3, tA);
-			MathUtil.vecaddN(tempvec, d2, t3, tB);
-			return axesInfo[axis];
-		}
-
-	} // end of Cell
-
-	public static class ParentCell extends Cell{
-
-		/**
-		 * InverseTranspose of ChildCell.conv2convParentTransposeP:
-		 * 
-		 * ChildCell.conv2convParentTransposeP is the transpose of P_convchild2convparent
-		 * from parsed value of "parentbasis". 
-		 * 
-		 * ChildCell.conv2convParentTransposeP^t*i is
-		 * P_convparent2convchild.
-		 * 
-		 * parentCell.basisCart * ChildCell.conv2convParentTransposeP^t*i = childCell.basisCart
-		 * 
-		 */
-		private double[][] conv2convChildTransposeP;
-
-		/**
-		 * cell origin relative to child cell origin on the unitless child lattice basis.
-		 * [x, y, z];
-		 * 
-		 * for parent, from ISOVIZ file "parentorigin"
-		 * 
-		 */
-		double[] originUnitless = new double[3];
-
-		/**
-		 * Original unstrained cell parameters [A, B, C, ALPHA, BETA, GAMMA];
-		 * 
-		 * set by parser for parent, from ISOVIZ file "parentcell"
-		 */
-		double[] latt0 = new double[6];
-
-		ParentCell() {
-			labelText = "  Pcell";
-			color = COLOR_PARENT_CELL;
-		}
-
-		/**
-		 * Generate the Cartesian basis matrix from the 3x3 matrix
-		 * childCell.conv2convParentTransposeP.
-		 * 
-		 * From parser.
-		 * 
-		 * parent cell only
-		 * 
-		 * @param isRhomb
-		 * @param convChild2Parent
-		 */
-		void setUnstrainedCartsianBasis(boolean isRhomb, double[][] convChild2Parent) {
-			// parent only
-			conv2convChildTransposeP = new double[3][3];
-			MathUtil.mat3transpose(convChild2Parent, t);
-			MathUtil.mat3inverse(t, conv2convChildTransposeP, t3, t2);
-			if (isRhomb) {
-				double temp1 = Math.sin(latt0[GAMMA] / 2);
-				double temp2 = Math.sqrt(1 / temp1 / temp1 - 4.0 / 3.0);
-				temp1 *= latt0[A];
-				basisCart0[0][0] = temp1 * (1);
-				basisCart0[0][1] = temp1 * (-1);
-				basisCart0[0][2] = temp1 * (0);
-				basisCart0[1][0] = temp1 * (1 / Math.sqrt(3));
-				basisCart0[1][1] = temp1 * (1 / Math.sqrt(3));
-				basisCart0[1][2] = temp1 * (-2 / Math.sqrt(3));
-				basisCart0[2][0] = temp1 * temp2;
-				basisCart0[2][1] = temp1 * temp2;
-				basisCart0[2][2] = temp1 * temp2;
-			} else {
-				// defined column by column
-				double d = Math.cos(latt0[BETA]);
-				double temp1 = (Math.cos(latt0[ALPHA]) - d * Math.cos(latt0[GAMMA])) / Math.sin(latt0[GAMMA]);
-				d = 1 - d * d - temp1 * temp1;
-				double temp2 = Math.sqrt(d < 0 ? 0 : d);
-				basisCart0[0][0] = latt0[A];
-				basisCart0[1][0] = 0;
-				basisCart0[2][0] = 0;
-				basisCart0[0][1] = latt0[B] * Math.cos(latt0[GAMMA]);
-				basisCart0[1][1] = latt0[B] * Math.sin(latt0[GAMMA]);
-				basisCart0[2][1] = 0;
-				basisCart0[0][2] = latt0[C] * Math.cos(latt0[BETA]);
-				basisCart0[1][2] = latt0[C] * temp1;
-				basisCart0[2][2] = latt0[C] * temp2;
-			}
-		}
-
-		@Override
-		public String toString() {
-			return "[ParentCell]";
-		}
-
-	}
-	
-	public static class ChildCell extends Cell{
-
-		
-		/**
-		 * row matrix of conventional parent basis vectors on the conventional child unitless-lattice basis 
-		 * [basis vector][x,y,z]; 
-		 * 
-		 * set by parser from ISOVIZ "parentbasis" value
-		 * 
-		 * used throughout IsoDiffractApp
-		 * 
-		 */
-		public double[][] conv2convParentTransposeP = new double[3][3];
-
-		/**
-		 * Inverse of basisCart in Inverse-Angstrom units [basis vector][x,y,z]
-		 */
-		private double[][] basisCartInverse = new double[3][3];
-
-
-		ChildCell() {
-			labelText = "  Ccell";
-			color = COLOR_CHILD_CELL; 
-		}
-
-		/**
-		 * Calculate the strained or unstrained metric tensor along
-		 * with the lattice-to-cartesian matrix.
-		 * 
-		 * Also fill the reciprocol-to-Cartesian matrix
-		 * 
-		 * child only
-		 * 
-		 * @param matChildReciprocal2cart
-		 * @param metric
-		 * @param isStrained
-		 * @param tempmat
-		 */
-
-		public void setMetricTensor(double[][] matChildReciprocal2cart, double[][] metric, boolean isStrained) {
-			// Determine the unstrained or strained metric tensor
-			MathUtil.mat3inverse((isStrained ? basisCart : basisCart0), t, t3, t2);
-			// cart^-1 -> t
-			MathUtil.mat3transpose(t, matChildReciprocal2cart);				
-			// B* = Transpose(Inverse(B))
-			MathUtil.mat3product(t, matChildReciprocal2cart, metric, t4); // G* = Transpose(B*).(B*)
-		}
-
-		/**
-		 * Convert the fractional coords to cartesian, placing the result in a temporary
-		 * variable.
-		 * 
-		 * child only
-		 * 
-		 * @param xyz fractional coordinates, unchanged
-		 * @return TEMPORARY [x,y,z]
-		 */
-		public double[] toTempCartesian(double[] fxyz) {
-			MathUtil.mat3mul(basisCart, fxyz, t3);
-			return t3;
-		}
-
-		/**
-		 * returns a TEMPORARY matrix
-		 * 
-		 * child only
-		 * 
-		 * @param info
+		 * Check that R_t * K == K
+		 * @param hkl
 		 * @return
 		 */
-		double[][] getTempStrainedCartesianBasis(double[] info) {
-			MathUtil.voigt2matrix(info, t, 0);
-			MathUtil.mat3product(basisCart, t, t2, t4);
-			MathUtil.mat3copy(t2, t);
-			MathUtil.mat3product(t, basisCartInverse, t2, t4);
-			return t2;
-		}
-
-		
-		/**
-		 * Used only for labels in the String panel. 
-		 * 
-		 * Convert a Voigt array to matrix format (V). Then apply 
-		 * 
-		 * StrainedCartBasis * V * StrainedCartBasis^-1
-		 * 
-		 * and return the sum of the squares of the nine elements of this matrix.
-		 * 
-		 * child cell only
-		 * 
-		 * @param v1
-		 * @return isotropic parameter
-		 */
-		public double getIsotropicParameter(double[] v1) {
-			MathUtil.voigt2matrix(v1, t, 0);
-			MathUtil.mat3product(basisCart, t, t, t2);
-			MathUtil.mat3product(t, basisCartInverse, t, t2);
-			// ellipsoid in cartesian coords
-			double d = 0;
-			for (int i = 0; i < 3; i++) {
-				for (int j = 0; j < 3; j++) {
-					d += t[i][j] * t[i][j];
-				}
-			}
-			return d;
+		private boolean isAbsentR(double[] hkl) {
+			if (r3t == null)
+				return true;
+			MathUtil.mat3mul(r3t, hkl, v3);
+			return MathUtil.approxEqual3(v3, hkl, ptol);
 		}
 
 		@Override
 		public String toString() {
-			return "[ChildCell]";
+			return type + ":" + (op == null ? "centering " : opXYZ + "\n" + MathUtil.matToString(op) + "\n with vi=") + Arrays.toString(vi);
 		}
 
+		final static double[][] t1 = new double[4][4];
+		final static double[][] t2 = new double[4][4];
+		final static double[][] t3 = new double[4][4];
 
-	}
-	
+		/**
+		 * given a 4x4 matrix, see if it is a point group operation
+		 * 
+		 * @param op
+		 * @return translation or null
+		 */
+		protected static double[] getIntrinsicTranslation(double[][] op) {
+			// check to see if an operation is a point group operation or not.
+			MathUtil.copyNN(op, t1);
+			int n = 1;
+			while (!MathUtil.mat3isUnit(t1)) {
+				MathUtil.mat4product(t1, op, t2, t3);
+				MathUtil.copyNN(t2, t1);
+				n++;
+			}
+			double[] v = new double[] { t1[0][3] / n, t1[1][3] / n, t1[2][3] / n };
+			return (MathUtil.isIntegral3(v, 0.0001d) ? null : v);
+		}
+
+		static String[] labels_ = new String[] { "x", "y", "z" };
+
+		/**
+		 * 
+		 * @param mat
+		 * @param allPositive
+		 * @param halfOrLess
+		 * @param allowFractions
+		 * @param fractionAsRational
+		 * @return string row-form of matrix with the given labels
+		 */
+		static String getXYZFromMatrixFrac(double[][] mat, boolean allPositive, boolean halfOrLess,
+				boolean allowFractions, boolean fractionAsRational) {
+			String str = "";
+			int denom = 12;
+			for (int i = 0; i < 3; i++) {
+				int lpt = (i < 3 ? 0 : 3);
+				double[] row = mat[i];
+				String term = "";
+				for (int j = 0; j < 3; j++) {
+					double x = row[j];
+					if (MathUtil.approx(x) != 0) {
+						term += plusMinus(term, x, labels_[j + lpt], allowFractions, fractionAsRational);
+					}
+				}
+
+				if ((MathUtil.approx(row[3])) != 0) {
+					String f = (fractionAsRational ? plusMinus(term, row[3], "", true, true)
+							: xyzFraction12((row[3] * denom), denom, allPositive, halfOrLess));
+					if (term == "")
+						f = (f.charAt(0) == '+' ? f.substring(1) : f);
+					term += f;
+				}
+				str += "," + (term == "" ? "0" : term);
+			}
+			return str.substring(1);
+		}
+
+		private final static int DIVISOR_MASK = 0xFF;
+		private final static int DIVISOR_OFFSET = 8;
+
+		private final static String xyzFraction12(double n12ths, int denom, boolean allPositive, boolean halfOrLess) {
+			if (n12ths == 0)
+				return "";
+			double n = n12ths;
+			if (denom != 12) {
+				int in = (int) n;
+				denom = (in & DIVISOR_MASK);
+				n = in >> DIVISOR_OFFSET;
+			}
+			int half = (denom / 2);
+			if (allPositive) {
+				while (n < 0)
+					n += denom;
+			} else if (halfOrLess) {
+				while (n > half)
+					n -= denom;
+				while (n < -half)
+					n += denom;
+			}
+			String s = (denom == 12 ? twelfthsOf(n) : n == 0 ? "0" : n + "/" + denom);
+			return (s.charAt(0) == '0' ? "" : n > 0 ? "+" + s : s);
+		}
+
+		private final static String[] twelfths = { "0", "1/12", "1/6", "1/4", "1/3", "5/12", "1/2", "7/12", "2/3",
+				"3/4", "5/6", "11/12" };
+
+		// private final static String[] fortyeigths = { "0",
+		// "1/48", "1/24", "1/16", "1/12",
+		// "5/48", "1/8", "7/48", "1/6",
+		// "3/16", "5/24", "11/48", "1/4",
+		// "13/48", "7/24", "5/16", "1/3",
+		// "17/48", "3/8", "19/48", "5/12",
+		// "7/16", "11/24", "23/48", "1/2",
+		// "25/48", "13/24", "9/16", "7/12",
+		// "29/48", "15/24", "31/48", "2/3",
+		// "11/12", "17/16", "35/48", "3/4",
+		// "37/48", "19/24", "13/16", "5/6",
+		// "41/48", "7/8", "43/48", "11/12",
+		// "15/16", "23/24", "47/48"
+		// };
+		//
+		private static String plusMinus(String strT, double x, String sx, boolean allowFractions,
+				boolean fractionAsRational) {
+			double a = Math.abs(x);
+			double afrac = a % 1; // -1.3333 and 1.3333 become 0.3333
+			if (a < 0.0001d) {
+				return "";
+			}
+			String s = (a > 0.9999d && a <= 1.0001d ? ""
+					: afrac <= 0.001d && !allowFractions ? "" + (int) a
+							: fractionAsRational ? "" + a : twelfthsOf(a * 12));
+			return (x < 0 ? "-" : strT.length() == 0 ? "" : "+") + (s.equals("1") ? "" : s) + sx;
+		}
+
+		final static String twelfthsOf(double n12ths) {
+			String str = "";
+			if (n12ths < 0) {
+				n12ths = -n12ths;
+				str = "-";
+			}
+			int m = 12;
+			int n = Math.round((float) n12ths);
+			if (Math.abs(n - n12ths) > 0.01f) {
+				// fifths? sevenths? eigths? ninths? sixteenths?
+				// Juan Manuel suggests 10 is large enough here
+				double f = n12ths / 12;
+				int max = 20;
+				for (m = 3; m < max; m++) {
+					double fm = f * m;
+					n = (int) Math.round(fm);
+					if (Math.abs(n - fm) < 0.01f)
+						break;
+				}
+				if (m == max)
+					return str + f;
+			} else {
+				if (n == 12)
+					return str + "1";
+				if (n < 12)
+					return str + twelfths[n % 12];
+				switch (n % 12) {
+				case 0:
+					return str + n / 12;
+				case 2:
+				case 10:
+					m = 6;
+					break;
+				case 3:
+				case 9:
+					m = 4;
+					break;
+				case 4:
+				case 8:
+					m = 3;
+					break;
+				case 6:
+					m = 2;
+					break;
+				default:
+					break;
+				}
+				n = (n * m / 12);
+			}
+			return str + n + "/" + m;
+		}
+
+	}// end of SymopData
 
 	/**
 	 * The IsoParser class is an inner class of Variables that loads Variable and
@@ -1573,7 +1386,7 @@ public class Variables {
 		 * 
 		 * @param key
 		 * @param mode
-		 * @param def          a default value or NaN to skip if key is not present
+		 * @param def        a default value or NaN to skip if key is not present
 		 * @param nAtomsRead
 		 * @param bsPeriodic
 		 * 
@@ -1785,15 +1598,65 @@ public class Variables {
 			childCell.conv2primTransposeP = getTransform("conv2primchildbasis", false);
 			parentCell.conv2primTransposeP = getTransform("conv2primparentbasis", false);
 			parentCell.setUnstrainedCartsianBasis(isRhombParentSetting, childCell.conv2convParentTransposeP);
+			parseSymmetryOperations("child");
+			parseSymmetryOperations("parent");
 			transformParentToChild(false);
+		}
+
+		private void parseSymmetryOperations(String type) {
+			Cell cell = (type == "child" ? childCell : parentCell);
+//			!convchildcenteringvecs 
+//			   0.00000   0.00000   0.00000
+//			   0.50000   0.50000   0.50000
+			int nData = vt.setData("conv" + type + "centeringvecs");
+			int nCenteringOps = nData / 3;
+			int ptCenterings = 0;
+			List<SymopData> list = cell.symopData = new ArrayList<SymopData>();
+			double[] dataC = null;
+			if (nCenteringOps != 0) {
+				if (nData % 3 != 0)
+					parseError("expected three columns of data (cx,cy,cz); found " + nData, 1);
+				dataC = new double[nData];
+				getDoubleArray(null, dataC, 0, nData);
+				if (dataC[0] == 0 && dataC[1] == 0 && dataC[2] == 0) {
+					nCenteringOps--;
+					ptCenterings = 3;
+				}
+				for (int ic = 0, pt = ptCenterings; ic < nCenteringOps; ic++) {
+					list.add(new SymopData(type, new double[] { dataC[pt++], dataC[pt++], dataC[pt++] }));
+				}
+
+			}
+			nData = vt.setData("conv" + type + "spacegroupops");
+			if (nData == 0)
+				return;
+			if (nData % 16 != 0)
+				parseError("expected 16 columns of data for operations; found " + nData, 1);
+			int nops = nData / 16;
+			double[] dataO = new double[nData];
+			getDoubleArray(null, dataO, 0, nData);
+			for (int pt = 0, iop = 0; iop < nops; iop++) {
+				double[][] op = new double[4][4];
+				for (int r = 0; r < 4; r++) {
+					for (int c = 0; c < 4; c++) {
+						op[r][c] = dataO[pt++];
+					}
+				}
+				double[] vi = SymopData.getIntrinsicTranslation(op);
+				if (vi != null) {
+					// screw axes and glide planes only
+					list.add(new SymopData(type, op, vi));
+				}
+			}
+			System.out.println(list.size() + " operations as SymData, including " + nCenteringOps + " centerings");
 		}
 
 		private double[][] getTransform(String key, boolean isRequired) {
 			if (isRequired) {
 				checkSize("parentbasis", 9);
-			} else if (vt.setData(key) == 0){
-				return null;				
-			}				
+			} else if (vt.setData(key) == 0) {
+				return null;
+			}
 			double[][] t = new double[3][3];
 			for (int pt = 0, j = 0; j < 3; j++) {
 				for (int i = 0; i < 3; i++, pt++) {
@@ -1818,7 +1681,6 @@ public class Variables {
 
 			BitSet bsPeriodic = vt.getBitSet("atomsinunitcell");
 
-			
 			int nData = vt.setData("atomcoordlist");
 			// number of atoms in the file, before filtering for primitives
 			int nAtomsRead = getNumberOfAtomsRead(nData);
@@ -1879,8 +1741,7 @@ public class Variables {
 			firstAtomOfType[nTypes] = new int[] { nAtomsRead, nAtoms };
 
 			vt.setData("atomcoordlist");
-			readAtomCoordinates(ncol, nAtomsRead, nSubTypeAtomsRead, bsPeriodic, nPrimitiveSubAtoms,
-					firstAtomOfType);
+			readAtomCoordinates(ncol, nAtomsRead, nSubTypeAtomsRead, bsPeriodic, nPrimitiveSubAtoms, firstAtomOfType);
 
 			nSubAtoms = (bsPeriodic == null ? nSubTypeAtomsRead : nPrimitiveSubAtoms);
 			for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
@@ -1919,6 +1780,7 @@ public class Variables {
 
 		/**
 		 * Just filtering out atoms with coord 1.000
+		 * 
 		 * @param nAtomsRead
 		 * @param ncol
 		 * @return
@@ -1929,21 +1791,22 @@ public class Variables {
 			StringBuffer sb = new StringBuffer();
 			for (int i = 0; i < nAtomsRead; i++) {
 				int pt = ncol * i + 3;
-				double[] p = new double[] {vt.getDouble(pt), vt.getDouble(pt+ 1), vt.getDouble(pt+2)+0.25};
-				//String s0= MathUtil.a2s(p);
+				double[] p = new double[] { vt.getDouble(pt), vt.getDouble(pt + 1), vt.getDouble(pt + 2) + 0.25 };
+				// String s0= MathUtil.a2s(p);
 				String spt = MathUtil.a2s(MathUtil.unitize3(p, 0.001d));
 				if (sb.indexOf(spt) >= 0) {
-					bs.clear(i);					
+					bs.clear(i);
 					MathUtil.scale3(p, 0.001, p);
-					//System.out.println("- " + s0);
+					// System.out.println("- " + s0);
 				} else {
 					sb.append(spt);
-					//System.out.println("+ " + s0);
+					// System.out.println("+ " + s0);
 				}
 			}
 			System.out.println("bsPeriodic " + bs.cardinality() + "/" + nAtomsRead);
 			return bs;
 		}
+
 		private void readAtomCoordinates(int ncol, int nAtomsRead, int[][] nSubTypeAtomsRead, BitSet bsPeriodic,
 				int[][] nPrimitiveSubAtoms, int[][] firstAtomOfType) {
 			int lastT = 0;
@@ -2007,10 +1870,11 @@ public class Variables {
 				if (vt.getInt(3 * i) != i + 1)
 					parseError("atom types are not in sequential order", 2);
 				atomTypeName[i] = vt.getString(3 * i + 1);
-				// no reason to believe this would be XX or xx, but 
-				// this guarantees Xx for Elements.getScatteringFactor. 
+				// no reason to believe this would be XX or xx, but
+				// this guarantees Xx for Elements.getScatteringFactor.
 				String s = vt.getString(3 * i + 2);
-				atomTypeSymbol[i] = s.substring(0, 1).toUpperCase() + (s.length() == 1 ? "" : s.substring(1,2).toLowerCase());
+				atomTypeSymbol[i] = s.substring(0, 1).toUpperCase()
+						+ (s.length() == 1 ? "" : s.substring(1, 2).toLowerCase());
 			}
 
 			nSubTypes = new int[n];
@@ -2091,8 +1955,8 @@ public class Variables {
 		 * @param ncol
 		 * @param firstAtomOfType
 		 */
-		private void parseAtomicMode(int mode, String key, int ncol, int[][] firstAtomOfType,
-				int[][] nSubTypeAtomsRead, BitSet bsPeriodic) {
+		private void parseAtomicMode(int mode, String key, int ncol, int[][] firstAtomOfType, int[][] nSubTypeAtomsRead,
+				BitSet bsPeriodic) {
 			int[] perType = new int[nTypes];
 			int n = getAtomModeNumbers(key, mode, perType, ncol, firstAtomOfType);
 			if (n == 0)
@@ -2161,8 +2025,7 @@ public class Variables {
 		 * @param parser
 		 * 
 		 */
-		private void getAtomModeData(Mode mode, int[][] firstAtomOfType, int[][] nSubTypeAtomsRead,
-				BitSet bsPeriodic) {
+		private void getAtomModeData(Mode mode, int[][] firstAtomOfType, int[][] nSubTypeAtomsRead, BitSet bsPeriodic) {
 
 //        t    m   calcAmp   maxAmp  irrep  name
 //		    1    1   0.00030   2.82843    3 GM1+[Sr:b:occ]A1g(a) 
@@ -2183,7 +2046,7 @@ public class Variables {
 				mode.maxAmpTM[atomType][mt] = vt.getDouble(pt++);
 				mode.irrepTM[atomType][mt] = vt.getInt(pt++) - 1;
 				mode.setModeName(atomType, mt, vt.getString(pt++));
-				
+
 				for (int s = 0; s < nSubTypes[atomType]; s++) {
 					for (int a = 0; a < nSubTypeAtomsRead[atomType][s]; a++, iread++, pt += ncol) {
 						if (bsPeriodic != null && !bsPeriodic.get(iread))
@@ -2250,9 +2113,8 @@ public class Variables {
 
 		private final static int subTypeWidth = 210;
 		private final static int barheight = 22;
-		
-		private final float[] hsb = new float[3];
 
+		private final float[] hsb = new float[3];
 
 		/**
 		 * Master (top most) slider bar controls all slider bars for superpositioning of
@@ -2321,14 +2183,13 @@ public class Variables {
 						for (int m = sliders[t].length; --m >= 0;) {
 							String name = getInputName(mode, t, m);
 							IsoSlider sm = sliders[t][m];
-							// Here we check to see if the slider label reads its initial value. 
+							// Here we check to see if the slider label reads its initial value.
 							// In that case, we use the "initial" value
 							double d = (toZero ? 0
-									: toInitial || childFraction == 1
-											&& sm.childLabelValue == sm.childLabelValue0
-													? sm.calcAmp
-													: sm.childLabelValue * childFraction);
-							//System.out.println("VAR " + name + "=" + d);
+									: toInitial || childFraction == 1 && sm.childLabelValue == sm.childLabelValue0
+											? sm.calcAmp
+											: sm.childLabelValue * childFraction);
+							// System.out.println("VAR " + name + "=" + d);
 							if (isovizData == null)
 								setModeFormValue(name, d, mapFormData, null);
 							else
@@ -2352,75 +2213,75 @@ public class Variables {
 
 		/**
 		 * Set the shade of gray for subtype atoms.
-		 *  
+		 * 
 		 * @param t
 		 * @param s
 		 * @return a number between low and high
 		 */
 		double getSelectedSubTypeShade(int t, int s) {
-			// adjust these parameters as needed		
+			// adjust these parameters as needed
 			double low = 0.0;
 			double high = 0.8;
 			double step = 0.0;
-			if (nSubTypes[t]>1) {
-				step = (high-low)/(nSubTypes[t]-1);
+			if (nSubTypes[t] > 1) {
+				step = (high - low) / (nSubTypes[t] - 1);
 			}
-			return low + s*step;
+			return low + s * step;
 		}
 
-	    /**
-	     * current static of (no) shading in slider panel
-	     */
-	    boolean colorByElement;
-	
-	    Color[] atomTypeColors;
-	    
-	    Color getAtomTypeColor(int t) {
-	      return atomTypeColors[t];
-	    }
-	
-	    void setColors() {
-	      for (int i = 0; i < MODE_COUNT; i++) {
-	        if (isModeActive(modes[i])) {
-	          Color[] colors = modes[i].getColorT();
-	          setColorScheme(colors, modes[i].type);
-	        }
-	      }
-	      if (atomTypeColors == null)
-	        atomTypeColors = new Color[nTypes];
-	      setColorScheme(atomTypeColors, -1);
-	    }
-	
-	    void updateColorScheme(boolean isByElmeent) {
-	      colorByElement = isByElmeent;
-	      app.colorBox.setEnabled(false);
-	      app.colorBox.setSelected(!isByElmeent);
-	      app.colorBox.setEnabled(true);
-	      setColors();
-	      for (int t = 0; t < nTypes; t++) {
-	        Color c = getAtomTypeColor(t);
-	        typeTitlePanel[t].setBackground(c);
-	        typeTitlePanel[t].getParent().setBackground(c);
-	        JPanel p = subTypePanel[t];
-	          p.setBackground(c);
-	        // recolor the checkbox/label panels as well as 
-	        // the column-filler backgrounds
-	        for (int i = p.getComponentCount(); --i >= 0;) {
-	        	p.getComponent(i).setBackground(c);
-	        }
-	        for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
-	          if (isModeActive(modes[i]))
-	            modeSliderPanelsT[i][t].setBackground(modes[i].colorT[t]);
-	        }
-	      }
-	    }
-	
-	    private static final float COLOR_BRIGHTNESS_ATOMS = 0.90f;
-	    private static final float COLOR_BRIGHTNESS_DIS   = 0.80f;
-	    private static final float COLOR_BRIGHTNESS_OCC   = 0.65f;
-	    private static final float COLOR_BRIGHTNESS_ROT   = 0.50f;
-	    private static final float COLOR_BRIGHTNESS_MAG   = 0.35f;
-	    private static final float COLOR_BRIGHTNESS_ELL   = 0.20f;
+		/**
+		 * current static of (no) shading in slider panel
+		 */
+		boolean colorByElement;
+
+		Color[] atomTypeColors;
+
+		Color getAtomTypeColor(int t) {
+			return atomTypeColors[t];
+		}
+
+		void setColors() {
+			for (int i = 0; i < MODE_COUNT; i++) {
+				if (isModeActive(modes[i])) {
+					Color[] colors = modes[i].getColorT();
+					setColorScheme(colors, modes[i].type);
+				}
+			}
+			if (atomTypeColors == null)
+				atomTypeColors = new Color[nTypes];
+			setColorScheme(atomTypeColors, -1);
+		}
+
+		void updateColorScheme(boolean isByElmeent) {
+			colorByElement = isByElmeent;
+			app.colorBox.setEnabled(false);
+			app.colorBox.setSelected(!isByElmeent);
+			app.colorBox.setEnabled(true);
+			setColors();
+			for (int t = 0; t < nTypes; t++) {
+				Color c = getAtomTypeColor(t);
+				typeTitlePanel[t].setBackground(c);
+				typeTitlePanel[t].getParent().setBackground(c);
+				JPanel p = subTypePanel[t];
+				p.setBackground(c);
+				// recolor the checkbox/label panels as well as
+				// the column-filler backgrounds
+				for (int i = p.getComponentCount(); --i >= 0;) {
+					p.getComponent(i).setBackground(c);
+				}
+				for (int i = 0; i < MODE_ATOMIC_COUNT; i++) {
+					if (isModeActive(modes[i]))
+						modeSliderPanelsT[i][t].setBackground(modes[i].colorT[t]);
+				}
+			}
+		}
+
+		private static final float COLOR_BRIGHTNESS_ATOMS = 0.90f;
+		private static final float COLOR_BRIGHTNESS_DIS = 0.80f;
+		private static final float COLOR_BRIGHTNESS_OCC = 0.65f;
+		private static final float COLOR_BRIGHTNESS_ROT = 0.50f;
+		private static final float COLOR_BRIGHTNESS_MAG = 0.35f;
+		private static final float COLOR_BRIGHTNESS_ELL = 0.20f;
 
 		/**
 		 * Set the colors of mode slider and title/checkbox backgrounds.
@@ -2461,7 +2322,7 @@ public class Variables {
 			if (colorByElement) {
 				for (int t = 0; t < nTypes; t++) {
 					int argb = Elements.getCPKColor(atomTypeSymbol[t]);
-					Color.RGBtoHSB((argb&0xFF0000) >> 16, (argb & 0xFF00) >> 8, argb & 0xFF, hsb);					
+					Color.RGBtoHSB((argb & 0xFF0000) >> 16, (argb & 0xFF00) >> 8, argb & 0xFF, hsb);
 					colors[t] = new Color(Color.HSBtoRGB(hsb[0], hsb[1], brightness));
 //					System.out.println("Variables.scs " + colorByElement 
 //							+ " " + atomTypeSymbol[t] 
@@ -2496,7 +2357,7 @@ public class Variables {
 			mainSlider.setValue(sliderMax);
 			for (int i = 0; i < MODE_COUNT; i++) {
 				if (isModeActive(modes[i]))
-				modes[i].resetSliders(sliderTM[i], sliderMax);
+					modes[i].resetSliders(sliderTM[i], sliderMax);
 			}
 		}
 
@@ -2564,7 +2425,7 @@ public class Variables {
 				subTypesPerRow[t] = Math.min(maxSubTypesPerRow, nSubTypes[t]);
 				nSubRows[t] = (int) Math.ceil((double) nSubTypes[t] / subTypesPerRow[t]);
 			}
-			needColorBox = true;//haveElementSubtypes();
+			needColorBox = true;// haveElementSubtypes();
 			colorByElement = true;
 			setColors();
 
@@ -2605,7 +2466,7 @@ public class Variables {
 				typeInfoPanel.setLayout(new BoxLayout(typeInfoPanel, BoxLayout.Y_AXIS));
 				typeInfoPanel.setBorder(new EmptyBorder(2, 2, 5, 60));
 				typeInfoPanel.setBackground(c); // important
-				typeLabel[t] = newWhiteLabel("" + atomTypeName[t] + " Modes", JLabel.CENTER);				
+				typeLabel[t] = newWhiteLabel("" + atomTypeName[t] + " Modes", JLabel.CENTER);
 				typeTitlePanel[t] = new JPanel(new GridLayout(1, 1, 0, 0));
 				typeTitlePanel[t].setName("typeNamePanel_" + t + " " + atomTypeName[t]);
 				typeTitlePanel[t].add(typeLabel[t]);
@@ -2731,8 +2592,8 @@ public class Variables {
 			JLabel blackCalcAmpPointer;
 
 			/**
-			 * A small orange triangle pointer on atom mode and strain sliders
-			 * only that indicates the zero point.
+			 * A small orange triangle pointer on atom mode and strain sliders only that
+			 * indicates the zero point.
 			 */
 			JLabel orangeZeroPointer;
 
@@ -2755,7 +2616,8 @@ public class Variables {
 				this.type = type;
 				// this setting is important; without it, everything looks shrunk
 				setPreferredSize(new Dimension(sliderWidth, barheight));
-				//System.out.println("Variables.IsoSlider.setpref " + name + " " + sliderWidth);
+				// System.out.println("Variables.IsoSlider.setpref " + name + " " +
+				// sliderWidth);
 				if (type >= 0 && showSliderPointers) {
 					this.min = min;
 					this.calcAmp = calcAmp;
@@ -2808,7 +2670,7 @@ public class Variables {
 				childLabelValue = val;
 				if (Double.isNaN(childLabelValue0))
 					childLabelValue0 = childLabelValue;
-				//System.out.println("V.setLabelValue " + name + " childValue=" + val);
+				// System.out.println("V.setLabelValue " + name + " childValue=" + val);
 				int prec = (type < MODE_ATOMIC_COUNT ? 2 : 3);
 				setSliderLabel(MathUtil.varToString(childLabelValue, prec, -8) + "  " + name);
 				setSliderPointerPositions();
@@ -2819,16 +2681,18 @@ public class Variables {
 					return;
 				}
 				int w = getWidth();
-				setPointerPosition(whiteCurrentAmpValuePointer, childLabelValue * mainSliderChildFraction/maxAmp, w);
+				setPointerPosition(whiteCurrentAmpValuePointer, childLabelValue * mainSliderChildFraction / maxAmp, w);
 				if (orangeZeroPointer != null) {
 					setPointerPosition(orangeZeroPointer, 0, w);
-					setPointerPosition(blackCalcAmpPointer, calcAmp/maxAmp, w);
+					setPointerPosition(blackCalcAmpPointer, calcAmp / maxAmp, w);
 				}
 			}
 
 			private void setPointerPosition(JLabel pointer, double d, int w) {
-				w -= (/** @j2sNative 1 ? 20 : */ 15);
-				int off = (/** @j2sNative 1 ? 8 : */ 6);
+				w -= (/** @j2sNative 1 ? 20 : */
+				15);
+				int off = (/** @j2sNative 1 ? 8 : */
+				6);
 				int x = (int) ((d * sliderMax - min) / (sliderMax - min) * w);
 				pointer.setBounds(x + off, 12, 6, 8);
 			}
@@ -2884,11 +2748,12 @@ public class Variables {
 		}
 
 		int test = 0;
+
 		private void addPanel(JPanel sliderPanel, Component c, String name) {
 			c.setName(name); // this is for debugging
 			// https://stackoverflow.com/questions/18405660/how-to-set-component-size-inside-container-with-boxlayout
 			c.setMaximumSize(new Dimension(Integer.MAX_VALUE, c.getMinimumSize().height));
-			sliderPanel.add(c);			
+			sliderPanel.add(c);
 		}
 
 		/**
@@ -2971,18 +2836,17 @@ public class Variables {
 	}
 
 	/**
-	 * Checks for the presence of primitive atoms and also for 
+	 * Checks for the presence of primitive atoms and also for
+	 * 
 	 * @param i
 	 * @return
 	 */
 	public boolean isPrimitive(int i) {
-		return (i < 0 || bsPeriodic == null ? bsPeriodic != null 
-				: bsPeriodic.get(i));
+		return (i < 0 || bsPeriodic == null ? bsPeriodic != null : bsPeriodic.get(i));
 	}
 
 	public void updateSliderPointers() {
 		gui.updateSliderPointers();
 	}
-
 
 }

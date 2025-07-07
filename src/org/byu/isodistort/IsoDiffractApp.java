@@ -10,6 +10,8 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import javax.swing.ButtonGroup;
@@ -23,7 +25,9 @@ import javax.swing.JToggleButton;
 import org.byu.isodistort.local.Elements;
 import org.byu.isodistort.local.IsoApp;
 import org.byu.isodistort.local.MathUtil;
+import org.byu.isodistort.local.Variables;
 import org.byu.isodistort.local.Variables.Atom;
+import org.byu.isodistort.local.Variables.SymopData;
 
 import javajs.util.PT;
 
@@ -31,6 +35,8 @@ import javajs.util.PT;
 *  
 *  Branton Campbell, David Tanner Andrew Zimmerman, 
 *  June 2006
+*  
+*  Refactored by Bob Hanson, 2023, 2025
 * 
 * This applet takes the data from the IsoDistort web page 
 * and uses it to render atoms and bonds and cells that represent various atomic crystal structures.
@@ -46,24 +52,114 @@ import javajs.util.PT;
 * Refactored to have the simple hierarchy:
 * 
 *   IsoDistortApp > IsoPanel
+*   
+* and adds GUI inner class
 *  
 */
 
 //http://stokes.byu.edu/isodistort.html is isodistort website
 
-//import all the needed java classes for this program
-
-/**
-11111111111111111111111111111111111111111111111111111111111111111111111111111111
-1																				1
-1 In the first section we import needed classes and instantiate the variables. 1
-1																				1
-11111111111111111111111111111111111111111111111111111111111111111111111111111111
-
-*/
-
 public class IsoDiffractApp extends IsoApp implements KeyListener {
 
+	
+	protected static boolean usePrimitiveAssignmentMethod = false;
+
+
+	private static class PeakData {
+
+		/**
+		 * peak multiplicities for powder pattern
+		 */
+		double peakMultiplicity;
+		
+		/**
+		 * dinverse value for peak in either single-crystal or powder display
+		 * 
+		 */
+		double peakDInv;
+
+		/**
+		 * childHKL contained within the display
+		 */
+		private double[] crystalPeakHKL = new double[3];
+		
+		/**
+		 * parentHKL contained within the display
+		 */
+		private double[] parentPeakHKL = new double[3];
+		
+		/**
+		 * string of childHKL contained within the display
+		 */
+		protected String crystalPeakHKLString;
+
+		/**
+		 * string of parentHKL contained within the display
+		 */
+		protected String parentPeakHKLString;
+
+		/**
+		 * peak XY coord contained within the single-crystal display
+		 */
+		double[] crystalPeakXY = new double[2];
+		
+		/**
+		 * peak radius contained within the single-crystal display
+		 */
+
+		double crystalPeakRadius;
+
+		/**
+		 * position of powder peaks in either 2th, d or q units
+		 */
+		double powderPeakY;
+
+		/**
+		 * position of powder peaks in scaled pixel units
+		 */
+		double powderPeakX;
+		
+		/**
+		 * peak intensity contained within the single-crystal display
+		 */
+		double peakIntensity;
+		
+		/**
+		 * peak type/color (1-4)
+		 */
+		protected int peakType;
+		@SuppressWarnings("unused")
+		private SymopData op;
+
+		protected void setPeakType(int peakType, SymopData op) {
+			this.peakType = peakType;
+			this.op = op;
+		}
+
+		public void updateDinverse(double[][] metric, double[] t3) {
+			MathUtil.mat3mul(metric, crystalPeakHKL, t3);
+			peakDInv = MathUtil.dot3Length(crystalPeakHKL, t3);
+		}
+
+		/**
+		 * Set the crystal peak HKL string for the child used in display and also
+		 * assignment when it is asssigned. Do this once for every peak.
+		 * 
+		 * @param p
+		 * @param hkl
+		 */
+		public void setPeakHKLStrings(double[][] mat) {
+				if (crystalPeakHKLString == null) {
+					crystalPeakHKLString = MathUtil.roundVec00(crystalPeakHKL);
+				}
+				if (parentPeakHKLString == null) {
+					MathUtil.mat3mul(mat, crystalPeakHKL, parentPeakHKL);
+					parentPeakHKLString = MathUtil.roundVec00(parentPeakHKL);
+			    }
+		}
+
+	}
+	
 	/**
 	 * An alternative panel to the RenderPanel3D of IsoDistortApp
 	 * 
@@ -71,36 +167,34 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 *
 	 * 
 	 */
-	private static class RenderPanel extends JPanel {
-
-		private IsoDiffractApp app;
+	private class RenderPanel extends JPanel {
 
 		private MouseAdapter adapter;
 		
-		RenderPanel(IsoDiffractApp app) {
-			this.app = app;
+		RenderPanel() {
 			adapter = new Adapter();
 			addMouseMotionListener(adapter);
 			addMouseListener(adapter);
+			addKeyListener(IsoDiffractApp.this);
 		}
 
 		private BufferedImage im;
 
 		@Override
 		public void paint(Graphics gr) {
-			super.paint(gr);
+//			super.paint(gr);
 			Dimension d = getSize();
-			System.out.println("RenderPanel paint " + app.drawWidth + "," + app.drawHeight + " d=" + d);
-			if (app.needsRecalc || app.drawWidth != d.width || app.drawHeight != d.height) {
-				app.updateDimensions();
-				app.needsRecalc = true;
-				app.updateDisplay();
+			gr.setColor(Color.black);
+			gr.fillRect(0,  0,  d.width, d.height);
+			//System.out.println("RenderPanel paint " + drawWidth + "," + drawHeight + " d=" + d);
+			if (needsRecalc || drawWidth != d.width || drawHeight != d.height) {
+				IsoDiffractApp.this.updateForPaint();
 				return;
 			}
 			if (im == null || im.getWidth() != d.width || im.getHeight() != d.height)
 				im = (BufferedImage) createImage(d.width, d.height);
 			Graphics g = im.getGraphics();
-			app.render(g);
+		    IsoDiffractApp.this.render(g);
 			g.dispose();
 			gr.drawImage(im, 0, 0, d.width, d.height, this);
 		}
@@ -116,14 +210,14 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 			@Override
 			public void mouseMoved(MouseEvent e) {
-				app.mousePeak(e.getX(), e.getY());
+				mousePeak(e.getX(), e.getY());
 			}
 
 			@Override
 			public void mouseDragged(MouseEvent e) {
 				int mx = e.getX();
 				int my = e.getY();
-				app.mouseDrag(mx - mouseX, my - mouseY);
+				IsoDiffractApp.this.mouseDrag(mx - mouseX, my - mouseY);
 				mouseX = mx;
 				mouseY = my;
 			}
@@ -131,21 +225,82 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			@Override
 			public void mousePressed(MouseEvent e) {
 				mouseX = e.getX(); mouseY = e.getY();
-				app.setStatusVisible(false);
+				setStatusVisible(false);
 			}
 
 		}
 
 	}
 
-	private static final Color[] colorMap = new Color[] { Color.PINK, Color.GREEN, Color.RED, Color.BLUE,
-			Color.ORANGE };
+	public static final int HKL_TYPE_PARENT = 1;
+	public static final int HKL_TYPE_CHILD =  2;
+
+	private final static int PEAK_TYPE_ERROR = 0;
+	private final static int PEAK_TYPE_PARENT_BRAGG = 1;
+	private final static int PEAK_TYPE_PARENT_SYSABS = 2;
+	private final static int PEAK_TYPE_CHILD_BRAGG = 3;
+	private final static int PEAK_TYPE_CHILD_SYSABS = 4;
+	
+		
+	private static final Color[] colorMap = new Color[5];
+	static {
+		colorMap[PEAK_TYPE_ERROR]         = Color.PINK;
+		colorMap[PEAK_TYPE_PARENT_BRAGG]  = Color.GREEN;
+		colorMap[PEAK_TYPE_PARENT_SYSABS] = Color.RED;
+		colorMap[PEAK_TYPE_CHILD_BRAGG]   = Color.BLUE;
+		colorMap[PEAK_TYPE_CHILD_SYSABS]  = Color.ORANGE; 
+	}
+
+	private static String colorOf(int peakType) {
+		switch (peakType) {
+		default:
+		case PEAK_TYPE_ERROR:
+			return "pink";
+		case PEAK_TYPE_PARENT_BRAGG:
+			return "green";
+		case PEAK_TYPE_PARENT_SYSABS:
+			return "red";
+		case PEAK_TYPE_CHILD_BRAGG:
+			return "blue";
+		case PEAK_TYPE_CHILD_SYSABS:
+			return "orange"; 
+		}
+	}
+
+	private static String typeOf(int peakType) {
+		switch (peakType) {
+		default:
+		case PEAK_TYPE_ERROR:
+			return "ERROR";
+		case PEAK_TYPE_PARENT_BRAGG:
+			return "PARENT_BRAG";
+		case PEAK_TYPE_PARENT_SYSABS:
+			return "PARENT_SYSABS";
+		case PEAK_TYPE_CHILD_BRAGG:
+			return "CHILD_BRAGG";
+		case PEAK_TYPE_CHILD_SYSABS:
+			return "CHILD_SYSABS"; 
+		}
+	}
+
+
+	private final static int POWDER_PATTERN_TYPE_2THETA = 1;
+	private final static int POWDER_PATTERN_TYPE_DSPACE = 2;
+	private final static int POWDER_PATTERN_TYPE_Q = 3;
+
+	private static final double MIN_PEAK_INTENSITY = 1e-25;
+	
+	private static final double powderPeakTolerance = 0.0001;
 
 	// Variables that the user may want to adjust
 	/**
 	 * Maximum number of diffraction peaks and tick marks in the display
 	 */
-	private int maxPeaks = 1000, powderMaxVisiblePeaks = 200, maxTicks = 100;
+	private int maxPeaks = 1000;
+	
+	private int powderMaxVisiblePeaks = 200;
+
+	private int maxTicks = 100;
 	/**
 	 * Axis & tick line thickness, tick length
 	 */
@@ -174,30 +329,34 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 */
 	double uiso = 0.15;
 
-	private final static int POWDER_PATTERN_TYPE_2THETA = 1;
-	private final static int POWDER_PATTERN_TYPE_DSPACE = 2;
-	private final static int POWDER_PATTERN_TYPE_Q = 3;
+	// global objects
+	
+	/**
+	 * array of peak data for peaks contained in the display
+	 */
+	PeakData[] peakData = new PeakData[maxPeaks];
 
-	private static final double MIN_PEAK_INTENSITY = 1e-25;
-
+	
 	// Other global variables.
-	int hklType = 1;
+	
+
+	int hklType = HKL_TYPE_PARENT;
+	
 	/**
 	 * Horizontal axis choice for powder pattern: (1) 2theta, (2) d-space, (3) q
 	 */
 	int powderPatternType = POWDER_PATTERN_TYPE_2THETA;
+
 	/**
 	 * X-ray vs neutron diffraction
 	 */
 	public boolean isXray = true;
+	
 	/**
-	 * contains x-ray and neutron scattering factors for each element
+	 * half the always-square display width and height in pixels
 	 */
-	/**
-	 * half the display width in pixels
-	 */
-	double drawHalfWidth;
-	double drawHalfHeight;
+	double drawHalfWidthHeight;
+	
 	/**
 	 * True means to make all atoms of the same element the same color
 	 */
@@ -213,19 +372,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * number of childHKL peaks contained within the display
 	 */
 	int peakCount;
-	/**
-	 * List of peak multiplicities for powder pattern
-	 */
-	double[] peakMultiplicity = new double[maxPeaks];
-	/**
-	 * List of dinverse values for peaks in either single-crystal or powder display
-	 * 
-	 */
-	double[] peakDInv = new double[maxPeaks];
-	/**
-	 * List of types of peaks contained within the display
-	 */
-	int[] peakType = new int[maxPeaks];
 
 	/**
 	 * unstrained dinverse-space metric tensor
@@ -247,35 +393,29 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	/**
 	 * maximum peak radius
 	 */
-	double crystalMaxPeakRadius;
+	private double crystalMaxPeakRadius;
 	/**
 	 * The hkl horizonal direction, upper direction, and center,
 	 */
-	double[] crystalHklCenter = new double[3];
+	private double[] crystalHklCenter = new double[3];
 	/**
 	 * number of single-crystal tickmarks to be displayed
 	 */
-	int[] crystalTickCount = new int[2];
+	private int[] crystalTickCount = new int[2];
 	/**
 	 * List of tickmark supHKLs to be displayed
 	 */
-	double[][][] crystalTickHKL = new double[2][maxTicks][3];
+	private double[][][] crystalTickHKL = new double[2][maxTicks][3];
 	/**
 	 * List of tickmark (X1Y1, X2Y2) coords to be displayed
 	 */
-	double[][][] crystalTickXY2 = new double[2][maxTicks][4];
+	private double[][][] crystalTickXY2 = new double[2][maxTicks][4];
+
 	/**
-	 * List of childHKLs contained within the display
+	 * A map of assignment types
 	 */
-	double[][] crystalPeakHKL = new double[maxPeaks][3];
-	/**
-	 * List of peak XY coords contained within the single-crystal display
-	 */
-	double[][] crystalPeakXY = new double[maxPeaks][2];
-	/**
-	 * List of peak radii contained within the single-crystal display
-	 */
-	double[] crystalPeakRadius = new double[maxPeaks];
+	private Map<String, PeakData> mapAssignHKLType = new HashMap<>();
+	
 	/**
 	 * Plot axes for crystal display
 	 */
@@ -289,18 +429,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 */
 	double[][] crystalHkldirections = new double[2][3];
 
-	/**
-	 * List of positions of powder peaks in either 2th, d or q units
-	 */
-	double[] powderPeakY = new double[maxPeaks];
-	/**
-	 * List of positions of powder peaks in scaled pixel units
-	 */
-	double[] powderPeakX = new double[maxPeaks];
-	/**
-	 * List of peak radii contained within the single-crystal display
-	 */
-	double[] peakIntensity = new double[maxPeaks];
 	/**
 	 * Largest powder peak multiplicity
 	 */
@@ -348,62 +476,50 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 */
 	double[] powderY = new double[powderXRange];
 
-	JLabel horizLabel, upperLabel, centerLabel, qrangeLabel, wavLabel, minLabel, maxLabel, fwhmLabel, zoomLabel,
-			mouseoverLabel;
-
-	/**
-	 * Radio buttons
-	 */
-	JRadioButton parentButton, childButton, xrayButton, neutronButton, crystalButton, powderButton, bothButton, dButton,
-			qButton, tButton;
-	/**
-	 * Text fields for inputting viewing region
-	 */
-	JTextField hHTxt, kHTxt, lHTxt, hVTxt, kVTxt, lVTxt, hOTxt, kOTxt, lOTxt, qTxt;
-	JTextField wavTxt, minTxt, maxTxt, fwhmTxt, zoomTxt;
-
-	private RenderPanel rp;
-
 	/**
 	 * BH EXPERIMENTAL allows selective removal of atoms from powder pattern
 	 */
 	private boolean allowSubtypeSelection = true;
 
+	private IsoDiffractGUI gui;
+
 	public IsoDiffractApp() {
 		super(APP_ISODIFFRACT);
+		gui = new IsoDiffractGUI();
+	}
+
+	protected void updateForPaint() {
+		updateDimensions();
+		needsRecalc = true;
+		updateDisplay();
 	}
 
 	@Override
 	protected void dispose() {
-		rp.removeKeyListener(this);
-		rp.dispose();
+		gui.dispose();
+		gui = null;
 		super.dispose();
 	}
 
 	@Override
 	protected void init() {
-		buildControls();
-		showControls();
-		rp = new RenderPanel(this);
-		rp.addKeyListener(this);
-		drawPanel.add(rp);
+		gui.init();
+		drawPanel.add(gui.rp);
 	}
 
 	@Override
 	protected void frameResized() {
 		super.frameResized();
 		needsRecalc = true;
-		if (rp == null)
-			return;
-		rp.im = null;
-		updateDisplay();
+		if (gui.frameResized())
+			updateDisplay();
 	}
 
 	@Override
 	protected void updateDimensions() {
 		super.updateDimensions();
-		drawHalfWidth = drawWidth / 2;
-		drawHalfHeight = drawHeight / 2;
+		int drawWH2 = Math.min(drawWidth, drawHeight)/ 2;
+		drawHalfWidthHeight = drawWH2;
 
 	}
 
@@ -421,8 +537,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				resetCrystalPeaks();
 			needsRecalc = false;
 			variables.isChanged = false;
-			rp.repaint();
-			rp.requestFocus();
+			gui.repaint();
 			isAdjusting = false;
 		}
 		super.updateDisplay();
@@ -459,20 +574,23 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	void drawCrystPeaks(Graphics gr) {
 		int max = (int) Math.rint(crystalMaxPeakRadius);
 		for (int p = 0; p < peakCount; p++) {
-			drawCrystalCircle(gr, crystalPeakXY[p][0], crystalPeakXY[p][1], crystalPeakRadius[p], max,
-					peakType[p]);
+			drawCrystalCircle(gr, peakData[p], max);
 		}
 	}
 
-	private void drawCrystalCircle(Graphics gr, double dx, double dy, double dradius, int max, int color) {
+	private void drawCrystalCircle(Graphics gr, PeakData p, int max) {
+		double dx = p.crystalPeakXY[0];
+		double dy = p.crystalPeakXY[1];
+		double dradius = p.crystalPeakRadius;
+		int color = p.peakType;	
 		boolean tooBig = false;
 		int radius = (int) Math.rint(dradius);
 		if (radius >= max) {
 			radius = max;
 			tooBig = true;
 		}
-		int x = (int) dx;
-		int y = (int) dy;
+		int x = (int) (dx);
+		int y = (int) (dy);
 		gr.setColor(tooBig ? Color.yellow : Color.white);
 		gr.fillOval(x - radius, y - radius, radius * 2, radius * 2);
 		gr.setColor(colorMap[color]);
@@ -535,18 +653,18 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		double y = drawHeight - stickYOffset;
 		gr.setColor(colorMap[0]);
-		drawDash(gr, drawHalfWidth, drawHeight - axisYOffset, 1, 0, drawHalfWidth, lineThickness, 0);
+		drawDash(gr, drawWidth/2, drawHeight - axisYOffset, 1, 0, drawWidth/2, lineThickness, 0);
 		for (int p = 0; p < peakCount; p++) {
-			if (peakIntensity[p] < MIN_PEAK_INTENSITY)
-				drawDash(gr, powderPeakX[p], y, 0, 1, tickLength, lineThickness, peakType[p]);
+			if (peakData[p].peakIntensity < MIN_PEAK_INTENSITY)
+				drawDash(gr, peakData[p].powderPeakX, y, 0, 1, tickLength, lineThickness, peakData[p].peakType);
 		}
 		for (int c = 4; c > 0; c--) {
 			// draw one color at at time with
 			// red and green last and on top
 			for (int p = 0; p < peakCount; p++) {
-				if (peakType[p] != c || peakIntensity[p] < MIN_PEAK_INTENSITY)
+				if (peakData[p].peakType != c || peakData[p].peakIntensity < MIN_PEAK_INTENSITY)
 					continue;
-				drawDash(gr, powderPeakX[p], y, 0, 1, tickLength, lineThickness, c);
+				drawDash(gr, peakData[p].powderPeakX, y, 0, 1, tickLength, lineThickness, c);
 			}
 		}
 		gr.setColor(colorMap[0]);
@@ -591,12 +709,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		boolean isPowder = this.isPowder && (!isBoth || y > drawHeight - shortPowderHeight);
 		for (int p = 0; p < peakCount; p++) {
 			if (isPowder) {
-				if (MathUtil.approxEqual(x, powderPeakX[p], tol2)
+				if (MathUtil.approxEqual(x, peakData[p].powderPeakX, tol2)
 						&& (!isBoth || (Math.abs(y - (drawHeight - powderStickYOffset)) < 1.25 * normalTickLength))
-						&& (peakType[p] < currentcolor)) {
+						&& (peakData[p].peakType < currentcolor)) {
 					thisPeak = p;
-					currentcolor = peakType[p];
-					valuestring = trim00(powderPeakY[p]);
+					currentcolor = peakData[p].peakType;
+					valuestring = MathUtil.trim00(peakData[p].powderPeakY);
 					switch (powderPatternType) {
 					case POWDER_PATTERN_TYPE_2THETA:
 						specifictext = "2\u0398 = " + valuestring + " \u00b0 ";
@@ -610,8 +728,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 					}
 				}
 			} else {
-				double dx = x - crystalPeakXY[p][0];
-				double dy = y - crystalPeakXY[p][1];
+				double dx = x - peakData[p].crystalPeakXY[0];
+				double dy = y - peakData[p].crystalPeakXY[1];
 				if (dx * dx + dy * dy <= tol2) {
 					thisPeak = p;
 					specifictext = "";
@@ -620,24 +738,21 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			}
 		}
 		if (thisPeak >= 0) {
-			double[] childHKL = crystalPeakHKL[thisPeak];
-			double[] parentHKL = new double[3];
-			MathUtil.mat3mul(variables.childCell.conv2convParentTransposeP, childHKL, parentHKL);
-			String intensity = toIntensityString(peakIntensity[thisPeak]);
-			mouseovertext = "Parent HKL = (" + trim00(parentHKL[0]) + ", " + trim00(parentHKL[1]) + ", "
-					+ trim00(parentHKL[2]) + ")       Child HKL = (" + trim00(childHKL[0]) + ", " + trim00(childHKL[1])
-					+ ", " + trim00(childHKL[2]) + ")     " + specifictext
-
-					+ (peakIntensity[thisPeak] < MIN_PEAK_INTENSITY ? ""
-							: "   I = " + intensity + (isPowder ? "   M = " + (int) peakMultiplicity[thisPeak] : ""));
+			PeakData p = peakData[thisPeak];
+			String intensity = toIntensityString(p.peakIntensity);
+			mouseovertext = "Parent HKL = " + p.parentPeakHKLString
+					+ "       Child HKL = " + p.crystalPeakHKLString 
+					+ "     " + specifictext
+					+ (p.peakIntensity < MIN_PEAK_INTENSITY ? ""
+							: "   I = " + intensity + (isPowder ? "   M = " + (int) p.peakMultiplicity : ""));
 
 			isMouseOver = true;
 		} else {
 			mouseovertext = "";
 			isMouseOver = false;
 		}
-		mouseoverLabel.setText(mouseovertext);
-		showControls();
+		gui.setMouseOverText(mouseovertext);
+		gui.showControls();
 	}
 	private String toIntensityString(double d) {
 		if (d > 0.001) {
@@ -649,11 +764,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	public void mouseDrag(int dx, int dy) {
 		if (!isPowder && !isBoth)
 			return;
-		double zoom = getText(zoomTxt, powderZoom, 2);
-		zoom += -dy / 100.0;
-		if (zoom < 0)
-			zoom = 0;
-		zoomTxt.setText(trim00(zoom));
+		gui.setZoom(powderZoom, dy);
 		needsRecalc = true;
 		updateDisplay();
 	}
@@ -742,9 +853,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				pppM[i] = 0;
 			}
 			}
-			MathUtil.set3(variables.childCell.toTempCartesian(crystalPeakHKL[p]), qhat);
+			MathUtil.set3(variables.childCell.toTempCartesian(peakData[p].crystalPeakHKL), qhat);
 			MathUtil.norm3(qhat);
-			double d = 2 * Math.PI * peakDInv[p];
+			double d = 2 * Math.PI * peakData[p].peakDInv;
 			double thermal = Math.exp(-0.5 * uiso * d * d);
 			
 			for (int ia = 0, n = variables.nAtoms; ia < n; ia++) {
@@ -765,7 +876,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				
 				// just [atomicNumber, 0] for xray
 				double[] atomScatFac = Elements.getScatteringFactor(a.getAtomTypeSymbol(), isXray);
-				double phase = 2 * Math.PI * MathUtil.dot3(crystalPeakHKL[p], supxyz);
+				double phase = 2 * Math.PI * MathUtil.dot3(peakData[p].crystalPeakHKL, supxyz);
 				double cos = Math.cos(phase);
 				if (Math.abs(cos) < 1e-13) {
 					// BH correcting for cos (Math.PI/2) == 6.123233995736766E-17, not zero
@@ -799,7 +910,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			double f = (pppNR == 0 ? 0 
 					: (pppNR * pppNR + pppNI * pppNI + (isXray ? 0 : MathUtil.lenSq3(pppM)))
 						/ (zzzNR * zzzNR + zzzNI * zzzNI + (isXray ? 0 : MathUtil.lenSq3(zzzM))));			
-			peakIntensity[p] = (f > 0 && f < MIN_PEAK_INTENSITY ? MIN_PEAK_INTENSITY / 2 : thermal * f);
+			peakData[p].peakIntensity = (f > 0 && f < MIN_PEAK_INTENSITY ? MIN_PEAK_INTENSITY / 2 : thermal * f);
 		}
 	}
 
@@ -811,23 +922,26 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	private void recalcCrystal() {
 		double[] t03 = new double[3], t3 = new double[3];
 
+		int dw = (int) (drawWidth/2-drawHalfWidthHeight);
+		int dh = (int) (drawHeight/2-drawHalfWidthHeight);
+
 		// update the structure based on current slider values
 		variables.recalcDistortion();
 
 		recalcStrainMetrics();
 
 		// update the peak drawing coordinates
+		double minWH = Math.min(drawHalfWidthHeight, drawHalfWidthHeight);
 		for (int p = 0; p < peakCount; p++) {
-			MathUtil.vecaddN(crystalPeakHKL[p], -1.0, crystalHklCenter, t03);
+			MathUtil.vecaddN(peakData[p].crystalPeakHKL, -1.0, crystalHklCenter, t03);
 			MathUtil.mat3mul(matChildReciprocal2rotatedCartesian, t03, t3);
-			crystalPeakXY[p][0] = (1 + t3[0] / crystalDInvRange) * drawHalfWidth;
-			crystalPeakXY[p][1] = (1 - t3[1] / crystalDInvRange) * drawHalfHeight; 
+			peakData[p].crystalPeakXY[0] = (1 + t3[0] / crystalDInvRange) * minWH + dw;
+			peakData[p].crystalPeakXY[1] = (1 - t3[1] / crystalDInvRange) * minWH + dh; 
 		}
 
 		// Update the dinverse list
 		for (int p = 0; p < peakCount; p++) {
-			MathUtil.mat3mul(metric, crystalPeakHKL[p], t3);
-			peakDInv[p] = MathUtil.dot3Length(crystalPeakHKL[p], t3);
+			peakData[p].updateDinverse(metric, t3);
 		}
 
 		// Update the axis and tickmark plot parameters
@@ -837,19 +951,19 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			MathUtil.norm3(t3);
 			double dirX = t3[0];
 			double dirY = t3[1];
-			crystalAxesXYDirXYLen[n][0] = drawHalfWidth;
-			crystalAxesXYDirXYLen[n][1] = drawHalfHeight;
+			crystalAxesXYDirXYLen[n][0] = drawHalfWidthHeight + dw;
+			crystalAxesXYDirXYLen[n][1] = drawHalfWidthHeight + dh;
 			crystalAxesXYDirXYLen[n][2] = dirX;
 			crystalAxesXYDirXYLen[n][3] = -dirY; // minus sign turns the picture upside right.
-			crystalAxesXYDirXYLen[n][4] = (Math.abs(dirX) <= 0.001 ? drawHalfWidth 
-					: Math.abs(dirX) > Math.abs(dirY) ? drawHalfWidth / Math.abs(dirX) 
-					: drawHalfHeight / Math.abs(dirY));
+			crystalAxesXYDirXYLen[n][4] = (Math.abs(dirX) <= 0.001 ? drawHalfWidthHeight 
+					: Math.abs(dirX) > Math.abs(dirY) ? drawHalfWidthHeight / Math.abs(dirX) 
+					: drawHalfWidthHeight / Math.abs(dirY));
 
 			for (int m = 0; m < crystalTickCount[n]; m++) {
 				MathUtil.mat3mul(matChildReciprocal2rotatedCartesian, crystalTickHKL[n][m], t3);
 				
-				crystalTickXY2[n][m][0] = (1 + t3[0] / crystalDInvRange) * drawHalfWidth;
-				crystalTickXY2[n][m][1] = (1 - t3[1] / crystalDInvRange) * drawHalfHeight; 
+				crystalTickXY2[n][m][0] = (1 + t3[0] / crystalDInvRange) * drawHalfWidthHeight + dw;
+				crystalTickXY2[n][m][1] = (1 - t3[1] / crystalDInvRange) * drawHalfWidthHeight + dh; 
 
 				// z = tempvec[2] * (drawHalfWidth / crystalDInvRange); // BH I guess...
 				crystalTickXY2[0][m][2] = crystalAxesXYDirXYLen[1][2];
@@ -866,8 +980,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		// update the logarithmic peak radii
 		for (int p = 0; p < peakCount; p++)
-			crystalPeakRadius[p] = crystalMaxPeakRadius
-					* (Math.max(Math.log(peakIntensity[p]) / 2.3025, -logfac) + logfac) / logfac;
+			peakData[p].crystalPeakRadius = crystalMaxPeakRadius
+					* (Math.max(Math.log(peakData[p].peakIntensity) / 2.3025, -logfac) + logfac) / logfac;
 
 	}
 
@@ -888,29 +1002,24 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		double[][] parent2childLattice = new double[3][3]; // transforms parentHKL to childHKL
 		MathUtil.mat3inverse(variables.childCell.conv2convParentTransposeP, parent2childLattice, tempvec, tempmat);
 
-		hklO[0] = getText(hOTxt, hklO[0], 2);
-		hklO[1] = getText(kOTxt, hklO[1], 2);
-		hklO[2] = getText(lOTxt, hklO[2], 2);
-		hklH[0] = getText(hHTxt, hklH[0], 2);
-		hklH[1] = getText(kHTxt, hklH[1], 2);
-		hklH[2] = getText(lHTxt, hklH[2], 2);
-		hklV[0] = getText(hVTxt, hklV[0], 2);
-		hklV[1] = getText(kVTxt, hklV[1], 2);
-		hklV[2] = getText(lVTxt, hklV[2], 2);
+		gui.setHKL(hklO, hklH, hklV);
 
-		crystalDInvRange = getText(qTxt, crystalDInvRange * (2 * Math.PI), 2) / (2 * Math.PI);
+		crystalDInvRange = getText(gui.qTxt, crystalDInvRange * (2 * Math.PI), 2) / (2 * Math.PI);
 
 		// Decide that user input is either of parentHKL or childHKL type
 		// Either way, the input directions are passed as childHKL vectors.
 		// Note that the platt2slatt matrix is slider-bar independent.
-		if (hklType == 2) {
+		switch (hklType) {
+		case HKL_TYPE_CHILD:
 			MathUtil.copy3(hklH, crystalHkldirections[0]);
 			MathUtil.copy3(hklV, crystalHkldirections[1]);
 			MathUtil.copy3(hklO, crystalHklCenter);
-		} else if (hklType == 1) {
+			break;
+		case HKL_TYPE_PARENT:
 			MathUtil.mat3mul(parent2childLattice, hklH, crystalHkldirections[0]);
 			MathUtil.mat3mul(parent2childLattice, hklV, crystalHkldirections[1]);
 			MathUtil.mat3mul(parent2childLattice, hklO, crystalHklCenter);
+			break;
 		}
 
 		// Identify the direct-space direction perpendicular to display plane.
@@ -930,8 +1039,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		checkDisplayRange(-crystalDInvRange, crystalDInvRange, min, max);
 
 		// Identify the peaks to display.
+		for (int i = 0; i < peakCount; i++)
+			peakData[i] = null;
 		peakCount = 0;
-		double r2max = drawHalfWidth * drawHalfWidth;
+		double r2max = drawHalfWidthHeight * drawHalfWidthHeight;
 		double f2 = r2max / crystalDInvRange / crystalDInvRange;
 		double[] childHKL = new double[3], childHKLcart = new double[3];
 		for (int H = min[0]; H <= max[0]; H++)
@@ -947,8 +1058,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 					// HKL point lies in q range of display
 					// HKL point lies in the display plane
 					// Save the XY coords of a good peak.
-					MathUtil.copy3(childHKL, crystalPeakHKL[peakCount]);
-					peakMultiplicity[peakCount] = 1;
+					peakData[peakCount] = new PeakData();
+					MathUtil.copy3(childHKL, peakData[peakCount].crystalPeakHKL);
+					peakData[peakCount].peakMultiplicity = 1;
 					double r2 = (childHKLcart[0] * childHKLcart[0] + childHKLcart[1] * childHKLcart[1]) * f2;
 					if ((Math.abs(r2) > 0.01) && (r2 < r2max)) {
 						r2max = r2;
@@ -1012,9 +1124,10 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	private void recalcPowderPeakPositionsAndValues() {
 		for (int p = 0; p < peakCount; p++) {
-			MathUtil.mat3mul(metric, crystalPeakHKL[p], tempvec);
-			double dinv = MathUtil.dot3Length(crystalPeakHKL[p], tempvec);
-			peakDInv[p] = dinv;
+			PeakData pd = peakData[p];
+			MathUtil.mat3mul(metric, pd.crystalPeakHKL, tempvec);
+			double dinv = MathUtil.dot3Length(pd.crystalPeakHKL, tempvec);
+			pd.peakDInv = dinv;
 			double dval = (dinv > 0 ? 1 / dinv : 0);
 			double v = 0;
 			switch (powderPatternType) {
@@ -1028,8 +1141,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				v = 2 * Math.PI * dinv;
 				break;
 			}
-			powderPeakX[p] = drawWidth * ((v - powderXMin) / (powderXMax - powderXMin));
-			powderPeakY[p] = v;
+			pd.powderPeakX = drawWidth * ((v - powderXMin) / (powderXMax - powderXMin));
+			pd.powderPeakY = v;
 		}
 	}
 
@@ -1041,10 +1154,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 				.ceil(powderXRange * (powderResolution / Math.sqrt(8 * Math.log(2))) / (powderXMax - powderXMin));
 		double f = 1.0 * powderXRange / drawWidth;
 		for (int p = 0; p < peakCount; p++) {
-			double center = powderPeakX[p] * f;
+			PeakData pd = peakData[p];
+			double center = pd.powderPeakX * f;
 			int left = Math.max((int) Math.floor(center - 5 * sigmapix), 0);
 			int right = Math.min((int) Math.ceil(center + 5 * sigmapix), powderXRange - 1);
-			double pmi = peakIntensity[p] * peakMultiplicity[p];
+			double pmi = peakData[p].peakIntensity * pd.peakMultiplicity;
 			for (int i = left; i <= right; i++) {
 				double d = (i - center) / sigmapix;
 				double v = Math.exp(-d * d / 2) * pmi;
@@ -1060,12 +1174,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * 
 	 */
 	private void resetPowderPeaks() {
-		double tol = 0.0001;
-		powderWavelength = getText(wavTxt, powderWavelength, 2);
-		powderXMin = getText(minTxt, powderXMin, 2);
-		powderXMax = getText(maxTxt, powderXMax, 2);
-		powderResolution = getText(fwhmTxt, powderResolution, 3);
-		powderZoom = getText(zoomTxt, powderZoom, 2);
+		double tol = powderPeakTolerance;
+		powderWavelength = getText(gui.wavTxt, powderWavelength, 2);
+		powderXMin = getText(gui.minTxt, powderXMin, 2);
+		powderXMax = getText(gui.maxTxt, powderXMax, 2);
+		powderResolution = getText(gui.fwhmTxt, powderResolution, 3);
+		powderZoom = getText(gui.zoomTxt, powderZoom, 2);
 		if ((powderXMax <= powderXMin) || (powderPatternType == POWDER_PATTERN_TYPE_DSPACE)
 				&& ((Math.abs(powderXMin) < tol) || (Math.abs(powderXMax) < tol)))
 			return;
@@ -1088,14 +1202,14 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			strainVals[m] = (2 * rval.nextFloat() - 1);// *rd.strainmodeMaxAmp[m];
 		variables.recalcDistortion();// Update the distortion parameters
 		recalcStrainMetrics(); // Build the randomized dinvmetric tensor
-		MathUtil.mat3copy(metric, randommetric1);
+		MathUtil.copyNN(metric, randommetric1);
 
 		// randomize the strains again to be extra careful
 		for (int m = 0; m < nStrains; m++)
 			strainVals[m] = (2 * rval.nextFloat() - 1);// *rd.strainmodeMaxAmp[m];
 		variables.recalcDistortion();// Update the distortion parameters
 		recalcStrainMetrics(); // Build the randomized dinvmetric tensor
-		MathUtil.mat3copy(metric, randommetric2);
+		MathUtil.copyNN(metric, randommetric2);
 
 		// restore the strains to their original values
 		variables.getSetChildFraction(child0);
@@ -1143,7 +1257,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 					if (isinrange) {
 						boolean createNewPeak = true;
 						for (int p = 0; p < peakCount; p++) {
-							double[] peakHKL = crystalPeakHKL[p];
+							PeakData pd = peakData[p];
+							double[] peakHKL = pd.crystalPeakHKL;
 							boolean isrobustlycoincident = MathUtil.approxEqual(dinv0, dinvlist0[p], tol)
 									&& MathUtil.approxEqual(dinv1, dinvlist1[p], tol)
 									&& MathUtil.approxEqual(dinv2, dinvlist2[p], tol);
@@ -1154,17 +1269,18 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 								if (comparePowderHKL(testHKL, peakHKL)) {
 									MathUtil.copy3(testHKL, peakHKL);
 								}
-								peakMultiplicity[p] += 1;
+								pd.peakMultiplicity += 1;
 								createNewPeak = false;
 								break;
 							}
 						}
 						if (createNewPeak) {
-							MathUtil.set3(crystalPeakHKL[peakCount], h, k, l);
+							PeakData pd = peakData[peakCount] = new PeakData();
+							MathUtil.set3(pd.crystalPeakHKL, h, k, l);
 							dinvlist0[peakCount] = dinv0;
 							dinvlist1[peakCount] = dinv1;
 							dinvlist2[peakCount] = dinv2;
-							peakMultiplicity[peakCount] = 1;
+							pd.peakMultiplicity = 1;
 							if (++peakCount >= maxPeaks)
 								return;
 						}
@@ -1202,15 +1318,13 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * @author Bob Hanson
 	 *
 	 */
-	private static class PowderPeakSorter implements Comparator<Integer> {
+	private class PowderPeakSorter implements Comparator<Integer> {
 
-		private double[] dinv;
 		private double tol;
-		private double[][] hkls;
+		private double[] dinvList;
 
-		PowderPeakSorter(double[] dinv, double[][] HKLs, double tol) {
-			this.dinv = dinv;
-			this.hkls = HKLs;
+		PowderPeakSorter(double[] dinvlist, double tol) {
+			this.dinvList = dinvlist;
 			this.tol = tol;
 		}
 
@@ -1218,9 +1332,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		public int compare(Integer o1, Integer o2) {
 			int i = o1.intValue();
 			int j = o2.intValue();
-			boolean sameDinv = MathUtil.approxEqual(dinv[i], dinv[j], tol);
-			boolean firstHigher = !sameDinv && dinv[i] > dinv[j];
-			boolean firstHKLnicerThanSecond = comparePowderHKL(hkls[i], hkls[j]);
+			double dinvi = dinvList[i];
+			double dinvj = dinvList[j];
+			boolean sameDinv = MathUtil.approxEqual(dinvi, dinvj, tol);
+			boolean firstHigher = !sameDinv && dinvi > dinvj;
+			boolean firstHKLnicerThanSecond = comparePowderHKL(peakData[i].crystalPeakHKL, peakData[j].crystalPeakHKL);
 			// we must return -1 if order is OK, 0 if equal, and 1 if they need switching
 			return (firstHigher ? 1 : !sameDinv || !firstHKLnicerThanSecond ? -1 : 0);
 		}
@@ -1237,16 +1353,12 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		Integer[] sortList = new Integer[peakCount];
 		for (int i = 0; i < peakCount; i++)
 			sortList[i] = i;
-		Arrays.sort(sortList, new PowderPeakSorter(dinvlist0, crystalPeakHKL, tol));
-		double[][] hkls = new double[maxPeaks][3];
-		double[] mults = new double[maxPeaks];
+		Arrays.sort(sortList, new PowderPeakSorter(dinvlist0, tol));
+		PeakData[] newPeakData = new PeakData[maxPeaks];
 		for (int i = 0; i < peakCount; i++) {
-			int j = sortList[i];
-			hkls[i] = crystalPeakHKL[j];
-			mults[i] = peakMultiplicity[j];
+			newPeakData[i] = peakData[sortList[i]];
 		}
-		crystalPeakHKL = hkls;
-		peakMultiplicity = mults;
+		peakData = newPeakData;
 	}
 
 	private void setPowderDinvMinMaxRes() {
@@ -1440,65 +1552,146 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		return MathUtil.approxEqual3(ta, tb, tol);
 	}
 
-	private final static int PEAK_TYPE_ERROR = 0;
-	private final static int PEAK_TYPE_PARENT_BRAGG = 1;
-	private final static int PEAK_TYPE_PARENT_SYSABS = 2;
-	private final static int PEAK_TYPE_CHILD_BRAGG = 3;
-	private final static int PEAK_TYPE_CHILD_SYSABS = 4;
-	
 	/**
 	 * identifies parent and super-lattice peaks that are systematically absent
 	 * Called by resetCrystalPeaks and resetPowderPeaks.
 	 * 
 	 */
 	public void assignPeakTypes() {
+		for (int p = 0; p < peakCount; p++) {
+			peakData[p].setPeakHKLStrings(variables.childCell.conv2convParentTransposeP);
+		}
 		if (variables.childCell.conv2primTransposeP == null) {
 			assignPeakTypesByRandomizing();
-			return;
+		} else if (variables.parentCell.symopData == null || usePrimitiveAssignmentMethod) {
+			assignPeakTypesPrimitive();
+		} else {
+			assignPeakTypesUsingOperations();
 		}
+	}
+
+	/**
+	 * This is the newer, preferred method, using operations
+	 */
+	private void assignPeakTypesUsingOperations() {
+		System.out.println("IsoDiffractApp assignmentMethod = assignPeakTypesUsingOperations for hklType " 
+				+ (hklType == HKL_TYPE_PARENT ? "parent" : "child"));
+		double ptolerance = 0.01;
+		for (int p = 0; p < peakCount; p++) {
+			PeakData pd = peakData[p];
+//			ParentZ test:  HKL is integral in conventional parent setting.
+//			ParentA test:	HKL is systematically absent for at least one conventional parent
+//			operation/centering in the conventional parent setting.
+//			ChildA test:	HKL is systematically absent for at least one conventional child
+//			operation/centering in the conventional child setting.
+//
+//			Color		ParentZ	ParentA	ChildA
+//			GREEN(1)	T	    F	      -
+//			RED(2)		T    	T	      -
+//			BLUE(3)		F	    -	      F
+//			ORANGE(4)	F	    -	      T
+
+			boolean testZ = MathUtil.isIntegral3(pd.parentPeakHKL, ptolerance);
+			Variables.SymopData op = (testZ ? variables.parentCell : variables.childCell)
+					.getSystematicallAbsentOp(testZ ? pd.parentPeakHKL : pd.crystalPeakHKL);
+			boolean testA = (op != null);
+
+//			System.out.println(pd.parentPeakHKLString + "\t" + pd.crystalPeakHKLString
+//					+ "\t" + testZ + " " + testA);
+			if (testZ & !testA) {
+				pd.setPeakType(PEAK_TYPE_PARENT_BRAGG, op); // GREEN
+			} else if (testZ & testA) {
+				pd.setPeakType(PEAK_TYPE_PARENT_SYSABS, op); // RED
+			} else if (!testZ && !testA) {
+				pd.setPeakType(PEAK_TYPE_CHILD_BRAGG, op); // BLUE
+			} else {// !testZ && testA
+				pd.setPeakType(PEAK_TYPE_CHILD_SYSABS, op); // ORANGE
+			}
+			if (op != null)
+				showLine(35, p + " " + typeOf(pd.peakType) + " " + op.opXYZ, 
+						20, MathUtil.roundVec00(op.vi), 25, pd.parentPeakHKLString, 15, pd.crystalPeakHKLString, 10, colorOf(pd.peakType));
+			else
+				showLine(35, p + " " + typeOf(pd.peakType), 20, "", 25, pd.parentPeakHKLString, 15, pd.crystalPeakHKLString, 10, colorOf(pd.peakType));
+		}
+	}				
+	
+	final static String linew = "                                   ";
+
+	private void showLine(Object... parts) {
+		String s = "";
+		int w;
+		for (int i = 0; i < parts.length;) {
+			w = ((Number) parts[i++]).intValue();
+			String p = (String) parts[i++];
+			s += (p.length() > w ? p + " " : (p + linew).substring(0, w));
+		}
+		System.out.println(s);
+	}
+
+	/**
+	 * Fallback to first attempt in 2023 to do something better than random,
+	 * using additional information found in newer ISOVIS files, but not operation
+	 * information. It is retained here for ISOVIZ files that might still be around
+	 * that do not have such information.
+	 */
+	@Deprecated
+	private void assignPeakTypesPrimitive() {
+		System.out.println("IsoDiffractApp assignmentMethod = assignPeakTypesPrimitive");
 		double[] conventionalHKL = new double[3];
 		double[] primitiveHKL = new double[3];
 		double ptolerance = 0.01;
 		for (int p = 0; p < peakCount; p++) {
-			double[] convChildHKL = crystalPeakHKL[p];
+			String key = peakData[p].crystalPeakHKLString;
+			PeakData data = (mapAssignHKLType.get(key));
+			if (data != null) {
+				peakData[p] = data;
+				continue;
+			}
+			double[] convChildHKL = peakData[p].crystalPeakHKL;
 			MathUtil.mat3mul(variables.childCell.conv2convParentTransposeP, convChildHKL, conventionalHKL);
 			MathUtil.mat3mul(variables.parentCell.conv2primTransposeP, conventionalHKL, primitiveHKL);
+			int itype;
 			if (MathUtil.isIntegral3(primitiveHKL, ptolerance)) {
-				peakType[p] = PEAK_TYPE_PARENT_BRAGG; // 1
-				continue;
+				itype = PEAK_TYPE_PARENT_BRAGG; // 1
+			} else if (MathUtil.isIntegral3(conventionalHKL, ptolerance)) {
+				itype = PEAK_TYPE_PARENT_SYSABS; // 2
+			} else {
+				MathUtil.mat3mul(variables.childCell.conv2primTransposeP, convChildHKL, primitiveHKL);
+				if (MathUtil.isIntegral3(primitiveHKL, ptolerance)) {
+					itype = PEAK_TYPE_CHILD_BRAGG; // 3
+				} else if (MathUtil.isIntegral3(convChildHKL, ptolerance)) {
+					itype = PEAK_TYPE_CHILD_SYSABS; // 4
+				} else {
+					itype = PEAK_TYPE_ERROR;
+					System.err.println("IsoDiffractApp.assignPeakTypesPrimitive error for " + peakData[p].crystalPeakHKLString);
+				}
 			}
-			if (MathUtil.isIntegral3(conventionalHKL, ptolerance)) {
-				peakType[p] = PEAK_TYPE_PARENT_SYSABS; // 2
-				continue;
-			}
-			MathUtil.mat3mul(variables.childCell.conv2primTransposeP, convChildHKL, primitiveHKL);
-			if (MathUtil.isIntegral3(primitiveHKL, ptolerance)) {
-				peakType[p] = PEAK_TYPE_CHILD_BRAGG; // 3
-				continue;
-			}
-			if (MathUtil.isIntegral3(convChildHKL, ptolerance)) {
-				peakType[p] = PEAK_TYPE_CHILD_SYSABS; // 4
-				continue;
-			}
-			peakType[p] = PEAK_TYPE_ERROR;
-			// Throw an error message of some kind.
+			peakData[p].setPeakType(itype, null);
+			mapAssignHKLType.put(key, peakData[p]);
 		}
 	}
 
 	/**
 	 * fall back to randomizing for older ISOVIZ files
 	 */
+	@Deprecated
 	private void assignPeakTypesByRandomizing() {
+		System.out.println("IsoDiffractApp assignmentMethod = assignPeakTypesByRandomizing");
 		double[] parentHKL = new double[3];
 		double ptolerance = 0.01; 
 		// Set the peak type to 1 for parent Bragg peaks, and 3 otherwise.
 		// Determines whether or not a peak is a parent Bragg peak (h k l all integral)
 		for (int p = 0; p < peakCount; p++) {
+			PeakData data = (mapAssignHKLType.get(peakData[p].crystalPeakHKLString));
+			if (data != null) {
+				peakData[p] = data;
+				continue;
+			}
 			// transform super hkl into parent hkl
-			MathUtil.mat3mul(variables.childCell.conv2convParentTransposeP, crystalPeakHKL[p], parentHKL); 
-			peakType[p] = PEAK_TYPE_CHILD_BRAGG; // 3
+			MathUtil.mat3mul(variables.childCell.conv2convParentTransposeP, peakData[p].crystalPeakHKL, parentHKL); 
+			peakData[p].setPeakType(PEAK_TYPE_CHILD_BRAGG, null); // 3
 			if (MathUtil.isIntegral3(parentHKL, ptolerance)) {
-				peakType[p] = PEAK_TYPE_PARENT_BRAGG; // 1
+				peakData[p].setPeakType(PEAK_TYPE_PARENT_BRAGG, null); // 1
 			}
 		}
 		// Save and zero all displacive, scalar and magnetic mode values
@@ -1511,16 +1704,17 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		recalcIntensities();
 		// Calculate all peak intensities and set (now) zero-intensity Bragg peaks to type 2.
 		for (int p = 0; p < peakCount; p++) {
-			if ((peakType[p] == PEAK_TYPE_PARENT_BRAGG) && (Math.abs(peakIntensity[p]) < 0.00000001))
-				peakType[p] = PEAK_TYPE_PARENT_SYSABS; // 2
+			if ((peakData[p].peakType == PEAK_TYPE_PARENT_BRAGG) && (Math.abs(peakData[p].peakIntensity) < 0.00000001))
+				peakData[p].peakType = PEAK_TYPE_PARENT_SYSABS; // 2
 		}
 		// Now randomize all Non-GM1 mode values to remove them from the peaks
 		variables.randomizeNonGM1Values(rval);
 		variables.recalcDistortion();
 		recalcIntensities();
 		for (int p = 0; p < peakCount; p++) {
-			if ((peakType[p] == PEAK_TYPE_CHILD_BRAGG) && (Math.abs(peakIntensity[p]) < 0.00000001))
-				peakType[p] = PEAK_TYPE_CHILD_SYSABS; // 4
+			if ((peakData[p].peakType == PEAK_TYPE_CHILD_BRAGG) && (Math.abs(peakData[p].peakIntensity) < 0.00000001))
+				peakData[p].peakType = PEAK_TYPE_CHILD_SYSABS; // 4
+			mapAssignHKLType.put(peakData[p].crystalPeakHKLString, peakData[p]);
 		}
 		// Restore all displacement and scalar mode values to their original values.
 		variables.restoreModeValues();
@@ -1543,24 +1737,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	@Override
 	public void reset() {
-		hOTxt.setText("0");
-		kOTxt.setText("0");
-		lOTxt.setText("0");
-		hHTxt.setText("1");
-		kHTxt.setText("0");
-		lHTxt.setText("0");
-		hVTxt.setText("0");
-		kVTxt.setText("1");
-		lVTxt.setText("0");
-		qTxt.setText("4");
-		wavTxt.setText("1.54");
-		minTxt.setText("5");
-		maxTxt.setText("60");
-		fwhmTxt.setText("0.200");
-		zoomTxt.setText("1.0");
-		tButton.setSelected(true);
-		parentButton.setSelected(true);
-		xrayButton.setSelected(true);
+		gui.reset();
 		variables.resetSliders();
 		variables.selectAllSubtypes();
 		needsRecalc = true;
@@ -1581,251 +1758,14 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		}
 	}
 
-	/**
-	 * creates the components of the control panel
-	 */
-	private void buildControls() {
-		ButtonGroup g = new ButtonGroup();
-		tButton = newRadioButton("2\u0398", true, g);
-		dButton = newRadioButton("d", false, g);
-		qButton = newRadioButton("q", false, g);
-
-		g = new ButtonGroup();
-		parentButton = newRadioButton("Parent", true, g);
-		childButton = newRadioButton("Child", false, g);
-
-		g = new ButtonGroup();
-		crystalButton = newRadioButton("Crystal", true, g);
-		powderButton = newRadioButton("Powder", false, g);
-		bothButton = newRadioButton("Both", false, g);
-
-		g = new ButtonGroup();
-		xrayButton = newRadioButton("Xray", true, g);
-		neutronButton = newRadioButton("Neut", false, g);
-		neutronButton.setHorizontalAlignment(JRadioButton.LEFT);
-
-		hOTxt = newTextField("0", -10);
-		kOTxt = newTextField("0", -10);
-		lOTxt = newTextField("0", -10);
-		hHTxt = newTextField("1", -10);
-		kHTxt = newTextField("0", -10);
-		lHTxt = newTextField("0", -10);
-		hVTxt = newTextField("0", -10);
-		kVTxt = newTextField("1", -10);
-		lVTxt = newTextField("0", -10);
-		qTxt = newTextField("4", -10);
-
-		wavTxt = newTextField("1.54", 0);
-		minTxt = newTextField("5", 0);
-		maxTxt = newTextField("60", 0);
-		fwhmTxt = newTextField("0.200", 0);
-		zoomTxt = newTextField("1.0", 0);
-
-		horizLabel = new JLabel("   Horiz");
-		upperLabel = new JLabel("   Upper");
-		centerLabel = new JLabel("Center");
-		qrangeLabel = new JLabel("   Q Range");
-		wavLabel = new JLabel("   Wave");
-		minLabel = new JLabel("   Min");
-		maxLabel = new JLabel("   Max");
-		fwhmLabel = new JLabel("   Res");
-		zoomLabel = new JLabel("   Zoom");
-
-		mouseoverLabel = new JLabel("");
-
-		JPanel topControlPanel = new JPanel();
-		JPanel botControlPanel = new JPanel();
-		topControlPanel.setBackground(Color.WHITE);
-		botControlPanel.setBackground(Color.WHITE);
-
-		topControlPanel.add(mouseoverLabel);
-		topControlPanel.add(new JLabel("      "));
-		topControlPanel.add(xrayButton);
-		topControlPanel.add(neutronButton);
-		topControlPanel.add(new JLabel("      "));
-		topControlPanel.add(parentButton);
-		topControlPanel.add(childButton);
-		topControlPanel.add(tButton);
-		topControlPanel.add(dButton);
-		topControlPanel.add(qButton);
-		topControlPanel.add(new JLabel("      "));
-		topControlPanel.add(crystalButton);
-		topControlPanel.add(powderButton);
-		topControlPanel.add(bothButton);
-		
-		addTopButtons(topControlPanel); // color box
-
-		botControlPanel.add(centerLabel);
-		botControlPanel.add(hOTxt);
-		botControlPanel.add(kOTxt);
-		botControlPanel.add(lOTxt);
-		botControlPanel.add(horizLabel);
-		botControlPanel.add(hHTxt);
-		botControlPanel.add(kHTxt);
-		botControlPanel.add(lHTxt);
-		botControlPanel.add(upperLabel);
-		botControlPanel.add(hVTxt);
-		botControlPanel.add(kVTxt);
-		botControlPanel.add(lVTxt);
-		botControlPanel.add(qrangeLabel);
-		botControlPanel.add(qTxt);
-		botControlPanel.add(wavLabel);
-		botControlPanel.add(wavTxt);
-		botControlPanel.add(minLabel);
-		botControlPanel.add(minTxt);
-		botControlPanel.add(maxLabel);
-		botControlPanel.add(maxTxt);
-		botControlPanel.add(fwhmLabel);
-		botControlPanel.add(fwhmTxt);
-		botControlPanel.add(zoomLabel);
-		botControlPanel.add(zoomTxt);
-
-		addBottomButtons(botControlPanel); // applyView
-
-		controlPanel.add(topControlPanel);
-		controlPanel.add(botControlPanel);
-
-	}
-
-	/**
-	 * loads the control components into the control panel
-	 */
-	private void showControls() {
-
-		// powder-only
-
-		boolean isPowder = (isBoth && !wasPowder || this.isPowder && !isBoth);
-		wasPowder = false;
-		wavTxt.setVisible(isPowder);
-		minTxt.setVisible(isPowder);
-		maxTxt.setVisible(isPowder);
-		fwhmTxt.setVisible(isPowder);
-		zoomTxt.setVisible(isPowder);
-		wavLabel.setVisible(isPowder);
-		minLabel.setVisible(isPowder);
-		maxLabel.setVisible(isPowder);
-		fwhmLabel.setVisible(isPowder);
-		zoomLabel.setVisible(isPowder);
-
-		dButton.setVisible(isPowder && !isMouseOver);
-		qButton.setVisible(isPowder && !isMouseOver);
-		tButton.setVisible(isPowder && !isMouseOver);
-
-		// crystal-only
-
-		hOTxt.setVisible(!isPowder);
-		kOTxt.setVisible(!isPowder);
-		lOTxt.setVisible(!isPowder);
-		hHTxt.setVisible(!isPowder);
-		kHTxt.setVisible(!isPowder);
-		lHTxt.setVisible(!isPowder);
-		hVTxt.setVisible(!isPowder);
-		kVTxt.setVisible(!isPowder);
-		lVTxt.setVisible(!isPowder);
-		qTxt.setVisible(!isPowder);
-
-		horizLabel.setVisible(!isPowder);
-		upperLabel.setVisible(!isPowder);
-		centerLabel.setVisible(!isPowder);
-		qrangeLabel.setVisible(!isPowder);
-
-		parentButton.setVisible(!isPowder && !isMouseOver);
-		childButton.setVisible(!isPowder && !isMouseOver);
-
-		// mouseOver-only
-
-		mouseoverLabel.setVisible(isMouseOver);
-
-		// no-mouseOver-only
-
-		xrayButton.setVisible(!isMouseOver);
-		neutronButton.setVisible(!isMouseOver);
-		crystalButton.setVisible(!isMouseOver);
-		powderButton.setVisible(!isMouseOver);
-		bothButton.setVisible(!isMouseOver);
-		colorBox.setVisible(!isMouseOver && variables.needColorBox);
-	}
-
 	@Override
 	protected BufferedImage getImage() {
-		return rp.im;
+		return gui.getImage();
 	}
 
 	@Override
 	protected void handleButtonEvent(Object src) {
-		if (src instanceof JCheckBox) {
-			needsRecalc = true;
-			rp.repaint();
-			return;
-		}
-		if (!((JToggleButton) src).isSelected())
-			return;
-		boolean setTextBoxes = false;
-		if (src == tButton) {
-			powderPatternType = 1;
-			double t = powderDinvmin * powderWavelength / 2;
-			if (t < -1)
-				t = -1;
-			if (t > 1)
-				t = 1;
-			powderXMin = (180 / Math.PI) * 2 * Math.asin(t);
-			t = powderDinvmax * powderWavelength / 2;
-			if (t < -1)
-				t = -1;
-			if (t > 1)
-				t = 1;
-			powderXMax = (180 / Math.PI) * 2 * Math.asin(t);
-			powderResolution = powderDinvres * powderWavelength / (Math.PI / 180);
-			setTextBoxes = true;
-			needsRecalc = true;
-		} else if (src == dButton) {
-			powderPatternType = 2;
-			powderXMax = 1 / powderDinvmin;
-			powderXMin = 1 / powderDinvmax;
-			double d = powderXMin + powderXMax;
-			powderResolution = powderDinvres * d * d / 4;
-			setTextBoxes = true;
-			needsRecalc = true;
-		} else if (src == qButton) {
-			powderPatternType = 3;
-			powderXMin = powderDinvmin * (2 * Math.PI);
-			powderXMax = powderDinvmax * (2 * Math.PI);
-			powderResolution = powderDinvres * (2 * Math.PI) / ((powderXMin + powderXMax) / 2);
-			setTextBoxes = true;
-			needsRecalc = true;
-		} else if (src == parentButton) {
-			hklType = 1;
-			needsRecalc = true;
-		} else if (src == childButton) {
-			hklType = 2;
-			needsRecalc = true;
-		} else if (src == xrayButton) {
-			isXray = true;
-			variables.readSliders();
-			needsRecalc = true;
-		} else if (src == neutronButton) {
-			isXray = false;
-			variables.readSliders();
-			needsRecalc = true;
-		} else if (src == crystalButton) {
-			isBoth = isPowder = false;
-			showControls();
-			needsRecalc = true;
-		} else if (src == powderButton) {
-			isBoth = !(isPowder = true);
-			showControls();
-			needsRecalc = true;
-		} else if (src == bothButton) {
-			wasPowder = isPowder;
-			isBoth = isPowder = true;
-			showControls();
-			needsRecalc = true;
-		}
-		if (setTextBoxes && !isAdjusting) {
-			minTxt.setText(trim00(powderXMin));
-			maxTxt.setText(trim00(powderXMax));
-			fwhmTxt.setText(MathUtil.varToString(powderResolution, 3, 0));
-		}
+		gui.handleButtonEvent(src);
 		updateDisplay();
 	}
 
@@ -1849,14 +1789,349 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		// na/a
 	}
 
-	public static void main(String[] args) {
-		create("IsoDiffract", args);
-	}
-
 	@Override
 	protected void updateViewOptions() {
 		// n/a
 	}
 
+	private class IsoDiffractGUI {
+
+		protected JLabel horizLabel, upperLabel, centerLabel, qrangeLabel, wavLabel, minLabel, maxLabel, fwhmLabel, zoomLabel,
+				mouseoverLabel;
+
+		/**
+		 * Radio buttons
+		 */
+		protected JRadioButton parentButton, childButton, xrayButton, neutronButton, crystalButton, powderButton, bothButton,
+				dButton, qButton, tButton;
+		/**
+		 * Text fields for inputting viewing region
+		 */
+		protected JTextField hHTxt, kHTxt, lHTxt, hVTxt, kVTxt, lVTxt, hOTxt, kOTxt, lOTxt, qTxt;
+		protected JTextField wavTxt, minTxt, maxTxt, fwhmTxt, zoomTxt;
+
+		protected RenderPanel rp;
+
+		public void init() {
+			buildControls();
+			showControls();
+			rp = new RenderPanel();
+			rp.addKeyListener(IsoDiffractApp.this);
+		}
+
+		public void handleButtonEvent(Object src) {
+			if (src instanceof JCheckBox) {
+				needsRecalc = true;
+				rp.repaint();
+				return;
+			}
+			if (!((JToggleButton) src).isSelected())
+				return;
+			boolean setTextBoxes = false;
+			if (src == tButton) {
+				powderPatternType = 1;
+				double t = powderDinvmin * powderWavelength / 2;
+				if (t < -1)
+					t = -1;
+				if (t > 1)
+					t = 1;
+				powderXMin = (180 / Math.PI) * 2 * Math.asin(t);
+				t = powderDinvmax * powderWavelength / 2;
+				if (t < -1)
+					t = -1;
+				if (t > 1)
+					t = 1;
+				powderXMax = (180 / Math.PI) * 2 * Math.asin(t);
+				powderResolution = powderDinvres * powderWavelength / (Math.PI / 180);
+				setTextBoxes = true;
+				needsRecalc = true;
+			} else if (src == dButton) {
+				powderPatternType = 2;
+				powderXMax = 1 / powderDinvmin;
+				powderXMin = 1 / powderDinvmax;
+				double d = powderXMin + powderXMax;
+				powderResolution = powderDinvres * d * d / 4;
+				setTextBoxes = true;
+				needsRecalc = true;
+			} else if (src == qButton) {
+				powderPatternType = 3;
+				powderXMin = powderDinvmin * (2 * Math.PI);
+				powderXMax = powderDinvmax * (2 * Math.PI);
+				powderResolution = powderDinvres * (2 * Math.PI) / ((powderXMin + powderXMax) / 2);
+				setTextBoxes = true;
+				needsRecalc = true;
+			} else if (src == parentButton) {
+				hklType = HKL_TYPE_PARENT;
+				needsRecalc = true;
+			} else if (src == childButton) {
+				hklType = HKL_TYPE_CHILD;
+				needsRecalc = true;
+			} else if (src == xrayButton) {
+				isXray = true;
+				variables.readSliders();
+				needsRecalc = true;
+			} else if (src == neutronButton) {
+				isXray = false;
+				variables.readSliders();
+				needsRecalc = true;
+			} else if (src == crystalButton) {
+				isBoth = isPowder = false;
+				showControls();
+				needsRecalc = true;
+			} else if (src == powderButton) {
+				isBoth = !(isPowder = true);
+				showControls();
+				needsRecalc = true;
+			} else if (src == bothButton) {
+				wasPowder = isPowder;
+				isBoth = isPowder = true;
+				showControls();
+				needsRecalc = true;
+			}
+			if (setTextBoxes && !isAdjusting) {
+				minTxt.setText(MathUtil.trim00(powderXMin));
+				maxTxt.setText(MathUtil.trim00(powderXMax));
+				fwhmTxt.setText(MathUtil.varToString(powderResolution, 3, 0));
+			}
+		}
+
+		public BufferedImage getImage() {
+			return rp.im;
+		}
+
+		public void reset() {
+			hOTxt.setText("0");
+			kOTxt.setText("0");
+			lOTxt.setText("0");
+			hHTxt.setText("1");
+			kHTxt.setText("0");
+			lHTxt.setText("0");
+			hVTxt.setText("0");
+			kVTxt.setText("1");
+			lVTxt.setText("0");
+			qTxt.setText("4");
+			wavTxt.setText("1.54");
+			minTxt.setText("5");
+			maxTxt.setText("60");
+			fwhmTxt.setText("0.200");
+			zoomTxt.setText("1.0");
+			tButton.setSelected(true);
+			parentButton.setSelected(true);
+			xrayButton.setSelected(true);
+		}
+
+		public void setHKL(double[] hklO, double[] hklH, double[] hklV) {
+			hklO[0] = getText(hOTxt, hklO[0], 2);
+			hklO[1] = getText(kOTxt, hklO[1], 2);
+			hklO[2] = getText(lOTxt, hklO[2], 2);
+			hklH[0] = getText(hHTxt, hklH[0], 2);
+			hklH[1] = getText(kHTxt, hklH[1], 2);
+			hklH[2] = getText(lHTxt, hklH[2], 2);
+			hklV[0] = getText(hVTxt, hklV[0], 2);
+			hklV[1] = getText(kVTxt, hklV[1], 2);
+			hklV[2] = getText(lVTxt, hklV[2], 2);
+		}
+
+		public void setZoom(double powderZoom, double dy) {
+			double zoom = getText(zoomTxt, powderZoom, 2);
+			zoom += -dy / 100.0;
+			if (zoom < 0)
+				zoom = 0;
+			zoomTxt.setText(MathUtil.trim00(zoom));
+		}
+
+		public void setMouseOverText(String mouseovertext) {
+			mouseoverLabel.setText(mouseovertext);
+		}
+
+		public void repaint() {
+			rp.repaint();
+			rp.requestFocus();
+		}
+
+		public boolean frameResized() {
+			if (rp == null)
+				return false;
+			rp.im = null;
+			return true;
+		}
+
+		public void dispose() {
+			rp.removeKeyListener(IsoDiffractApp.this);
+			rp.dispose();
+		}
+
+		/**
+		 * creates the components of the control panel
+		 */
+		protected void buildControls() {
+			ButtonGroup g = new ButtonGroup();
+			tButton = newRadioButton("2\u0398", true, g);
+			dButton = newRadioButton("d", false, g);
+			qButton = newRadioButton("q", false, g);
+
+			g = new ButtonGroup();
+			parentButton = newRadioButton("Parent", true, g);
+			childButton = newRadioButton("Child", false, g);
+
+			g = new ButtonGroup();
+			crystalButton = newRadioButton("Crystal", true, g);
+			powderButton = newRadioButton("Powder", false, g);
+			bothButton = newRadioButton("Both", false, g);
+
+			g = new ButtonGroup();
+			xrayButton = newRadioButton("Xray", true, g);
+			neutronButton = newRadioButton("Neut", false, g);
+			neutronButton.setHorizontalAlignment(JRadioButton.LEFT);
+
+			hOTxt = newTextField("0", -10);
+			kOTxt = newTextField("0", -10);
+			lOTxt = newTextField("0", -10);
+			hHTxt = newTextField("1", -10);
+			kHTxt = newTextField("0", -10);
+			lHTxt = newTextField("0", -10);
+			hVTxt = newTextField("0", -10);
+			kVTxt = newTextField("1", -10);
+			lVTxt = newTextField("0", -10);
+			qTxt = newTextField("4", -10);
+
+			wavTxt = newTextField("1.54", 0);
+			minTxt = newTextField("5", 0);
+			maxTxt = newTextField("60", 0);
+			fwhmTxt = newTextField("0.200", 0);
+			zoomTxt = newTextField("1.0", 0);
+
+			horizLabel = new JLabel("   Horiz");
+			upperLabel = new JLabel("   Upper");
+			centerLabel = new JLabel("Center");
+			qrangeLabel = new JLabel("   Q Range");
+			wavLabel = new JLabel("   Wave");
+			minLabel = new JLabel("   Min");
+			maxLabel = new JLabel("   Max");
+			fwhmLabel = new JLabel("   Res");
+			zoomLabel = new JLabel("   Zoom");
+
+			mouseoverLabel = new JLabel("");
+
+			JPanel topControlPanel = new JPanel();
+			JPanel botControlPanel = new JPanel();
+			topControlPanel.setBackground(Color.WHITE);
+			botControlPanel.setBackground(Color.WHITE);
+
+			topControlPanel.add(mouseoverLabel);
+			topControlPanel.add(new JLabel("      "));
+			topControlPanel.add(xrayButton);
+			topControlPanel.add(neutronButton);
+			topControlPanel.add(new JLabel("      "));
+			topControlPanel.add(parentButton);
+			topControlPanel.add(childButton);
+			topControlPanel.add(tButton);
+			topControlPanel.add(dButton);
+			topControlPanel.add(qButton);
+			topControlPanel.add(new JLabel("      "));
+			topControlPanel.add(crystalButton);
+			topControlPanel.add(powderButton);
+			topControlPanel.add(bothButton);
+			
+			addTopButtons(topControlPanel); // color box
+
+			botControlPanel.add(centerLabel);
+			botControlPanel.add(hOTxt);
+			botControlPanel.add(kOTxt);
+			botControlPanel.add(lOTxt);
+			botControlPanel.add(horizLabel);
+			botControlPanel.add(hHTxt);
+			botControlPanel.add(kHTxt);
+			botControlPanel.add(lHTxt);
+			botControlPanel.add(upperLabel);
+			botControlPanel.add(hVTxt);
+			botControlPanel.add(kVTxt);
+			botControlPanel.add(lVTxt);
+			botControlPanel.add(qrangeLabel);
+			botControlPanel.add(qTxt);
+			botControlPanel.add(wavLabel);
+			botControlPanel.add(wavTxt);
+			botControlPanel.add(minLabel);
+			botControlPanel.add(minTxt);
+			botControlPanel.add(maxLabel);
+			botControlPanel.add(maxTxt);
+			botControlPanel.add(fwhmLabel);
+			botControlPanel.add(fwhmTxt);
+			botControlPanel.add(zoomLabel);
+			botControlPanel.add(zoomTxt);
+
+			addBottomButtons(botControlPanel); // applyView
+
+			controlPanel.add(topControlPanel);
+			controlPanel.add(botControlPanel);
+
+		}
+
+		/**
+		 * loads the control components into the control panel
+		 */
+		protected void showControls() {
+
+			// powder-only
+
+			boolean bPowder = (isBoth && !wasPowder || isPowder && !isBoth);
+			wasPowder = false;
+			wavTxt.setVisible(bPowder);
+			minTxt.setVisible(bPowder);
+			maxTxt.setVisible(bPowder);
+			fwhmTxt.setVisible(bPowder);
+			zoomTxt.setVisible(bPowder);
+			wavLabel.setVisible(bPowder);
+			minLabel.setVisible(bPowder);
+			maxLabel.setVisible(bPowder);
+			fwhmLabel.setVisible(bPowder);
+			zoomLabel.setVisible(bPowder);
+
+			dButton.setVisible(bPowder && !isMouseOver);
+			qButton.setVisible(bPowder && !isMouseOver);
+			tButton.setVisible(bPowder && !isMouseOver);
+
+			// crystal-only
+
+			hOTxt.setVisible(!bPowder);
+			kOTxt.setVisible(!bPowder);
+			lOTxt.setVisible(!bPowder);
+			hHTxt.setVisible(!bPowder);
+			kHTxt.setVisible(!bPowder);
+			lHTxt.setVisible(!bPowder);
+			hVTxt.setVisible(!bPowder);
+			kVTxt.setVisible(!bPowder);
+			lVTxt.setVisible(!bPowder);
+			qTxt.setVisible(!bPowder);
+
+			horizLabel.setVisible(!bPowder);
+			upperLabel.setVisible(!bPowder);
+			centerLabel.setVisible(!bPowder);
+			qrangeLabel.setVisible(!bPowder);
+
+			parentButton.setVisible(!bPowder && !isMouseOver);
+			childButton.setVisible(!bPowder && !isMouseOver);
+
+			// mouseOver-only
+
+			mouseoverLabel.setVisible(isMouseOver);
+
+			// no-mouseOver-only
+
+			xrayButton.setVisible(!isMouseOver);
+			neutronButton.setVisible(!isMouseOver);
+			crystalButton.setVisible(!isMouseOver);
+			powderButton.setVisible(!isMouseOver);
+			bothButton.setVisible(!isMouseOver);
+			colorBox.setVisible(!isMouseOver && variables.needColorBox);
+		}
+
+	}
+
+	public static void main(String[] args) {
+		if (args != null && String.join(";",args).toLowerCase().indexOf("-assignprimitive") >= 0)
+			usePrimitiveAssignmentMethod = true;
+		create("IsoDiffract", args);
+	}
 
 }

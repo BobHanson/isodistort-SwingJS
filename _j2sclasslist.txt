@@ -368,6 +368,7 @@ javax/swing/undo/UndoableEdit.js
 org/byu/isodistort/IsoDiffractApp.js
 org/byu/isodistort/IsoDistortApp.js
 org/byu/isodistort/local/Bspt.js
+org/byu/isodistort/local/Cell.js
 org/byu/isodistort/local/Elements.js
 org/byu/isodistort/local/FileUtil.js
 org/byu/isodistort/local/IsoApp.js

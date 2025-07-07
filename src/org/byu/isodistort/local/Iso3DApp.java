@@ -131,7 +131,7 @@ public abstract class Iso3DApp extends IsoApp {
 		variables.setAtomInfo();
 
 		// Calculate the maximum distance from applet center (used to determine FOV).
-		double d2 = variables.parentCell.addRange2(variables.childCell.addRange2(0.0));
+		double d2 = parentCell.addRange2(childCell.addRange2(0.0));
 		
 		for (int i = 0, n = variables.nAtoms; i < n; i++) {
 			d2 = MathUtil.maxlen2(variables.atoms[i].getCartesianCoord(), d2);
@@ -166,8 +166,8 @@ public abstract class Iso3DApp extends IsoApp {
 			variables.setCellInfo();
 		}
 		for (int axis = 0; axis < 3; axis++) {
-			variables.setAxisExtents(axis, variables.parentCell, 2.0, 3.5);
-			variables.setAxisExtents(axis, variables.childCell, 1.5, 4.0);
+			variables.setAxisExtents(axis, parentCell, 2.0, 3.5);
+			variables.setAxisExtents(axis, childCell, 1.5, 4.0);
 		}
 	}
 

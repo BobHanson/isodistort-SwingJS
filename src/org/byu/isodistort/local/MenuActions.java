@@ -31,6 +31,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.swing.AbstractAction;
@@ -171,18 +172,15 @@ public class MenuActions {
 
 		actions.put("File.Examples.", null);
 
-		String[] exampleFiles = IsoApp.exampleFiles;
-		for (int i = 0; i < exampleFiles.length;) {
-			String label = exampleFiles[i++];
-			String name = exampleFiles[i++];
+		List<String[]> exampleFiles = app.getExampleFiles();
+		for (int i = 0; i < exampleFiles.size(); i++) {
+			String[] example = exampleFiles.get(i);
+			String label = example[0];
+			String name = example[1];
 			if (label == null)
 				label = name;
 			actions.put("File.Examples.isodistort" + i,
 					new IsoAction("exampleIsodistort" + i, label, "open " + name, 0) {
-						/**
-						 * 
-						 */
-						private static final long serialVersionUID = 1L;
 
 						@Override
 						public void actionPerformed(ActionEvent e) {

@@ -1,0 +1,27 @@
+#one per line
+#menutitle=file
+#or just
+#=file 
+#for examples...file
+
+sample DISTORTION File=data/data.iso.txt
+sample ISOVIS File 1=data/data29.isoviz
+sample ISOVIS File 2=data/test25.txt
+incommensurate DISTORTION file=data/tbmno3-distortion.iso.txt
+large ISOVIZ file=data/ZrP2O7-sg205-sg61-distort.isoviz
+=data/sg227-sg167-example.isoviz
+=data/operations1.isoviz
+=data/visual_bccspiral.isoviz
+=data/visual_dymn6ge6.isoviz
+=data/visual_la2coruo6-magnetic.isoviz
+=data/visual_lamno3_magnetic.isoviz
+=data/visual_lamno3_ortho.isoviz
+=data/visual_lcmo_magnetic.isoviz
+=data/visual_mno.isoviz
+=data/visual_pt3cu_L12.isoviz
+=data/visual_skyrmionlattice.isoviz
+=data/visual_tbmno3_cycloid.isoviz
+=data/visual_vortexlattice.isoviz
+=data/visual_wo3_RTmono.isoviz
+=data/visual_ymno3_afe.isoviz
+online example=https://chemapps.stolaf.edu/isodistort/data29.isoviz

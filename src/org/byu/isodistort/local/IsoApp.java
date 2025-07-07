@@ -13,13 +13,17 @@ import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,6 +59,7 @@ import javax.swing.text.DefaultCaret;
 import org.byu.isodistort.IsoDiffractApp;
 import org.byu.isodistort.IsoDistortApp;
 import org.byu.isodistort.IsoSymmetryApp;
+import org.byu.isodistort.local.Cell.ChildCell;
 import org.byu.isodistort.server.ServerUtil;
 
 /**
@@ -66,7 +71,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp {
 
-	final static String minorVersion = ".14_2024.02.24";
+	final static String minorVersion = ".16_2025.07.06";
 
 	/**
 	 * the datafile to use for startup
@@ -85,27 +90,8 @@ public abstract class IsoApp {
 	 * debugging.
 	 * 
 	 */
-	public final static String[] exampleFiles = { "sample DISTORTION File", "data/data.iso.txt", //
-			"sample ISOVIS File 1", "data/data29.isoviz", //
-			"sample ISOVIS File 2", "data/test25.txt", //
-			"incommensurate DISTORTION file", "data/tbmno3-distortion.iso.txt", //
-			"large ISOVIZ file", "data/ZrP2O7-sg205-sg61-distort.isoviz", //
-			null, "data/visual_bccspiral.isoviz", //
-			null, "data/visual_dymn6ge6.isoviz", //
-			null, "data/visual_la2coruo6-magnetic.isoviz", //
-			null, "data/visual_lamno3_magnetic.isoviz", //
-			null, "data/visual_lamno3_ortho.isoviz", //
-			null, "data/visual_lcmo_magnetic.isoviz", //
-			null, "data/visual_mno.isoviz", //
-			null, "data/visual_pt3cu_L12.isoviz", //
-			null, "data/visual_skyrmionlattice.isoviz", //
-			null, "data/visual_tbmno3_cycloid.isoviz", //
-			null, "data/visual_vortexlattice.isoviz", //
-			null, "data/visual_wo3_RTmono.isoviz", //
-			null, "data/visual_ymno3_afe.isoviz", //
-			"online example", "https://chemapps.stolaf.edu/isodistort/data29.isoviz", //
-	};
-
+	public static List<String[]> exampleFiles;
+	
 	static boolean isJS = (/** @j2sNative true || */
 	false);
 
@@ -218,6 +204,7 @@ public abstract class IsoApp {
 				((JComponent) getContentPane()).setTransferHandler(new FileUtil.FileDropHandler(newapp));
 				newapp.variables.setValuesFrom(currentApp.variables);
 				repaint();
+				requestFocus();				
 			} else {
 				currentApp.openApplication(type, currentApp.isovizData, null, false);
 			}
@@ -621,7 +608,7 @@ public abstract class IsoApp {
 		try {
 			String s = t.getText();
 			if (s.length() == 0) {
-				t.setText(precision == 2 ? trim00(currentValue) : MathUtil.varToString(currentValue, precision, 0));
+				t.setText(precision == 2 ? MathUtil.trim00(currentValue) : MathUtil.varToString(currentValue, precision, 0));
 				val = currentValue;
 			} else {
 				val = Double.parseDouble(s);
@@ -638,23 +625,22 @@ public abstract class IsoApp {
 		return val;
 	}
 
-	protected static String trim00(double val) {
-		String s = MathUtil.varToString(val, 2, 0);
-		int n = s.length() - 1;
-		char ch = '0';
-		while ((ch = s.charAt(n)) == '0') {
-			--n;
-		}
-		if (ch != '.')
-			n++;
-		return s.substring(0, n);
-	}
-
 	/**
 	 * true if Variables.modDim > 0 based on ISOViz !numberOfModulations > 0 or
 	 * FormData "xkparam... presence or DFile "!
 	 */
 	public Boolean isIncommensurate;
+
+	/**
+	 * cell for the child, aka "super" cell
+	 * 
+	 */
+	public ChildCell childCell = new ChildCell();
+
+	/**
+	 * cell for the parent
+	 */
+	public Cell.ParentCell parentCell = new Cell.ParentCell();
 
 	public static boolean testing;
 
@@ -976,7 +962,20 @@ public abstract class IsoApp {
 		JTextField t = new JTextField(text, 3);
 		//t.setMargin(new Insets(-2, 0, -1, insetRight));
 		t.addActionListener(textBoxListener);
+		t.addFocusListener(new FocusListener() {
+
+			@Override
+			public void focusGained(FocusEvent e) {
+				t.selectAll();
+			}
+
+			@Override
+			public void focusLost(FocusEvent e) {
+			}
+		});
+		
 		return t;
+		
 	}
 
 	private void openApplication(int appType, byte[] data, Map<String, Object> mapFormData, boolean isDrop) {
@@ -1546,5 +1545,35 @@ public abstract class IsoApp {
 			openApplication(appType, data, null, true);
 		}, "isodistort_file_opener").start();
 	}
+
+	public List<String[]> getExampleFiles() {
+		if (exampleFiles == null) {
+			exampleFiles = new ArrayList<String[]>();
+			try {
+				String files = new String(FileUtil.readFileOrResource(this, "data/_menu_examples.txt"));
+				if (files != null) {
+				}
+				BufferedReader br = new BufferedReader(new StringReader(files));
+				String line;
+				while ((line = br.readLine()) != null) {
+					line = line.trim();
+					if (line.length() == 0 || line.startsWith("#"))
+						continue;
+					if (!line.contains("="))
+						line = "=" + line;
+					String[] info = line.split("=");
+					if (info[0].length() == 0)
+						info[0] = null;
+					exampleFiles.add(info);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			return exampleFiles;
+		}
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 
 }

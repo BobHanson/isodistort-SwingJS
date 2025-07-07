@@ -51,6 +51,12 @@ public class MathUtil {
 		return sum;
 	}
 
+	public static double dot4(double[] a, double[] b) {
+		double sum = 0;
+		for (int i = 4; --i >= 0;)
+			sum += a[i] * b[i];
+		return sum;
+	}
 //	/**
 //	 * Computes the cross-product of two vectors a and b and stores the result in
 //	 * dst. a, b, and dst must be 3 dimensional vectors.
@@ -100,7 +106,7 @@ public class MathUtil {
 	 * @param src original matrix
 	 * @param dst copy of original matrix
 	 */
-	public static void mat3copy(double[][] src, double[][] dst) {
+	public static void copyNN(double[][] src, double[][] dst) {
 		for (int j = src.length, inlen = src[0].length; --j >= 0;)
 			for (int i = inlen; --i >= 0;)
 				dst[i][j] = src[i][j];
@@ -108,7 +114,7 @@ public class MathUtil {
 
 	/**
 	 * Populates the dst vector with values x, y, z.
-	 * 
+	 *
 	 * @param dst vector to be populated
 	 * @param x   component 0
 	 * @param y   component 1
@@ -165,15 +171,40 @@ public class MathUtil {
 	}
 
 	/**
+	 * Tranpose a 4x4 matrix
+	 * 
+	 * @param dst transposed output matrix
+	 * @param mat input matrix
+	 */
+	public static void mat4transpose(double mat[][], double dst[][]) {
+		for (int j = 4; --j >= 0;)
+			for (int i = 4; --i >= 0;)
+				dst[i][j] = mat[j][i];
+	}
+	
+	/**
 	 * Apply a matrix transformation to a vector.
 	 * 
 	 * @param dst  transformed vector
 	 * @param mat  transformation matrix
-	 * @param vect input vector Branton Campbell
+	 * @param vect input vector 
+	 * @author Branton Campbell
 	 */
 	public static void mat3mul(double mat[][], double vect[], double dst[]) {
 		for (int i = 3; --i >= 0;)
 			dst[i] = dot3(mat[i], vect);
+	}
+
+	/**
+	 * Apply a 4X4 matrix transformation to a vector.
+	 * 
+	 * @param dst  transformed vector
+	 * @param mat  transformation matrix
+	 * @param vect input vector 
+	 */
+	public static void mat4mul(double mat[][], double vect[], double dst[]) {
+		for (int i = 4; --i >= 0;)
+			dst[i] = dot4(mat[i], vect);
 	}
 
 
@@ -212,17 +243,33 @@ public class MathUtil {
 	}
 
 	/**
-	 * Multiply two square matrices.
+	 * Multiply two square 3x3 matrices.
 	 * 
 	 * @param dst  output matrix
 	 * @param mat1 original matrix 1
-	 * @param mat2 original matrix 2 Branton Campbell
+	 * @param mat2 original matrix 2 
+	 * @author Branton Campbell
 	 */
 	public static void mat3product(double mat1[][], double mat2[][], double dst[][], double[][] tempmat) {
 		mat3transpose(mat2, tempmat);
 		for (int j = 3; --j >= 0;)
 			for (int i = 3; --i >= 0;)
 				dst[i][j] = dot3(mat1[i], tempmat[j]);
+	}
+
+	/**
+	 * Multiply two 4x4 matrices.
+	 * 
+	 * @param mat1 original matrix 1
+	 * @param mat2 original matrix 2 
+	 * @param dst  output matrix MUST NOT BE mat1 or mat2 or tempmat
+	 * @param tempmat  temp matrix MUST NOT BE mat1 or mat2 or dst
+	 */
+	public static void mat4product(double[][] mat1, double[][] mat2, double[][] dst, double[][] tempmat) {
+		mat4transpose(mat2, tempmat);
+		for (int j = 4; --j >= 0;)
+			for (int i = 4; --i >= 0;)
+				dst[i][j] = dot4(mat1[i], tempmat[j]);
 	}
 
 	/**
@@ -434,6 +481,15 @@ public class MathUtil {
 		return (Math.abs(a - b) < tol);
 	}
 
+    public static double approx(double f, double n) {
+        f = Math.round (f * n) / n;
+        return (f == 0 ? 0 : f);// removing -0 values
+      }
+
+	public static double approx(double f) {
+		return approx(f, 100);
+	}
+
 	public static String a2s(double[] a) {
 		return Arrays.toString(a);
 	}
@@ -484,6 +540,29 @@ public class MathUtil {
 
 	public static double dot3Length(double[] a, double[] b) {
 		return Math.sqrt(dot3(a, b));
+	}
+
+	static boolean mat3isUnit(double[][] m) {
+		return m[0][0] == 1 && m[0][1] == 0 && m[0][2] == 0 && //
+			   m[1][0] == 0 && m[1][1] == 1 && m[1][2] == 0 && //
+			   m[2][0] == 0 && m[2][1] == 0 && m[2][2] == 1;
+	}
+
+	public static String roundVec00(double[] v) {
+			return "(" + trim00(v[0]) + ", " + trim00(v[1]) + ", "
+					+ trim00(v[2]) + ")";
+	}
+
+	public static String trim00(double val) {
+		String s = varToString(val, 2, 0);
+		int n = s.length() - 1;
+		char ch = '0';
+		while ((ch = s.charAt(n)) == '0') {
+			--n;
+		}
+		if (ch != '.')
+			n++;
+		return s.substring(0, n);
 	}
 
 //	  static {

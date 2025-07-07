@@ -1573,10 +1573,8 @@ public abstract class IsoApp {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			return exampleFiles;
 		}
-		// TODO Auto-generated method stub
-		return null;
+		return exampleFiles;
 	}
 
 

@@ -5,6 +5,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
@@ -93,6 +94,8 @@ public class Variables {
 	 * double version of sliderMax
 	 */
 	final static double maxJSliderIntVal = sliderMax;
+
+	public static final double defaultAppletWHRatio = 1.8;
 
 	private IsoApp app;
 
@@ -1590,7 +1593,7 @@ public class Variables {
 			int n = getOneInt("appletwidth", 0);
 			if (n >= 500 && n <= 5000)
 				appletWidth = n;
-			appletHeight = (int) Math.round((double) appletWidth / 1.6);
+			appletHeight = (int) Math.round((double) appletWidth / defaultAppletWHRatio);
 
 		}
 

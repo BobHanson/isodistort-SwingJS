@@ -6,6 +6,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
@@ -230,6 +231,16 @@ public abstract class IsoApp {
 
 			@Override
 			public void windowClosed(WindowEvent e) {
+			}
+
+			@Override
+			public void windowOpened(WindowEvent e) {
+				/**
+				 * @j2sNative
+				 * 
+				 * window.scrollTo(0,0);
+				 * 
+				 */
 			}
 
 			@Override
@@ -919,7 +930,28 @@ public abstract class IsoApp {
 		isoPanel = new JPanel(new BorderLayout());
 		isoPanel.setName("isoPanel");
 		if (sliderPanel == null) {
-			sliderPanel = new JPanel();
+			sliderPanel = new JPanel() {
+				
+				
+				boolean configured;
+
+				@Override
+				public void paint(Graphics g) {
+					super.paint(g);
+					if (configured)
+						return;
+					configured = true;
+					/**
+					 * one-time fix for handles on sliders overlapping the pointers.
+					 * 
+					 * @j2sNative
+					 * 
+					 * $(".ui-j2sslider-handle").css({"height":"0.5em","background":"black"});
+					 * 
+					 */
+
+				}
+			};
 			sliderPanel.setName("sliderPanel");
 			sliderPanel.setBackground(Color.WHITE);
 			sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.PAGE_AXIS));
@@ -934,7 +966,7 @@ public abstract class IsoApp {
 //		marginPanel.add(marginLabel);
 //		
 		sliderScrollPane = new JScrollPane(sliderPanel);
-		sliderScrollPane.setBackground(Color.YELLOW);
+		sliderScrollPane.setBackground(Color.white);
 		sliderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		sliderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		isoPanel.add(sliderScrollPane, BorderLayout.EAST);

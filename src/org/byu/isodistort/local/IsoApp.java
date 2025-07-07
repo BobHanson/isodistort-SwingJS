@@ -791,8 +791,8 @@ public abstract class IsoApp {
 	 * @param map
 	 */
 	private void fixFormBondMinMax(Map<String, Object> map) {
-		Object min = map.remove("bondlengthmin");
-		Object max = map.remove("bondlength");
+		Object min = map.get("bondlengthmin");
+		Object max = map.get("bondlength");
 		if (min != null)
 			map.put("minbondlength", min);
 		if (max != null)

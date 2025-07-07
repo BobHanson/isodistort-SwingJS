@@ -75,10 +75,17 @@ public class ServerUtil {
 	public static String isoUrl = (IsoApp.testing ? testServerURL : publicServerURL);
 	
 	static {
+		String ref = "";
 		if (isJS) {
-			String ref = /** @j2sNative document.location.href || */isoUrl;
-			if (ref.startsWith("https:"))
-				isoUrl = "";
+			/**
+			 * will be blank for file://
+			 * 
+			 * @j2sNative
+			 *   
+			 *   ref = document.location.host;
+			 */
+			if (ref.length() > 0)
+				isoUrl = "https://" + ref + "/";
 		}
 		System.err.println("ServerUtil.isoUrl is set to " + isoUrl);
 	}

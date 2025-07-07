@@ -421,8 +421,10 @@ public abstract class IsoApp {
 	
 	private static final int roomForScrollBar = 10;
 
-	private static final int defaultSliderPanelWidth = 450;
-
+	private static final int defaultSliderPanelWidth = 480;
+	
+	final static double defaultSliderFraction = 0.55;
+	
 	private static int buttonID = 0;
 
 	final static Border controlBorder = new EmptyBorder(0, 0, 0, 0);// BorderFactory.createLineBorder(Color.BLACK, 1);
@@ -923,6 +925,14 @@ public abstract class IsoApp {
 			sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.PAGE_AXIS));
 			// sets grid length equal to number of rows.
 		}
+//		JPanel marginPanel = new JPanel();
+//		marginPanel.setLayout(new BoxLayout(marginPanel, BoxLayout.LINE_AXIS));
+//		marginPanel.add(sliderPanel);
+//		JLabel marginLabel = new JLabel();
+//		marginLabel.setText("helping here!");
+//		marginLabel.setBackground(Color.white);
+//		marginPanel.add(marginLabel);
+//		
 		sliderScrollPane = new JScrollPane(sliderPanel);
 		sliderScrollPane.setBackground(Color.YELLOW);
 		sliderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);

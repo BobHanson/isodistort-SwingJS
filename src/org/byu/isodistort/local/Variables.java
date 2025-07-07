@@ -123,9 +123,9 @@ public class Variables {
 	public boolean isChanged = true;
 
 	/**
-	 * Applet width and height in pixels
+	 * Applet width and height in pixels (ignored)
 	 */
-	public int appletWidth = 1024, appletHeight;
+	public int appletWidth = 1080, appletHeight;
 	/**
 	 * Total number of atoms after filtering for primitive.
 	 */
@@ -2418,7 +2418,7 @@ public class Variables {
 			// Divide the applet area with structure on the left and controls on the right.
 
 			sliderPanelWidth = width;
-			sliderWidth = (int) (sliderPanelWidth * 0.6);
+			sliderWidth = (int) (sliderPanelWidth * IsoApp.defaultSliderFraction);
 
 			needColorBox = true;// haveElementSubtypes();
 			colorByElement = true;
@@ -2532,15 +2532,18 @@ public class Variables {
 			// strainDataPanel
 			initCell(childCell, c);
 			initCell(parentCell, c);
-			JPanel strainDataPanel = new JPanel(new GridLayout(2, 6, 0, 0));
+			JPanel strainDataPanel = new JPanel(new GridLayout(2, 9, 0, 0));
 			strainDataPanel.setBackground(c);
 			strainDataPanel.add(parentCell.title);
 			for (int n = 0; n < 6; n++)
 				strainDataPanel.add(parentCell.labels[n]);
+			strainDataPanel.add(Box.createHorizontalStrut(10));
 			strainDataPanel.add(childCell.title);
 			for (int n = 0; n < 6; n++)
 				strainDataPanel.add(childCell.labels[n]);
+			strainDataPanel.add(Box.createHorizontalStrut(10));
 			addPanel(sliderPanel, strainDataPanel, "strainDataPanel");
+			
 			initModeGUI(sliderPanel, modes[STRAIN], 0);
 
 			if (isModeActive(modes[IRREP])) {

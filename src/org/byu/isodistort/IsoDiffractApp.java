@@ -489,7 +489,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 	@Override
 	protected void dispose() {
-		gui.dispose();
+		if (gui != null)
+			gui.dispose();
 		gui = null;
 		super.dispose();
 	}

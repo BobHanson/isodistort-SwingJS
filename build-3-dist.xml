@@ -5,11 +5,16 @@
    <target name="zip" id="zip">
   			   	
    	<echo>creating dist/isodistort-site.zip </echo>
-   	<zip destfile="dist/isodistort-site.zip" basedir="site" >
+  	<copy file="server/bootstrap.css" tofile="site/bootstrap.css" />    	
+  	<copy file="server/isodistort.js" tofile="site/isodistort.js" />    	
+  	<zip destfile="dist/isodistort-site.zip" basedir="site" >
    		<exclude name="test/**"/>
    		<exclude name="org/byu/isodistort0/**"/>
    		<exclude name="*.txt"/>
    	   	<include name="*org_byu*.html"/>
+   		<exclude name="*org_byu_isodistort0*.html"/>
+   	   	<include name="bootstrap.css"/>   		
+   	   	<include name="isodistort.js"/>   		
    	   	<include name="swingjs/**/*"/>
    	</zip>
   </target>

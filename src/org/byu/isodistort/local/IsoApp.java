@@ -782,16 +782,21 @@ public abstract class IsoApp {
 		return mapData;
 	}
 
+
+	/**
+	 * Coming from the page form itself, the names for 
+	 * max and min will be different. We need these to 
+	 * match the names in the ISOVIS file.
+	 * 
+	 * @param map
+	 */
 	private void fixFormBondMinMax(Map<String, Object> map) {
-		boolean testing1 = false;
-		if (testing1) {
-		Object min = map.get("bondlengthmin");
-		Object max = map.get("bondlength");
+		Object min = map.remove("bondlengthmin");
+		Object max = map.remove("bondlength");
 		if (min != null)
 			map.put("minbondlength", min);
 		if (max != null)
 			map.put("maxbondlength", max);
-		}
 	}
 
 	/**

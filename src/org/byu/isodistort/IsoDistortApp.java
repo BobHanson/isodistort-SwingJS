@@ -802,8 +802,6 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	}
 
 	public static void main(String[] args) {
-		if (args != null && String.join(";",args).toLowerCase().indexOf("-jmol") >= 0)
-			addJmol = true;
 		create("IsoDistort", args);
 	}
 

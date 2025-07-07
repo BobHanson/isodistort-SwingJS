@@ -98,7 +98,7 @@ public class Variables {
 
 	private SliderPanelGUI gui;
 
-	public Atom[] atoms;
+	public IsoAtom[] atoms;
 
 	/**
 	 * a bitset used in IsoDiffractApp to filter atoms and atom properties. It is
@@ -306,7 +306,7 @@ public class Variables {
 		return true;
 	}
 
-	public Atom getAtom(int ia) {
+	public IsoAtom getAtom(int ia) {
 		return atoms[ia];
 	}
 
@@ -598,7 +598,7 @@ public class Variables {
 			bspt = new Bspt();
 		}
 		for (int ia = 0, n = nAtoms; ia < n; ia++) {
-			Atom a = atoms[ia];
+			IsoAtom a = atoms[ia];
 			double[][] info = a.info;
 			if (info[OCC] == null) {
 				info[OCC] = new double[1];
@@ -757,7 +757,7 @@ public class Variables {
 	 * A class to collect all atom-related content.
 	 * 
 	 */
-	public static class Atom {
+	public static class IsoAtom {
 
 		/**
 		 * The index of this atom in the filtered array.
@@ -783,7 +783,7 @@ public class Variables {
 		 * zero-based index within the subType
 		 * 
 		 */
-		int subTypeIndex;
+		public int subTypeIndex;
 
 		/**
 		 * the initial parameter vector, by mode type; may be of length 1, 3, or 6;
@@ -827,7 +827,7 @@ public class Variables {
 		 */
 		final double[][] info = new double[MODE_COUNT][];
 
-		private String sym;
+		public String sym;
 
 		/**
 		 * 
@@ -839,7 +839,7 @@ public class Variables {
 		 * @param elementSymbol
 		 * 
 		 */
-		private Atom(int index, int t, int s, int a, double[] coord, String elementSymbol) {
+		private IsoAtom(int index, int t, int s, int a, double[] coord, String elementSymbol) {
 			this.index = index;
 			this.type = t;
 			this.subType = s;
@@ -1723,7 +1723,7 @@ public class Variables {
 			// nAtoms may be the number of primitive atoms only
 			if (nAtoms == 0)
 				nAtoms = nAtomsRead;
-			atoms = new Atom[nAtoms];
+			atoms = new IsoAtom[nAtoms];
 
 			// Find number of subatoms for each subtype
 			// Set up nSubAtom (and nPrimitiveSubAtoms if this is for IsoDiffract)
@@ -1825,7 +1825,8 @@ public class Variables {
 					if (bsPeriodic != null) {
 						nPrimitiveSubAtoms[t][s]++;
 					}
-					atoms[ia] = new Atom(ia, t, s, a, coord, atomTypeSymbol[t]);
+					atoms[ia] = new IsoAtom(ia, t, s, a, coord, atomTypeSymbol[t]);
+					setAtomType(t, s, ia);
 //					if (haveBonds)
 //						atomMap.put(getKeyTSA(t + 1, s + 1, a + 1), atom);
 					ia++;
@@ -2005,7 +2006,7 @@ public class Variables {
 			}
 			// initialize the atom mode[] arrays now that we have the perType information.
 			for (int ia = nAtoms; --ia >= 0;) {
-				Atom a = atoms[ia];
+				IsoAtom a = atoms[ia];
 				a.modes[mode] = (perType[a.type] == 0 ? null : new double[perType[a.type]][]);
 			}
 			return n;
@@ -2253,6 +2254,8 @@ public class Variables {
 		}
 
 		void updateColorScheme(boolean isByElmeent) {
+			if (app.colorBox == null)
+				return;
 			colorByElement = isByElmeent;
 			app.colorBox.setEnabled(false);
 			app.colorBox.setSelected(!isByElmeent);
@@ -2413,6 +2416,14 @@ public class Variables {
 			sliderPanelWidth = width;
 			sliderWidth = (int) (sliderPanelWidth * 0.6);
 
+			needColorBox = true;// haveElementSubtypes();
+			colorByElement = true;
+			setColors();
+
+			createMasterSliderPanel(sliderPanel, width);
+		}
+
+		private void createMasterSliderPanel(JPanel sliderPanel, int width) {
 			/**
 			 * Maximum number of check boxes per row the GUI will hold
 			 */
@@ -2425,10 +2436,6 @@ public class Variables {
 				subTypesPerRow[t] = Math.min(maxSubTypesPerRow, nSubTypes[t]);
 				nSubRows[t] = (int) Math.ceil((double) nSubTypes[t] / subTypesPerRow[t]);
 			}
-			needColorBox = true;// haveElementSubtypes();
-			colorByElement = true;
-			setColors();
-
 			masterSliderPanel = new JPanel();
 			masterSliderPanel.setLayout(new BoxLayout(masterSliderPanel, BoxLayout.LINE_AXIS));
 			masterSliderPanel.setBorder(new EmptyBorder(2, 2, 5, 80));
@@ -2819,6 +2826,21 @@ public class Variables {
 	 */
 	public double getSelectedSubTypeShade(int t, int s) {
 		return gui.getSelectedSubTypeShade(t, s);
+	}
+
+	private Map<Integer, BitSet> mapTStoAtoms = new HashMap<>();
+	
+	public void setAtomType(int t, int s, int ia) {
+		Integer key = Integer.valueOf(t << 10 + s);
+		BitSet bs = mapTStoAtoms.get(key);
+		if (bs == null)
+			mapTStoAtoms.put(key, bs = new BitSet());
+		bs.set(ia);
+	}
+	
+	public BitSet getAtomsFromTS(int t, int s) {
+		Integer key = Integer.valueOf(t << 10 + s);
+		return mapTStoAtoms.get(key);
 	}
 
 	public void dispose() {

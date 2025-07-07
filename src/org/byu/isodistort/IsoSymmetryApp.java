@@ -11,13 +11,22 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
+import java.util.BitSet;
 
 import javax.swing.JPanel;
 
 import org.byu.isodistort.local.Iso3DApp;
+import org.byu.isodistort.local.Variables;
+import org.byu.isodistort.local.Variables.IsoAtom;
+import org.byu.isodistort.render.Geometry;
+import org.byu.isodistort.render.Material;
+import org.byu.isodistort.render.RenderPanel3D;
 import org.jmol.adapter.smarter.SmarterJmolAdapter;
 import org.jmol.api.JmolViewer;
+import org.jmol.modelset.Atom;
 import org.jmol.viewer.Viewer;
+
+import javajs.util.BS;
 
 /**
  * 
@@ -32,10 +41,11 @@ import org.jmol.viewer.Viewer;
  * @author Bob Hanson(mostly just refactoring)
  *
  */
-public class IsoSymmetryApp extends Iso3DApp {
+public class IsoSymmetryApp extends IsoDistortApp {
 
 	Viewer viewer;
 	private JmolPanel rpJmol;
+	private Geometry world;
 
 	class JmolPanel extends JPanel implements IsoRenderPanel {
 
@@ -49,12 +59,6 @@ public class IsoSymmetryApp extends Iso3DApp {
 		public void paint(Graphics g) {
 			getSize(currentSize);
 			viewer.renderScreenImage(g, currentSize.width, currentSize.height);
-		}
-
-		@Override
-		public void initializeSettings(double radius) {
-			// TODO Auto-generated method stub
-
 		}
 
 		@Override
@@ -127,15 +131,20 @@ public class IsoSymmetryApp extends Iso3DApp {
 			
 		}
 
+		@Override
+		public void initializeSettings(double radius) {
+		}
+
 	}
 
 	public IsoSymmetryApp() {
-		super(APP_ISOSYMMETRY);
+		super();
+		this.appType = APP_ISOSYMMETRY;
 	}
 
 	@Override
 	protected void init() {
-		setRenderPanel(rpJmol = new JmolPanel());
+		setRenderPanel(irp = rpJmol = new JmolPanel());
 //	    JPanel panel2 = new JPanel();
 //	    AppConsole console = new AppConsole(rp.viewer, panel2,
 //	        "History State Clear");
@@ -143,7 +152,24 @@ public class IsoSymmetryApp extends Iso3DApp {
 		rpJmol.setPreferredSize(drawPanel.getSize());
 		rpJmol.setSize(drawPanel.getSize());
 		drawPanel.removeAll();
-		drawPanel.add((JPanel) rpJmol, BorderLayout.CENTER);
+		drawPanel.add((JPanel) rpJmol, BorderLayout.CENTER);		
+		rpJmol.addKeyListener(this);		
+		createJmolModel();
+		world = new Geometry();
+		super.initWorld(world);	
+	}
+
+	private void createJmolModel() {
+		StringBuffer xyzFile = new StringBuffer();
+		int nAtoms = variables.nAtoms;
+		xyzFile.append(nAtoms).append('\n');
+		for (int i = 0; i < nAtoms; i++) {
+			IsoAtom a = variables.getAtom(i);
+			xyzFile.append(a.getAtomTypeSymbol()).append(" ");
+			
+		}
+		// TODO Auto-generated method stub
+		
 	}
 
 	@Override
@@ -152,83 +178,151 @@ public class IsoSymmetryApp extends Iso3DApp {
 	}
 
 	@Override
-	protected BufferedImage getImage() {
-		return rpJmol.getImage();
-	}
-
-	@Override
 	public void reset() {
-		viewer.script("restore orientation");
+		super.reset();
+//		viewer.script("restore orientation");
 	}
 
 	@Override
 	protected boolean prepareToSwapOut() {
-		viewer.script("animation off;vibration off;spin off");
+		super.prepareToSwapOut();
+//		viewer.script("animation off;vibration off;spin off");
 		return true;
 	}
 
 	@Override
 	protected void handleButtonEvent(Object src) {
-		// n/a
+		super.handleButtonEvent(src);
 	}
 
 	@Override
 	protected void applyView() {
-		// n/a
+		super.applyView();
 	}
 
 
 	@Override
 	public void recalcCellColors() {
-		// TODO Auto-generated method stub
+		super.recalcCellColors();
+		// apply colors
 	}
 
 	@Override
 	protected void checkBonding() {
-		// TODO Auto-generated method stub
-		
+		super.checkBonding();
 	}
 
+	double bondRadius = 0.15;
+	
 	@Override
 	protected void enableSelectedObjects() {
-		// TODO Auto-generated method stub
-		
+		apBox.setEnabled(variables.isPrimitive(-1));
+		String script = "";
+		script += "display " + (showAtoms ? "all;" : "none;");
+		script += "draw cell0* " + (showParentCell ? "on;" : "off;");
+		script += "draw cell1* " + (showChildCell ? "on;" : "off;");
+		script += "wireframe " + (showBonds ? 0 : bondRadius) + ";";
+		script += "draw axes0* " + (showAxes && (showParentCell || !showChildCell) ? "on;" : "off;");
+		script += "draw axes1* " + (showAxes && (showChildCell || !showParentCell) ? "on;" : "off;");
+		runScript(script);
+	}
+
+	private void runScript(String script) {
+		System.out.println ("SYMAPP runScript " + script);
+		viewer.scriptWait(script);
 	}
 
 	@Override
 	protected void recalcAtomColors() {
-		// TODO Auto-generated method stub
-		
+		super.recalcAtomColors();
+		double[] spec = new double[4];
+		double[] amb = new double[3];
+		String script = "";
+		for (int t = variables.nTypes; --t >= 0;) {
+			for (int s = variables.nSubTypes[t]; --s >= 0;) {
+				subMaterial[t][s].getSpecular(spec);
+				subMaterial[t][s].getAmbient(amb);
+				BS bsAtoms = newBS(variables.getAtomsFromTS(t, s));
+				int c = getJmolColor(spec, amb);
+				script += "color " + bsAtoms + " " + c + ";";
+			}
+		}
+		viewer.scriptWait(script);
 	}
 
-	@Override
-	protected void renderAtoms() {
-		// TODO Auto-generated method stub
-		
+	private BS newBS(BitSet a) {
+		BS bs = new BS();
+		for (int i = a.nextSetBit(0); i >= 0; i = a.nextSetBit(i + 1)) {
+			bs.set(i);
+		}
+		return bs;
 	}
 
-	@Override
-	protected void renderBonds() {
-		// TODO Auto-generated method stub
-		
+	private int getJmolColor(double[] spec, double[] amb) {
+		int r = (int) Math.max(0, Math.min(255, 255 * amb[0]));
+		int g = (int) Math.max(0, Math.min(255, 255 * amb[1]));
+		int b = (int) Math.max(0, Math.min(255, 255 * amb[2]));
+		return (0xFF << 24) | (b << 16) | (g << 8) | r;
 	}
 
 	@Override
 	protected void renderCells() {
-		// TODO Auto-generated method stub
-		
+		double r = variables.atomMaxRadius * cellMultiplier;
+//		for (int i = 0; i < 12; i++) {
+//			transformCylinder(r, variables.parentCell.getCellInfo(i), cellObjects[0].child(i));
+//		}
+//		for (int i = 0; i < 12; i++) {
+//			transformCylinder(r, variables.childCell.getCellInfo(i), cellObjects[1].child(i));
+//		}
 	}
 
 	@Override
 	protected void renderAxes() {
-		// TODO Auto-generated method stub
-		
+		double rParent = variables.atomMaxRadius * axesMultipliers[0];
+		double rChild = variables.atomMaxRadius * axesMultipliers[1];
+//		for (int i = 0; i < 3; i++) {
+//			transformCylinder(rParent, variables.parentCell.getAxisInfo(i), axisObjects[0].child(i));
+//			transformCylinder(rChild, variables.childCell.getAxisInfo(i), axisObjects[1].child(i));
+//		}
+	}
+
+	@Override
+	protected void renderAtoms() {
+		for (int i = 0, n = variables.nAtoms; i < n; i++) {
+			double[][] info = variables.getAtomInfo(i);
+			boolean isEnabled = !showPrimitiveAtoms || variables.isPrimitive(i);
+//			Geometry a = atomObjects.child(i);
+//			a.setEnabled(isEnabled);
+//			renderScaledAtom(a, info[DIS], info[OCC][0] * variables.atomMaxRadius);
+//			renderArrow(a.child(MAG - 2), info[MAG], momentMultiplier, variables.angstromsPerMagneton);
+//			renderArrow(a.child(ROT - 2), info[ROT], rotationMultiplier, variables.angstromsPerRadian);
+//			renderEllipsoid(a.child(ELL - 2), info[ELL], 1 / Math.sqrt(variables.defaultUiso));
+		}
+	}
+
+	@Override
+	protected void renderBonds() {
+//		double r = Math.max(variables.atomMaxRadius * bondMultiplier, 0.05);
+//		for (int b = bsBondsEnabled.nextSetBit(0); b >= 0; b = bsBondsEnabled.nextSetBit(b + 1)) {
+//			transformCylinder(r, bondInfo[b], bondObjects.child(b));
+//		}
+	}
+
+	private void renderArrow(Geometry child, double[] info, double r, double scale) {
+		boolean isOK = (Math.abs(info[2]) > 0.1);
+//		child.setEnabled(isOK);
+//		if (!isOK)
+//			return;
 	}
 
 	@Override
 	protected void updateViewOptions() {
-		// TODO Auto-generated method stub
-		
+		super.updateViewOptions();
 	}
 
+	@Override
+	public void stop() {
+		super.stop();
+
+	}
 }

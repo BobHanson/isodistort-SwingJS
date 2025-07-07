@@ -34,6 +34,14 @@ import org.byu.isodistort.local.Iso3DApp.IsoRenderPanel;
 
 public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
+	public static class IsoMaterial extends Material {
+
+		public IsoMaterial(Renderer renderer) {
+			super(renderer);
+		}
+
+	}
+
 	// APS (April 2009): edits thanks to: http://www.dgp.toronto.edu/~mjmcguff/learn/java/04-mouseInput/
 
 	/**
@@ -653,8 +661,8 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 		theta = phi = sigma = 0;
 	}
 
-	public Material newMaterial() {
-		return new Material(renderer);
+	public IsoMaterial newMaterial() {
+		return new IsoMaterial(renderer);
 	}
 
 	@Override

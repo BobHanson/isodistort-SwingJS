@@ -24,7 +24,7 @@ import org.byu.isodistort.local.Elements;
 import org.byu.isodistort.local.IsoApp;
 import org.byu.isodistort.local.MathUtil;
 import org.byu.isodistort.local.Variables;
-import org.byu.isodistort.local.Variables.Atom;
+import org.byu.isodistort.local.Variables.IsoAtom;
 import org.byu.isodistort.local.Variables.SymopData;
 
 import javajs.util.PT;
@@ -504,7 +504,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	protected void frameResized() {
 		super.frameResized();
 		needsRecalc = true;
-		if (gui.frameResized())
+		if (gui != null && gui.frameResized())
 			updateDisplay();
 	}
 
@@ -854,7 +854,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			double thermal = Math.exp(-0.5 * uiso * d * d);
 			
 			for (int ia = 0, n = variables.nAtoms; ia < n; ia++) {
-				Atom a = variables.getAtom(ia);
+				IsoAtom a = variables.getAtom(ia);
 				if (allowSubtypeSelection && !variables.isSubTypeSelected(a.type, a.subType))
 					continue;
 				MathUtil.set3(a.getFinalFractionalCoord(), supxyz);

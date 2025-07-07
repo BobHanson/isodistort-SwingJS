@@ -12,7 +12,7 @@ import org.byu.isodistort.local.MathUtil;
  * @author Ken Perlin 2001
  */
 
-class Renderer {
+public class Renderer {
 
 	//String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 

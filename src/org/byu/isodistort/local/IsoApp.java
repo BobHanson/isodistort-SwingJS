@@ -95,8 +95,7 @@ public abstract class IsoApp {
 	static boolean isJS = (/** @j2sNative true || */
 	false);
 
-	static boolean addJmol = false; // BH experimental
-
+	protected static boolean addJmol = false;//true; // BH experimental use -jmol
 	public static class IsoFrame extends JFrame {
 		
 	    int sliderPanelWidth;
@@ -1472,9 +1471,14 @@ public abstract class IsoApp {
 	 */
 	private int readStartupFile(Object[] args) {
 		this.args = args;
+		String tests;
 		int n = (args == null || args.length == 0 || args[0] == null ? 0 : args.length);
-		if (n > 0 && "-test".equals(args[n - 1])) {
-			testing = true;
+		if (n > 0 && args[n - 1] instanceof String 
+				&& (tests = args[n-1].toString()).startsWith("-")) {
+			if (tests.contains("-test"))
+				testing = true;
+			if (tests.contains("-jmol"))
+				addJmol = true;
 			n--;
 		}
 		switch (n) {

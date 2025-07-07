@@ -697,6 +697,8 @@ public class Variables {
 				prefs.put("atomicradius", o);
 			}
 			o = values.remove("maxbondlength");
+			if (o == null)
+				o = values.remove("bondlengthmax");
 			if (o != null) {
 				lMax = (o instanceof Double ? ((Double) o).doubleValue() : Double.parseDouble(o.toString()));
 				changed |= (lMax != maxBondLength);
@@ -704,6 +706,8 @@ public class Variables {
 				prefs.put("maxbondlength", o);
 			}
 			o = values.remove("minbondlength");
+			if (o == null)
+				o = values.remove("bondlengthmin");
 			if (o != null) {
 				lMax = (o instanceof Double ? ((Double) o).doubleValue() : Double.parseDouble(o.toString()));
 				changed |= (lMin != minBondLength);

@@ -767,7 +767,7 @@ public abstract class IsoApp {
 
 	private Map<String, Object> ensureMapData(Object formData, boolean asClone, boolean silent) {
 		if (formData == null) {
-			formData = this.formData;
+			formData = this.formData;			
 		}
 		Map<String, Object> mapData = (formData instanceof String && ((String) formData).length() == 0 ? null
 				: ServerUtil.json2Map(formData, asClone));
@@ -777,8 +777,21 @@ public abstract class IsoApp {
 				sayNotPossible("No form data to process; open a DISTORTION file first.");
 			return null;
 		}
+		fixFormBondMinMax(mapData);
 		this.formData = mapData;
 		return mapData;
+	}
+
+	private void fixFormBondMinMax(Map<String, Object> map) {
+		boolean testing1 = false;
+		if (testing1) {
+		Object min = map.get("bondlengthmin");
+		Object max = map.get("bondlength");
+		if (min != null)
+			map.put("minbondlength", min);
+		if (max != null)
+			map.put("maxbondlength", max);
+		}
 	}
 
 	/**
@@ -1486,6 +1499,8 @@ public abstract class IsoApp {
 			document = args[2];
 			// Fall through //
 		case 2:
+			// note this has "bondlength" and "bondlenghmin"
+			
 			formData = args[1]; // String or Map
 			// Fall through //
 		case 1:

@@ -240,12 +240,13 @@ public abstract class Iso3DApp extends IsoApp {
 		if (showBonds) {
 			updateBonding();
 		}
-		if (showParentCell || showChildCell) {
-			variables.setCellInfo();
-		}
+		
 		for (int axis = 0; axis < 3; axis++) {
 			variables.setAxisExtents(axis, variables.parentCell, 2.0 * DEFAULT_DISTANCE, 3.5 * DEFAULT_DISTANCE);
 			variables.setAxisExtents(axis, variables.childCell, 1.5 * DEFAULT_DISTANCE, 4.0 * DEFAULT_DISTANCE);
+		}
+		if (showParentCell || showChildCell) {
+			variables.setCellInfo();
 		}
 	}
 	

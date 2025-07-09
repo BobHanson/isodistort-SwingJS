@@ -490,7 +490,7 @@ public abstract class Cell {
 
 	/**
 	 * Calculate positions for the axes of this cell.
-	 * Fills in [6]-[11] of axisInfo[x|y|z]
+	 * Fills in [6]-[11] of axisInfo[x|y|z] with [start, vector]
 	 * 
 	 * parent and child
 	 * 
@@ -521,14 +521,18 @@ public abstract class Cell {
 		MathUtil.norm3(t3);
 		MathUtil.vecaddN(tempPt, d1, t3, tA);
 		MathUtil.vecaddN(tempPt, d2, t3, tB);
+		
+		MathUtil.scaleAdd3(tB, -1, tA, t3);
+		MathUtil.scale3(t3, 2, t3);
 		int pt = 6;
+		
 		double[] info = axesInfo[axis];
 		info[pt++] = tA[0];
 		info[pt++] = tA[1];
 		info[pt++] = tA[2];
-		info[pt++] = tB[0];
-		info[pt++] = tB[1];
-		info[pt++] = tB[2];
+		info[pt++] = t3[0];
+		info[pt++] = t3[1];
+		info[pt++] = t3[2];
 		return info;
 	}
 

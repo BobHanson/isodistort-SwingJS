@@ -774,7 +774,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
 	@Override
 	public double[] getCameraMatrix() {
-		return renderer.getCamera().getUnsafe();
+		return renderer == null ? null : renderer.getCamera().getUnsafe();
 	}
 
 	@Override
@@ -789,6 +789,6 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
 	@Override
 	public double getZoom() {
-		return fov0 / renderer.getFOV() * 100;
+		return (renderer == null ? 100 : fov0 / renderer.getFOV() * 100);
 	}
 }

@@ -814,7 +814,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 		isAnimateSelected = false;
 		if (rp != null) {
 			// could be blank window
-			rp.setSpinning(false);
+			rp.setSpinning(false); 
 			frame.cameraMatrix = rp.getCameraMatrix();
 			frame.zoom = rp.getZoom();
 		}

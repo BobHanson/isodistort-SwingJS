@@ -56,7 +56,7 @@ public class IsoSymmetryApp extends IsoDistortApp {
 
 	class IsoJmolPanel extends JPanel implements IsoRenderPanel {
 
-		private static final String jmolStartupScript = "frank off;set antialiasdisplay true;background lightgray;set showUnitCellInfo false";
+		private static final String jmolStartupScript = "frank off;set antialiasdisplay true;background lightgray;set showUnitCellInfo false;set defaultdrawArrowScale -0.66";
 
 		private final Dimension currentSize = new Dimension();
 
@@ -252,6 +252,8 @@ public class IsoSymmetryApp extends IsoDistortApp {
 		world = new Geometry();
 		initWorld(world);	
 		updateCells();
+		jmolInitAxes();
+		updateSelectedObjects();
 		resetViewDirection(VIEW_TYPE_CHILD_HKL);
 	}
 
@@ -327,8 +329,8 @@ public class IsoSymmetryApp extends IsoDistortApp {
 		script += "draw cell_parent* " + (showParentCell ? "on;" : "off;");
 		script += "draw cell_child* " + (showChildCell ? "on;" : "off;");
 		script += "wireframe " + (showBonds ? 0 : bondRadius) + ";";
-		script += "draw axes_parent* " + (showAxes && (showParentCell || !showChildCell) ? "on;" : "off;");
-		script += "draw axes_child* " + (showAxes && (showChildCell || !showParentCell) ? "on;" : "off;");
+		script += "draw axis_parent* " + (showAxes && (showParentCell || !showChildCell) ? "on;" : "off;");
+		script += "draw axis_child* " + (showAxes && (showChildCell || !showParentCell) ? "on;" : "off;");
 		jmolScriptWait(script);
 	}
 
@@ -370,8 +372,7 @@ public class IsoSymmetryApp extends IsoDistortApp {
 
 	@Override
 	protected void updateAxes() {
-		jmolSetAxes(PARENT);
-		jmolSetAxes(CHILD);
+		// n/a
 	}
 
 	@Override
@@ -406,6 +407,7 @@ public class IsoSymmetryApp extends IsoDistortApp {
 	@Override
 	protected void updateViewOptions() {
 		super.updateViewOptions();
+		updateSelectedObjects();
 	}
 
 	@Override
@@ -421,39 +423,29 @@ public class IsoSymmetryApp extends IsoDistortApp {
 
 	@Override
 	protected void setViewDir(double[] v) {
-			boolean isParent;
 			String s = "";
 			switch (viewType) {
 			case VIEW_TYPE_CHILD_UVW:
-				isParent = false;
 				break;
 			case VIEW_TYPE_PARENT_UVW:
-				isParent = true;
 				break;
 			case VIEW_TYPE_CHILD_HKL:
-				isParent = false;
 				s = "rotate z -90;";
 				break;
 			default:
 			case VIEW_TYPE_PARENT_HKL:	
-				isParent = true;
 				s = "rotate z -90;";
 				break;
 			}
-			
-			System.out.println("viewdir " + MathUtil.a2s(v));
-			
 			s = "reset view; moveto 0 plane {" + v[0] + " " + v[1] + " " + v[2] + " 0};" + s;
 			jmolScriptWait(s);		
-			
-
 			rp.centerImage();
 	}
 	
-	private String currentCellScript;
+	private String parentCellScript, childCellScript;
 	private String[] jmolCellColors = new String[2];
 
-	private void jmolSetAxes(int itype) {
+	private String jmolGetAxisScript(int itype) {
 		Cell cell;
 		String type;
 		switch (itype) {
@@ -471,12 +463,13 @@ public class IsoSymmetryApp extends IsoDistortApp {
 		String script = getJmolDrawAxis(type, cell, 0, d, Color.red)
 		 				+ getJmolDrawAxis(type, cell, 1, d, Color.green)
 		 				+ getJmolDrawAxis(type, cell, 2, d, Color.blue);
-		jmolScriptWait(script);		
+		return script;
 	}
 	private String getJmolDrawAxis(String type, Cell cell, int i, double d, Color c) {
+		
 		double[] info = cell.getAxisInfo(i);
 		return "draw axis_" + type + "_" + i + " diameter " + d 
-				+ " arrow " + jmolPoint(info, 6) + jmolPoint(info, 9) 
+				+ " vector " + jmolPoint(info, 6) + jmolPoint(info, 9) 
 				+ " color " + getJmolColor(c) +";";
 	}
 
@@ -487,15 +480,18 @@ public class IsoSymmetryApp extends IsoDistortApp {
 	private void jmolSetCell(int itype) {
 		Cell cell;
 		String type;
+		String currentCellScript;
 		switch (itype) {
 		case PARENT:
 			type = "parent";
 			cell = variables.parentCell;
+			currentCellScript = parentCellScript;
 			break;
 		default:
 		case CHILD:
 			type = "child";
 			cell = variables.childCell;
+			currentCellScript = childCellScript;
 			break;
 		}
 		String s = "unitcell [";
@@ -503,13 +499,22 @@ public class IsoSymmetryApp extends IsoDistortApp {
 				+ jmolPoint(cell.getCartesianAxisTemp(2)) + jmolPoint(cell.getCartesianAxisTemp(4)) + "]; ";
 		if (s.equals(currentCellScript))
 			return;
-		currentCellScript = s;
+		if (itype == PARENT)
+			parentCellScript = s;
+		else
+			childCellScript = s;
 		String color = jmolCellColors[itype];
 		if (color == null) {
 			Color col = (itype == PARENT ? Variables.COLOR_PARENT_CELL : Variables.COLOR_CHILD_CELL);
 			color = jmolCellColors[itype] = getJmolColor(col);
 		}
 		s += "draw cell_" + type + " diameter " + CELL_RADIUS*2 + " unitcell color " + jmolCellColors[itype] + ";";
+		s += jmolGetAxisScript(itype);
+		viewer.scriptWait(s);
+	}
+	
+	private void jmolInitAxes() {
+		String s = jmolGetAxisScript(PARENT) + jmolGetAxisScript(CHILD);
 		viewer.scriptWait(s);
 	}
 	

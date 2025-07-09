@@ -5,7 +5,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
@@ -69,8 +68,8 @@ public class Variables {
 
 	public final static int RX = 3, RY = 4, L_2 = 5;
 
-	static final Color COLOR_CHILD_CELL = new Color(128, 128, 204);
-	static final Color COLOR_PARENT_CELL = new Color(204, 128, 128);
+	public static final Color COLOR_CHILD_CELL = new Color(128, 128, 204);
+	public static final Color COLOR_PARENT_CELL = new Color(204, 128, 128);
 
 	static final Color COLOR_STRAIN = Color.DARK_GRAY;
 	static final Color COLOR_IRREP = new Color(0xA0A0A0);
@@ -160,7 +159,7 @@ public class Variables {
 	 */
 	String[][] subTypeName;
 	/**
-	 * Radius of atoms
+	 * Radius of atoms; also used as a scaling factor for bonds, cells, and axes
 	 */
 	public double atomMaxRadius;
 	/**
@@ -227,6 +226,15 @@ public class Variables {
 	private double[][] tempmat = new double[3][3];
 	private double[] tA = new double[3];
 	private double[] tB = new double[3];
+
+	/**
+	 * The hkl or uvw view direction indices in lattice coordinates
+	 */
+	final private double[] viewIndices = new double[] {0, 0, 1};
+	
+	public double[] getViewIndices() {
+		return viewIndices;
+	}
 
 	/**
 	 * Boolean variable that tracks whether irrep sliders were last set to sliderMax
@@ -478,7 +486,7 @@ public class Variables {
 		MathUtil.set3(minmax[1], -1E6, -1e6, -1e6);
 		childCell.rangeCheckVertices(minmax);
 		for (int i = nAtoms; --i >= 0;) {
-			MathUtil.rangeCheck(childCell.toTempCartesian(atoms[i].vectorBest[DIS]), minmax);
+			MathUtil.rangeCheck(atoms[i].getBestChildLocationTemp(), minmax);
 		}
 		MathUtil.average3(minmax[0], minmax[1], cartesianCenter);
 		childCell.setRelativeTo(cartesianCenter);
@@ -611,7 +619,7 @@ public class Variables {
 				info[ELL] = new double[7];
 			}
 			info[OCC][0] = a.getOccupancy();
-			double[] coord = a.setDisplacementInfo(childCell, cartesianCenter);
+			double[] coord = a.setDisplacementInfo(cartesianCenter);
 			if (getBspt) {
 				// This coordinate is saved, not copied.
 				// The binary space partition tree thus.
@@ -619,9 +627,9 @@ public class Variables {
 				// but I think this is close enough. Prove me wrong! BH
 				bspt.addTuple(coord);
 			}
-			a.setArrowInfo(MAG, childCell);
-			a.setArrowInfo(ROT, childCell);
-			a.setEllipsoidInfo(childCell);
+			a.setArrowInfo(MAG);
+			a.setArrowInfo(ROT);
+			a.setEllipsoidInfo();
 		}
 	}
 
@@ -753,7 +761,7 @@ public class Variables {
 	}
 
 	public void setAxisExtents(int axis, Cell cell, double d1, double d2) {
-		double[] axesInfo = cell.getAxisExtents(axis, cartesianCenter, d1 * atomMaxRadius, tA, d2 * atomMaxRadius, tB,
+		double[] axesInfo = cell.getAxisExtents(axis, cartesianCenter, d1, tA, d2, tB,
 				tempvec);
 		setCylinderInfo(tA, tB, axesInfo, -1);
 	}
@@ -764,7 +772,7 @@ public class Variables {
 	 * A class to collect all atom-related content.
 	 * 
 	 */
-	public static class IsoAtom {
+	public class IsoAtom {
 
 		/**
 		 * The index of this atom in the filtered array.
@@ -855,8 +863,16 @@ public class Variables {
 			vectorBest[DIS] = coord;
 		}
 
+		public double[] getBestChildLocationTemp() {
+			return childCell.toTempCartesian(vectorBest[DIS]);
+		}
+
 		public double[] getFinalFractionalCoord() {
 			return vector1[DIS];
+		}
+
+		public double[] getFinalCartesianCoordTemp() {
+			return childCell.toTempCartesian(vector1[DIS]);
 		}
 
 		public double[] get(int mode) {
@@ -900,8 +916,8 @@ public class Variables {
 		 * @param t
 		 * @return [cartX, cartY, cartZ, index]
 		 */
-		private double[] setDisplacementInfo(ChildCell child, double[] center) {
-			double[] t3 = child.toTempCartesian(vector1[DIS]);
+		private double[] setDisplacementInfo(double[] center) {
+			double[] t3 = childCell.toTempCartesian(vector1[DIS]);
 			MathUtil.scaleAdd3(t3, -1, center, info[DIS]);
 			return info[DIS];
 		}
@@ -915,9 +931,9 @@ public class Variables {
 		 * @param type  is MAG or ROT
 		 * @param child is the child cell
 		 */
-		public void setArrowInfo(int type, ChildCell child) {
+		public void setArrowInfo(int type) {
 			double[] info = this.info[type];
-			double[] t = child.toTempCartesian(vector1[type]);
+			double[] t = childCell.toTempCartesian(vector1[type]);
 			double lensq = MathUtil.lenSq3(t);
 			if (lensq < 0.000000000001) {
 				info[0] = info[1] = info[2] = 0;
@@ -941,10 +957,10 @@ public class Variables {
 		 * 
 		 * @param child is the child cell.
 		 */
-		public void setEllipsoidInfo(ChildCell child) {
+		public void setEllipsoidInfo() {
 			double[] info = this.info[ELL];
 
-			double[][] mat = child.getTempStrainedCartesianBasis(get(ELL));
+			double[][] mat = childCell.getTempStrainedCartesianBasis(get(ELL));
 
 			// TODO -- Branton -- apply strain to anisotropic ellipsoid
 
@@ -2879,6 +2895,12 @@ public class Variables {
 
 	public void updateSliderPointers() {
 		gui.updateSliderPointers();
+	}
+
+	public void initCellsAndAxes() {
+			readSliders();
+			recalcDistortion();
+			setAtomInfo();
 	}
 
 }

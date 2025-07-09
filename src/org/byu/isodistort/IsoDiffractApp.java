@@ -4,7 +4,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -57,7 +56,7 @@ import javajs.util.PT;
 
 //http://stokes.byu.edu/isodistort.html is isodistort website
 
-public class IsoDiffractApp extends IsoApp implements KeyListener {
+public class IsoDiffractApp extends IsoApp {
 
 	
 	protected static boolean usePrimitiveAssignmentMethod = false;
@@ -173,7 +172,6 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			adapter = new Adapter();
 			addMouseMotionListener(adapter);
 			addMouseListener(adapter);
-			addKeyListener(IsoDiffractApp.this);
 		}
 
 		private BufferedImage im;
@@ -1001,7 +999,7 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 
 		gui.setHKL(hklO, hklH, hklV);
 
-		crystalDInvRange = getText(gui.qTxt, crystalDInvRange * (2 * Math.PI), 2) / (2 * Math.PI);
+		crystalDInvRange = getTextValue(gui.qTxt, crystalDInvRange * (2 * Math.PI), 2) / (2 * Math.PI);
 
 		// Decide that user input is either of parentHKL or childHKL type
 		// Either way, the input directions are passed as childHKL vectors.
@@ -1172,11 +1170,11 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 */
 	private void resetPowderPeaks() {
 		double tol = powderPeakTolerance;
-		powderWavelength = getText(gui.wavTxt, powderWavelength, 2);
-		powderXMin = getText(gui.minTxt, powderXMin, 2);
-		powderXMax = getText(gui.maxTxt, powderXMax, 2);
-		powderResolution = getText(gui.fwhmTxt, powderResolution, 3);
-		powderZoom = getText(gui.zoomTxt, powderZoom, 2);
+		powderWavelength = getTextValue(gui.wavTxt, powderWavelength, 2);
+		powderXMin = getTextValue(gui.minTxt, powderXMin, 2);
+		powderXMax = getTextValue(gui.maxTxt, powderXMax, 2);
+		powderResolution = getTextValue(gui.fwhmTxt, powderResolution, 3);
+		powderZoom = getTextValue(gui.zoomTxt, powderZoom, 2);
 		if ((powderXMax <= powderXMin) || (powderPatternType == POWDER_PATTERN_TYPE_DSPACE)
 				&& ((Math.abs(powderXMin) < tol) || (Math.abs(powderXMax) < tol)))
 			return;
@@ -1571,8 +1569,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 	 * This is the newer, preferred method, using operations
 	 */
 	private void assignPeakTypesUsingOperations() {
-		System.out.println("IsoDiffractApp assignmentMethod = assignPeakTypesUsingOperations for hklType " 
-				+ (hklType == HKL_TYPE_PARENT ? "parent" : "child"));
+//		System.out.println("IsoDiffractApp assignmentMethod = assignPeakTypesUsingOperations for hklType " 
+//				+ (hklType == HKL_TYPE_PARENT ? "parent" : "child"));
 		double ptolerance = 0.01;
 		for (int p = 0; p < peakCount; p++) {
 			PeakData pd = peakData[p];
@@ -1804,8 +1802,9 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			buildControls();
 			showControls();
 			rp = new RenderPanel();
-			rp.addKeyListener(IsoDiffractApp.this);
+			rp.addKeyListener(frame.keyListener);
 		}
+
 
 		public void handleButtonEvent(Object src) {
 			if (src instanceof JCheckBox) {
@@ -1909,19 +1908,19 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		}
 
 		public void setHKL(double[] hklO, double[] hklH, double[] hklV) {
-			hklO[0] = getText(hOTxt, hklO[0], 2);
-			hklO[1] = getText(kOTxt, hklO[1], 2);
-			hklO[2] = getText(lOTxt, hklO[2], 2);
-			hklH[0] = getText(hHTxt, hklH[0], 2);
-			hklH[1] = getText(kHTxt, hklH[1], 2);
-			hklH[2] = getText(lHTxt, hklH[2], 2);
-			hklV[0] = getText(hVTxt, hklV[0], 2);
-			hklV[1] = getText(kVTxt, hklV[1], 2);
-			hklV[2] = getText(lVTxt, hklV[2], 2);
+			hklO[0] = getTextValue(hOTxt, hklO[0], 2);
+			hklO[1] = getTextValue(kOTxt, hklO[1], 2);
+			hklO[2] = getTextValue(lOTxt, hklO[2], 2);
+			hklH[0] = getTextValue(hHTxt, hklH[0], 2);
+			hklH[1] = getTextValue(kHTxt, hklH[1], 2);
+			hklH[2] = getTextValue(lHTxt, hklH[2], 2);
+			hklV[0] = getTextValue(hVTxt, hklV[0], 2);
+			hklV[1] = getTextValue(kVTxt, hklV[1], 2);
+			hklV[2] = getTextValue(lVTxt, hklV[2], 2);
 		}
 
 		public void setZoom(double powderZoom, double dy) {
-			double zoom = getText(zoomTxt, powderZoom, 2);
+			double zoom = getTextValue(zoomTxt, powderZoom, 2);
 			zoom += -dy / 100.0;
 			if (zoom < 0)
 				zoom = 0;
@@ -1945,8 +1944,8 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 		}
 
 		public void dispose() {
-			rp.removeKeyListener(IsoDiffractApp.this);
 			rp.dispose();
+			rp.removeKeyListener(frame.keyListener);
 		}
 
 		/**
@@ -2121,5 +2120,17 @@ public class IsoDiffractApp extends IsoApp implements KeyListener {
 			usePrimitiveAssignmentMethod = true;
 		create("IsoDiffract", args);
 	}
+
+	@Override
+	protected void takeFocus() {
+		gui.rp.requestFocusInWindow();
+	}
+
+	@Override
+	protected boolean prepareToSwapIn() {
+		return true;
+	}
+
+
 
 }

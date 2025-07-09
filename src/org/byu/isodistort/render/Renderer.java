@@ -4,6 +4,7 @@
 package org.byu.isodistort.render;
 
 import org.byu.isodistort.local.MathUtil;
+import org.byu.isodistort0.render.Matrix;
 
 /**
  * Provides the computational functionality to render geometric objects in
@@ -253,10 +254,11 @@ public class Renderer {
 	 * @param theta horizontal angle (radians)
 	 * @param phi   vertical angle (radians)
 	 */
-	synchronized void setCamera(double t, double p) {
+	synchronized void setCamera(double t, double p, double s) {
 		Matrix3D.identity(camera);
 		theta = t;
 		phi = p;
+		sigma = s;
 		computeCamera();
 	}
 
@@ -691,15 +693,10 @@ public class Renderer {
 		} else {
 			if (theta == 0 && phi == 0 && sigma == 0)
 				return;
-
-			Matrix3D.identity(camtmp);
-			camtmp.rotateZ(sigma);
-			camera.postMultiply(camtmp);
-			Matrix3D.identity(camtmp);
-			camtmp.rotateY(theta);
-			camera.postMultiply(camtmp);
 			Matrix3D.identity(camtmp);
 			camtmp.rotateX(phi);
+			camtmp.rotateY(theta);
+			camtmp.rotateZ(sigma);
 			camera.postMultiply(camtmp);
 			clearAngles();
 		}
@@ -1603,7 +1600,6 @@ public class Renderer {
 				}
 			}
 		}
-
 		red = rD * D[0] + rS * S[0] + A[0];
 		grn = gD * D[1] + gS * S[1] + A[1];
 		blu = bD * D[2] + bS * S[2] + A[2];

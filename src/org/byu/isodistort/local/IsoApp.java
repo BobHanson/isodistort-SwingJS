@@ -18,6 +18,10 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -60,7 +64,6 @@ import javax.swing.text.DefaultCaret;
 import org.byu.isodistort.IsoDiffractApp;
 import org.byu.isodistort.IsoDistortApp;
 import org.byu.isodistort.IsoSymmetryApp;
-import org.byu.isodistort.local.Cell.ChildCell;
 import org.byu.isodistort.server.ServerUtil;
 
 /**
@@ -70,7 +73,7 @@ import org.byu.isodistort.server.ServerUtil;
  * @author Bob Hanson
  *
  */
-public abstract class IsoApp {
+public abstract class IsoApp implements KeyListener {
 
 	final static String minorVersion = ".16_2025.07.06";
 
@@ -115,9 +118,30 @@ public abstract class IsoApp {
 
 		private MenuActions actions;
 
+		public KeyListener keyListener = new KeyListener() {
+
+			@Override
+			public void keyTyped(KeyEvent e) {
+				apps[thisType].keyTyped(e);
+			}
+
+			@Override
+			public void keyPressed(KeyEvent e) {
+				System.out.println("IsoApp.Frame " + e);
+				apps[thisType].keyPressed(e);
+			}
+
+			@Override
+			public void keyReleased(KeyEvent e) {
+				apps[thisType].keyReleased(e);
+			}
+			
+		};
+
 		IsoFrame(String title) {
 			super(title);
 			contentPane = (JComponent) getContentPane();
+			addKeyListener(keyListener );
 		}
 
 		void addIsoPanel(IsoApp app, JPanel isoPanel) {
@@ -127,7 +151,7 @@ public abstract class IsoApp {
 			}
 			actions.setApp(app);
 			int type = app.appType;
-			this.apps[type] = app;
+			apps[type] = app;
 			if (tabbedPane == null) {
 				tabbedPane = new JTabbedPane();
 				tabbedPane.setName("tabbedPane");
@@ -180,6 +204,8 @@ public abstract class IsoApp {
 					apps[i] = null;
 				}
 			}
+			cameraMatrix = null;
+			zoom = Double.NaN;
 		}
 
 		int getPanelHeight() {
@@ -200,14 +226,25 @@ public abstract class IsoApp {
 			if (currentApp == null)
 				return;
 			if (newapp != null) {
+				check3DApp(currentApp);
 				currentApp.prepareToSwapOut();
+				newapp.prepareToSwapIn();
 				((JComponent) getContentPane()).setTransferHandler(new FileUtil.FileDropHandler(newapp));
 				newapp.variables.setValuesFrom(currentApp.variables);
+				
 				repaint();
 				requestFocus();				
 			} else {
+				currentApp.prepareToSwapOut();
 				currentApp.openApplication(type, currentApp.isovizData, null, false);
 			}
+		}
+
+		public Iso3DApp from3DApp;
+		
+		private void check3DApp(IsoApp currentApp) {
+			if (currentApp instanceof Iso3DApp)
+				from3DApp = (Iso3DApp)currentApp;
 		}
 
 		private ComponentListener componentListener = new ComponentAdapter() {
@@ -262,8 +299,16 @@ public abstract class IsoApp {
 			}
 
 		};
-		
+
+		/**
+		 * from IsoDistortApp
+		 */
+		public double[] cameraMatrix;
+
+		public double zoom = Double.NaN;
+
 		void finalizeFrame(IsoApp app) {
+			check3DApp(app);
 			String title = getTitle();
 			if (title.indexOf(" ") < 0)
 				setName(title);
@@ -616,7 +661,14 @@ public abstract class IsoApp {
 
 	};
 
-	protected double getText(JTextField t, double currentValue, int precision) {
+	/**
+	 * 
+	 * @param t
+	 * @param currentValue
+	 * @param precision
+	 * @return
+	 */
+	protected double getTextValue(JTextField t, double currentValue, int precision) {
 		double val = 0;
 		try {
 			String s = t.getText();
@@ -643,17 +695,6 @@ public abstract class IsoApp {
 	 * FormData "xkparam... presence or DFile "!
 	 */
 	public Boolean isIncommensurate;
-
-	/**
-	 * cell for the child, aka "super" cell
-	 * 
-	 */
-	public ChildCell childCell = new ChildCell();
-
-	/**
-	 * cell for the parent
-	 */
-	public Cell.ParentCell parentCell = new Cell.ParentCell();
 
 	public static boolean testing;
 
@@ -922,6 +963,31 @@ public abstract class IsoApp {
 		controlStatusPanel.setName("controlStatusPanel");
 		controlStatusPanel.setBackground(Color.WHITE);
 		controlPanel = new JPanel();
+		controlPanel.addMouseListener(new MouseListener() {
+
+			@Override
+			public void mouseClicked(MouseEvent e) {
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				takeFocus();
+			}
+			
+		});
+			
 		controlPanel.setName("controlPanel");
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
@@ -984,6 +1050,8 @@ public abstract class IsoApp {
 		}
 	}
 
+	abstract protected void takeFocus();
+
 	public boolean isStatusVisible() {
 		return statusPanel.isVisible();
 	}
@@ -1041,8 +1109,6 @@ public abstract class IsoApp {
 	private void openApplication(int appType, byte[] data, Map<String, Object> mapFormData, boolean isDrop) {
 		if (data == null)
 			return;
-		if (!prepareToSwapOut())
-			return;
 		IsoFrame frame = this.frame;
 		SwingUtilities.invokeLater(() -> {
 			new Thread(() -> {
@@ -1093,6 +1159,7 @@ public abstract class IsoApp {
 			app.prepareFrame(frame, oldVariables, isDrop);
 			app.updateDimensions();
 			app.init();
+			app.prepareToSwapIn();
 			frame.finalizeFrame(app);
 			app.addStatus("Time to load: " + (System.currentTimeMillis() - t) + " ms");
 		} catch (Throwable e) {
@@ -1137,6 +1204,8 @@ public abstract class IsoApp {
 	 * 
 	 */
 	abstract protected boolean prepareToSwapOut();
+
+	abstract protected boolean prepareToSwapIn();
 
 	abstract public void recalcCellColors();
 
@@ -1576,7 +1645,6 @@ public abstract class IsoApp {
 
 	/**
 	 * @param f
-	 * @return
 	 */
 	public void loadFile(File f) {
 		if (f == null)

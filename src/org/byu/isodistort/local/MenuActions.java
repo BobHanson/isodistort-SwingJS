@@ -216,14 +216,14 @@ public class MenuActions {
 			}
 		});
 
-//		actions.put("File.Save.saveFormData", new IsoAction("saveFormData", "ISODISTORT Form Data JSON",
-//				"Save ISODISTORT form data in JSON format.", 0) {
-//			@Override
-//			public void actionPerformed(ActionEvent e) {
-//				app.saveFormData(null);
-//			}
-//		});
-//
+		actions.put("File.Save.saveFormData", new IsoAction("saveFormData", "ISODISTORT Form Data JSON",
+				"Save ISODISTORT form data in JSON format.", 0) {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				app.saveFormData(null);
+			}
+		});
+
 		actions.put("File.Save.saveCIF",
 				new IsoAction("saveCIF", "-CIF file or movie", "Save current configuration as CIF file.", 0) {
 					/**

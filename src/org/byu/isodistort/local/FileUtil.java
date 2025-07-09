@@ -25,6 +25,9 @@ import javax.swing.JOptionPane;
 import javax.swing.TransferHandler;
 import javax.swing.filechooser.FileFilter;
 
+import org.jmol.api.JmolAppConsoleInterface;
+import org.jmol.util.Logger;
+
 import javajs.async.AsyncFileChooser;
 
 public class FileUtil {
@@ -535,6 +538,19 @@ public class FileUtil {
 				whenDone.accept(f);
 			}
 		});
+	}
+
+	public static void showUrl(String url) {
+		try {
+			Class<?> c = Class.forName("java.awt.Desktop");
+			Method getDesktop = c.getMethod("getDesktop", new Class[] {});
+			Object deskTop = getDesktop.invoke(null, new Object[] {});
+			Method browse = c.getMethod("browse", new Class[] { URI.class });
+			Object arguments[] = { new URI(url) };
+			browse.invoke(deskTop, arguments);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 }

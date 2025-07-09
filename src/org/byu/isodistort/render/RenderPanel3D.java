@@ -22,7 +22,8 @@ import org.byu.isodistort.local.Iso3DApp.IsoRenderPanel;
  * control features dealing with mouse and keyboard interaction. Extend this
  * class to create an interactive web applet.
  * 
- * Bob Hanson 2023.12.10 refactored to be its own JPanel, adapting dynamically to its size.
+ * Bob Hanson 2023.12.10 refactored to be its own JPanel, adapting dynamically
+ * to its size.
  * 
  * Was "RenderPanel", but it's really only for 3D rendering (IsoDistort).
  * IsoDiffractApp has its own private 2D RenderPanel
@@ -40,14 +41,20 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 			super(renderer);
 		}
 
+		public IsoMaterial setColor(Color c) {
+			setDiffuse(c.getRed() / 255, c.getGreen() / 255, c.getBlue() / 255);
+			return this;
+		}
+
 	}
 
-	// APS (April 2009): edits thanks to: http://www.dgp.toronto.edu/~mjmcguff/learn/java/04-mouseInput/
+	// APS (April 2009): edits thanks to:
+	// http://www.dgp.toronto.edu/~mjmcguff/learn/java/04-mouseInput/
 
 	/**
 	 * Flag chooses x,y,z-Rotate modes.
 	 */
-	private int rotAxis = 0; // Branton Campbell
+	private int rotAxis = ROTATE_NORMAL; // Branton Campbell
 
 	/**
 	 * Flag controls continuous spin mode.
@@ -86,9 +93,8 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	private Matrix3D matrix[] = new Matrix3D[10]; // THE MATRIX STACK
 
 	private int top = 0; // MATRIX STACK POINTER
-	
-	// private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
+	// private String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
 	/**
 	 * {@link Renderer} object
@@ -103,6 +109,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	public Geometry getWorld() {
 		return world;
 	}
+
 	/**
 	 * Flag that determines whether to display current frame rate.
 	 */
@@ -115,20 +122,22 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	protected int invert = 1;
 
 	MouseAdapter adapter;
-	
+
 	public RenderPanel3D(IsoDistortApp app) {
 		this.app = app;
 		adapter = new Adapter();
+		addKeyListener(app.frame.keyListener);
 		addMouseListener(adapter);
 		addMouseMotionListener(adapter);
 		initialize();
 	}
 
 	public void dispose() {
-		app = null;
+		removeKeyListener(app.frame.keyListener);
 		removeMouseListener(adapter);
 		removeMouseMotionListener(adapter);
 		renderer = null;
+		app = null;
 	}
 
 	/**
@@ -176,7 +185,6 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 			double r, double g, double b) {
 		renderer.addLight(x, y, z, r, g, b);
 	}
-	
 
 	// private METHODS TO LET THE PROGRAMMER MANIPULATE A MATRIX STACK
 
@@ -348,18 +356,17 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 ////		im = createImage(mis);
 //		//bufferIm = (BufferedImage) createImage(width, height);
 //	}
-	
+
 	/**
-	 * Check to see if the renderer is in sync with Java's layout manager. 
+	 * Check to see if the renderer is in sync with Java's layout manager.
 	 * 
 	 * @return true if dimensions are unchanged
 	 */
 	private boolean isInSync() {
-		return (getWidth() * (isAntialiased ? 2 : 1) == renderer.W 
+		return (getWidth() * (isAntialiased ? 2 : 1) == renderer.W
 				&& getHeight() * (isAntialiased ? 2 : 1) == renderer.H);
 	}
-	
-	
+
 //long lastt = 0;
 
 	/**
@@ -417,9 +424,9 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
 	// BH this did not have any particular effect that I could see.
 	boolean isAntialiased = false;
-	
+
 	@Override
-    public synchronized void paint(Graphics g) {
+	public synchronized void paint(Graphics g) {
 		// long t1 = System.currentTimeMillis();
 		// System.out.println("RP timer " + (t1 - ttime));
 		// ttime = t1;
@@ -429,8 +436,9 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 			return;
 		}
 
-		//System.out.println("RenderPanel3D paint " + isInSync() + " " + app.drawWidth + " " + app.drawHeight + " " + getSize());
-		
+		// System.out.println("RenderPanel3D paint " + isInSync() + " " + app.drawWidth
+		// + " " + app.drawHeight + " " + getSize());
+
 		super.paint(g);
 		int dw = im.getWidth();
 		int dh = im.getHeight();
@@ -468,7 +476,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 		}
 
 		if (app.t0 != 0)
-			System.out.println("Time to load, render, and paint: "+(System.currentTimeMillis() - app.t0)+" ms");			
+			System.out.println("Time to load, render, and paint: " + (System.currentTimeMillis() - app.t0) + " ms");
 		app.t0 = 0;
 	}
 
@@ -501,41 +509,41 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 //	}
 
 	private class Adapter extends MouseAdapter {
-	@Override
-	public void mousePressed(MouseEvent e) {
-		app.setStatusVisible(false);
-		requestFocus();
-		int x = e.getX();
-		int y = e.getY();
-		renderer.setDragging(true);
-		mx = x;
-		my = y;
-		if (e.isShiftDown()) {
-			clearAngles();
-			setRotationAxis(4);
-			isMouseZooming = true;
+		@Override
+		public void mousePressed(MouseEvent e) {
+			app.setStatusVisible(false);
+			requestFocus();
+			int x = e.getX();
+			int y = e.getY();
+			renderer.setDragging(true);
+			mx = x;
+			my = y;
+			if (e.isShiftDown()) {
+				clearAngles();
+				setRotationAxis(ROTATE_ZOOM);
+				isMouseZooming = true;
+			}
+
 		}
 
-	}
-
-	@Override
-	public void mouseReleased(MouseEvent e) {
-		renderer.setDragging(false);
-		if (isMouseZooming) {
-			isMouseZooming = false;
-			clearAngles();
-			setRotationAxis(0);
+		@Override
+		public void mouseReleased(MouseEvent e) {
+			renderer.setDragging(false);
+			if (isMouseZooming) {
+				isMouseZooming = false;
+				clearAngles();
+				setRotationAxis(ROTATE_NORMAL);
+			}
 		}
-	}
 
-	@Override
-	public void mouseMoved(MouseEvent e) {
-		if (isMouseZooming && !e.isShiftDown()) {
-			isMouseZooming = false;
-			clearAngles();
-			setRotationAxis(0);
+		@Override
+		public void mouseMoved(MouseEvent e) {
+			if (isMouseZooming && !e.isShiftDown()) {
+				isMouseZooming = false;
+				clearAngles();
+				setRotationAxis(ROTATE_NORMAL);
+			}
 		}
-	}
 
 		@Override
 		public void mouseDragged(MouseEvent e) {
@@ -556,28 +564,28 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 					spinrate = 0.006;
 				if (renderer.isDragging()) {
 					switch (rotAxis) {
-					case 0:
+					case ROTATE_NORMAL:
 						phi += spinrate * (double) (y - my); // VERTICAL VIEW ROTATION
-						theta += spinrate * (double) (x - mx); // VERTICAL VIEW ROTATION
+						theta += spinrate * (double) (x - mx); // HORIZONTAL VIEW ROTATION
 						sigma = 0;
 						break;
-					case 1:
+					case ROTATE_X:
 						phi += spinrate * (double) (y - my);
 						theta = 0;
 						sigma = 0;
 						break;
-					case 2:
+					case ROTATE_Y:
 						phi = 0;
 						theta += spinrate * (double) (x - mx);
 						sigma = 0;
 						break;
-					case 3:
+					case ROTATE_Z:
 						phi = 0;
 						theta = 0;
 						sigma += -spinrate * (double) ((x - mx) * (256 - y) - (y - my) * (256 - x))
 								/ (double) (1 + Math.sqrt((256 - x) * (256 - x) + (256 - y) * (256 - y)));
 						break;
-					case 4:
+					case ROTATE_ZOOM:
 						setFOV(renderer.getFOV() * (1 + (y - my) * 0.004));
 						// y-direction motion changes field of view (zoom).
 						// -David Tanner
@@ -625,6 +633,12 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 		}
 
 	}
+	
+	protected void setRotationAxis(int i) {
+		rotAxis = i;
+	}
+
+
 	// --- PRIVATE METHODS
 
 	private double getCurrentTime() {
@@ -632,10 +646,10 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	}
 
 	// additional IsoPanel-public methods
-	
+
 	@Override
-	public void setCamera(double t, double p) {
-		renderer.setCamera(t, p);
+	public void setCamera(double t, double p, double s) {
+		renderer.setCamera(t, p, s);
 	}
 
 	@Override
@@ -670,22 +684,10 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 		invert = -invert;
 	}
 
-	@Override
-	public void clearOffsets() {
-		xOff = 0;
-		yOff = 0;
-		zOff = 0;
-		invert = 1;
-	}
-
 	public void transformWorld() {
 		for (int i = world.child.length; --i >= 0;)
 			if (world.child(i) != null)
 				transform(world.child(i));
-	}
-
-	public void setRotationAxis(int i) {
-		rotAxis = i;
 	}
 
 	@Override
@@ -695,30 +697,29 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 		int dw = isAntialiased ? sw >> 1 : sw;
 		int dh = isAntialiased ? sh >> 1 : sh;
 
-		
-		BufferedImage bi = newBufferedImage(dw, dh); 
+		BufferedImage bi = newBufferedImage(dw, dh);
 		Graphics2D g = bi.createGraphics();
 		if (isAntialiased) {
-			g.drawImage(im, 0, 0, dw, dh, 0, 0, sw, sh,  null); 
+			g.drawImage(im, 0, 0, dw, dh, 0, 0, sw, sh, null);
 		} else {
-			g.drawImage(im, 0, 0, null); 			
+			g.drawImage(im, 0, 0, null);
 		}
 		g.dispose();
-		return bi; 
+		return bi;
 	}
 
 	@Override
 	public void initializeSettings(double scdSize) {
 		double fl = 10;
-		double fov = 2 	* scdSize / fl;
+		double fov = 2 * scdSize / fl;
 		fov0 = fov;
 		setBgColor(1, 1, 1);// background color: white
 		setFOV(fov);// field of view
 		setFL(fl);// focal length: zoomed way out
-		setCamera(0, 0);
+		setCamera(0, 0, 0);
 		// Define position and color of light source (x, y, z, r, g, b)
 		double intensity = 0.38;
-		addLight(Double.NaN, 0,0,0,0,0);
+		addLight(Double.NaN, 0, 0, 0, 0, 0);
 		addLight(.5, .5, .5, 1.7 * intensity, 1.7 * intensity, 1.7 * intensity);
 		addLight(-.5, .5, .5, intensity, intensity, intensity);
 		addLight(.5, -.5, .5, intensity, intensity, intensity);
@@ -727,7 +728,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
 	@Override
 	public void resetView() {
-		setCamera(0, 0);
+		setCamera(0, 0, 0);
 		setFOV(fov0);
 	}
 
@@ -735,8 +736,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	public double[][] getPerspective() {
 		double[] m = new double[16];
 		System.arraycopy(renderer.getCamera().getUnsafe(), 0, m, 0, 16);
-		return new double[][] {
-				new double[] { fov0, renderer.getFOV(), renderer.isOrthographic() ? 0 : 1 }, m }; 
+		return new double[][] { new double[] { fov0, renderer.getFOV(), renderer.isOrthographic() ? 0 : 1 }, m };
 	}
 
 	@Override
@@ -750,6 +750,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
 	/**
 	 * Turn perspective on or off
+	 * 
 	 * @param b true for perspective
 	 */
 	private void setPerspective(boolean b) {
@@ -758,7 +759,10 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
 	@Override
 	public void centerImage() {
-		clearOffsets();
+		xOff = 0;
+		yOff = 0;
+		zOff = 0;
+		invert = 1;
 		push();
 		{
 			identity();
@@ -768,4 +772,23 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 		pop();
 	}
 
+	@Override
+	public double[] getCameraMatrix() {
+		return renderer.getCamera().getUnsafe();
+	}
+
+	@Override
+	public void setCameraMatrixAndZoom(double[] m, double zoom) {
+		clearAngles();
+		double[] cameraMatrix = getCameraMatrix();
+		if (m != cameraMatrix) {
+			System.arraycopy(m, 0, cameraMatrix, 0, 16);
+			setFOV(fov0 / (zoom / 100));			
+		}
+	}
+
+	@Override
+	public double getZoom() {
+		return fov0 / renderer.getFOV() * 100;
+	}
 }

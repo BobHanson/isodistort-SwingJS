@@ -229,8 +229,7 @@ public abstract class Cell {
 		public String toString() {
 			return "[ChildCell]";
 		}
-	
-	
+
 	}
 
 	protected final static int A = 0, B = 1, C = 2, ALPHA = 3, BETA = 4, GAMMA = 5;
@@ -278,10 +277,30 @@ public abstract class Cell {
 	
 	/**
 	 * Array of Cartesian vertices of strained window-centered cell. [edge
-	 * number][x, y, z]
+	 * number][x, y, z]. 
+	 * 
+	 * The first four are [0 0 0], [1 0 0], [0 1 0], and [0 0 1]
+	 * 
+	 * Set in setVertices, from Vaiables.recalDdistortion().
 	 * 
 	 */
 	double[][] cartesianVertices = new double[8][3];
+
+    public double[] getCartesianVertex(int i) {
+		return cartesianVertices[i];
+	}
+
+    /**
+     * return the origin (i== 0) x, y, or z axis (1,2,4)
+     * @param i
+     * @return axis vector
+     */
+	public double[] getCartesianAxisTemp(int i) {
+		MathUtil.vecaddN(cartesianVertices[i], -1, cartesianVertices[0], t3);
+		return t3;
+	}
+
+
 
 	/**
 	 * Strained cell origin relative to strained child cell origin in cartesian
@@ -317,10 +336,10 @@ public abstract class Cell {
 
 	/**
 	 * Final information needed to render unit cell axes [axis number][x, y, z,
-	 * x-angle , y-angle, length]
+	 * x-angle , y-angle, length, pt1x, pt1y, pt1z, p2x, pt2y, pt2z]
 	 * 
 	 */
-	private double[][] axesInfo = new double[3][6];
+	private double[][] axesInfo = new double[3][12];
 
 	public String labelText;
 
@@ -390,10 +409,21 @@ public abstract class Cell {
 	}
 
 	/**
-	 * parent and child
+	 * Get parent or child axis info:
 	 * 
-	 * @param i
-	 * @return axisInfo[i]
+	 * [0] [axis number]
+	 * 
+	 * [1] [x1, y1, z1]
+	 * 
+	 * [2] [x2, y2, z2]
+	 * 
+	 * [3] [x-angle , y-angle, length]
+
+	 * 
+	 * [start end] Cartesian coordinates.
+	 * 
+	 * @param i 
+	 * @return start or end coordinate
 	 */
 	public double[] getAxisInfo(int i) {
 		return axesInfo[i];
@@ -459,27 +489,47 @@ public abstract class Cell {
 	}
 
 	/**
-	 * Measure distance from center for the axes of this cell.
+	 * Calculate positions for the axes of this cell.
+	 * Fills in [6]-[11] of axisInfo[x|y|z]
 	 * 
 	 * parent and child
 	 * 
-	 * @param axis
-	 * @param center
-	 * @param tempvec
-	 * @param tB
-	 * @param d2
-	 * @param tA
+	 * @param axis x,y,z (0,1,2)
+	 * @param center Cartesian center
 	 * @param d1
+	 * @param tA    start pt
+	 * @param d2
+	 * @param tB    end pt
+	 * @param tempPt
 	 */
 	double[] getAxisExtents(int axis, double[] center, double d1, double[] tA, double d2, double[] tB,
-			double[] tempvec) {
+			double[] tempPt) {
+		// -----o----------a-----======>
+		// ----------------|-----|tA
+		// ----------------|-d1->
+		// ----------------|-----d2---->
+		// ----------------|-----------|tB
+		//
+		// center
+		//
+		// t3 = a
+		// tempPt = o + a - c
 		for (int i = 0; i < 3; i++) {
-			tempvec[i] = originCart[i] + (t3[i] = basisCart[i][axis]) - center[i];
+			t3[i] = basisCart[i][axis];
+			tempPt[i] = originCart[i] + t3[i] - center[i];
 		}
 		MathUtil.norm3(t3);
-		MathUtil.vecaddN(tempvec, d1, t3, tA);
-		MathUtil.vecaddN(tempvec, d2, t3, tB);
-		return axesInfo[axis];
+		MathUtil.vecaddN(tempPt, d1, t3, tA);
+		MathUtil.vecaddN(tempPt, d2, t3, tB);
+		int pt = 6;
+		double[] info = axesInfo[axis];
+		info[pt++] = tA[0];
+		info[pt++] = tA[1];
+		info[pt++] = tA[2];
+		info[pt++] = tB[0];
+		info[pt++] = tB[1];
+		info[pt++] = tB[2];
+		return info;
 	}
 
 	public SymopData getSystematicallAbsentOp(double[] hkl) {

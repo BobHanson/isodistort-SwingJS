@@ -251,8 +251,9 @@ public class IsoSymmetryApp extends IsoDistortApp {
 		rpJmol.addKeyListener(this);		
 		world = new Geometry();
 		initWorld(world);	
+		updateAxisExtents();
 		updateCells();
-		jmolInitAxes();
+		//jmolInitAxes();
 		updateSelectedObjects();
 		resetViewDirection(VIEW_TYPE_CHILD_HKL);
 	}
@@ -288,6 +289,13 @@ public class IsoSymmetryApp extends IsoDistortApp {
 	public void reset() {
 		super.reset();
 //		viewer.script("restore orientation");
+	}
+
+	@Override
+	protected boolean prepareToSwapIn() {
+		super.prepareToSwapIn();
+//		viewer.script("animation off;vibration off;spin off");
+		return true;
 	}
 
 	@Override

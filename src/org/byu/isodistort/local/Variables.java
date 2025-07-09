@@ -2740,6 +2740,7 @@ public class Variables {
 				if (isAdjusting)
 					return;
 				isChanged = true;
+				System.out.println("VAR SLI " + e);
 				app.updateDisplay();
 			}
 

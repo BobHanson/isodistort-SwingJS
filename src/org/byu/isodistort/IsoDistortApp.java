@@ -127,6 +127,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 		initCells();
 		initAxes();
 		initControls();
+		updateGUI();
 		updateSelectedObjects();
 		updateAtomColors();
 	}
@@ -296,9 +297,6 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 
 		controlPanel.add(top);
 		controlPanel.add(bottom);
-
-		if (fromApp != null && fromApp != this)
-			initGUI(fromApp);
 	}
 
 	private void renderScaledAtom(Geometry child, double[] xyz, double r) {

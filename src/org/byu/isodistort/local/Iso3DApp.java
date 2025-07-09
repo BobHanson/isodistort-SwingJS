@@ -144,7 +144,10 @@ public abstract class Iso3DApp extends IsoApp {
 		return radius;
 	}
 
-	protected void initGUI(Iso3DApp app) {
+	protected void updateGUI() {
+		Iso3DApp app = frame.from3DApp;
+		if (app == null || app == this)
+			return;
 		childHKL.setSelected(app.childHKL.isSelected());
 		childUVW.setSelected(app.childUVW.isSelected());
 		parentHKL.setSelected(app.parentHKL.isSelected());
@@ -230,6 +233,7 @@ public abstract class Iso3DApp extends IsoApp {
 	protected void updateAtomsBondsCells() {
 		variables.readSliders();
 		variables.recalcDistortion();
+		updateAxisExtents();
 		if (showAtoms || showBonds) {
 			variables.setAtomInfo();
 			if (showAtoms && isAtomColorChanged) {
@@ -241,12 +245,15 @@ public abstract class Iso3DApp extends IsoApp {
 			updateBonding();
 		}
 		
+		if (showParentCell || showChildCell) {
+			variables.setCellInfo();
+		}
+	}
+
+	protected void updateAxisExtents() {
 		for (int axis = 0; axis < 3; axis++) {
 			variables.setAxisExtents(axis, variables.parentCell, 2.0 * DEFAULT_DISTANCE, 3.5 * DEFAULT_DISTANCE);
 			variables.setAxisExtents(axis, variables.childCell, 1.5 * DEFAULT_DISTANCE, 4.0 * DEFAULT_DISTANCE);
-		}
-		if (showParentCell || showChildCell) {
-			variables.setCellInfo();
 		}
 	}
 	

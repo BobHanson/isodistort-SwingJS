@@ -80,7 +80,8 @@ public abstract class IsoApp implements KeyListener {
 	/**
 	 * the datafile to use for startup
 	 */
-	protected String startupDataFile = "data/visual_mno.isoviz";//"data/data29.isoviz"; // varied settings
+	protected String startupDataFile = "data/sg227-sg167-example.isoviz";
+	//data/visual_mno.isoviz";//"data/data29.isoviz"; // varied settings
 
 	/**
 	 * The list of menu items in the File.Examples. menu.
@@ -127,7 +128,7 @@ public abstract class IsoApp implements KeyListener {
 
 			@Override
 			public void keyPressed(KeyEvent e) {
-				System.out.println("IsoApp.Frame " + e);
+				//System.out.println("IsoApp.Frame " + e);
 				apps[thisType].keyPressed(e);
 			}
 
@@ -230,10 +231,9 @@ public abstract class IsoApp implements KeyListener {
 				currentApp.prepareToSwapOut();
 				newapp.prepareToSwapIn();
 				((JComponent) getContentPane()).setTransferHandler(new FileUtil.FileDropHandler(newapp));
-				newapp.variables.setValuesFrom(currentApp.variables);
-				
+				newapp.variables.setValuesFrom(currentApp.variables);				
 				repaint();
-				requestFocus();				
+				requestFocusInWindow();
 			} else {
 				currentApp.prepareToSwapOut();
 				currentApp.openApplication(type, currentApp.isovizData, null, false);
@@ -1546,6 +1546,7 @@ public abstract class IsoApp implements KeyListener {
 	 */
 	public void updateDisplay() {
 		variables.updateSliderPointers();
+		frame.requestFocusInWindow();
 	}
 
 	abstract protected void updateViewOptions();
@@ -1554,10 +1555,7 @@ public abstract class IsoApp implements KeyListener {
 		String sliderSetting = "current";
 		if (values != null) {
 			sliderSetting = (String) values.remove("slidersetting");
-			System.out.println(map);
-			System.out.println(values);
 			map.putAll(values);
-			System.out.println(map);
 		}
 		setFormData(map, sliderSetting);
 		setServerFormOriginType(map, originType);

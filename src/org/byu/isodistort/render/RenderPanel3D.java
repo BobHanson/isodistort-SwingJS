@@ -119,7 +119,8 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	protected double xOff = 0, yOff = 0, zOff = 0;
 
 	/** This int determines whether or not the panning is normal or inverted */
-	protected int invert = 1;
+	@Deprecated
+	final protected int invert = 1;
 
 	MouseAdapter adapter;
 
@@ -679,10 +680,10 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 		return new IsoMaterial(renderer);
 	}
 
-	@Override
-	public void reversePanningAction() {
-		invert = -invert;
-	}
+//	@Override
+//	public void reversePanningAction() {
+//		invert = -invert;
+//	}
 
 	public void transformWorld() {
 		for (int i = world.child.length; --i >= 0;)
@@ -762,7 +763,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 		xOff = 0;
 		yOff = 0;
 		zOff = 0;
-		invert = 1;
+		//invert = 1;
 		push();
 		{
 			identity();

@@ -28,6 +28,11 @@ import org.jmol.adapter.smarter.SmarterJmolAdapter;
 import org.jmol.api.JmolStatusListener;
 import org.jmol.api.JmolViewer;
 import org.jmol.c.CBK;
+import org.jmol.modelset.Atom;
+import org.jmol.modelset.ModelSet;
+import org.jmol.shape.Balls;
+import org.jmol.util.C;
+import org.jmol.viewer.JC;
 import org.jmol.viewer.Viewer;
 
 import javajs.util.BS;
@@ -56,7 +61,7 @@ public class IsoSymmetryApp extends IsoDistortApp {
 
 	class IsoJmolPanel extends JPanel implements IsoRenderPanel {
 
-		private static final String jmolStartupScript = "frank off;set antialiasdisplay true;background lightgray;set showUnitCellInfo false;set defaultdrawArrowScale -0.66";
+		private static final String jmolStartupScript = "frank off;set antialiasdisplay true;background lightgray;set showUnitCellInfo false;set defaultdrawArrowScale -0.66;";
 
 		private final Dimension currentSize = new Dimension();
 
@@ -168,15 +173,8 @@ public class IsoSymmetryApp extends IsoDistortApp {
 		}
 
 		@Override
-		public void reversePanningAction() {
-			// TODO Auto-generated method stub
-
-		}
-
-		@Override
 		public void resetView() {
-			// TODO Auto-generated method stub
-
+			// TODO
 		}
 
 		@Override
@@ -256,6 +254,7 @@ public class IsoSymmetryApp extends IsoDistortApp {
 		//jmolInitAxes();
 		updateSelectedObjects();
 		resetViewDirection(VIEW_TYPE_CHILD_HKL);
+		jmolSaveRestoreOrientation("o1", true);
 	}
 
 	@Override
@@ -277,7 +276,7 @@ public class IsoSymmetryApp extends IsoDistortApp {
 			xyzFile.append(coord[2]).append('\n');
 		}
 		xyzFile.append("end 'xyz'\n");
-		xyzFile.append("modelkit spacegroup P1;center {0 0 0}");
+		xyzFile.append("modelkit spacegroup P1;center {0 0 0};axes off;unitcell off;");
 		jmolScriptWait(xyzFile.toString());		
 	}
 
@@ -288,8 +287,8 @@ public class IsoSymmetryApp extends IsoDistortApp {
 	@Override
 	public void reset() {
 		super.reset();
-//		viewer.script("restore orientation");
-	}
+		jmolSaveRestoreOrientation("o1", false);
+ 	}
 
 	@Override
 	protected boolean prepareToSwapIn() {
@@ -324,11 +323,12 @@ public class IsoSymmetryApp extends IsoDistortApp {
 
 	@Override
 	protected void updateBonding() {
+		double rMin = variables.getMinBondLength();
+		double rMax = variables.getMaxBondLength();
+		jmolScriptWait("connect delete;connect " + rMin + " " + rMax + " {*} {*} radius " + BOND_RADIUS + " modifyOrcreate;");
 		super.updateBonding();
 	}
 
-	double bondRadius = 0.15;
-	
 	@Override
 	protected void updateSelectedObjects() {
 		apBox.setEnabled(variables.isPrimitive(-1));
@@ -336,7 +336,7 @@ public class IsoSymmetryApp extends IsoDistortApp {
 		script += "display " + (showAtoms ? "all;" : "none;");
 		script += "draw cell_parent* " + (showParentCell ? "on;" : "off;");
 		script += "draw cell_child* " + (showChildCell ? "on;" : "off;");
-		script += "wireframe " + (showBonds ? 0 : bondRadius) + ";";
+		script += "select *;wireframe " + (showBonds ? 0 : BOND_RADIUS) + ";";
 		script += "draw axis_parent* " + (showAxes && (showParentCell || !showChildCell) ? "on;" : "off;");
 		script += "draw axis_child* " + (showAxes && (showChildCell || !showParentCell) ? "on;" : "off;");
 		jmolScriptWait(script);
@@ -347,8 +347,13 @@ public class IsoSymmetryApp extends IsoDistortApp {
 		viewer.scriptWait(script);
 	}
 
+
+	private String[] jmolAtomColors;
 	@Override
 	protected void updateAtomColors() {
+		if (jmolAtomColors == null)
+			jmolAtomColors = new String[variables.nAtoms];
+		
 		super.updateAtomColors();
 		double[] diff = new double[4];
 		double[] spec = new double[4];
@@ -361,6 +366,9 @@ public class IsoSymmetryApp extends IsoDistortApp {
 				subMaterial[t][s].getAmbient(amb);
 				BS bsAtoms = newBS(variables.getAtomsFromTS(t, s));
 				String c = getJmolColor(diff, spec, amb);
+				for (int i = bsAtoms.nextSetBit(0); i >= 0; i = bsAtoms.nextSetBit(i + 1)) {
+					jmolAtomColors[i] = c;
+				}
 				script += "color " + bsAtoms + " " + c + ";";
 			}
 		}
@@ -385,32 +393,51 @@ public class IsoSymmetryApp extends IsoDistortApp {
 
 	@Override
 	protected void updateAtoms() {
+		BS bsDisplay = new BS(), bsRemove = new BS();
+		double apm = variables.angstromsPerMagneton / variables.atomMaxRadius;
+		double apr = variables.angstromsPerRadian / variables.atomMaxRadius;
+		
+		String script = "";
+		Balls balls = (Balls) viewer.shm.getShape(JC.SHAPE_BALLS);
+		if (balls.mads == null) {
+			balls.mads = new short[variables.nAtoms];
+			balls.bsSizeSet = new BS();
+		}
 		for (int i = 0, n = variables.nAtoms; i < n; i++) {
+			ModelSet ms = viewer.ms;
+			Atom jmolAtom = ms.at[i];
 			double[][] info = variables.getAtomInfo(i);
 			boolean isEnabled = !showPrimitiveAtoms || variables.isPrimitive(i);
-//			Geometry a = atomObjects.child(i);
-//			a.setEnabled(isEnabled);
-//			renderScaledAtom(a, info[DIS], info[OCC][0] * variables.atomMaxRadius);
-//			renderArrow(a.child(MAG - 2), info[MAG], momentMultiplier, variables.angstromsPerMagneton);
-//			renderArrow(a.child(ROT - 2), info[ROT], rotationMultiplier, variables.angstromsPerRadian);
-//			renderEllipsoid(a.child(ELL - 2), info[ELL], 1 / Math.sqrt(variables.defaultUiso));
+			if (isEnabled) {
+				bsDisplay.set(i);
+				double[] xyz = info[DIS];
+				jmolAtom.set(xyz[0], xyz[1], xyz[2]);
+				double r = info[OCC][0] * variables.atomMaxRadius;
+				balls.mads[i] = jmolAtom.madAtom = (short) (r * 2000);
+				balls.bsSizeSet.set(i);
+				double[] maginfo = info[MAG];
+				double[] rotinfo = info[ROT];
+				String s = (maginfo[2] == 0 ? null : jmolGetAtomArrowScript(i, "mag", xyz, maginfo, MOMENT_FACTOR * r, apm * r, jmolAtomColors[i]));
+				if (s != null)
+					script += s;
+				s = (rotinfo[2] == 0 ? null : jmolGetAtomArrowScript(i, "rot", xyz, rotinfo, ROTATION_FACTOR * r, apr * r, jmolAtomColors[i]));
+				if (s != null)
+					script += s;
+			} else {
+				bsRemove.set(i);
+			}
 		}
+		if (!bsRemove.isEmpty())
+			script += "hide " + bsRemove + ";";
+		if (script.length() > 0)
+			jmolScriptWait(script);
 	}
 
 	@Override
 	protected void updateBonds() {
-//		double r = Math.max(variables.atomMaxRadius * bondMultiplier, 0.05);
-//		for (int b = bsBondsEnabled.nextSetBit(0); b >= 0; b = bsBondsEnabled.nextSetBit(b + 1)) {
-//			transformCylinder(r, bondInfo[b], bondObjects.child(b));
-//		}
+		// n/a
 	}
 
-	private void renderArrow(Geometry child, double[] info, double r, double scale) {
-		boolean isOK = (Math.abs(info[2]) > 0.1);
-//		child.setEnabled(isOK);
-//		if (!isOK)
-//			return;
-	}
 
 	@Override
 	protected void updateViewOptions() {
@@ -450,6 +477,26 @@ public class IsoSymmetryApp extends IsoDistortApp {
 			rp.centerImage();
 	}
 	
+	private double[] t3 = new double[3], t0 = new double[3];
+	
+	private String jmolGetAtomArrowScript(int i, String type, double[] xyz, double[] info, double r, double scale, String color) {
+		if (Math.abs(info[2]) <= 0.1)
+			return null;
+		
+		
+		double d = ARROW_MIN_LENGTH + info[2] * scale;
+		
+		t3[0] = info[3];
+		t3[1] = info[4];
+		t3[2] = info[5];
+		MathUtil.scale3(t3, d/info[2], t3);
+		MathUtil.vecaddN(xyz, -0.5, t3, t0);
+		return "draw atom_" + i + "_" + type 
+				+ " diameter " + r*2 
+				+ " vector " + jmolPoint(t0) + jmolPoint(t3) 
+				+ " color " + color + ";";
+	}
+
 	private String parentCellScript, childCellScript;
 	private String[] jmolCellColors = new String[2];
 
@@ -521,11 +568,11 @@ public class IsoSymmetryApp extends IsoDistortApp {
 		viewer.scriptWait(s);
 	}
 	
-	private void jmolInitAxes() {
-		String s = jmolGetAxisScript(PARENT) + jmolGetAxisScript(CHILD);
-		viewer.scriptWait(s);
+	private void jmolSaveRestoreOrientation(String id, boolean isSave) {
+		String script = (isSave ? "save " : "restore ") + "orientation " + id;
+		jmolScriptWait(script);
 	}
-	
+
 	/**
 	 * Java BitSet to java2script BS
 	 * 
@@ -549,6 +596,10 @@ public class IsoSymmetryApp extends IsoDistortApp {
 
 	private static String getJmolColor(Color col) {
 		return "[" + col.getRed() + " " + col.getGreen() + " " + col.getBlue() + "]";
+	}
+
+	private static String jmolColor(int argb) {
+		return "[" + (argb & 0xFF) + " " + ((argb & 0xFF00) >> 8) + " " + ((argb & 0xFF0000) >> 16) + "]";
 	}
 
 

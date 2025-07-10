@@ -328,7 +328,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 		{
 			rp3.rotateY(info[1]);// y-angle orientation of arrow number q
 			rp3.rotateX(info[0]);// x-angle orientation of arrow number q
-			rp3.scale(r, r, 0.62 + info[2] * scale);
+			rp3.scale(r, r, ARROW_MIN_LENGTH + info[2] * scale);
 			// BH TODO may be true for standard ball size, but...
 			// The factor of 0.62 hides the zero-length moments
 			// just inside the surface of the spheres.
@@ -555,11 +555,12 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 		case 'R':
 			reset();
 			break;
+		case 'x':
+		case 'X':
+		case 'y':
+		case 'Y':
 		case 'n':
 		case 'N':
-			// BH Q: Why would one ever want to do this?
-			rp3.reversePanningAction();
-			updateDisplay();
 			break;
 		case 'c':
 		case 'C':
@@ -701,8 +702,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 			Geometry a = atomObjects.child(i);
 			a.setEnabled(isEnabled);
 			renderScaledAtom(a, info[DIS], info[OCC][0] * variables.atomMaxRadius);
-			renderArrow(a.child(MAG - 2), info[MAG], MOMENT_MULTIPLIER, variables.angstromsPerMagneton);
-			renderArrow(a.child(ROT - 2), info[ROT], ROTATION_MULTIPLIER, variables.angstromsPerRadian);
+			renderArrow(a.child(MAG - 2), info[MAG], MOMENT_FACTOR, variables.angstromsPerMagneton);
+			renderArrow(a.child(ROT - 2), info[ROT], ROTATION_FACTOR, variables.angstromsPerRadian);
 			renderEllipsoid(a.child(ELL - 2), info[ELL], 1 / Math.sqrt(variables.defaultUiso));
 		}
 	}

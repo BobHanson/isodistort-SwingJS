@@ -37,7 +37,7 @@ public abstract class Iso3DApp extends IsoApp {
 		void initializeSettings(double radius);
 		boolean isSpinning();
 		void resetView();
-		void reversePanningAction();
+//		void reversePanningAction();
 		void setCamera(double theta, double phi, double sigma);
 		void setPerspective(double[][] params);
 //		void setPreferredSize(Dimension size);
@@ -83,8 +83,10 @@ public abstract class Iso3DApp extends IsoApp {
 	 */
 	final protected static double BOND_RADIUS = DEFAULT_DISTANCE * 0.1;
 	final protected static double CELL_RADIUS = DEFAULT_DISTANCE * 0.25;
-	final protected static double MOMENT_MULTIPLIER = 0.4;
-	final protected static double ROTATION_MULTIPLIER = 0.35;
+	final protected static double MOMENT_FACTOR = 0.4;
+	final protected static double ROTATION_FACTOR = 0.35;
+	protected static final double ARROW_MIN_LENGTH = 0.62;
+
 
 	/**
 	 * flag to indicate animation is in progress

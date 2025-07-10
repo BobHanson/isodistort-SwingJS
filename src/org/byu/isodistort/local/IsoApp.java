@@ -80,7 +80,9 @@ public abstract class IsoApp implements KeyListener {
 	/**
 	 * the datafile to use for startup
 	 */
-	protected String startupDataFile = "data/sg227-sg167-example.isoviz";
+	protected String startupDataFile = "data/visual_la2coruo6-magnetic.isoviz";
+			//"data/visual_lamno3_magnetic.isoviz";
+			//"data/sg227-sg167-example.isoviz";
 	//data/visual_mno.isoviz";//"data/data29.isoviz"; // varied settings
 
 	/**

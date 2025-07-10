@@ -614,8 +614,8 @@ public class Variables {
 			if (info[OCC] == null) {
 				info[OCC] = new double[1];
 				info[DIS] = new double[] { 0, 0, 0, ia };
-				info[ROT] = new double[3];
-				info[MAG] = new double[3];
+				info[ROT] = new double[9];
+				info[MAG] = new double[9];
 				info[ELL] = new double[7];
 			}
 			info[OCC][0] = a.getOccupancy();
@@ -943,6 +943,9 @@ public class Variables {
 			info[0] = -Math.asin(t[1] / d); // X rotation
 			info[1] = Math.atan2(t[0], t[2]); // Y rotation
 			info[2] = d; // Length
+			info[3] = t[0];
+			info[4] = t[1];
+			info[5] = t[2];
 		}
 
 		/**
@@ -2740,7 +2743,6 @@ public class Variables {
 				if (isAdjusting)
 					return;
 				isChanged = true;
-				System.out.println("VAR SLI " + e);
 				app.updateDisplay();
 			}
 

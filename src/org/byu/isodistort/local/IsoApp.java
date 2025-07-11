@@ -1626,13 +1626,20 @@ public abstract class IsoApp implements KeyListener {
 			if (args[0] instanceof byte[]) {
 				isovizData = (byte[]) args[0];
 			} else {
-				String fname = (String) args[0];
-				frame.loadingFileName = new File(fname).getName();
-				isovizData = FileUtil.readFileOrResource(this, fname);
+				String arg = (String) args[0];
+				if (arg.length() > 500 && arg.indexOf("!") > 0) {
+					// distortion or JSON or ISOVIZ data
+					isovizData = arg.getBytes();
+				} else {
+					// try a file name
+					frame.loadingFileName = new File(arg).getName();
+					isovizData = FileUtil.readFileOrResource(this, arg);
+				}
 			}
 			startupDataFile = null;
 			break;
 		default:
+			getExampleFiles(true);
 			isovizData = getExampleFileData(startupDataFile);
 			break;
 		}
@@ -1690,7 +1697,7 @@ public abstract class IsoApp implements KeyListener {
 		}, "isodistort_file_opener").start();
 	}
 
-	public List<String[]> getExampleFiles() {
+	public List<String[]> getExampleFiles(boolean isStartup) {
 		if (exampleFiles == null) {
 			exampleFiles = new ArrayList<String[]>();
 			try {
@@ -1706,9 +1713,14 @@ public abstract class IsoApp implements KeyListener {
 					if (!line.contains("="))
 						line = "=" + line;
 					String[] info = line.split("=");
-					if (info[0].length() == 0)
-						info[0] = null;
-					exampleFiles.add(info);
+					if (info[0].equals("startup")) {
+						if (isStartup)
+							startupDataFile = info[1];						
+					} else {
+						if (info[0].length() == 0)
+							info[0] = null;
+						exampleFiles.add(info);
+					}
 				}
 			} catch (Exception e) {
 				e.printStackTrace();

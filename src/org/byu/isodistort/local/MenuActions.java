@@ -171,8 +171,7 @@ public class MenuActions {
 		});
 
 		actions.put("File.Examples.", null);
-
-		List<String[]> exampleFiles = app.getExampleFiles();
+		List<String[]> exampleFiles = app.getExampleFiles(false);
 		for (int i = 0; i < exampleFiles.size(); i++) {
 			String[] example = exampleFiles.get(i);
 			String label = example[0];

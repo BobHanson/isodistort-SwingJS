@@ -44,6 +44,7 @@
 	    </jar>
 	  	<echo>build/ISOViz.jar created (unsigned)</echo>
 	  	<copy file="build/ISOViz.jar" tofile="dist/ISOViz.jar" />    	
+        <copy file="build/ISOViz.jar" tofile="docs/ISOViz.jar" />       
 	  </target>
 
 </project>

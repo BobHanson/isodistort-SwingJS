@@ -1,6 +1,7 @@
 package org.byu.isodistort.local;
 
 import java.awt.Graphics;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JCheckBox;
@@ -22,9 +23,9 @@ public abstract class Iso3DApp extends IsoApp {
 	protected static final double DEFAULT_DISTANCE = 0.4;
 
 
-	public interface IsoRenderPanel {
+	public interface IsoRenderPanel extends KeyListener {
 
-		public static final int ROTATE_NORMAL = 0;
+		public static final int ROTATE_XYZ    = 0;
 		public static final int ROTATE_X      = 1;
 		public static final int ROTATE_Y      = 2;
 		public static final int ROTATE_Z      = 3;
@@ -48,7 +49,7 @@ public abstract class Iso3DApp extends IsoApp {
 		double[] getCameraMatrix();
 		void setCameraMatrixAndZoom(double[] cameraMatrix, double zoom);
 		double getZoom();
-	
+		boolean ignoreKeyRelease(char c);
 	}
 
 	protected IsoRenderPanel  rp;	

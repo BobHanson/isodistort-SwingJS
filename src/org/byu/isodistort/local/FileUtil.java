@@ -25,9 +25,6 @@ import javax.swing.JOptionPane;
 import javax.swing.TransferHandler;
 import javax.swing.filechooser.FileFilter;
 
-import org.jmol.api.JmolAppConsoleInterface;
-import org.jmol.util.Logger;
-
 import javajs.async.AsyncFileChooser;
 
 public class FileUtil {

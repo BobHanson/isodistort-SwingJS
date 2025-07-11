@@ -30,6 +30,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -1602,6 +1603,7 @@ public abstract class IsoApp implements KeyListener {
 	private int readStartupFile(Object[] args) {
 		this.args = args;
 		String tests;
+		System.out.println("IsoApp.readStartupFile" + Arrays.toString(args));
 		int n = (args == null || args.length == 0 || args[0] == null ? 0 : args.length);
 		if (n > 0 && args[n - 1] instanceof String 
 				&& (tests = args[n-1].toString()).startsWith("-")) {
@@ -1621,7 +1623,13 @@ public abstract class IsoApp implements KeyListener {
 			formData = args[1]; // String or Map
 			// Fall through //
 		case 1:
-			isovizData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
+			if (args[0] instanceof byte[]) {
+				isovizData = (byte[]) args[0];
+			} else {
+				String fname = (String) args[0];
+				frame.loadingFileName = new File(fname).getName();
+				isovizData = FileUtil.readFileOrResource(this, fname);
+			}
 			startupDataFile = null;
 			break;
 		default:
@@ -1650,6 +1658,7 @@ public abstract class IsoApp implements KeyListener {
 		if (f == null)
 			return;
 		frame.loadingFileName = f.getName();
+		System.out.println("IsoApp loading " + f);
 		loadFileData(FileUtil.readFileOrResource(this, f.getAbsolutePath()));
 	}
 

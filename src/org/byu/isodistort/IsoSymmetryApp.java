@@ -11,6 +11,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.util.BitSet;
 import java.util.Map;
@@ -31,7 +32,6 @@ import org.jmol.c.CBK;
 import org.jmol.modelset.Atom;
 import org.jmol.modelset.ModelSet;
 import org.jmol.shape.Balls;
-import org.jmol.util.C;
 import org.jmol.viewer.JC;
 import org.jmol.viewer.Viewer;
 
@@ -225,6 +225,29 @@ public class IsoSymmetryApp extends IsoDistortApp {
 			Qd q = Qd.newM(m3);
 			String script = "moveto 0 QUATERNION " + q + ";zoom " + zoom;
 			jmolScriptWait(script);
+		}
+
+		@Override
+		public boolean ignoreKeyRelease(char c) {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		public void keyTyped(KeyEvent e) {
+			// n/a
+		}
+
+		@Override
+		public void keyPressed(KeyEvent e) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void keyReleased(KeyEvent e) {
+			// TODO Auto-generated method stub
+			
 		}
 
 	}
@@ -595,11 +618,11 @@ public class IsoSymmetryApp extends IsoDistortApp {
 	}
 
 	private static String getJmolColor(Color col) {
-		return "[" + col.getRed() + " " + col.getGreen() + " " + col.getBlue() + "]";
+		return jmolColor(col.getRGB());
 	}
 
 	private static String jmolColor(int argb) {
-		return "[" + (argb & 0xFF) + " " + ((argb & 0xFF00) >> 8) + " " + ((argb & 0xFF0000) >> 16) + "]";
+		return "[" + ((argb >> 16) & 0xFF) + " " + ((argb >> 8) & 0xFF) + " " + (argb & 0xFF) + "]";
 	}
 
 

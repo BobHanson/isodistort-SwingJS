@@ -7,6 +7,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -54,7 +55,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	/**
 	 * Flag chooses x,y,z-Rotate modes.
 	 */
-	private int rotAxis = ROTATE_NORMAL; // Branton Campbell
+	private int rotAxis = ROTATE_XYZ; // Branton Campbell
 
 	/**
 	 * Flag controls continuous spin mode.
@@ -509,134 +510,167 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 //		return renderer.getGeometry(x, y);
 //	}
 
+	/**
+	 * tracks whether, between z-key_down and z-key_up
+	 * the mouse was used
+	 */
+	protected boolean zRotated;
+
+	protected boolean mouseMoveActive;
+	
+	
+
 	private class Adapter extends MouseAdapter {
-		@Override
-		public void mousePressed(MouseEvent e) {
-			app.setStatusVisible(false);
-			requestFocus();
-			int x = e.getX();
-			int y = e.getY();
-			renderer.setDragging(true);
-			mx = x;
-			my = y;
-			if (e.isShiftDown()) {
-				clearAngles();
-				setRotationAxis(ROTATE_ZOOM);
-				isMouseZooming = true;
-			}
-
-		}
-
-		@Override
-		public void mouseReleased(MouseEvent e) {
-			renderer.setDragging(false);
-			if (isMouseZooming) {
-				isMouseZooming = false;
-				clearAngles();
-				setRotationAxis(ROTATE_NORMAL);
-			}
-		}
+	
 
 		@Override
 		public void mouseMoved(MouseEvent e) {
+			if (mouseMoveActive) {
+				if (dragging)
+					doMouseDragged(e, true);
+				else
+					doMousePressed(e, true);
+				return;
+			}
 			if (isMouseZooming && !e.isShiftDown()) {
 				isMouseZooming = false;
 				clearAngles();
-				setRotationAxis(ROTATE_NORMAL);
+				setRotationAxis(ROTATE_XYZ);
 			}
+		}
+
+		@Override
+		public void mousePressed(MouseEvent e) {
+			doMousePressed(e, false);
 		}
 
 		@Override
 		public void mouseDragged(MouseEvent e) {
+			doMouseDragged(e, false);
+		}
 
-			int x = e.getX();
-			int y = e.getY();
-			/**
-			 * LEFT-DRAG but not CTRL-LEFT-DRAG for rotation
-			 */
-			boolean isRotation = ((e.getModifiersEx() & InputEvent.BUTTON1_DOWN_MASK) != 0 && !e.isControlDown());
-
-			if (isRotation) {
-
-				double spinrate;
-				if (spin)
-					spinrate = 0.0003;
-				else
-					spinrate = 0.006;
-				if (renderer.isDragging()) {
-					switch (rotAxis) {
-					case ROTATE_NORMAL:
-						phi += spinrate * (double) (y - my); // VERTICAL VIEW ROTATION
-						theta += spinrate * (double) (x - mx); // HORIZONTAL VIEW ROTATION
-						sigma = 0;
-						break;
-					case ROTATE_X:
-						phi += spinrate * (double) (y - my);
-						theta = 0;
-						sigma = 0;
-						break;
-					case ROTATE_Y:
-						phi = 0;
-						theta += spinrate * (double) (x - mx);
-						sigma = 0;
-						break;
-					case ROTATE_Z:
-						phi = 0;
-						theta = 0;
-						sigma += -spinrate * (double) ((x - mx) * (256 - y) - (y - my) * (256 - x))
-								/ (double) (1 + Math.sqrt((256 - x) * (256 - x) + (256 - y) * (256 - y)));
-						break;
-					case ROTATE_ZOOM:
-						setFOV(renderer.getFOV() * (1 + (y - my) * 0.004));
-						// y-direction motion changes field of view (zoom).
-						// -David Tanner
-						phi = 0;
-						theta = 0;
-						sigma = 0;
-						break;
-					}
-					mx = x;
-					my = y;
-				}
-			} else {
-				// panning
-
-				// If we want this to be only at right click, then
-				// we would need to check e.getModifiers with
-				// MouseEvent.BUTTON2_MASK or MouseEvent.BUTTON3_MASK
-				theta = phi = sigma = 0;
-
-				double shiftRate = 0.01 * renderer.getFOV();
-				double shiftX = shiftRate * (x - mx);
-				double shiftY = shiftRate * (y - my);
-
-				mx = x;
-				my = y;
-
-				push();
-				{
-					identity();
-					xOff += invert * shiftX * renderer.getCamera().get(0, 0);
-					yOff += invert * shiftX * renderer.getCamera().get(0, 1);
-					zOff += invert * shiftX * renderer.getCamera().get(0, 2);
-
-					xOff -= invert * shiftY * renderer.getCamera().get(1, 0);
-					yOff -= invert * shiftY * renderer.getCamera().get(1, 1);
-					zOff -= invert * shiftY * renderer.getCamera().get(1, 2);
-					translate(xOff, yOff, zOff);
-					for (int i = 0; i < 16; i++)
-						if (world.child(i) != null)
-							transform(world.child(i));
-				}
-				pop();
+		@Override
+		public void mouseReleased(MouseEvent e) {
+			dragging = false;
+			if (isMouseZooming) {
+				isMouseZooming = false;
+				clearAngles();
 			}
-			app.updateDisplay();
+			setRotationAxis(ROTATE_XYZ);
 		}
 
 	}
 	
-	protected void setRotationAxis(int i) {
-		rotAxis = i;
+	protected boolean setRotationAxis(int mode) {
+		if (dragging)
+			return false;
+		rotAxis = mode;
+		return true;
+	}
+
+	private boolean dragging = false;
+	
+	public void doMouseDragged(MouseEvent e, boolean isMove) {
+		if (rotAxis == ROTATE_Z)
+			zRotated = true;
+
+		int x = e.getX();
+		int y = e.getY();
+		/**
+		 * LEFT-DRAG but not CTRL-LEFT-DRAG for rotation
+		 */
+		boolean isRotation = isMove || ((e.getModifiersEx() & InputEvent.BUTTON1_DOWN_MASK) != 0 && !e.isControlDown());
+
+		if (isRotation) {
+
+			double spinrate;
+			if (spin)
+				spinrate = 0.0003;
+			else
+				spinrate = 0.006;
+			if (dragging) {
+				switch (rotAxis) {
+				case ROTATE_XYZ:
+					phi += spinrate * (double) (y - my); // VERTICAL VIEW ROTATION
+					theta += spinrate * (double) (x - mx); // HORIZONTAL VIEW ROTATION
+					sigma = 0;
+					break;
+				case ROTATE_X:
+					phi += spinrate * (double) (y - my);
+					theta = 0;
+					sigma = 0;
+					break;
+				case ROTATE_Y:
+					phi = 0;
+					theta += spinrate * (double) (x - mx);
+					sigma = 0;
+					break;
+				case ROTATE_Z:
+					phi = 0;
+					theta = 0;
+					sigma += -spinrate * (double) ((x - mx) * (256 - y) - (y - my) * (256 - x))
+							/ (double) (1 + Math.sqrt((256 - x) * (256 - x) + (256 - y) * (256 - y)));
+					break;
+				case ROTATE_ZOOM:
+					setFOV(renderer.getFOV() * (1 + (y - my) * 0.004));
+					// y-direction motion changes field of view (zoom).
+					// -David Tanner
+					phi = 0;
+					theta = 0;
+					sigma = 0;
+					break;
+				}
+				mx = x;
+				my = y;
+			}
+		} else {
+			// panning
+
+			// If we want this to be only at right click, then
+			// we would need to check e.getModifiers with
+			// MouseEvent.BUTTON2_MASK or MouseEvent.BUTTON3_MASK
+			theta = phi = sigma = 0;
+
+			double shiftRate = 0.01 * renderer.getFOV();
+			double shiftX = shiftRate * (x - mx);
+			double shiftY = shiftRate * (y - my);
+
+			mx = x;
+			my = y;
+
+			push();
+			{
+				identity();
+				xOff += invert * shiftX * renderer.getCamera().get(0, 0);
+				yOff += invert * shiftX * renderer.getCamera().get(0, 1);
+				zOff += invert * shiftX * renderer.getCamera().get(0, 2);
+
+				xOff -= invert * shiftY * renderer.getCamera().get(1, 0);
+				yOff -= invert * shiftY * renderer.getCamera().get(1, 1);
+				zOff -= invert * shiftY * renderer.getCamera().get(1, 2);
+				translate(xOff, yOff, zOff);
+				for (int i = 0; i < 16; i++)
+					if (world.child(i) != null)
+						transform(world.child(i));
+			}
+			pop();
+		}
+		app.updateDisplay();
+	}
+
+	protected void doMousePressed(MouseEvent e, boolean isMove) {
+		int x = e.getX();
+		int y = e.getY();
+		dragging = true;
+		mx = x;
+		my = y;
+		app.setStatusVisible(false);
+		requestFocus();
+		if (!isMove && e.isShiftDown()) {
+			clearAngles();
+			setRotationAxis(ROTATE_ZOOM);
+			isMouseZooming = true;
+		}
 	}
 
 
@@ -792,4 +826,66 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	public double getZoom() {
 		return (renderer == null ? 100 : fov0 / renderer.getFOV() * 100);
 	}
+
+	@Override
+	public boolean ignoreKeyRelease(char c) {
+		switch (c) {
+		case 'Z':
+		case 'z':
+			if (zRotated) {
+				// if z was already used for rotate, 
+				// ignore its release and clear the flag
+				zRotated = false;
+				return true;				
+			}
+			break;
+		}
+		return false;
+	}
+
+	@Override
+	public void keyTyped(KeyEvent e) {
+		// n/a
+	}
+
+	@Override
+	public void keyPressed(KeyEvent e) {
+		// called from IsoDistortApp
+		System.out.println("\n" + e);
+		checkRotateKeyPressed(e.getKeyChar());
+	}
+
+	private void checkRotateKeyPressed(char c) {
+		int mode;
+		switch (c) {
+		case 'x':
+		case 'X':
+			mode = IsoRenderPanel.ROTATE_X;
+			break;
+		case 'y':
+		case 'Y':
+			mode = IsoRenderPanel.ROTATE_Y;
+			break;
+		case 'z':
+		case 'Z': // "normal to screen"
+			mode = IsoRenderPanel.ROTATE_Z;
+			break;
+		default:
+			// any other key puts us back in xyz mode
+			setRotationAxis(IsoRenderPanel.ROTATE_XYZ);
+			return;
+		}
+		setRotationAxis(mode);
+		mouseMoveActive = true;
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+		// called from IsoDistortApp
+		if (mouseMoveActive) {
+			adapter.mouseReleased(null);
+			mouseMoveActive = false;
+		}
+	}
+
 }

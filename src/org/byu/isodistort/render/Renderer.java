@@ -107,27 +107,6 @@ public class Renderer {
 	}
 
 	/**
-	 * If the user is interactively dragging the mouse, we want the renderer to know
-	 * about it, so that any other background process (eg: a material which is
-	 * building a lookup table) can ask the renderer, and thereby avoid consuming
-	 * scarce CPU resources simultaneously.
-	 * 
-	 * @param tf dragging true or false
-	 */
-	void setDragging(boolean tf) {
-		dragging = tf;
-	}
-
-	/**
-	 * Returns whether dragging is active or not.
-	 * 
-	 * @return true when dragging is active, false otherwise
-	 */
-	boolean isDragging() {
-		return dragging;
-	}
-
-	/**
 	 * Sets the camera's focal length.
 	 * 
 	 * @param value focal lengh
@@ -1703,7 +1682,6 @@ public class Renderer {
 	// BH Q: These lights were static???
 	private int nLights = 0; // NUM. OF LIGHT SOURCES DEFINED
 	private double light[][] = new double[20][6]; // DATA FOR LIGHTS
-	private boolean dragging = false;
 //	private boolean isOutline = false;
 //	private int threshold = 256;
 //	private double outline_t = -1;

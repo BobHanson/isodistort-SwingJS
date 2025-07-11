@@ -237,13 +237,6 @@ public class Variables {
 	}
 
 	/**
-	 * Boolean variable that tracks whether irrep sliders were last set to sliderMax
-	 * or to zero.
-	 * 
-	 */
-	boolean irrepSlidersOn = true;
-
-	/**
 	 * The master slider bar value.
 	 */
 	private double mainSliderChildFraction;
@@ -2369,19 +2362,19 @@ public class Variables {
 		}
 
 		void toggleIrrepSliders() {
-			irrepSlidersOn = !irrepSlidersOn;
-			int val = (irrepSlidersOn ? sliderMax : 0);
-			modes[IRREP].setSliders(sliderTM[IRREP], val);
+			Mode m = modes[IRREP];
+			IsoSlider[][] sliders = sliderTM[IRREP];
+			m.setSliders(sliders, m.isNonzero(sliders) ? 0 : sliderMax);
 		}
 
 		void zeroSliders() {
 			mainSlider.setValue(sliderMax);
-			for (int i = 0; i < MODE_COUNT; i++) {
+			for (int i = 0; i < IRREP; i++) {
 				if (isModeActive(modes[i]))
 					modes[i].setSliders(sliderTM[i], 0);
 			}
 		}
-
+		
 		void resetSliders() {
 			mainSlider.setValue(sliderMax);
 			for (int i = 0; i < MODE_COUNT; i++) {

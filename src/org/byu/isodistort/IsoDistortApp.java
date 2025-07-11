@@ -542,14 +542,12 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 
 	@Override
 	public void keyPressed(KeyEvent e) {
-	}
-
-	@Override
-	public void keyReleased(KeyEvent e) {
+		rp.keyPressed(e);
 	}
 
 	@Override
 	public void keyTyped(KeyEvent e) {
+		System.out.println(e);
 		switch (e.getKeyChar()) {
 		case 'r':
 		case 'R':
@@ -559,15 +557,29 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 		case 'X':
 		case 'y':
 		case 'Y':
-		case 'n':
-		case 'N':
-			break;
+		case 'Z':
+		case 'z':
+			// handled by keyPress
+			return;
 		case 'c':
 		case 'C':
 			centerImage();
 			updateDisplay();
-			break;
-		default:
+			return;
+		}
+		variables.keyTyped(e);
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+		System.out.println(e);
+		rp.keyReleased(e);
+		char ch = e.getKeyChar();
+		if (rp.ignoreKeyRelease(ch))
+			return;
+		switch (ch) {
+		case 'z':
+		case 'Z':
 			variables.keyTyped(e);
 			break;
 		}

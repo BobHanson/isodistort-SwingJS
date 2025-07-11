@@ -292,6 +292,18 @@ class Mode {
 			}
 		}
 	}
+	
+	boolean isNonzero(IsoSlider[][] sliders) {
+		if (isActive()) {
+			for (int t = nTypes; --t >= 0;) {
+				for (int m = modesPerType[t]; --m >= 0;) {
+					if (sliders[t][m].getValue() != 0)
+						return true;
+				}
+			}
+		}
+		return false;
+	}
 
 	/**
 	 * Reset all sliders to their maximum values.

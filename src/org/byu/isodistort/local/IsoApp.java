@@ -1627,8 +1627,8 @@ public abstract class IsoApp implements KeyListener {
 				isovizData = (byte[]) args[0];
 			} else {
 				String arg = (String) args[0];
-				if (arg.length() > 500 && arg.indexOf("!") > 0) {
-					// distortion or JSON or ISOVIZ data
+				if (arg.length() > 500) {
+					// probably distortion or JSON or ISOVIZ data
 					isovizData = arg.getBytes();
 				} else {
 					// try a file name

@@ -1713,14 +1713,18 @@ public abstract class IsoApp implements KeyListener {
 					if (!line.contains("="))
 						line = "=" + line;
 					String[] info = line.split("=");
-					if (info[0].equals("startup")) {
-						if (isStartup)
-							startupDataFile = info[1];						
-					} else {
-						if (info[0].length() == 0)
-							info[0] = null;
-						exampleFiles.add(info);
+					switch (info[0]) {
+					case "":
+						info[0] = null;
+						break;
+					case "startup":
+						if (isStartup) {
+							startupDataFile = info[1];
+						}
+						info[0] = "start-up example";
+						break;
 					}
+					exampleFiles.add(info);
 				}
 			} catch (Exception e) {
 				e.printStackTrace();

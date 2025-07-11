@@ -1,0 +1,27 @@
+The data.* and data29.* examples have isoviz, distortion, and json files.  
+They are the standard R4+ SrTiO3 case.  We want multiple examples of this:
+(isoviz, distortion, json, old-isoviz)
+
+What are the gif files for?
+
+***** Remake these based on a distortion file
+operation1 -> SrTiO3_r2xr2x1
+LAO-decimal-origin -> LiAlO2_alpha-beta
+sg227-sg167-example.isoviz
+TbMnO3-incommensurate
+dis_occ_mag_rot_strain.isoviz -> ABO3_disp-occ-rot-mag-strain
+All of the "visual" files
+PtCu_L13mode.isoviz -> PtCu3_L13
+sg227-sg167-example
+Quartz_alpha-beta-RUM
+TTB-RUM
+bccspiral
+dymn6ge6
+La2CoRuO6-magnetic
+LaMnO3-magnetic
+lamno3-nonmagnetic
+LCMO-magnetic
+MnO-magnetic
+Pt3Cu-L12
+skyrmion-lattice-2D
+TbMnO3-magnetic

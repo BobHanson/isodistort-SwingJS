@@ -4,6 +4,7 @@
 package org.byu.isodistort.render;
 
 import org.byu.isodistort.local.MathUtil;
+import org.byu.isodistort0.render.Matrix;
 
 /**
  * Provides the computational functionality to render geometric objects in
@@ -12,7 +13,7 @@ import org.byu.isodistort.local.MathUtil;
  * @author Ken Perlin 2001
  */
 
-class Renderer {
+public class Renderer {
 
 	//String notice = "Copyright 2001 Ken Perlin. All rights reserved.";
 
@@ -103,27 +104,6 @@ class Renderer {
 		pix = pixels;
 		zbuffer = null;
 		gzbuffer = null;
-	}
-
-	/**
-	 * If the user is interactively dragging the mouse, we want the renderer to know
-	 * about it, so that any other background process (eg: a material which is
-	 * building a lookup table) can ask the renderer, and thereby avoid consuming
-	 * scarce CPU resources simultaneously.
-	 * 
-	 * @param tf dragging true or false
-	 */
-	void setDragging(boolean tf) {
-		dragging = tf;
-	}
-
-	/**
-	 * Returns whether dragging is active or not.
-	 * 
-	 * @return true when dragging is active, false otherwise
-	 */
-	boolean isDragging() {
-		return dragging;
 	}
 
 	/**
@@ -253,10 +233,11 @@ class Renderer {
 	 * @param theta horizontal angle (radians)
 	 * @param phi   vertical angle (radians)
 	 */
-	synchronized void setCamera(double t, double p) {
+	synchronized void setCamera(double t, double p, double s) {
 		Matrix3D.identity(camera);
 		theta = t;
 		phi = p;
+		sigma = s;
 		computeCamera();
 	}
 
@@ -691,15 +672,10 @@ class Renderer {
 		} else {
 			if (theta == 0 && phi == 0 && sigma == 0)
 				return;
-
-			Matrix3D.identity(camtmp);
-			camtmp.rotateZ(sigma);
-			camera.postMultiply(camtmp);
-			Matrix3D.identity(camtmp);
-			camtmp.rotateY(theta);
-			camera.postMultiply(camtmp);
 			Matrix3D.identity(camtmp);
 			camtmp.rotateX(phi);
+			camtmp.rotateY(theta);
+			camtmp.rotateZ(sigma);
 			camera.postMultiply(camtmp);
 			clearAngles();
 		}
@@ -1603,7 +1579,6 @@ class Renderer {
 				}
 			}
 		}
-
 		red = rD * D[0] + rS * S[0] + A[0];
 		grn = gD * D[1] + gS * S[1] + A[1];
 		blu = bD * D[2] + bS * S[2] + A[2];
@@ -1707,7 +1682,6 @@ class Renderer {
 	// BH Q: These lights were static???
 	private int nLights = 0; // NUM. OF LIGHT SOURCES DEFINED
 	private double light[][] = new double[20][6]; // DATA FOR LIGHTS
-	private boolean dragging = false;
 //	private boolean isOutline = false;
 //	private int threshold = 256;
 //	private double outline_t = -1;

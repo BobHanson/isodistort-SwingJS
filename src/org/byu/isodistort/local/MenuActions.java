@@ -171,8 +171,7 @@ public class MenuActions {
 		});
 
 		actions.put("File.Examples.", null);
-
-		List<String[]> exampleFiles = app.getExampleFiles();
+		List<String[]> exampleFiles = app.getExampleFiles(false);
 		for (int i = 0; i < exampleFiles.size(); i++) {
 			String[] example = exampleFiles.get(i);
 			String label = example[0];
@@ -216,14 +215,14 @@ public class MenuActions {
 			}
 		});
 
-//		actions.put("File.Save.saveFormData", new IsoAction("saveFormData", "ISODISTORT Form Data JSON",
-//				"Save ISODISTORT form data in JSON format.", 0) {
-//			@Override
-//			public void actionPerformed(ActionEvent e) {
-//				app.saveFormData(null);
-//			}
-//		});
-//
+		actions.put("File.Save.saveFormData", new IsoAction("saveFormData", "ISODISTORT Form Data JSON",
+				"Save ISODISTORT form data in JSON format.", 0) {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				app.saveFormData(null);
+			}
+		});
+
 		actions.put("File.Save.saveCIF",
 				new IsoAction("saveCIF", "-CIF file or movie", "Save current configuration as CIF file.", 0) {
 					/**

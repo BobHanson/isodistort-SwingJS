@@ -16,70 +16,43 @@ import javax.swing.JTextField;
  *
  */
 public abstract class Iso3DApp extends IsoApp {
-	
-	public interface IsoRenderPanel {
 
-		void addKeyListener(KeyListener listener);
+	protected static final int PARENT = 0;
+	protected static final int CHILD = 1;
+	
+	protected static final double DEFAULT_DISTANCE = 0.4;
+
+
+	public interface IsoRenderPanel extends KeyListener {
+
+		public static final int ROTATE_XYZ    = 0;
+		public static final int ROTATE_X      = 1;
+		public static final int ROTATE_Y      = 2;
+		public static final int ROTATE_Z      = 3;
+		public static final int ROTATE_ZOOM   = 4;
+
 		void centerImage();
 		void clearAngles();
-		void clearOffsets();
 		BufferedImage getImage();
 		double[][] getPerspective();
 		void initializeSettings(double radius);
 		boolean isSpinning();
-		void removeKeyListener(KeyListener listener);
 		void resetView();
-		void reversePanningAction();
-		void setCamera(double tY, double tX);
+//		void reversePanningAction();
+		void setCamera(double theta, double phi, double sigma);
 		void setPerspective(double[][] params);
 //		void setPreferredSize(Dimension size);
 //		void setSize(Dimension size);
 		void setSpinning(boolean spin);
 		void updateForDisplay(boolean b);
 	    void paint(Graphics g);
-
+		double[] getCameraMatrix();
+		void setCameraMatrixAndZoom(double[] cameraMatrix, double zoom);
+		double getZoom();
+		boolean ignoreKeyRelease(char c);
 	}
 
-	
-
-	/**
-	 * [0] parent; [1] child
-	 */
-	protected double[] axesMultipliers = new double[] { 0.35, 0.25 };
-	
-	/**
-	 * various arrow/line radia
-	 */
-	protected double bondMultiplier = 0.1, cellMultiplier = 0.25, momentMultiplier = 0.4, rotationMultiplier = 0.35;
-
-	/**
-	 * flag to indicate animation is in progress
-	 */
-	protected boolean isAnimationRunning;
-
-	/**
-	 * true if the animate checkbox is checked
-	 */
-	protected boolean isAnimateSelected;
-	protected double animPhase = Math.PI / 2;
-	protected double animAmp = 1;
-
-	/**
-	 * Initially show settings
-	 */
-	protected boolean showBonds0 = true, showAtoms0 = true, showPrimitiveAtoms0 = false,
-			showParentCell0 = true, showChildCell0 = true, 
-			showAxes0 = false;
-	/**
-	 * Currently show bonds or not
-	 */
-	protected boolean showBonds, showAtoms, showPrimitiveAtoms,
-		showParentCell, showChildCell, showAxes;
-
-	/**
-	 * Which type of view direction: childHKL, childUVW, parentHKL, parentUVW
-	 */
-	protected int viewType;
+	protected IsoRenderPanel  rp;	
 
 	/**
 	 * Check boxes for zoom, spin, anim toggles
@@ -97,12 +70,54 @@ public abstract class Iso3DApp extends IsoApp {
 	 * 
 	 */
 	protected JTextField uView, vView, wView;
-
-	private IsoRenderPanel  rp;
 	
-	protected void setRenderPanel(IsoRenderPanel rp) {
-		this.rp = rp;
-	}
+	/////////// global variables /////////
+	
+	/**
+	 * [0] parent; [1] child
+	 */
+	final protected static double[] AXIS_RADII = 
+			new double[] { DEFAULT_DISTANCE * 0.35, DEFAULT_DISTANCE * 0.25 };
+	
+	/**
+	 * various arrow/line radia
+	 */
+	final protected static double BOND_RADIUS = DEFAULT_DISTANCE * 0.1;
+	final protected static double CELL_RADIUS = DEFAULT_DISTANCE * 0.25;
+	final protected static double MOMENT_FACTOR = 0.4;
+	final protected static double ROTATION_FACTOR = 0.35;
+	protected static final double ARROW_MIN_LENGTH = 0.62;
+
+
+	/**
+	 * flag to indicate animation is in progress
+	 */
+	protected boolean isAnimationRunning;
+
+	protected double animPhase = Math.PI / 2;
+	protected double animAmp = 1;
+
+	/**
+	 * Initial show settings
+	 */
+	protected boolean showBonds0 = true, showAtoms0 = true, showPrimitiveAtoms0 = false,
+			showParentCell0 = true, showChildCell0 = true, 
+			showAxes0 = false;
+	/**
+	 * CheckBox propertiers
+	 */
+	protected boolean showBonds, showAtoms, showPrimitiveAtoms,
+		showParentCell, showChildCell, showAxes;
+	/**
+	 * true if the animate checkbox is checked
+	 */
+	protected boolean isAnimateSelected;
+	
+
+	/**
+	 * Which type of view direction: childHKL, childUVW, parentHKL, parentUVW
+	 */
+	protected int viewType;
 
 	/**
 	 * A class to allow common methods to any 3D app.
@@ -113,34 +128,16 @@ public abstract class Iso3DApp extends IsoApp {
 		super(appType);
 	}
 
-	@Override
-	protected void frameResized() {
-		if (variables == null)
-			return;
-		super.frameResized();
-		needsRecalc = true;
-		updateDisplay();
-	}
-
-	/**
-	 * Done once, only during initialization.
-	 */
+	///////////////////// one-time initialization //////////////
+	
 	protected double initFieldOfView() {
-		variables.readSliders();
-		variables.recalcDistortion();
-		variables.setAtomInfo();
 
 		// Calculate the maximum distance from applet center (used to determine FOV).
-		double d2 = parentCell.addRange2(childCell.addRange2(0.0));
+		double d2 = variables.parentCell.addRange2(variables.childCell.addRange2(0.0));
 		
 		for (int i = 0, n = variables.nAtoms; i < n; i++) {
 			d2 = MathUtil.maxlen2(variables.atoms[i].getCartesianCoord(), d2);
 		}
-// BH: this does not have to be so exact. Just adding 2 * variables.atomMaxRadius for this.
-//		for (int axis = 0; axis < 3; axis++) {
-//			d2 = MathUtil.maxlen2(paxesends[axis], d2);
-//			d2 = MathUtil.maxlen2(saxesends[axis], d2);
-//		}
 
 		// the 4 here takes care of axes
 		double radius = Math.sqrt(d2) + 4 * variables.atomMaxRadius;
@@ -150,54 +147,38 @@ public abstract class Iso3DApp extends IsoApp {
 		return radius;
 	}
 
-	/**
-	 * recalculates structural distortions and bond configurations.
-	 */
-	protected void recalcABC() {
-		variables.readSliders();
-		variables.recalcDistortion();
-		if (showAtoms || showBonds) {
-			variables.setAtomInfo();
-		}
-		if (showBonds) {
-			checkBonding();
-		}
-		if (showParentCell || showChildCell) {
-			variables.setCellInfo();
-		}
-		for (int axis = 0; axis < 3; axis++) {
-			variables.setAxisExtents(axis, parentCell, 2.0, 3.5);
-			variables.setAxisExtents(axis, childCell, 1.5, 4.0);
-		}
+	protected void updateGUI() {
+		Iso3DApp app = frame.from3DApp;
+		if (app == null || app == this)
+			return;
+		childHKL.setSelected(app.childHKL.isSelected());
+		childUVW.setSelected(app.childUVW.isSelected());
+		parentHKL.setSelected(app.parentHKL.isSelected());
+		parentUVW.setSelected(app.parentUVW.isSelected());
+		uView.setText(app.uView.getText());
+		vView.setText(app.vView.getText());
+		wView.setText(app.wView.getText());
+		aBox.setSelected(app.aBox.isSelected());
+		apBox.setSelected(app.apBox.isSelected());
+		bBox.setSelected(app.bBox.isSelected());
+		cpBox.setSelected(app.cpBox.isSelected());
+		ccBox.setSelected(app.ccBox.isSelected());
+		axesBox.setSelected(app.axesBox.isSelected());
+		spinBox.setSelected(app.spinBox.isSelected());
+		animBox.setSelected(app.animBox.isSelected());
+		colorBox.setSelected(app.colorBox.isSelected());
+		frame.from3DApp = this;
 	}
 
-	abstract protected void checkBonding();
-
-	abstract protected void enableSelectedObjects();
+	///////////// updating /////////////
 	
-	protected boolean isMaterialTainted;
-	
-	/**
-	 * recalculates the atom colors after a checkbox has been set.
-	 */
-	protected void recalcMaterials() {
-		if (showAtoms)
-			recalcAtomColors();
-		isMaterialTainted = false;
-	}
+	protected boolean isAtomColorChanged;
 
-	abstract protected void recalcAtomColors();
-	abstract protected void renderAtoms();
-	abstract protected void renderBonds();
-	abstract protected void renderCells();
-	abstract protected void renderAxes();
-
-	
 	@Override
 	public void updateDisplay() {		
 		if (isAdjusting)
 			return;
-		enableSelectedObjects();
+		updateSelectedObjects();
 		isAdjusting = true;
 		if (variables.isChanged) {
 			needsRecalc = true;
@@ -206,23 +187,21 @@ public abstract class Iso3DApp extends IsoApp {
 		if (rp == null)
 			return;
 		rp.updateForDisplay(false);		
-		if (isMaterialTainted) {
-			recalcMaterials();
-		}
+		updateAtomColors();
 		if (needsRecalc) {
 			// virtually all the time is here:
-			recalcABC();
+			updateAtomsBondsCells();
 			if (showAtoms) {
-				renderAtoms();
+				updateAtoms();
 			}
 			if (showBonds) {
-				renderBonds();
+				updateBonds();
 			}
 			if (showParentCell || showChildCell) {
-				renderCells();
+				updateCells();
 			}
 			if (showAxes) {
-				renderAxes();
+				updateAxes();
 			}
 			needsRecalc = false;
 		}
@@ -232,4 +211,53 @@ public abstract class Iso3DApp extends IsoApp {
 	}
 
 
+	@Override
+	protected void frameResized() {
+		if (variables == null)
+			return;
+		super.frameResized();
+		needsRecalc = true;
+		updateDisplay();
+	}
+
+	abstract protected void updateBonding();
+	abstract protected void updateSelectedObjects();
+	abstract protected void updateAtomColors();
+	abstract protected void updateAtoms();
+	abstract protected void updateBonds();
+	abstract protected void updateCells();
+	abstract protected void updateAxes();
+
+	
+	
+	/**
+	 * update for atoms, bonds, and cells
+	 */
+	protected void updateAtomsBondsCells() {
+		variables.readSliders();
+		variables.recalcDistortion();
+		updateAxisExtents();
+		if (showAtoms || showBonds) {
+			variables.setAtomInfo();
+			if (showAtoms && isAtomColorChanged) {
+				updateAtomColors();
+				isAtomColorChanged = false;
+			}
+		}
+		if (showBonds) {
+			updateBonding();
+		}
+		
+		if (showParentCell || showChildCell) {
+			variables.setCellInfo();
+		}
+	}
+
+	protected void updateAxisExtents() {
+		for (int axis = 0; axis < 3; axis++) {
+			variables.setAxisExtents(axis, variables.parentCell, 2.0 * DEFAULT_DISTANCE, 3.5 * DEFAULT_DISTANCE);
+			variables.setAxisExtents(axis, variables.childCell, 1.5 * DEFAULT_DISTANCE, 4.0 * DEFAULT_DISTANCE);
+		}
+	}
+	
 }

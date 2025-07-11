@@ -68,8 +68,8 @@ public class Variables {
 
 	public final static int RX = 3, RY = 4, L_2 = 5;
 
-	static final Color COLOR_CHILD_CELL = new Color(128, 128, 204);
-	static final Color COLOR_PARENT_CELL = new Color(204, 128, 128);
+	public static final Color COLOR_CHILD_CELL = new Color(128, 128, 204);
+	public static final Color COLOR_PARENT_CELL = new Color(204, 128, 128);
 
 	static final Color COLOR_STRAIN = Color.DARK_GRAY;
 	static final Color COLOR_IRREP = new Color(0xA0A0A0);
@@ -94,11 +94,13 @@ public class Variables {
 	 */
 	final static double maxJSliderIntVal = sliderMax;
 
+	public static final double defaultAppletWHRatio = 1.8;
+
 	private IsoApp app;
 
 	private SliderPanelGUI gui;
 
-	public Atom[] atoms;
+	public IsoAtom[] atoms;
 
 	/**
 	 * a bitset used in IsoDiffractApp to filter atoms and atom properties. It is
@@ -123,9 +125,9 @@ public class Variables {
 	public boolean isChanged = true;
 
 	/**
-	 * Applet width and height in pixels
+	 * Applet width and height in pixels (ignored)
 	 */
-	public int appletWidth = 1024, appletHeight;
+	public int appletWidth = 1080, appletHeight;
 	/**
 	 * Total number of atoms after filtering for primitive.
 	 */
@@ -157,7 +159,7 @@ public class Variables {
 	 */
 	String[][] subTypeName;
 	/**
-	 * Radius of atoms
+	 * Radius of atoms; also used as a scaling factor for bonds, cells, and axes
 	 */
 	public double atomMaxRadius;
 	/**
@@ -226,11 +228,13 @@ public class Variables {
 	private double[] tB = new double[3];
 
 	/**
-	 * Boolean variable that tracks whether irrep sliders were last set to sliderMax
-	 * or to zero.
-	 * 
+	 * The hkl or uvw view direction indices in lattice coordinates
 	 */
-	boolean irrepSlidersOn = true;
+	final private double[] viewIndices = new double[] {0, 0, 1};
+	
+	public double[] getViewIndices() {
+		return viewIndices;
+	}
 
 	/**
 	 * The master slider bar value.
@@ -306,7 +310,7 @@ public class Variables {
 		return true;
 	}
 
-	public Atom getAtom(int ia) {
+	public IsoAtom getAtom(int ia) {
 		return atoms[ia];
 	}
 
@@ -475,7 +479,7 @@ public class Variables {
 		MathUtil.set3(minmax[1], -1E6, -1e6, -1e6);
 		childCell.rangeCheckVertices(minmax);
 		for (int i = nAtoms; --i >= 0;) {
-			MathUtil.rangeCheck(childCell.toTempCartesian(atoms[i].vectorBest[DIS]), minmax);
+			MathUtil.rangeCheck(atoms[i].getBestChildLocationTemp(), minmax);
 		}
 		MathUtil.average3(minmax[0], minmax[1], cartesianCenter);
 		childCell.setRelativeTo(cartesianCenter);
@@ -598,17 +602,17 @@ public class Variables {
 			bspt = new Bspt();
 		}
 		for (int ia = 0, n = nAtoms; ia < n; ia++) {
-			Atom a = atoms[ia];
+			IsoAtom a = atoms[ia];
 			double[][] info = a.info;
 			if (info[OCC] == null) {
 				info[OCC] = new double[1];
 				info[DIS] = new double[] { 0, 0, 0, ia };
-				info[ROT] = new double[3];
-				info[MAG] = new double[3];
+				info[ROT] = new double[9];
+				info[MAG] = new double[9];
 				info[ELL] = new double[7];
 			}
 			info[OCC][0] = a.getOccupancy();
-			double[] coord = a.setDisplacementInfo(childCell, cartesianCenter);
+			double[] coord = a.setDisplacementInfo(cartesianCenter);
 			if (getBspt) {
 				// This coordinate is saved, not copied.
 				// The binary space partition tree thus.
@@ -616,9 +620,9 @@ public class Variables {
 				// but I think this is close enough. Prove me wrong! BH
 				bspt.addTuple(coord);
 			}
-			a.setArrowInfo(MAG, childCell);
-			a.setArrowInfo(ROT, childCell);
-			a.setEllipsoidInfo(childCell);
+			a.setArrowInfo(MAG);
+			a.setArrowInfo(ROT);
+			a.setEllipsoidInfo();
 		}
 	}
 
@@ -697,6 +701,8 @@ public class Variables {
 				prefs.put("atomicradius", o);
 			}
 			o = values.remove("maxbondlength");
+			if (o == null)
+				o = values.remove("bondlengthmax");
 			if (o != null) {
 				lMax = (o instanceof Double ? ((Double) o).doubleValue() : Double.parseDouble(o.toString()));
 				changed |= (lMax != maxBondLength);
@@ -704,6 +710,8 @@ public class Variables {
 				prefs.put("maxbondlength", o);
 			}
 			o = values.remove("minbondlength");
+			if (o == null)
+				o = values.remove("bondlengthmin");
 			if (o != null) {
 				lMax = (o instanceof Double ? ((Double) o).doubleValue() : Double.parseDouble(o.toString()));
 				changed |= (lMin != minBondLength);
@@ -746,7 +754,7 @@ public class Variables {
 	}
 
 	public void setAxisExtents(int axis, Cell cell, double d1, double d2) {
-		double[] axesInfo = cell.getAxisExtents(axis, cartesianCenter, d1 * atomMaxRadius, tA, d2 * atomMaxRadius, tB,
+		double[] axesInfo = cell.getAxisExtents(axis, cartesianCenter, d1, tA, d2, tB,
 				tempvec);
 		setCylinderInfo(tA, tB, axesInfo, -1);
 	}
@@ -757,7 +765,7 @@ public class Variables {
 	 * A class to collect all atom-related content.
 	 * 
 	 */
-	public static class Atom {
+	public class IsoAtom {
 
 		/**
 		 * The index of this atom in the filtered array.
@@ -783,7 +791,7 @@ public class Variables {
 		 * zero-based index within the subType
 		 * 
 		 */
-		int subTypeIndex;
+		public int subTypeIndex;
 
 		/**
 		 * the initial parameter vector, by mode type; may be of length 1, 3, or 6;
@@ -827,7 +835,7 @@ public class Variables {
 		 */
 		final double[][] info = new double[MODE_COUNT][];
 
-		private String sym;
+		public String sym;
 
 		/**
 		 * 
@@ -839,7 +847,7 @@ public class Variables {
 		 * @param elementSymbol
 		 * 
 		 */
-		private Atom(int index, int t, int s, int a, double[] coord, String elementSymbol) {
+		private IsoAtom(int index, int t, int s, int a, double[] coord, String elementSymbol) {
 			this.index = index;
 			this.type = t;
 			this.subType = s;
@@ -848,8 +856,16 @@ public class Variables {
 			vectorBest[DIS] = coord;
 		}
 
+		public double[] getBestChildLocationTemp() {
+			return childCell.toTempCartesian(vectorBest[DIS]);
+		}
+
 		public double[] getFinalFractionalCoord() {
 			return vector1[DIS];
+		}
+
+		public double[] getFinalCartesianCoordTemp() {
+			return childCell.toTempCartesian(vector1[DIS]);
 		}
 
 		public double[] get(int mode) {
@@ -893,8 +909,8 @@ public class Variables {
 		 * @param t
 		 * @return [cartX, cartY, cartZ, index]
 		 */
-		private double[] setDisplacementInfo(ChildCell child, double[] center) {
-			double[] t3 = child.toTempCartesian(vector1[DIS]);
+		private double[] setDisplacementInfo(double[] center) {
+			double[] t3 = childCell.toTempCartesian(vector1[DIS]);
 			MathUtil.scaleAdd3(t3, -1, center, info[DIS]);
 			return info[DIS];
 		}
@@ -908,9 +924,9 @@ public class Variables {
 		 * @param type  is MAG or ROT
 		 * @param child is the child cell
 		 */
-		public void setArrowInfo(int type, ChildCell child) {
+		public void setArrowInfo(int type) {
 			double[] info = this.info[type];
-			double[] t = child.toTempCartesian(vector1[type]);
+			double[] t = childCell.toTempCartesian(vector1[type]);
 			double lensq = MathUtil.lenSq3(t);
 			if (lensq < 0.000000000001) {
 				info[0] = info[1] = info[2] = 0;
@@ -920,6 +936,9 @@ public class Variables {
 			info[0] = -Math.asin(t[1] / d); // X rotation
 			info[1] = Math.atan2(t[0], t[2]); // Y rotation
 			info[2] = d; // Length
+			info[3] = t[0];
+			info[4] = t[1];
+			info[5] = t[2];
 		}
 
 		/**
@@ -934,10 +953,10 @@ public class Variables {
 		 * 
 		 * @param child is the child cell.
 		 */
-		public void setEllipsoidInfo(ChildCell child) {
+		public void setEllipsoidInfo() {
 			double[] info = this.info[ELL];
 
-			double[][] mat = child.getTempStrainedCartesianBasis(get(ELL));
+			double[][] mat = childCell.getTempStrainedCartesianBasis(get(ELL));
 
 			// TODO -- Branton -- apply strain to anisotropic ellipsoid
 
@@ -1586,7 +1605,7 @@ public class Variables {
 			int n = getOneInt("appletwidth", 0);
 			if (n >= 500 && n <= 5000)
 				appletWidth = n;
-			appletHeight = (int) Math.round((double) appletWidth / 1.6);
+			appletHeight = (int) Math.round((double) appletWidth / defaultAppletWHRatio);
 
 		}
 
@@ -1723,7 +1742,7 @@ public class Variables {
 			// nAtoms may be the number of primitive atoms only
 			if (nAtoms == 0)
 				nAtoms = nAtomsRead;
-			atoms = new Atom[nAtoms];
+			atoms = new IsoAtom[nAtoms];
 
 			// Find number of subatoms for each subtype
 			// Set up nSubAtom (and nPrimitiveSubAtoms if this is for IsoDiffract)
@@ -1825,7 +1844,8 @@ public class Variables {
 					if (bsPeriodic != null) {
 						nPrimitiveSubAtoms[t][s]++;
 					}
-					atoms[ia] = new Atom(ia, t, s, a, coord, atomTypeSymbol[t]);
+					atoms[ia] = new IsoAtom(ia, t, s, a, coord, atomTypeSymbol[t]);
+					setAtomType(t, s, ia);
 //					if (haveBonds)
 //						atomMap.put(getKeyTSA(t + 1, s + 1, a + 1), atom);
 					ia++;
@@ -2005,7 +2025,7 @@ public class Variables {
 			}
 			// initialize the atom mode[] arrays now that we have the perType information.
 			for (int ia = nAtoms; --ia >= 0;) {
-				Atom a = atoms[ia];
+				IsoAtom a = atoms[ia];
 				a.modes[mode] = (perType[a.type] == 0 ? null : new double[perType[a.type]][]);
 			}
 			return n;
@@ -2253,6 +2273,8 @@ public class Variables {
 		}
 
 		void updateColorScheme(boolean isByElmeent) {
+			if (app.colorBox == null)
+				return;
 			colorByElement = isByElmeent;
 			app.colorBox.setEnabled(false);
 			app.colorBox.setSelected(!isByElmeent);
@@ -2340,19 +2362,19 @@ public class Variables {
 		}
 
 		void toggleIrrepSliders() {
-			irrepSlidersOn = !irrepSlidersOn;
-			int val = (irrepSlidersOn ? sliderMax : 0);
-			modes[IRREP].setSliders(sliderTM[IRREP], val);
+			Mode m = modes[IRREP];
+			IsoSlider[][] sliders = sliderTM[IRREP];
+			m.setSliders(sliders, m.isNonzero(sliders) ? 0 : sliderMax);
 		}
 
 		void zeroSliders() {
 			mainSlider.setValue(sliderMax);
-			for (int i = 0; i < MODE_COUNT; i++) {
+			for (int i = 0; i < IRREP; i++) {
 				if (isModeActive(modes[i]))
 					modes[i].setSliders(sliderTM[i], 0);
 			}
 		}
-
+		
 		void resetSliders() {
 			mainSlider.setValue(sliderMax);
 			for (int i = 0; i < MODE_COUNT; i++) {
@@ -2411,8 +2433,16 @@ public class Variables {
 			// Divide the applet area with structure on the left and controls on the right.
 
 			sliderPanelWidth = width;
-			sliderWidth = (int) (sliderPanelWidth * 0.6);
+			sliderWidth = (int) (sliderPanelWidth * IsoApp.defaultSliderFraction);
 
+			needColorBox = true;// haveElementSubtypes();
+			colorByElement = true;
+			setColors();
+
+			createMasterSliderPanel(sliderPanel, width);
+		}
+
+		private void createMasterSliderPanel(JPanel sliderPanel, int width) {
 			/**
 			 * Maximum number of check boxes per row the GUI will hold
 			 */
@@ -2425,10 +2455,6 @@ public class Variables {
 				subTypesPerRow[t] = Math.min(maxSubTypesPerRow, nSubTypes[t]);
 				nSubRows[t] = (int) Math.ceil((double) nSubTypes[t] / subTypesPerRow[t]);
 			}
-			needColorBox = true;// haveElementSubtypes();
-			colorByElement = true;
-			setColors();
-
 			masterSliderPanel = new JPanel();
 			masterSliderPanel.setLayout(new BoxLayout(masterSliderPanel, BoxLayout.LINE_AXIS));
 			masterSliderPanel.setBorder(new EmptyBorder(2, 2, 5, 80));
@@ -2521,15 +2547,18 @@ public class Variables {
 			// strainDataPanel
 			initCell(childCell, c);
 			initCell(parentCell, c);
-			JPanel strainDataPanel = new JPanel(new GridLayout(2, 6, 0, 0));
+			JPanel strainDataPanel = new JPanel(new GridLayout(2, 9, 0, 0));
 			strainDataPanel.setBackground(c);
 			strainDataPanel.add(parentCell.title);
 			for (int n = 0; n < 6; n++)
 				strainDataPanel.add(parentCell.labels[n]);
+			strainDataPanel.add(Box.createHorizontalStrut(10));
 			strainDataPanel.add(childCell.title);
 			for (int n = 0; n < 6; n++)
 				strainDataPanel.add(childCell.labels[n]);
+			strainDataPanel.add(Box.createHorizontalStrut(10));
 			addPanel(sliderPanel, strainDataPanel, "strainDataPanel");
+			
 			initModeGUI(sliderPanel, modes[STRAIN], 0);
 
 			if (isModeActive(modes[IRREP])) {
@@ -2821,6 +2850,21 @@ public class Variables {
 		return gui.getSelectedSubTypeShade(t, s);
 	}
 
+	private Map<Integer, BitSet> mapTStoAtoms = new HashMap<>();
+	
+	public void setAtomType(int t, int s, int ia) {
+		Integer key = Integer.valueOf(t << 10 + s);
+		BitSet bs = mapTStoAtoms.get(key);
+		if (bs == null)
+			mapTStoAtoms.put(key, bs = new BitSet());
+		bs.set(ia);
+	}
+	
+	public BitSet getAtomsFromTS(int t, int s) {
+		Integer key = Integer.valueOf(t << 10 + s);
+		return mapTStoAtoms.get(key);
+	}
+
 	public void dispose() {
 		gui = null;
 		app = null;
@@ -2847,6 +2891,12 @@ public class Variables {
 
 	public void updateSliderPointers() {
 		gui.updateSliderPointers();
+	}
+
+	public void initCellsAndAxes() {
+			readSliders();
+			recalcDistortion();
+			setAtomInfo();
 	}
 
 }

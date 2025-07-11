@@ -335,7 +335,6 @@ public class Material {//implements Runnable {
 		amb[0] = ambient[0];
 		amb[1] = ambient[1];
 		amb[2] = ambient[2];
-		amb[3] = ambient[3];
 	}
 
 //	/**

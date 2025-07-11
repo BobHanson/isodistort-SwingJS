@@ -6,6 +6,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
@@ -17,6 +18,10 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -25,6 +30,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +65,6 @@ import javax.swing.text.DefaultCaret;
 import org.byu.isodistort.IsoDiffractApp;
 import org.byu.isodistort.IsoDistortApp;
 import org.byu.isodistort.IsoSymmetryApp;
-import org.byu.isodistort.local.Cell.ChildCell;
 import org.byu.isodistort.server.ServerUtil;
 
 /**
@@ -69,14 +74,17 @@ import org.byu.isodistort.server.ServerUtil;
  * @author Bob Hanson
  *
  */
-public abstract class IsoApp {
+public abstract class IsoApp implements KeyListener {
 
 	final static String minorVersion = ".16_2025.07.06";
 
 	/**
 	 * the datafile to use for startup
 	 */
-	protected String startupDataFile = "data/visual_mno.isoviz";//"data/data29.isoviz"; // varied settings
+	protected String startupDataFile = "data/visual_la2coruo6-magnetic.isoviz";
+			//"data/visual_lamno3_magnetic.isoviz";
+			//"data/sg227-sg167-example.isoviz";
+	//data/visual_mno.isoviz";//"data/data29.isoviz"; // varied settings
 
 	/**
 	 * The list of menu items in the File.Examples. menu.
@@ -95,8 +103,7 @@ public abstract class IsoApp {
 	static boolean isJS = (/** @j2sNative true || */
 	false);
 
-	static boolean addJmol = false; // BH experimental
-
+	protected static boolean addJmol = false;//true; // BH experimental use -jmol
 	public static class IsoFrame extends JFrame {
 		
 	    int sliderPanelWidth;
@@ -115,9 +122,30 @@ public abstract class IsoApp {
 
 		private MenuActions actions;
 
+		public KeyListener keyListener = new KeyListener() {
+
+			@Override
+			public void keyTyped(KeyEvent e) {
+				apps[thisType].keyTyped(e);
+			}
+
+			@Override
+			public void keyPressed(KeyEvent e) {
+				//System.out.println("IsoApp.Frame " + e);
+				apps[thisType].keyPressed(e);
+			}
+
+			@Override
+			public void keyReleased(KeyEvent e) {
+				apps[thisType].keyReleased(e);
+			}
+			
+		};
+
 		IsoFrame(String title) {
 			super(title);
 			contentPane = (JComponent) getContentPane();
+			addKeyListener(keyListener );
 		}
 
 		void addIsoPanel(IsoApp app, JPanel isoPanel) {
@@ -127,7 +155,7 @@ public abstract class IsoApp {
 			}
 			actions.setApp(app);
 			int type = app.appType;
-			this.apps[type] = app;
+			apps[type] = app;
 			if (tabbedPane == null) {
 				tabbedPane = new JTabbedPane();
 				tabbedPane.setName("tabbedPane");
@@ -180,6 +208,8 @@ public abstract class IsoApp {
 					apps[i] = null;
 				}
 			}
+			cameraMatrix = null;
+			zoom = Double.NaN;
 		}
 
 		int getPanelHeight() {
@@ -200,14 +230,24 @@ public abstract class IsoApp {
 			if (currentApp == null)
 				return;
 			if (newapp != null) {
+				check3DApp(currentApp);
 				currentApp.prepareToSwapOut();
+				newapp.prepareToSwapIn();
 				((JComponent) getContentPane()).setTransferHandler(new FileUtil.FileDropHandler(newapp));
-				newapp.variables.setValuesFrom(currentApp.variables);
+				newapp.variables.setValuesFrom(currentApp.variables);				
 				repaint();
-				requestFocus();				
+				requestFocusInWindow();
 			} else {
+				currentApp.prepareToSwapOut();
 				currentApp.openApplication(type, currentApp.isovizData, null, false);
 			}
+		}
+
+		public Iso3DApp from3DApp;
+		
+		private void check3DApp(IsoApp currentApp) {
+			if (currentApp instanceof Iso3DApp)
+				from3DApp = (Iso3DApp)currentApp;
 		}
 
 		private ComponentListener componentListener = new ComponentAdapter() {
@@ -234,6 +274,17 @@ public abstract class IsoApp {
 			}
 
 			@Override
+			public void windowOpened(WindowEvent e) {
+				/**
+				 * 
+				 * @j2sNative
+				 * 
+				 * setTimeout(function(){window.scrollTo(0,0)},100);
+				 */
+
+			}
+
+			@Override
 			public void windowClosing(WindowEvent e) {
 				shutDown();
 			}
@@ -251,8 +302,16 @@ public abstract class IsoApp {
 			}
 
 		};
-		
+
+		/**
+		 * from IsoDistortApp
+		 */
+		public double[] cameraMatrix;
+
+		public double zoom = Double.NaN;
+
 		void finalizeFrame(IsoApp app) {
+			check3DApp(app);
 			String title = getTitle();
 			if (title.indexOf(" ") < 0)
 				setName(title);
@@ -422,8 +481,10 @@ public abstract class IsoApp {
 	
 	private static final int roomForScrollBar = 10;
 
-	private static final int defaultSliderPanelWidth = 450;
-
+	private static final int defaultSliderPanelWidth = 480;
+	
+	final static double defaultSliderFraction = 0.55;
+	
 	private static int buttonID = 0;
 
 	final static Border controlBorder = new EmptyBorder(0, 0, 0, 0);// BorderFactory.createLineBorder(Color.BLACK, 1);
@@ -603,7 +664,14 @@ public abstract class IsoApp {
 
 	};
 
-	protected double getText(JTextField t, double currentValue, int precision) {
+	/**
+	 * 
+	 * @param t
+	 * @param currentValue
+	 * @param precision
+	 * @return
+	 */
+	protected double getTextValue(JTextField t, double currentValue, int precision) {
 		double val = 0;
 		try {
 			String s = t.getText();
@@ -630,17 +698,6 @@ public abstract class IsoApp {
 	 * FormData "xkparam... presence or DFile "!
 	 */
 	public Boolean isIncommensurate;
-
-	/**
-	 * cell for the child, aka "super" cell
-	 * 
-	 */
-	public ChildCell childCell = new ChildCell();
-
-	/**
-	 * cell for the parent
-	 */
-	public Cell.ParentCell parentCell = new Cell.ParentCell();
 
 	public static boolean testing;
 
@@ -768,7 +825,7 @@ public abstract class IsoApp {
 
 	private Map<String, Object> ensureMapData(Object formData, boolean asClone, boolean silent) {
 		if (formData == null) {
-			formData = this.formData;
+			formData = this.formData;			
 		}
 		Map<String, Object> mapData = (formData instanceof String && ((String) formData).length() == 0 ? null
 				: ServerUtil.json2Map(formData, asClone));
@@ -778,8 +835,26 @@ public abstract class IsoApp {
 				sayNotPossible("No form data to process; open a DISTORTION file first.");
 			return null;
 		}
+		fixFormBondMinMax(mapData);
 		this.formData = mapData;
 		return mapData;
+	}
+
+
+	/**
+	 * Coming from the page form itself, the names for 
+	 * max and min will be different. We need these to 
+	 * match the names in the ISOVIS file.
+	 * 
+	 * @param map
+	 */
+	private void fixFormBondMinMax(Map<String, Object> map) {
+		Object min = map.get("bondlengthmin");
+		Object max = map.get("bondlength");
+		if (min != null)
+			map.put("minbondlength", min);
+		if (max != null)
+			map.put("maxbondlength", max);
 	}
 
 	/**
@@ -891,6 +966,31 @@ public abstract class IsoApp {
 		controlStatusPanel.setName("controlStatusPanel");
 		controlStatusPanel.setBackground(Color.WHITE);
 		controlPanel = new JPanel();
+		controlPanel.addMouseListener(new MouseListener() {
+
+			@Override
+			public void mouseClicked(MouseEvent e) {
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				takeFocus();
+			}
+			
+		});
+			
 		controlPanel.setName("controlPanel");
 		controlPanel.setBackground(Color.WHITE);
 		controlPanel.setLayout(new GridLayout(2, 1, 0, -5));
@@ -900,14 +1000,43 @@ public abstract class IsoApp {
 		isoPanel = new JPanel(new BorderLayout());
 		isoPanel.setName("isoPanel");
 		if (sliderPanel == null) {
-			sliderPanel = new JPanel();
+			sliderPanel = new JPanel() {
+				
+				
+				boolean configured;
+
+				@Override
+				public void paint(Graphics g) {
+					super.paint(g);
+					if (configured)
+						return;
+					configured = true;
+					/**
+					 * one-time fix for handles on sliders overlapping the pointers.
+					 * 
+					 * @j2sNative
+					 * 
+					 * $(".ui-j2sslider-handle").css({"height":"0.5em","background":"black"});
+					 * 
+					 */
+
+				}
+			};
 			sliderPanel.setName("sliderPanel");
 			sliderPanel.setBackground(Color.WHITE);
 			sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.PAGE_AXIS));
 			// sets grid length equal to number of rows.
 		}
+//		JPanel marginPanel = new JPanel();
+//		marginPanel.setLayout(new BoxLayout(marginPanel, BoxLayout.LINE_AXIS));
+//		marginPanel.add(sliderPanel);
+//		JLabel marginLabel = new JLabel();
+//		marginLabel.setText("helping here!");
+//		marginLabel.setBackground(Color.white);
+//		marginPanel.add(marginLabel);
+//		
 		sliderScrollPane = new JScrollPane(sliderPanel);
-		sliderScrollPane.setBackground(Color.YELLOW);
+		sliderScrollPane.setBackground(Color.white);
 		sliderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		sliderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		isoPanel.add(sliderScrollPane, BorderLayout.EAST);
@@ -923,6 +1052,8 @@ public abstract class IsoApp {
 				addStatus("NOTE: Diffraction is not available for an incommensurately modulated structure");
 		}
 	}
+
+	abstract protected void takeFocus();
 
 	public boolean isStatusVisible() {
 		return statusPanel.isVisible();
@@ -981,8 +1112,6 @@ public abstract class IsoApp {
 	private void openApplication(int appType, byte[] data, Map<String, Object> mapFormData, boolean isDrop) {
 		if (data == null)
 			return;
-		if (!prepareToSwapOut())
-			return;
 		IsoFrame frame = this.frame;
 		SwingUtilities.invokeLater(() -> {
 			new Thread(() -> {
@@ -1033,6 +1162,7 @@ public abstract class IsoApp {
 			app.prepareFrame(frame, oldVariables, isDrop);
 			app.updateDimensions();
 			app.init();
+			app.prepareToSwapIn();
 			frame.finalizeFrame(app);
 			app.addStatus("Time to load: " + (System.currentTimeMillis() - t) + " ms");
 		} catch (Throwable e) {
@@ -1077,6 +1207,8 @@ public abstract class IsoApp {
 	 * 
 	 */
 	abstract protected boolean prepareToSwapOut();
+
+	abstract protected boolean prepareToSwapIn();
 
 	abstract public void recalcCellColors();
 
@@ -1417,6 +1549,7 @@ public abstract class IsoApp {
 	 */
 	public void updateDisplay() {
 		variables.updateSliderPointers();
+		frame.requestFocusInWindow();
 	}
 
 	abstract protected void updateViewOptions();
@@ -1425,10 +1558,7 @@ public abstract class IsoApp {
 		String sliderSetting = "current";
 		if (values != null) {
 			sliderSetting = (String) values.remove("slidersetting");
-			System.out.println(map);
-			System.out.println(values);
 			map.putAll(values);
-			System.out.println(map);
 		}
 		setFormData(map, sliderSetting);
 		setServerFormOriginType(map, originType);
@@ -1472,9 +1602,15 @@ public abstract class IsoApp {
 	 */
 	private int readStartupFile(Object[] args) {
 		this.args = args;
+		String tests;
+		System.out.println("IsoApp.readStartupFile" + Arrays.toString(args));
 		int n = (args == null || args.length == 0 || args[0] == null ? 0 : args.length);
-		if (n > 0 && "-test".equals(args[n - 1])) {
-			testing = true;
+		if (n > 0 && args[n - 1] instanceof String 
+				&& (tests = args[n-1].toString()).startsWith("-")) {
+			if (tests.contains("-test"))
+				testing = true;
+			if (tests.contains("-jmol"))
+				addJmol = true;
 			n--;
 		}
 		switch (n) {
@@ -1482,13 +1618,28 @@ public abstract class IsoApp {
 			document = args[2];
 			// Fall through //
 		case 2:
+			// note this has "bondlength" and "bondlenghmin"
+			
 			formData = args[1]; // String or Map
 			// Fall through //
 		case 1:
-			isovizData = (args[0] instanceof byte[] ? (byte[]) args[0] : args[0].toString().getBytes());
+			if (args[0] instanceof byte[]) {
+				isovizData = (byte[]) args[0];
+			} else {
+				String arg = (String) args[0];
+				if (arg.length() > 500) {
+					// probably distortion or JSON or ISOVIZ data
+					isovizData = arg.getBytes();
+				} else {
+					// try a file name
+					frame.loadingFileName = new File(arg).getName();
+					isovizData = FileUtil.readFileOrResource(this, arg);
+				}
+			}
 			startupDataFile = null;
 			break;
 		default:
+			getExampleFiles(true);
 			isovizData = getExampleFileData(startupDataFile);
 			break;
 		}
@@ -1509,12 +1660,12 @@ public abstract class IsoApp {
 
 	/**
 	 * @param f
-	 * @return
 	 */
 	public void loadFile(File f) {
 		if (f == null)
 			return;
 		frame.loadingFileName = f.getName();
+		System.out.println("IsoApp loading " + f);
 		loadFileData(FileUtil.readFileOrResource(this, f.getAbsolutePath()));
 	}
 
@@ -1546,7 +1697,7 @@ public abstract class IsoApp {
 		}, "isodistort_file_opener").start();
 	}
 
-	public List<String[]> getExampleFiles() {
+	public List<String[]> getExampleFiles(boolean isStartup) {
 		if (exampleFiles == null) {
 			exampleFiles = new ArrayList<String[]>();
 			try {
@@ -1562,17 +1713,24 @@ public abstract class IsoApp {
 					if (!line.contains("="))
 						line = "=" + line;
 					String[] info = line.split("=");
-					if (info[0].length() == 0)
+					switch (info[0]) {
+					case "":
 						info[0] = null;
+						break;
+					case "startup":
+						if (isStartup) {
+							startupDataFile = info[1];
+						}
+						info[0] = "start-up example";
+						break;
+					}
 					exampleFiles.add(info);
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			return exampleFiles;
 		}
-		// TODO Auto-generated method stub
-		return null;
+		return exampleFiles;
 	}
 
 

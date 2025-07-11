@@ -3,7 +3,7 @@ package org.byu.isodistort.local;
 import java.awt.Color;
 import java.util.Random;
 
-import org.byu.isodistort.local.Variables.Atom;
+import org.byu.isodistort.local.Variables.IsoAtom;
 import org.byu.isodistort.local.Variables.SliderPanelGUI.IsoSlider;
 
 /**
@@ -180,7 +180,7 @@ class Mode {
 	void calcDistortion(Variables v, double[][][] max, double[] tempvec, double[][] tempmat, double childFraction) {
 		double[] irrepVals = (v.modes[IRREP] == null ? null : v.modes[IRREP].valuesTM[0]);
 		for (int ia = 0, n = v.nAtoms; ia < n; ia++) {
-			Atom a = v.atoms[ia];
+			IsoAtom a = v.atoms[ia];
 			MathUtil.vecfill(delta, 0);
 			int t = a.type;
 			int s = a.subType;
@@ -291,6 +291,18 @@ class Mode {
 				sliders[t][m].setValue(n);
 			}
 		}
+	}
+	
+	boolean isNonzero(IsoSlider[][] sliders) {
+		if (isActive()) {
+			for (int t = nTypes; --t >= 0;) {
+				for (int m = modesPerType[t]; --m >= 0;) {
+					if (sliders[t][m].getValue() != 0)
+						return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/**

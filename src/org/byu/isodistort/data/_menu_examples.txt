@@ -4,10 +4,9 @@
 #=file 
 #for examples...file
 
-sample DISTORTION File=data/data.iso.txt
-sample ISOVIS File 1=data/data29.isoviz
-sample ISOVIS File 2=data/test25.txt
-incommensurate DISTORTION file=data/tbmno3-distortion.iso.txt
+test01-distortion=data/test01.txt
+test29-ISOVIZ=data/test29.isoviz
+test25-ISOVIZ=data/test25.txt
 large ISOVIZ file=data/ZrP2O7-sg205-sg61-distort.isoviz
 =data/sg227-sg167-example.isoviz
 =data/operations1.isoviz
@@ -24,4 +23,5 @@ large ISOVIZ file=data/ZrP2O7-sg205-sg61-distort.isoviz
 =data/visual_vortexlattice.isoviz
 =data/visual_wo3_RTmono.isoviz
 =data/visual_ymno3_afe.isoviz
+incommensurate DISTORTION file=data/tbmno3-distortion.iso.txt
 online example=https://chemapps.stolaf.edu/isodistort/data29.isoviz

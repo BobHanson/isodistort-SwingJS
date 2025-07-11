@@ -366,12 +366,8 @@ public class FileUtil {
 						// 012345678
 						// !isoversion
 						// !begin distortionFile
-						String tag = new String(data, i + 1, 20);
-						if (tag.equals("begin distortionFile")) {
-							type = FILE_TYPE_DISTORTION_TXT;
-						} else if (tag.startsWith("isoversion")) {
-							type = FILE_TYPE_ISOVIZ;
-						}
+						String tag = new String(data, i, 20);
+						type = checkIsodistortFileTypeString(tag);
 						break;
 					}
 				}
@@ -380,6 +376,19 @@ public class FileUtil {
 			}
 		}
 		return type;
+	}
+
+	private static int checkIsodistortFileTypeString(String tag) {
+		int pt = tag.indexOf("!");
+		if (pt >= 0 && tag.length() >= pt + 11) {
+			switch (tag.substring(pt, pt + 11)) {
+			case "!begin dist":
+				return FILE_TYPE_DISTORTION_TXT;
+			case "!isoversion":
+				return FILE_TYPE_ISOVIZ;
+			}
+		}
+		return FILE_TYPE_UNKNOWN;
 	}
 
 	/**
@@ -535,6 +544,19 @@ public class FileUtil {
 				whenDone.accept(f);
 			}
 		});
+	}
+
+	public static void showUrl(String url) {
+		try {
+			Class<?> c = Class.forName("java.awt.Desktop");
+			Method getDesktop = c.getMethod("getDesktop", new Class[] {});
+			Object deskTop = getDesktop.invoke(null, new Object[] {});
+			Method browse = c.getMethod("browse", new Class[] { URI.class });
+			Object arguments[] = { new URI(url) };
+			browse.invoke(deskTop, arguments);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 }

@@ -11,7 +11,6 @@ import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -27,11 +26,11 @@ import org.byu.isodistort.local.Bspt.CubeIterator;
 import org.byu.isodistort.local.Iso3DApp;
 import org.byu.isodistort.local.MathUtil;
 import org.byu.isodistort.local.Variables;
-import org.byu.isodistort.local.Variables.Atom;
+import org.byu.isodistort.local.Variables.IsoAtom;
 import org.byu.isodistort.render.Geometry;
-import org.byu.isodistort.render.Material;
 // import org.byu.isodistort.render.Matrix;
 import org.byu.isodistort.render.RenderPanel3D;
+import org.byu.isodistort.render.RenderPanel3D.IsoMaterial;
 
 /**
  * 
@@ -46,11 +45,10 @@ import org.byu.isodistort.render.RenderPanel3D;
  * @author Bob Hanson(mostly just refactoring)
  *
  */
-public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
+public class IsoDistortApp extends Iso3DApp implements Runnable {
 
 	private RenderPanel3D rp3;
 	
-
 	/**
 	 * initial value for indicating time required from loading to rendering.
 	 */
@@ -68,7 +66,9 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	 * cylinders for the parent and child cell.
 	 * 
 	 */
-	private Geometry atomObjects, bondObjects;
+	private Geometry atomObjects;
+
+	protected Geometry bondObjects;
 	
 	private Geometry[] cellObjects = new Geometry[2], axisObjects = new Geometry[2];
 
@@ -76,33 +76,43 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	 * Materials for coloring bonds and cells.
 	 * 
 	 */
-	private Material bondMaterial, parentCellMaterial, childCellMaterial, aAxisMaterial, bAxisMaterial,
+	private IsoMaterial bondMaterial, parentCellMaterial, childCellMaterial, aAxisMaterial, bAxisMaterial,
 			cAxisMaterial;
 
 	/**
 	 * Array of materials for coloring atoms[type][subtype][regular,highlighted]
 	 * 
 	 */
-	private Material[][] subMaterial;
+	protected IsoMaterial[][] subMaterial;
 
 	/**
 	 * a BitSet indictating true (bit==1) for bond enabled; false (bit==0) for
 	 * disabled
 	 */
-	private BitSet bsBondsEnabled;
+	protected BitSet bsBondsEnabled;
+
+	protected Iso3DApp fromApp;
 
 	public IsoDistortApp() {
 		super(APP_ISODISTORT);
 	}
 
+	//////////////// initialize ///////////////////
+	
+	/**
+	 * once-run, from AsoApp.startApp
+	 */
 	@Override
 	protected void init() {
-		setRenderPanel(rp3 = new RenderPanel3D(this));
+		fromApp = frame.from3DApp;
+		rp = rp3 = new RenderPanel3D(this);
 		drawPanel.removeAll();
-		drawPanel.add((JPanel) rp3);
-		rp3.addKeyListener(this);
+		drawPanel.add((JPanel) rp);
+		initWorld(rp3.getWorld());
+	}
+
+	protected void initWorld(Geometry world) {
 		initMaterials();
-		Geometry world = rp3.getWorld();
 		atomObjects = world.add();
 		bondObjects = world.add();
 		cellObjects[0] = world.add();
@@ -110,30 +120,21 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		axisObjects[0] = world.add();
 		axisObjects[1] = world.add();
 		
+		variables.initCellsAndAxes();
 		double modelRadius = initFieldOfView();
 		initAtoms(modelRadius);
 		initBonds();
 		initCells();
 		initAxes();
-		buildControls();
-		enableSelectedObjects();
-		recalcMaterials();
+		initControls();
+		updateGUI();
+		updateSelectedObjects();
+		updateAtomColors();
 	}
 
-	@Override
-	protected void enableSelectedObjects() {
-		atomObjects.setEnabled(showAtoms);
-		apBox.setEnabled(variables.isPrimitive(-1));
-		cellObjects[0].setEnabled(showParentCell);
-		cellObjects[1].setEnabled(showChildCell);
-		bondObjects.setEnabled(showBonds);
-		axisObjects[0].setEnabled(showAxes && (showParentCell || !showChildCell));
-		axisObjects[1].setEnabled(showAxes && (showChildCell || !showParentCell));
-	}
-
-	private void initAtoms(double modelRadius) {
+	protected void initAtoms(double modelRadius) {
 		// Adjustable resolution based on field of view
-		rp3.initializeSettings(modelRadius);
+		rp.initializeSettings(modelRadius);
 		showAtoms = showAtoms0;
 		int n = variables.nAtoms;
 		atomObjects.clear(0);
@@ -141,8 +142,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		addStatus("atom shape resolution set to " + res);
 		for (int ia = 0; ia < n; ia++) {
 			atomObjects.add();
-			Atom a = variables.atoms[ia];
-			Material m = subMaterial[a.type][a.subType];
+			IsoAtom a = variables.atoms[ia];
+			IsoMaterial m = subMaterial[a.type][a.subType];
 			// [MAG,ROT,ELL]
 			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m); // MAG - 2
 			atomObjects.child(ia).add().arrow(numArrowSides).setMaterial(m); // ROT - 2
@@ -163,13 +164,6 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 			for (int b = 0; b < n; b++)
 				addBondObject("bond_" + b);
 		}
-	}
-
-	/**
-	 * For dynamic addition of bonds by variables using the Binary
-	 */
-	public void addBondObject(String name) {
-		bondObjects.add().tube(numBondSides).setMaterial(bondMaterial).setName(name);
 	}
 
 	/**
@@ -203,6 +197,10 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		axisObjects[1].add().arrow(numArrowSides).setMaterial(cAxisMaterial);
 	}
 
+	protected IsoMaterial newMaterial() {
+		return (IsoMaterial) rp3.newMaterial();
+	}
+
 	/**
 	 * initMaterials instantiates an array of colors for the atoms. These methods
 	 * are from the render package
@@ -213,83 +211,92 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		// note that this color is also in Variable.GUI.COLOR_PARENT_CELL
 		// child cell slightly blue
 		// note that this color is also in Variable.GUI.COLOR_CHILD_CELL
-		parentCellMaterial = rp3.newMaterial().setColor(.8, .5, .5, 1.5, 1.5, 1.5, 20, .30, .30, .30);
-		childCellMaterial = rp3.newMaterial().setColor(.5, .5, .8, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+		parentCellMaterial = (IsoMaterial) newMaterial().setColor(.8, .5, .5, 1.5, 1.5, 1.5, 20, .30, .30, .30);
+		childCellMaterial = (IsoMaterial) newMaterial().setColor(.5, .5, .8, 1.5, 1.5, 1.5, 20, .30, .30, .30);
 		// bonds are black
-		bondMaterial = rp3.newMaterial().setGrayScale(0.2, 0.2, 20, 0.2);
+		bondMaterial = (IsoMaterial) newMaterial().setGrayScale(0.2, 0.2, 20, 0.2);
 		
-		// a axis is black, b is gray, c is in between
-		aAxisMaterial = rp3.newMaterial().setDiffuse(1, 0, 0);//.setGrayScale(0.0, 0.2, 20, 0.2);
-		bAxisMaterial = rp3.newMaterial().setDiffuse(0,1,0);//.setGrayScale(0.5, 0.2, 20, 0.2);
-		cAxisMaterial = rp3.newMaterial().setDiffuse(0, 0, 1);//.setGrayScale(0.25,0.2, 20, 0.2);
+		aAxisMaterial = (IsoMaterial) newMaterial().setColor(Color.RED);
+		bAxisMaterial = (IsoMaterial) newMaterial().setColor(Color.GREEN);
+		cAxisMaterial = (IsoMaterial) newMaterial().setColor(Color.BLUE);
 		
-		subMaterial = new Material[variables.nTypes][];
+		subMaterial = new IsoMaterial[variables.nTypes][];
 
 		// Create the subMaterial array;
 		for (int t = 0, nt = variables.nTypes; t < nt; t++) {
-			subMaterial[t] = new Material[variables.nSubTypes[t]];
+			subMaterial[t] = new IsoMaterial[variables.nSubTypes[t]];
 			for (int s = 0, nst = variables.nSubTypes[t]; s < nst; s++)// iterate over number-of-subtypes
-				subMaterial[t][s] = rp3.newMaterial();
+				subMaterial[t][s] = newMaterial();
 		}
 	}
 
-	private static final int VIEW_TYPE_CHILD_HKL = 1;
-	private static final int VIEW_TYPE_CHILD_UVW = 2;
-	private static final int VIEW_TYPE_PARENT_HKL = 3;
-	private static final int VIEW_TYPE_PARENT_UVW = 4;
+	/**
+	 * creates the components of the control panel
+	 * 
+	 */
+	protected void initControls() {
 
-	@Override
-	protected void renderCells() {
-		double r = variables.atomMaxRadius * cellMultiplier;
-		for (int i = 0; i < 12; i++) {
-			transformCylinder(r, variables.parentCell.getCellInfo(i), cellObjects[0].child(i));
-		}
-		for (int i = 0; i < 12; i++) {
-			transformCylinder(r, variables.childCell.getCellInfo(i), cellObjects[1].child(i));
-		}
-	}
+		aBox = newJCheckBox("Atoms", showAtoms);
+		apBox = newJCheckBox("Primitive Only", showPrimitiveAtoms);
+		apBox.setVisible(showPrimitiveBox);
+		bBox = newJCheckBox("Bonds", showBonds);
+		cpBox = newJCheckBox("Parent Cell", showParentCell);
+		ccBox = newJCheckBox("Child Cell", showChildCell);
+		axesBox = newJCheckBox("Axes", showAxes);
+		animBox = newJCheckBox("Animate", false);
+		spinBox = newJCheckBox("Spin", false);
 
-	@Override
-	protected void renderAxes() {
-		double rParent = variables.atomMaxRadius * axesMultipliers[0];
-		double rChild = variables.atomMaxRadius * axesMultipliers[1];
-		for (int i = 0; i < 3; i++) {
-			transformCylinder(rParent, variables.parentCell.getAxisInfo(i), axisObjects[0].child(i));
-			transformCylinder(rChild, variables.childCell.getAxisInfo(i), axisObjects[1].child(i));
-		}
-	}
+//		ButtonGroup xyzButtons = new ButtonGroup();
+//		nButton = newRadioButton("Normal", true, xyzButtons);
+//		xButton = newRadioButton("Xrot", false, xyzButtons);
+//		yButton = newRadioButton("Yrot", false, xyzButtons);
+//		zButton = newRadioButton("Zrot", false, xyzButtons);
+//		zoomButton = newRadioButton("Zoom", false, xyzButtons);
 
-	@Override
-	protected void renderAtoms() {
-		for (int i = 0, n = variables.nAtoms; i < n; i++) {
-			double[][] info = variables.getAtomInfo(i);
-			Geometry a = atomObjects.child(i);
-			a.setEnabled(!showPrimitiveAtoms || variables.isPrimitive(i));
-			renderScaledAtom(a, info[DIS], info[OCC][0] * variables.atomMaxRadius);
-			renderArrow(a.child(MAG - 2), info[MAG], momentMultiplier, variables.angstromsPerMagneton);
-			renderArrow(a.child(ROT - 2), info[ROT], rotationMultiplier, variables.angstromsPerRadian);
-			renderEllipsoid(a.child(ELL - 2), info[ELL], 1 / Math.sqrt(variables.defaultUiso));
-		}
-	}
+		viewType = VIEW_TYPE_CHILD_HKL;
 
-	@Override
-	protected void renderBonds() {
-		double r = Math.max(variables.atomMaxRadius * bondMultiplier, 0.05);
-		for (int b = bsBondsEnabled.nextSetBit(0); b >= 0; b = bsBondsEnabled.nextSetBit(b + 1)) {
-			transformCylinder(r, bondInfo[b], bondObjects.child(b));
-		}
-	}
+		ButtonGroup cellButtons = new ButtonGroup();
+		childHKL = newRadioButton("SupHKL", true, cellButtons);
+		childUVW = newRadioButton("SupUVW", false, cellButtons);
+		parentHKL = newRadioButton("ParHKL", false, cellButtons);
+		parentUVW = newRadioButton("ParUVW", false, cellButtons);
+		uView = newTextField("0", -10);
+		vView = newTextField("0", -10);
+		wView = newTextField("1", -10);
+		JPanel top = new JPanel();
+		top.setBackground(Color.WHITE);
+//		top.add(nButton);
+//		top.add(xButton);
+//		top.add(yButton);
+//		top.add(zButton);
+//		top.add(zoomButton);
+		top.add(new JLabel("       "));
+		top.add(aBox);
+		top.add(apBox);
+		top.add(bBox);
+		top.add(cpBox);
+		top.add(ccBox);
+		top.add(axesBox);
+		top.add(spinBox);
+		top.add(animBox);
 
-	private void transformCylinder(double r, double[] info, Geometry child) {
-		rp3.push();
-		{
-			rp3.translate(info);
-			rp3.rotateY(info[Variables.RY]);
-			rp3.rotateX(info[Variables.RX]);
-			rp3.scale(r, r, info[Variables.L_2]);
-			rp3.transform(child);
-		}
-		rp3.pop();
+		addTopButtons(top);
+
+		JPanel bottom = new JPanel();
+		bottom.setBackground(Color.WHITE);
+		bottom.add(childHKL);
+		bottom.add(childUVW);
+		bottom.add(parentHKL);
+		bottom.add(parentUVW);
+		bottom.add(new JLabel("          Direction: "));
+		bottom.add(uView);
+		bottom.add(vView);
+		bottom.add(wView);
+
+		addBottomButtons(bottom);
+
+		controlPanel.add(top);
+		controlPanel.add(bottom);
 	}
 
 	private void renderScaledAtom(Geometry child, double[] xyz, double r) {
@@ -321,7 +328,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		{
 			rp3.rotateY(info[1]);// y-angle orientation of arrow number q
 			rp3.rotateX(info[0]);// x-angle orientation of arrow number q
-			rp3.scale(r, r, 0.62 + info[2] * scale);
+			rp3.scale(r, r, ARROW_MIN_LENGTH + info[2] * scale);
 			// BH TODO may be true for standard ball size, but...
 			// The factor of 0.62 hides the zero-length moments
 			// just inside the surface of the spheres.
@@ -331,7 +338,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	}
 
 	@Override
-	protected void checkBonding() {
+	protected void updateBonding() {
 		if (bondInfo == null)
 			bondInfo = new double[64][];
 		bsBondsEnabled.clear();
@@ -344,7 +351,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		double rMin2 = rMin * rMin;
 		double minBondOcc = variables.minBondOcc;
 		for (int a1 = 0, n = variables.nAtoms; a1 < n; a1++) {
-			Atom a = variables.getAtom(a1);
+			IsoAtom a = variables.getAtom(a1);
 			if (a.getOccupancy() < minBondOcc || showPrimitiveAtoms && !variables.isPrimitive(a1))
 				continue;
 			double[] center = a.getCartesianCoord();
@@ -354,7 +361,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 				// we store the atom index in the "coordinate" of the atom as the fourth element
 				// of that array.
 				int a2 = (int) iterator.next()[3];
-				Atom b = variables.getAtom(a2);
+				IsoAtom b = variables.getAtom(a2);
 				double d2;
 				if (a2 <= a1 || 
 						(d2 = iterator.foundDistance2()) < 0.000000000001 
@@ -375,6 +382,14 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 			}
 		}
 	}
+	
+	/**
+	 * For dynamic addition of bonds by variables using the Binary
+	 */
+	public void addBondObject(String name) {
+		bondObjects.add().tube(numBondSides).setMaterial(bondMaterial).setName(name);
+	}
+
 	
 	/**
 	 * Total number of bonds
@@ -438,7 +453,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	}
 
 	@Override
-	protected void recalcAtomColors() {
+	protected void updateAtomColors() {
 		double[] rgb = new double[3];
 		for (int t = variables.nTypes; --t >= 0;) {
 			variables.getColors(t, rgb);
@@ -457,12 +472,6 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	}
 
 	/**
-	 * The hkl or uvw view direction indices in lattice coordinates
-	 */
-	private double[] viewIndices = new double[3];
-
-
-	/**
 	 * Not really of any interest if it is just atoms in the unit cell and not 
 	 * actually a primitive atom set.
 	 */
@@ -472,18 +481,19 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	 * resets the viewing direction without changing anything else
 	 */
 	void resetViewDirection(int type) {
-		if (type >= 0)
-			viewType = type;
 		/**
 		 * The view direction in cartesian coordinates
 		 */
 		double[] viewDir = new double[3];
 
-		viewIndices[0] = getText(uView, viewIndices[0], 2);
-		viewIndices[1] = getText(vView, viewIndices[1], 2);
-		viewIndices[2] = getText(wView, viewIndices[2], 2);
+		double[] viewIndices = variables.getViewIndices();
+		viewIndices[0] = getTextValue(uView, viewIndices[0], 2);
+		viewIndices[1] = getTextValue(vView, viewIndices[1], 2);
+		viewIndices[2] = getTextValue(wView, viewIndices[2], 2);
 
 		double[][] tempmat = null;
+		if (type >= 0)
+			viewType = type;
 		switch (viewType) {
 		case VIEW_TYPE_CHILD_UVW:
 			tempmat = variables.childCell.basisCart;
@@ -494,6 +504,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		case VIEW_TYPE_CHILD_HKL:
 			tempmat = variables.childCell.getTempTransposedReciprocalBasis();
 			break;
+		default:
 		case VIEW_TYPE_PARENT_HKL:
 			tempmat = variables.parentCell.getTempTransposedReciprocalBasis();
 			break;
@@ -502,23 +513,27 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		double l2 = MathUtil.lenSq3(viewDir);
 		if (l2 > 0.000000000001) {
 			MathUtil.norm3(viewDir);
-			double xV = viewDir[0];
-			double yV = viewDir[1];
-			double zV = viewDir[2];
-			double phi = Math.asin(yV);
-			double theta = (Math.abs(Math.cos(phi)) < 0.000001 ? 0
-					: Math.abs(zV) < 0.000001 ? -Math.PI / 2 * (xV / Math.abs(xV)) 
-					: -Math.atan2(xV, zV));
-			rp3.clearAngles();
-			rp3.setCamera(theta, phi);
-			updateDisplay();
+			setViewDir(viewDir);
+			centerImage();
 		}
+	}
+
+	protected void setViewDir(double[] viewDir) {
+		double xV = viewDir[0];
+		double yV = viewDir[1];
+		double zV = viewDir[2];
+		double phi = Math.asin(yV);
+		double theta = (Math.abs(Math.cos(phi)) < 0.000001 ? 0
+				: Math.abs(zV) < 0.000001 ? -Math.PI / 2 * (xV / Math.abs(xV)) 
+				: -Math.atan2(xV, zV));
+		rp3.clearAngles();
+		double sigma = 0;
+		rp3.setCamera(theta, phi, sigma);
 	}
 
 	@Override
 	protected void dispose() {
 		if (rp3 != null) {
-			rp3.removeKeyListener(this);
 			rp3.dispose();
 			rp3 = null;
 		}
@@ -527,31 +542,44 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 	@Override
 	public void keyPressed(KeyEvent e) {
-	}
-
-	@Override
-	public void keyReleased(KeyEvent e) {
+		rp.keyPressed(e);
 	}
 
 	@Override
 	public void keyTyped(KeyEvent e) {
+		System.out.println(e);
 		switch (e.getKeyChar()) {
 		case 'r':
 		case 'R':
 			reset();
 			break;
-		case 'n':
-		case 'N':
-			// BH Q: Why would one ever want to do this?
-			rp3.reversePanningAction();
-			updateDisplay();
-			break;
+		case 'x':
+		case 'X':
+		case 'y':
+		case 'Y':
+		case 'Z':
+		case 'z':
+			// handled by keyPress
+			return;
 		case 'c':
 		case 'C':
 			centerImage();
 			updateDisplay();
-			break;
-		default:
+			return;
+		}
+		variables.keyTyped(e);
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+		System.out.println(e);
+		rp.keyReleased(e);
+		char ch = e.getKeyChar();
+		if (rp.ignoreKeyRelease(ch))
+			return;
+		switch (ch) {
+		case 'z':
+		case 'Z':
 			variables.keyTyped(e);
 			break;
 		}
@@ -559,8 +587,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 
 	@Override
 	public void reset() {
-		rp3.clearAngles();
-		rp3.resetView();
+		rp.clearAngles();
+		rp.resetView();
 		centerImage();
 		animPhase = Math.PI / 2;
 		animAmp = 1;
@@ -592,14 +620,14 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	}
 
 	@Override
-	public void centerImage() {
-		rp3.centerImage();
+	final public void centerImage() {
+		rp.centerImage();
 		updateDisplay();
 	}
 
 	@Override
 	public BufferedImage getImage() {
-		return rp3.getImage();
+		return rp.getImage();
 	}
 
 	@Override
@@ -632,8 +660,8 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		boolean spin = spinBox.isSelected();
 		isAnimateSelected = animBox.isSelected();
 		colorBox.setVisible(variables.needColorBox);
-		isMaterialTainted = true;
-		rp3.setSpinning(spin);
+		isAtomColorChanged = true;
+		rp.setSpinning(spin);
 		if (isAnimateSelected || spin) {
 			start();
 		} else {
@@ -642,74 +670,73 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		}
 	}
 
-	/**
-	 * creates the components of the control panel
-	 * 
-	 */
-	private void buildControls() {
+	//////////// update display from changes ///////////
+	
+	@Override
+	protected void updateSelectedObjects() {
+		apBox.setEnabled(variables.isPrimitive(-1));
+		atomObjects.setEnabled(showAtoms);
+		cellObjects[0].setEnabled(showParentCell);
+		cellObjects[1].setEnabled(showChildCell);
+		bondObjects.setEnabled(showBonds);
+		axisObjects[0].setEnabled(showAxes && (showParentCell || !showChildCell));
+		axisObjects[1].setEnabled(showAxes && (showChildCell || !showParentCell));
+	}
 
-		aBox = newJCheckBox("Atoms", showAtoms);
-		apBox = newJCheckBox("Primitive Only", showPrimitiveAtoms);
-		apBox.setVisible(showPrimitiveBox );
-		bBox = newJCheckBox("Bonds", showBonds);
-		cpBox = newJCheckBox("Parent Cell", showParentCell);
-		ccBox = newJCheckBox("Child Cell", showChildCell);
-		axesBox = newJCheckBox("Axes", showAxes);
-		animBox = newJCheckBox("Animate", false);
-		spinBox = newJCheckBox("Spin", false);
+	protected static final int VIEW_TYPE_CHILD_HKL = 1;
+	protected static final int VIEW_TYPE_CHILD_UVW = 2;
+	protected static final int VIEW_TYPE_PARENT_HKL = 3;
+	protected static final int VIEW_TYPE_PARENT_UVW = 4;
 
-//		ButtonGroup xyzButtons = new ButtonGroup();
-//		nButton = newRadioButton("Normal", true, xyzButtons);
-//		xButton = newRadioButton("Xrot", false, xyzButtons);
-//		yButton = newRadioButton("Yrot", false, xyzButtons);
-//		zButton = newRadioButton("Zrot", false, xyzButtons);
-//		zoomButton = newRadioButton("Zoom", false, xyzButtons);
+	@Override
+	protected void updateCells() {
+		for (int i = 0; i < 12; i++) {
+			transformCylinder(CELL_RADIUS, variables.parentCell.getCellInfo(i), cellObjects[0].child(i));
+		}
+		for (int i = 0; i < 12; i++) {
+			transformCylinder(CELL_RADIUS, variables.childCell.getCellInfo(i), cellObjects[1].child(i));
+		}
+	}
 
-		viewType = VIEW_TYPE_CHILD_HKL;
+	@Override
+	protected void updateAxes() {
+		for (int i = 0; i < 3; i++) {
+			transformCylinder(AXIS_RADII[PARENT], variables.parentCell.getAxisInfo(i), axisObjects[0].child(i));
+			transformCylinder(AXIS_RADII[CHILD], variables.childCell.getAxisInfo(i), axisObjects[1].child(i));
+		}
+	}
 
-		ButtonGroup cellButtons = new ButtonGroup();
-		childHKL = newRadioButton("SupHKL", true, cellButtons);
-		childUVW = newRadioButton("SupUVW", false, cellButtons);
-		parentHKL = newRadioButton("ParHKL", false, cellButtons);
-		parentUVW = newRadioButton("ParUVW", false, cellButtons);
-		uView = newTextField("0", -10);
-		vView = newTextField("0", -10);
-		wView = newTextField("1", -10);
+	@Override
+	protected void updateAtoms() {
+		for (int i = 0, n = variables.nAtoms; i < n; i++) {
+			double[][] info = variables.getAtomInfo(i);
+			boolean isEnabled = !showPrimitiveAtoms || variables.isPrimitive(i);
+			Geometry a = atomObjects.child(i);
+			a.setEnabled(isEnabled);
+			renderScaledAtom(a, info[DIS], info[OCC][0] * variables.atomMaxRadius);
+			renderArrow(a.child(MAG - 2), info[MAG], MOMENT_FACTOR, variables.angstromsPerMagneton);
+			renderArrow(a.child(ROT - 2), info[ROT], ROTATION_FACTOR, variables.angstromsPerRadian);
+			renderEllipsoid(a.child(ELL - 2), info[ELL], 1 / Math.sqrt(variables.defaultUiso));
+		}
+	}
 
-		JPanel top = new JPanel();
-		top.setBackground(Color.WHITE);
-//		top.add(nButton);
-//		top.add(xButton);
-//		top.add(yButton);
-//		top.add(zButton);
-//		top.add(zoomButton);
-		top.add(new JLabel("       "));
-		top.add(aBox);
-		top.add(apBox);
-		top.add(bBox);
-		top.add(cpBox);
-		top.add(ccBox);
-		top.add(axesBox);
-		top.add(spinBox);
-		top.add(animBox);
+	@Override
+	protected void updateBonds() {
+		for (int b = bsBondsEnabled.nextSetBit(0); b >= 0; b = bsBondsEnabled.nextSetBit(b + 1)) {
+			transformCylinder(BOND_RADIUS, bondInfo[b], bondObjects.child(b));
+		}
+	}
 
-		addTopButtons(top);
-
-		JPanel bottom = new JPanel();
-		bottom.setBackground(Color.WHITE);
-		bottom.add(childHKL);
-		bottom.add(childUVW);
-		bottom.add(parentHKL);
-		bottom.add(parentUVW);
-		bottom.add(new JLabel("          Direction: "));
-		bottom.add(uView);
-		bottom.add(vView);
-		bottom.add(wView);
-
-		addBottomButtons(bottom);
-
-		controlPanel.add(top);
-		controlPanel.add(bottom);
+	private void transformCylinder(double r, double[] info, Geometry child) {
+		rp3.push();
+		{
+			rp3.translate(info);
+			rp3.rotateY(info[Variables.RY]);
+			rp3.rotateX(info[Variables.RX]);
+			rp3.scale(r, r, info[Variables.L_2]);
+			rp3.transform(child);
+		}
+		rp3.pop();
 	}
 
 	@Override
@@ -785,10 +812,23 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 	}
 
 	@Override
+	protected boolean prepareToSwapIn() {
+		double[] cameraMatrix = frame.cameraMatrix;
+		if (cameraMatrix != null) {
+			rp.setCameraMatrixAndZoom(cameraMatrix, frame.zoom);
+		}
+		return true;
+	}
+
+	@Override
 	protected boolean prepareToSwapOut() {
 		isAnimateSelected = false;
-		if (rp3 != null) // could be blank window
-			rp3.setSpinning(false);
+		if (rp != null) {
+			// could be blank window
+			rp.setSpinning(false); 
+			frame.cameraMatrix = rp.getCameraMatrix();
+			frame.zoom = rp.getZoom();
+		}
 		return true;
 	}
 
@@ -796,5 +836,9 @@ public class IsoDistortApp extends Iso3DApp implements Runnable, KeyListener {
 		create("IsoDistort", args);
 	}
 
+	@Override
+	protected void takeFocus() {
+		rp3.requestFocusInWindow();
+	}
 
 }

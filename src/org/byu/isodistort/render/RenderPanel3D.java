@@ -10,6 +10,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 
@@ -135,6 +136,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 		adapter = new Adapter();
 		addKeyListener(app.frame.keyListener);
 		addMouseListener(adapter);
+		addMouseWheelListener(adapter);
 		addMouseMotionListener(adapter);
 		initialize();
 	}
@@ -528,6 +530,11 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	private class Adapter extends MouseAdapter {
 	
 
+	    @Override
+		public void mouseWheelMoved(MouseWheelEvent e){
+	    	doMouseWheel(e.getPreciseWheelRotation());
+	    }
+	    
 		@Override
 		public void mouseMoved(MouseEvent e) {
 			if (mouseMoveActive) {
@@ -571,6 +578,13 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 			return false;
 		rotAxis = mode;
 		return true;
+	}
+
+	public void doMouseWheel(double d) {
+    	double fov = renderer.getFOV();
+    	double newfov = fov * (1 + d * 0.1);
+		setFOV(newfov);
+		app.updateDisplay();
 	}
 
 	private boolean dragging = false;

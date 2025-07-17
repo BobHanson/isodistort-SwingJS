@@ -36,6 +36,11 @@ import org.byu.isodistort.local.Iso3DApp.IsoRenderPanel;
 
 public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
+	/**
+	 * Just testing to see if it is ok to use Jmol zoom direction
+	 */
+	private static boolean useJmolZoomDirection = true;
+	
 	public static class IsoMaterial extends Material {
 
 		public IsoMaterial(Renderer renderer) {
@@ -569,7 +574,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	}
 
 	private boolean dragging = false;
-	
+
 	public void doMouseDragged(MouseEvent e, boolean isMove) {
 		if (rotAxis == ROTATE_Z)
 			zRotated = true;
@@ -588,6 +593,8 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 				spinrate = 0.0003;
 			else
 				spinrate = 0.006;
+			
+			System.out.println("R3d mouse " + dragging);
 			if (dragging) {
 				switch (rotAxis) {
 				case ROTATE_XYZ:
@@ -612,7 +619,12 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 							/ (double) (1 + Math.sqrt((256 - x) * (256 - x) + (256 - y) * (256 - y)));
 					break;
 				case ROTATE_ZOOM:
-					setFOV(renderer.getFOV() * (1 + (y - my) * 0.004));
+					// BH I reversed the sense of the zoom. Just testing!
+					if (useJmolZoomDirection ) {
+						setFOV(renderer.getFOV() * (1 + (my - y) * 0.004));
+					} else {
+						setFOV(renderer.getFOV() * (1 + (y - my) * 0.004));
+					}
 					// y-direction motion changes field of view (zoom).
 					// -David Tanner
 					phi = 0;
@@ -661,7 +673,6 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	protected void doMousePressed(MouseEvent e, boolean isMove) {
 		int x = e.getX();
 		int y = e.getY();
-		dragging = true;
 		mx = x;
 		my = y;
 		app.setStatusVisible(false);
@@ -671,6 +682,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 			setRotationAxis(ROTATE_ZOOM);
 			isMouseZooming = true;
 		}
+		dragging = true;
 	}
 
 

@@ -582,7 +582,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 
 	public void doMouseWheel(double d) {
     	double fov = renderer.getFOV();
-    	double newfov = fov * (1 + d * 0.1);
+    	double newfov = fov * (1 - d * 0.1);
 		setFOV(newfov);
 		app.updateDisplay();
 	}

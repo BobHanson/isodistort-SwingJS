@@ -1702,8 +1702,6 @@ public abstract class IsoApp implements KeyListener {
 			exampleFiles = new ArrayList<String[]>();
 			try {
 				String files = new String(FileUtil.readFileOrResource(this, "data/_menu_examples.txt"));
-				if (files != null) {
-				}
 				BufferedReader br = new BufferedReader(new StringReader(files));
 				String line;
 				while ((line = br.readLine()) != null) {
@@ -1712,6 +1710,7 @@ public abstract class IsoApp implements KeyListener {
 						continue;
 					if (!line.contains("="))
 						line = "=" + line;
+					System.out.println("getExampleFiles " + line);
 					String[] info = line.split("=");
 					switch (info[0]) {
 					case "":

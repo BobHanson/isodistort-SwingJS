@@ -1422,6 +1422,7 @@ public class Variables {
 				for (int i = 0; i < ncol; i++) {
 					data[i] = (isDefault ? def : vt.getDouble(pt + i));
 				}
+				System.out.println("readData " + (ia-1) + Arrays.toString(data));
 			}
 			return true;
 		}
@@ -1893,6 +1894,8 @@ public class Variables {
 				// no reason to believe this would be XX or xx, but
 				// this guarantees Xx for Elements.getScatteringFactor.
 				String s = vt.getString(3 * i + 2);
+				if (s.length() > 1 && Character.isDigit(s.charAt(1))) // "O2-"
+					s = s.substring(0, 1);
 				atomTypeSymbol[i] = s.substring(0, 1).toUpperCase()
 						+ (s.length() == 1 ? "" : s.substring(1, 2).toLowerCase());
 			}

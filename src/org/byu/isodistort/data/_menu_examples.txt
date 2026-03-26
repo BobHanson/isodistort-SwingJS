@@ -8,6 +8,7 @@ test01-distortion=data/test01.txt
 test29-ISOVIZ=data/test29.isoviz
 test25-ISOVIZ=data/test25.txt
 large ISOVIZ file=data/ZrP2O7-sg205-sg61-distort.isoviz
+=data/ISOTEST_bug180_MoTe2.isoviz
 =data/sg227-sg167-example.isoviz
 =data/operations1.isoviz
 =data/visual_bccspiral.isoviz

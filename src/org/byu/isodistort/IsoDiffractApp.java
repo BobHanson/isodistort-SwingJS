@@ -58,7 +58,16 @@ import javajs.util.PT;
 
 public class IsoDiffractApp extends IsoApp {
 
-	
+	// TODO
+	// BH 2026.03.26 properly account for magnetic type 4 vi issues
+	// BH 2026.03.26 peaks just out of range are ignored even if they tail into frame
+	// DONE
+	// BH 2026.03.26 display not seen even if peaks are present
+	//     setPowderScaleFactor() too early; needed to be moved to after calculation
+	// BH 2026.03.26 O-displacive X3- and GM4- modes do not affect the power pattern at all in either x-ray or neutron mode.
+    //     was "O2-" in IsoVIS file read as "O2" intead of "O"  
+	// BH 2026.03.26 direction cannot be set during animation
+
 	protected static boolean usePrimitiveAssignmentMethod = false;
 
 
@@ -78,7 +87,7 @@ public class IsoDiffractApp extends IsoApp {
 		/**
 		 * childHKL contained within the display
 		 */
-		private double[] crystalPeakHKL = new double[3];
+		private double[] childPeakHKL = new double[3];
 		
 		/**
 		 * parentHKL contained within the display
@@ -122,6 +131,13 @@ public class IsoDiffractApp extends IsoApp {
 		double peakIntensity;
 		
 		/**
+		 * not a systematic absences
+		 * 
+		 */
+		
+		boolean isVisible;
+		
+		/**
 		 * peak type/color (1-4)
 		 */
 		protected int peakType;
@@ -131,11 +147,17 @@ public class IsoDiffractApp extends IsoApp {
 		protected void setPeakType(int peakType, SymopData op) {
 			this.peakType = peakType;
 			this.op = op;
+			switch (peakType) {
+			case PEAK_TYPE_CHILD_BRAGG:
+			case PEAK_TYPE_PARENT_BRAGG:
+			case PEAK_TYPE_PARENT_SYSABS:
+				isVisible = true;
+			}				
 		}
 
 		public void updateDinverse(double[][] metric, double[] t3) {
-			MathUtil.mat3mul(metric, crystalPeakHKL, t3);
-			peakDInv = MathUtil.dot3Length(crystalPeakHKL, t3);
+			MathUtil.mat3mul(metric, childPeakHKL, t3);
+			peakDInv = MathUtil.dot3Length(childPeakHKL, t3);
 		}
 
 		/**
@@ -147,10 +169,10 @@ public class IsoDiffractApp extends IsoApp {
 		 */
 		public void setPeakHKLStrings(double[][] mat) {
 				if (crystalPeakHKLString == null) {
-					crystalPeakHKLString = MathUtil.roundVec00(crystalPeakHKL);
+					crystalPeakHKLString = MathUtil.roundVec00(childPeakHKL);
 				}
 				if (parentPeakHKLString == null) {
-					MathUtil.mat3mul(mat, crystalPeakHKL, parentPeakHKL);
+					MathUtil.mat3mul(mat, childPeakHKL, parentPeakHKL);
 					parentPeakHKLString = MathUtil.roundVec00(parentPeakHKL);
 			    }
 		}
@@ -292,15 +314,15 @@ public class IsoDiffractApp extends IsoApp {
 	/**
 	 * Maximum number of diffraction peaks and tick marks in the display
 	 */
-	private int maxPeaks = 1000;
+	private final static int maxPeaks = 1000;
 	
-	private int powderMaxVisiblePeaks = 200;
+	private final static int powderMaxVisiblePeaks = 200;
 
-	private int maxTicks = 100;
+	private final static int maxTicks = 100;
 	/**
 	 * Axis & tick line thickness, tick length
 	 */
-	private double lineThickness = 2, normalTickLength = 10;
+	private final double lineThickness = 2, normalTickLength = 10;
 	/**
 	 * Heights of powder display components
 	 */
@@ -519,7 +541,7 @@ public class IsoDiffractApp extends IsoApp {
 	public synchronized void updateDisplay() {
 		if (isAdjusting || drawHeight < 20 || variables == null)
 			return;
-		if (needsRecalc || variables.isChanged) {
+		if (true || needsRecalc || variables.isChanged) {
 			isAdjusting = true;
 			variables.readSliders();
 			variables.enableSubtypeSelection(allowSubtypeSelection);//  && (isBoth || isPowder));
@@ -830,28 +852,36 @@ public class IsoDiffractApp extends IsoApp {
 		if (isXray) {
 			zzzM = pppM = null;
 		} else {
-			zzzM = new double[3]; 
+			zzzM = new double[3];
 			pppM = new double[3];
 		}
 		double[] qhat = new double[3], supxyz = new double[3];
+		boolean isOrigin = false;
 
 		for (int p = 0; p < peakCount; p++) {
 			PeakData pd = peakData[p];
+			pd.peakIntensity = 0;
+			if (pd.peakType == PEAK_TYPE_CHILD_SYSABS)
+				continue;
 			double zzzNR = 0;
 			double zzzNI = 0;
 			double pppNR = 0;
 			double pppNI = 0;
 			if (!isXray) {
-			for (int i = 0; i < 3; i++) {
-				zzzM[i] = 0;
-				pppM[i] = 0;
+				for (int i = 0; i < 3; i++) {
+					zzzM[i] = 0;
+					pppM[i] = 0;
+				}
 			}
+			if (!isXray) {
+				// we can't
+				MathUtil.set3(variables.childCell.toTempCartesian(pd.childPeakHKL), qhat);
+				MathUtil.norm3(qhat);
+				isOrigin = Double.isNaN(qhat[0]);
 			}
-			MathUtil.set3(variables.childCell.toTempCartesian(pd.crystalPeakHKL), qhat);
-			MathUtil.norm3(qhat);
 			double d = 2 * Math.PI * pd.peakDInv;
 			double thermal = Math.exp(-0.5 * uiso * d * d);
-			
+
 			for (int ia = 0, n = variables.nAtoms; ia < n; ia++) {
 				IsoAtom a = variables.getAtom(ia);
 				if (allowSubtypeSelection && !variables.isSubTypeSelected(a.type, a.subType))
@@ -866,11 +896,10 @@ public class IsoDiffractApp extends IsoApp {
 
 				// if (supxyz[0] >= 0 && supxyz[0] < 1 && supxyz[1] >= 0 && supxyz[1] < 1 &&
 				// supxyz[2] >= 0 && supxyz[2] < 1) {
-				
-				
+
 				// just [atomicNumber, 0] for xray
 				double[] atomScatFac = Elements.getScatteringFactor(a.getAtomTypeSymbol(), isXray);
-				double phase = 2 * Math.PI * MathUtil.dot3(pd.crystalPeakHKL, supxyz);
+				double phase = 2 * Math.PI * MathUtil.dot3(pd.childPeakHKL, supxyz);
 				double cos = Math.cos(phase);
 				if (Math.abs(cos) < 1e-13) {
 					// BH correcting for cos (Math.PI/2) == 6.123233995736766E-17, not zero
@@ -886,24 +915,24 @@ public class IsoDiffractApp extends IsoApp {
 				zzzNR += occ0 * atomScatFac[0];
 				zzzNI += occ0 * atomScatFac[1];
 				pppNR += scatNR * cos - scatNI * sin;
-				pppNI += scatNR * sin + scatNI * cos;				
-				if (!isXray) {
+				pppNI += scatNR * sin + scatNI * cos;
+				if (!isXray && !isOrigin) {
 					// remember that magnetic mode vectors (magnetons/Angstrom) were predefined to
 					// transform this way.
 					// mucart is temporary only
 					double[] mucart = variables.childCell.toTempCartesian(a.getMagneticMoment());
 					double scatM = occ * 5.4;
 					// zzz += scatM*mu
-					MathUtil.scaleAdd3(zzzM, scatM, mucart, zzzM); 
+					MathUtil.scaleAdd3(zzzM, scatM, mucart, zzzM);
 					// t = mu-(mu.qhat)*qhat
-					MathUtil.scaleAdd3(mucart, -MathUtil.dot3(mucart, qhat), qhat, tempvec); 
+					MathUtil.scaleAdd3(mucart, -MathUtil.dot3(mucart, qhat), qhat, tempvec);
 					// ppp += scatM*cos*t
 					MathUtil.scaleAdd3(pppM, cos * scatM, tempvec, pppM);
 				}
 			}
-			double f = (pppNR == 0 ? 0 
+			double f = (pppNR == 0 ? 0
 					: (pppNR * pppNR + pppNI * pppNI + (isXray ? 0 : MathUtil.lenSq3(pppM)))
-						/ (zzzNR * zzzNR + zzzNI * zzzNI + (isXray ? 0 : MathUtil.lenSq3(zzzM))));			
+							/ (zzzNR * zzzNR + zzzNI * zzzNI + (isXray ? 0 : MathUtil.lenSq3(zzzM))));
 			pd.peakIntensity = (f > 0 && f < MIN_PEAK_INTENSITY ? MIN_PEAK_INTENSITY / 2 : thermal * f);
 		}
 	}
@@ -928,7 +957,7 @@ public class IsoDiffractApp extends IsoApp {
 		double minWH = Math.min(drawHalfWidthHeight, drawHalfWidthHeight);
 		for (int p = 0; p < peakCount; p++) {
 			PeakData pd = peakData[p];
-			MathUtil.vecaddN(pd.crystalPeakHKL, -1.0, crystalHklCenter, t03);
+			MathUtil.vecaddN(pd.childPeakHKL, -1.0, crystalHklCenter, t03);
 			MathUtil.mat3mul(matChildReciprocal2rotatedCartesian, t03, t3);
 			pd.crystalPeakXY[0] = (1 + t3[0] / crystalDInvRange) * minWH + dw;
 			pd.crystalPeakXY[1] = (1 - t3[1] / crystalDInvRange) * minWH + dh; 
@@ -1054,7 +1083,7 @@ public class IsoDiffractApp extends IsoApp {
 					// HKL point lies in the display plane
 					// Save the XY coords of a good peak.
 					peakData[peakCount] = new PeakData();
-					MathUtil.copy3(childHKL, peakData[peakCount].crystalPeakHKL);
+					MathUtil.copy3(childHKL, peakData[peakCount].childPeakHKL);
 					peakData[peakCount].peakMultiplicity = 1;
 					double r2 = (childHKLcart[0] * childHKLcart[0] + childHKLcart[1] * childHKLcart[1]) * f2;
 					if ((Math.abs(r2) > 0.01) && (r2 < r2max)) {
@@ -1120,8 +1149,8 @@ public class IsoDiffractApp extends IsoApp {
 	private void recalcPowderPeakPositionsAndValues() {
 		for (int p = 0; p < peakCount; p++) {
 			PeakData pd = peakData[p];
-			MathUtil.mat3mul(metric, pd.crystalPeakHKL, tempvec);
-			double dinv = MathUtil.dot3Length(pd.crystalPeakHKL, tempvec);
+			MathUtil.mat3mul(metric, pd.childPeakHKL, tempvec);
+			double dinv = MathUtil.dot3Length(pd.childPeakHKL, tempvec);
 			pd.peakDInv = dinv;
 			double dval = (dinv > 0 ? 1 / dinv : 0);
 			double v = 0;
@@ -1145,21 +1174,28 @@ public class IsoDiffractApp extends IsoApp {
 		// recalculate the powder pattern
 		for (int i = 0; i < powderXRange; i++)
 			powderY[i] = 0;
-		double sigmapix = Math
-				.ceil(powderXRange * (powderResolution / Math.sqrt(8 * Math.log(2))) / (powderXMax - powderXMin));
-		double f = 1.0 * powderXRange / drawWidth;
+		double sigmapix = getSigmaPixels();
+		double f = getPixelsPerUnit();
 		for (int p = 0; p < peakCount; p++) {
 			PeakData pd = peakData[p];
-			double center = pd.powderPeakX * f;
+			double center = pd.powderPeakX / f;
 			int left = Math.max((int) Math.floor(center - 5 * sigmapix), 0);
 			int right = Math.min((int) Math.ceil(center + 5 * sigmapix), powderXRange - 1);
 			double pmi = pd.peakIntensity * pd.peakMultiplicity;
 			for (int i = left; i <= right; i++) {
 				double d = (i - center) / sigmapix;
 				double v = Math.exp(-d * d / 2) * pmi;
-				powderY[i] += v;				
+				powderY[i] += v;	
 			}
 		}
+	}
+
+	private double getPixelsPerUnit() {
+		return 1.0 * drawWidth / powderXRange;
+	}
+
+	private double getSigmaPixels() {
+		return Math.ceil(powderXRange * (powderResolution / Math.sqrt(8 * Math.log(2))) / (powderXMax - powderXMin));
 	}
 
 	/**
@@ -1253,7 +1289,7 @@ public class IsoDiffractApp extends IsoApp {
 						boolean createNewPeak = true;
 						for (int p = 0; p < peakCount; p++) {
 							PeakData pd = peakData[p];
-							double[] peakHKL = pd.crystalPeakHKL;
+							double[] peakHKL = pd.childPeakHKL;
 							boolean isrobustlycoincident = MathUtil.approxEqual(dinv0, dinvlist0[p], tol)
 									&& MathUtil.approxEqual(dinv1, dinvlist1[p], tol)
 									&& MathUtil.approxEqual(dinv2, dinvlist2[p], tol);
@@ -1271,7 +1307,7 @@ public class IsoDiffractApp extends IsoApp {
 						}
 						if (createNewPeak) {
 							PeakData pd = peakData[peakCount] = new PeakData();
-							MathUtil.set3(pd.crystalPeakHKL, h, k, l);
+							MathUtil.set3(pd.childPeakHKL, h, k, l);
 							dinvlist0[peakCount] = dinv0;
 							dinvlist1[peakCount] = dinv1;
 							dinvlist2[peakCount] = dinv2;
@@ -1298,10 +1334,10 @@ public class IsoDiffractApp extends IsoApp {
 		variables.getSetChildFraction(child0);
 
 		// Calculate the x-ray powder-pattern scale factor
-		setPowderScaleFactor();
 		setPowderAxisTicks(tol);
 		assignPeakTypes(); // Type the peaks
 		recalcPowder(); // recalculate intensities and positions
+		setPowderScaleFactor();
 	}
 
 	/**
@@ -1331,7 +1367,7 @@ public class IsoDiffractApp extends IsoApp {
 			double dinvj = dinvList[j];
 			boolean sameDinv = MathUtil.approxEqual(dinvi, dinvj, tol);
 			boolean firstHigher = !sameDinv && dinvi > dinvj;
-			boolean firstHKLnicerThanSecond = comparePowderHKL(peakData[i].crystalPeakHKL, peakData[j].crystalPeakHKL);
+			boolean firstHKLnicerThanSecond = comparePowderHKL(peakData[i].childPeakHKL, peakData[j].childPeakHKL);
 			// we must return -1 if order is OK, 0 if equal, and 1 if they need switching
 			return (firstHigher ? 1 : !sameDinv || !firstHKLnicerThanSecond ? -1 : 0);
 		}
@@ -1387,7 +1423,9 @@ public class IsoDiffractApp extends IsoApp {
 			// This should never drop to zero, but prevent it 
 			// just in case.
 			// BH: this is fine -- no atoms selected
-			powderScaleFactor = 0;
+			// was 0, but we still might have peaks???
+			powderScaleFactor = 1;
+			System.out.println("setPowderScaleFactor() No peaks found");
 		}
 	}
 
@@ -1588,7 +1626,7 @@ public class IsoDiffractApp extends IsoApp {
 
 			boolean testZ = MathUtil.isIntegral3(pd.parentPeakHKL, ptolerance);
 			Variables.SymopData op = (testZ ? variables.parentCell : variables.childCell)
-					.getSystematicallAbsentOp(testZ ? pd.parentPeakHKL : pd.crystalPeakHKL);
+					.getSystematicallyAbsentOp(testZ ? pd.parentPeakHKL : pd.childPeakHKL, !testZ);
 			boolean testA = (op != null);
 
 //			System.out.println(pd.parentPeakHKLString + "\t" + pd.crystalPeakHKLString
@@ -1637,7 +1675,7 @@ public class IsoDiffractApp extends IsoApp {
 		double ptolerance = 0.01;
 		for (int p = 0; p < peakCount; p++) {
 			PeakData pd = peakData[p];
-			double[] convChildHKL = pd.crystalPeakHKL;
+			double[] convChildHKL = pd.childPeakHKL;
 			MathUtil.mat3mul(variables.childCell.conv2convParentTransposeP, convChildHKL, conventionalHKL);
 			MathUtil.mat3mul(variables.parentCell.conv2primTransposeP, conventionalHKL, primitiveHKL);
 			int itype;
@@ -1673,7 +1711,7 @@ public class IsoDiffractApp extends IsoApp {
 		for (int p = 0; p < peakCount; p++) {
 			PeakData pd = peakData[p];
 			// transform super hkl into parent hkl
-			MathUtil.mat3mul(variables.childCell.conv2convParentTransposeP, peakData[p].crystalPeakHKL, parentHKL); 
+			MathUtil.mat3mul(variables.childCell.conv2convParentTransposeP, peakData[p].childPeakHKL, parentHKL); 
 			pd.setPeakType(PEAK_TYPE_CHILD_BRAGG, null); // 3
 			if (MathUtil.isIntegral3(parentHKL, ptolerance)) {
 				pd.setPeakType(PEAK_TYPE_PARENT_BRAGG, null); // 1

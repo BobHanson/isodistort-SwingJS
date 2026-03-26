@@ -260,6 +260,7 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 		childUVW = newRadioButton("SupUVW", false, cellButtons);
 		parentHKL = newRadioButton("ParHKL", false, cellButtons);
 		parentUVW = newRadioButton("ParUVW", false, cellButtons);
+
 		uView = newTextField("0", -10);
 		vView = newTextField("0", -10);
 		wView = newTextField("1", -10);
@@ -516,6 +517,15 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 			setViewDir(viewDir);
 			centerImage();
 		}
+//		double[] vCUVW = new double[3];
+//		double[] vPUVW = new double[3];
+//		double[] vCUVW = new double[3];
+//		double[] vCUVW = new double[3];
+//		MathUtil.mat3mul(variables.childCell.basisCartInverse, viewDir, vCUVW);
+//		MathUtil.mat3mul(variables.parentCell.basisCartInverse, viewDir, vPUVW);
+//		MathUtil.mat3mul(variables.childCell.basisCartInverse, viewDir, vCUVW);
+//		MathUtil.mat3mul(variables.childCell.basisCartInverse, viewDir, vCUVW);
+		
 	}
 
 	protected void setViewDir(double[] viewDir) {

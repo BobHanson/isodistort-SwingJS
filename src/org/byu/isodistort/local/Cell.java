@@ -1,6 +1,7 @@
 package org.byu.isodistort.local;
 
 import java.awt.Color;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.swing.JLabel;
@@ -131,12 +132,6 @@ public abstract class Cell {
 		 * 
 		 */
 		public double[][] conv2convParentTransposeP = new double[3][3];
-	
-		/**
-		 * Inverse of basisCart in Inverse-Angstrom units [basis vector][x,y,z]
-		 */
-		double[][] basisCartInverse = new double[3][3];
-	
 	
 		ChildCell() {
 			labelText = "  Ccell";
@@ -326,6 +321,12 @@ public abstract class Cell {
 	 * 
 	 */
 	public double[][] basisCart = new double[3][3];
+
+	/**
+	 * Inverse of basisCart in Inverse-Angstrom units [basis vector][x,y,z]
+	 */
+	public double[][] basisCartInverse = new double[3][3];
+
 
 	/**
 	 * Final information needed to render the cell (last 12). [edge number][x, y, z,
@@ -536,10 +537,14 @@ public abstract class Cell {
 		return info;
 	}
 
-	public SymopData getSystematicallAbsentOp(double[] hkl) {
+	public SymopData getSystematicallyAbsentOp(double[] hkl, boolean isTest) {
 		for (int i = 0, n = symopData.size(); i < n; i++) {
 			SymopData data = symopData.get(i);
-			if (data.isSystematicAbsence(hkl)) {
+			boolean isAbsent = data.isSystematicAbsence(hkl);
+//			if (isTest) {
+//				System.out.println(Arrays.toString(hkl) + "  " + isAbsent);			
+//			}
+			if (isAbsent) {
 				return data;
 			}
 		}

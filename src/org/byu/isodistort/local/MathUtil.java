@@ -481,6 +481,15 @@ public class MathUtil {
 		return (Math.abs(a - b) < tol);
 	}
 
+	public static void clean(double[] v) {
+		approx(v, 1e10);
+	}
+    public static void approx(double[] v, double n) {
+    	v[0] = approx(v[0], n);
+    	v[1] = approx(v[1], n);
+    	v[2] = approx(v[2], n);
+    }
+
     public static double approx(double f, double n) {
         f = Math.round (f * n) / n;
         return (f == 0 ? 0 : f);// removing -0 values

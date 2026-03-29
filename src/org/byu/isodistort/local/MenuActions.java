@@ -179,7 +179,7 @@ public class MenuActions {
 			if (label == null)
 				label = name;
 			actions.put("File.Examples.isodistort" + i,
-					new IsoAction("exampleIsodistort" + i, label, "open " + name, 0) {
+					new IsoAction("exampleIsodistort" + i, i + ": " + label, "open " + name, 0) {
 
 						@Override
 						public void actionPerformed(ActionEvent e) {

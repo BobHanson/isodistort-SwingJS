@@ -1,7 +1,6 @@
 package org.byu.isodistort.local;
 
 import java.awt.Color;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.swing.JLabel;
@@ -350,7 +349,7 @@ public abstract class Cell {
 
 	protected double[] t3 = new double[3];
 
-	protected double[][] t = new double[3][3], t2 = new double[3][3], t4 = new double[3][3];
+	protected double[][] t = new double[3][3], t1 = new double[3][3], t2 = new double[3][3], t4 = new double[3][3];
 
 	Cell() {
 	}
@@ -397,6 +396,13 @@ public abstract class Cell {
 		MathUtil.mat3inverse(basisCart, t, t3, t2);
 		MathUtil.mat3transpose(t, t2);
 		return t2;
+	}
+
+	public double[][] getTempTransposedReciprocalBasisInverse() {
+		MathUtil.mat3inverse(basisCart, t, t3, t2);
+		MathUtil.mat3transpose(t, t2);
+		MathUtil.mat3inverse(t2, t, t3, t1);
+		return t;
 	}
 
 	/**
@@ -537,15 +543,14 @@ public abstract class Cell {
 		return info;
 	}
 
-	public SymopData getSystematicallyAbsentOp(double[] hkl, boolean isTest) {
+	public SymopData getSystematicallyAbsentOp(double[] hkl, boolean isXray) {
 		for (int i = 0, n = symopData.size(); i < n; i++) {
-			SymopData data = symopData.get(i);
-			boolean isAbsent = data.isSystematicAbsence(hkl);
-//			if (isTest) {
-//				System.out.println(Arrays.toString(hkl) + "  " + isAbsent);			
-//			}
+			SymopData op = symopData.get(i);
+			if (isXray && op.isIdentity)
+				continue;
+			boolean isAbsent = op.isSystematicAbsence(hkl);
 			if (isAbsent) {
-				return data;
+				return op;
 			}
 		}
 		return null;

@@ -541,7 +541,7 @@ public class IsoDiffractApp extends IsoApp {
 	public synchronized void updateDisplay() {
 		if (isAdjusting || drawHeight < 20 || variables == null)
 			return;
-		if (true || needsRecalc || variables.isChanged) {
+		if (needsRecalc || variables.isChanged) {
 			isAdjusting = true;
 			variables.readSliders();
 			variables.enableSubtypeSelection(allowSubtypeSelection);//  && (isBoth || isPowder));
@@ -1626,7 +1626,7 @@ public class IsoDiffractApp extends IsoApp {
 
 			boolean testZ = MathUtil.isIntegral3(pd.parentPeakHKL, ptolerance);
 			Variables.SymopData op = (testZ ? variables.parentCell : variables.childCell)
-					.getSystematicallyAbsentOp(testZ ? pd.parentPeakHKL : pd.childPeakHKL, !testZ);
+					.getSystematicallyAbsentOp(testZ ? pd.parentPeakHKL : pd.childPeakHKL, isXray);
 			boolean testA = (op != null);
 
 //			System.out.println(pd.parentPeakHKLString + "\t" + pd.crystalPeakHKLString

@@ -76,7 +76,7 @@ import org.byu.isodistort.server.ServerUtil;
  */
 public abstract class IsoApp implements KeyListener {
 
-	final static String minorVersion = ".16_2025.07.06";
+	final static String minorVersion = ".17_2026.03.29";
 
 	/**
 	 * the datafile to use for startup
@@ -126,18 +126,21 @@ public abstract class IsoApp implements KeyListener {
 
 			@Override
 			public void keyTyped(KeyEvent e) {
-				apps[thisType].keyTyped(e);
+				if (apps[thisType] != null)
+					apps[thisType].keyTyped(e);
 			}
 
 			@Override
 			public void keyPressed(KeyEvent e) {
 				//System.out.println("IsoApp.Frame " + e);
-				apps[thisType].keyPressed(e);
+				if (apps[thisType] != null)
+					apps[thisType].keyPressed(e);
 			}
 
 			@Override
 			public void keyReleased(KeyEvent e) {
-				apps[thisType].keyReleased(e);
+				if (apps[thisType] != null)
+					apps[thisType].keyReleased(e);
 			}
 			
 		};
@@ -1710,7 +1713,6 @@ public abstract class IsoApp implements KeyListener {
 						continue;
 					if (!line.contains("="))
 						line = "=" + line;
-					System.out.println("getExampleFiles " + line);
 					String[] info = line.split("=");
 					switch (info[0]) {
 					case "":

@@ -12,6 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -517,15 +518,30 @@ public class IsoDistortApp extends Iso3DApp implements Runnable {
 			setViewDir(viewDir);
 			centerImage();
 		}
-//		double[] vCUVW = new double[3];
-//		double[] vPUVW = new double[3];
-//		double[] vCUVW = new double[3];
-//		double[] vCUVW = new double[3];
-//		MathUtil.mat3mul(variables.childCell.basisCartInverse, viewDir, vCUVW);
-//		MathUtil.mat3mul(variables.parentCell.basisCartInverse, viewDir, vPUVW);
-//		MathUtil.mat3mul(variables.childCell.basisCartInverse, viewDir, vCUVW);
-//		MathUtil.mat3mul(variables.childCell.basisCartInverse, viewDir, vCUVW);
-		
+//		setToolTips(viewDir);		
+	}
+
+	private void setToolTips(double[] viewDir) {
+		double[] vCUVW = new double[3];
+		double[] vPUVW = new double[3];
+		double[] vCHKL = new double[3];
+		double[] vPHKL = new double[3];
+		MathUtil.mat3mul(variables.childCell.basisCartInverse, viewDir, vCUVW);
+		MathUtil.mat3mul(variables.parentCell.basisCartInverse, viewDir, vPUVW);
+		MathUtil.mat3mul(variables.childCell.getTempTransposedReciprocalBasisInverse(), viewDir, vCHKL);
+		MathUtil.mat3mul(variables.parentCell.getTempTransposedReciprocalBasisInverse(), viewDir, vPHKL);
+		double d = 2*3*4*5*6*7*8;
+		MathUtil.clean(vCUVW);
+		MathUtil.clean(vPUVW);
+		MathUtil.clean(vCHKL);
+		MathUtil.clean(vPHKL);
+		System.out.println(""
+				+ "\nvCUVW " + Arrays.toString(vCUVW)
+				+ "\nvPUVW " + Arrays.toString(vPUVW)
+				+ "\nvCHKL " + Arrays.toString(vCHKL)
+				+ "\nvPHKL " + Arrays.toString(vPHKL)
+				);	
+		System.out.println("???");
 	}
 
 	protected void setViewDir(double[] viewDir) {

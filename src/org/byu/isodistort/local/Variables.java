@@ -410,11 +410,12 @@ public class Variables {
 		// Angstrom
 		// coordinates.
 
+		
 		double[][] pStrainPlusIdentity = (modes[STRAIN] == null
 				? MathUtil.voigt2matrix(new double[6], new double[3][3], 1)
-				: modes[STRAIN].getVoigtStrainTensor(mainSliderChildFraction, modes[IRREP]));
-		double[][] temp = new double[3][3];
-		MathUtil.mat3product(pStrainPlusIdentity, parentCell.basisCart0, parentCell.basisCart, temp);
+				: modes[STRAIN].getVoigtStrainTensor(mainSliderChildFraction, new double[3][3], modes[IRREP]));
+		MathUtil.mat3product(pStrainPlusIdentity, parentCell.basisCart0, parentCell.basisCart, new double[3][3]);
+		MathUtil.mat3inverse(parentCell.basisCart, parentCell.basisCartInverse, new double[3], new double[3][3]);
 		transformParentToChild(true);
 		MathUtil.set3(childCell.toTempCartesian(parentCell.originUnitless), parentCell.originCart);
 		parentCell.setVertices();
@@ -1050,6 +1051,12 @@ public class Variables {
 
 		public String type;
 
+		/**
+		 * will only be true if this is a magnetic-only translation
+		 */
+		boolean isIdentity;
+
+
 		protected SymopData(String type, double[] vi) {
 			// centering translation
 			this.type = type;
@@ -1063,13 +1070,17 @@ public class Variables {
 		}
 
 		protected SymopData(String type, double[][] op, double[] vi) {
+			isIdentity = (MathUtil.mat3trace(op) == 3);
 			this.type = type;
 			this.op = op;
 			opXYZ = getXYZFromMatrixFrac(op, false, false, true, false);
 			this.vi = vi;
 			r3t = new double[3][3];
 			MathUtil.mat3transpose(op, r3t);
-			System.out.println(type + " adding operator " + this);
+			System.out.println(type + " adding operator " + (isIdentity ? "IDENTITY ":"") + this);
+			if (isIdentity)
+				System.out.println("????");
+			
 		}
 
 		private static double[] v3 = new double[3];
@@ -1422,7 +1433,7 @@ public class Variables {
 				for (int i = 0; i < ncol; i++) {
 					data[i] = (isDefault ? def : vt.getDouble(pt + i));
 				}
-				System.out.println("readData " + (ia-1) + Arrays.toString(data));
+				//System.out.println("readData " + (ia-1) + Arrays.toString(data));
 			}
 			return true;
 		}

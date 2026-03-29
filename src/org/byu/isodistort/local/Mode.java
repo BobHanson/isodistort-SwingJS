@@ -360,7 +360,7 @@ class Mode {
 	 * 
 	 * @return the Voigt strain tensor plus Identity
 	 */
-	double[][] getVoigtStrainTensor(double childFraction, Mode irreps) {
+	double[][] getVoigtStrainTensor(double childFraction, double[][] ret, Mode irreps) {
 		double[] irrepVals = irreps.valuesTM[0];
 		double[] mySliderVals = valuesTM[0];
 		int[] myIrreps = irrepTM[0];
@@ -370,7 +370,7 @@ class Mode {
 				v[n] += vector[m][n] * irrepVals[myIrreps[m]] * mySliderVals[m] * childFraction;
 			}
 		}
-		return MathUtil.voigt2matrix(v, new double[3][3], 1);
+		return MathUtil.voigt2matrix(v, ret, 1);
 	}
 
 	@Override

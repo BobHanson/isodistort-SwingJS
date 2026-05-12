@@ -414,7 +414,7 @@ public class Variables {
 		double[][] pStrainPlusIdentity = (modes[STRAIN] == null
 				? MathUtil.voigt2matrix(new double[6], new double[3][3], 1)
 				: modes[STRAIN].getVoigtStrainTensor(mainSliderChildFraction, new double[3][3], modes[IRREP]));
-		MathUtil.mat3product(pStrainPlusIdentity, parentCell.basisCart0, parentCell.basisCart, new double[3][3]);
+		MathUtil.mat3product(parentCell.basisCart0, pStrainPlusIdentity, parentCell.basisCart, new double[3][3]);
 		MathUtil.mat3inverse(parentCell.basisCart, parentCell.basisCartInverse, new double[3], new double[3][3]);
 		transformParentToChild(true);
 		MathUtil.set3(childCell.toTempCartesian(parentCell.originUnitless), parentCell.originCart);

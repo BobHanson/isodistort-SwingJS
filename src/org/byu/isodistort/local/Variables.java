@@ -401,16 +401,18 @@ public class Variables {
 
 	/**
 	 * recalcDistortion recalculates the positions and occupancies based on current
-	 * slider values.
+	 * slider values. 
+	 * 
+	 * Note that the input (ISOVIZ file stored) Voigt mode vector is
+	 * for the parent. Thus, here we calculate the strained parent cell
+	 * first, then transform that to the chile.
 	 * 
 	 */
 	public void recalcDistortion() {
 
 		// Calculate strained parent and child unit cell basis vectors in cartesian
-		// Angstrom
-		// coordinates.
+		// Angstrom coordinates.
 
-		
 		double[][] pStrainPlusIdentity = (modes[STRAIN] == null
 				? MathUtil.voigt2matrix(new double[6], new double[3][3], 1)
 				: modes[STRAIN].getVoigtStrainTensor(mainSliderChildFraction, new double[3][3], modes[IRREP]));

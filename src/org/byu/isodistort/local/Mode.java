@@ -358,6 +358,8 @@ class Mode {
 	 * 
 	 * Accumulate the mode components, as adjusted by sliders.
 	 * 
+	 * That is, I + epsilon
+	 * 
 	 * @return the Voigt strain tensor plus Identity
 	 */
 	double[][] getVoigtStrainTensor(double childFraction, double[][] ret, Mode irreps) {

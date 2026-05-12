@@ -24,5 +24,6 @@ large ISOVIZ file=data/ZrP2O7-sg205-sg61-distort.isoviz
 =data/visual_vortexlattice.isoviz
 =data/visual_wo3_RTmono.isoviz
 =data/visual_ymno3_afe.isoviz
+strain-handling-test=data/hex-P1supercell-distortion.txt
 incommensurate DISTORTION file=data/tbmno3-distortion.iso.txt
 online example=https://chemapps.stolaf.edu/isodistort/data29.isoviz

@@ -1017,8 +1017,8 @@ public class Variables {
 		final static double ptol = 0.001;
 
 		/**
-		 * the 4x4 matrix representation for this operator; null for a centering
-		 * translation
+		 * the 4x4 matrix representation for this operator; 
+		 * null for a centering translation
 		 */
 		protected double[][] op;
 
@@ -1043,7 +1043,7 @@ public class Variables {
 		/**
 		 * the intrinsic translation for screw axes and glide planes
 		 */
-		public double[] vi;
+		final public double[] vi;
 
 		/**
 		 * potentially useful but not implemented Jones-Faithful description of the
@@ -1051,13 +1051,17 @@ public class Variables {
 		 */
 		public String opXYZ;
 
-		public String type;
+		final public String type;
 
 		/**
 		 * will only be true if this is a magnetic-only translation
 		 */
 		boolean isIdentity;
 
+		/**
+		 * time reversal 1, 0, -1
+		 */
+	    int tau;
 
 		protected SymopData(String type, double[] vi) {
 			// centering translation
@@ -1071,18 +1075,23 @@ public class Variables {
 			opXYZ = getXYZFromMatrixFrac(op, false, false, true, false);
 		}
 
-		protected SymopData(String type, double[][] op, double[] vi) {
+		/**
+		 * 
+		 * @param type  child or parent
+		 * @param op
+		 * @param vi translation for screw axes and glide planes
+		 * @param tau time reversal 1, 0, -1
+		 */
+		protected SymopData(String type, double[][] op, double[] vi, double tau) {
 			isIdentity = (MathUtil.mat3trace(op) == 3);
 			this.type = type;
 			this.op = op;
+			this.tau = (int) tau;
 			opXYZ = getXYZFromMatrixFrac(op, false, false, true, false);
 			this.vi = vi;
 			r3t = new double[3][3];
 			MathUtil.mat3transpose(op, r3t);
 			System.out.println(type + " adding operator " + (isIdentity ? "IDENTITY ":"") + this);
-			if (isIdentity)
-				System.out.println("????");
-			
 		}
 
 		private static double[] v3 = new double[3];
@@ -1665,9 +1674,17 @@ public class Variables {
 				return;
 			if (nData % 16 != 0)
 				parseError("expected 16 columns of data for operations; found " + nData, 1);
-			int nops = nData / 16;
 			double[] dataO = new double[nData];
 			getDoubleArray(null, dataO, 0, nData);
+			int nops = nData / 16;
+			double[] dataTR = null;
+			if (type == "child") {
+				int nTR = vt.setData("childspacegrouptimereversal");
+				if (nTR == nops) {
+					dataTR = new double[nops];
+					getDoubleArray(null, dataTR, 0, nops);
+				}
+			}			
 			for (int pt = 0, iop = 0; iop < nops; iop++) {
 				double[][] op = new double[4][4];
 				for (int r = 0; r < 4; r++) {
@@ -1678,10 +1695,13 @@ public class Variables {
 				double[] vi = SymopData.getIntrinsicTranslation(op);
 				if (vi != null) {
 					// screw axes and glide planes only
-					list.add(new SymopData(type, op, vi));
+					list.add(new SymopData(type, op, vi, dataTR == null ? 0 : dataTR[iop]));
 				}
 			}
-			System.out.println(list.size() + " operations as SymData, including " + nCenteringOps + " centerings");
+			System.out.println(list.size() + " operations as SymData" + 
+			(nCenteringOps == 0 ? "" : "; " + nCenteringOps + " centerings")
+			+ (dataTR == null ? "" : "; with TimeReversal flags"));		
+					
 		}
 
 		private double[][] getTransform(String key, boolean isRequired) {

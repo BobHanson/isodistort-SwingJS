@@ -262,9 +262,11 @@ public abstract class Cell {
 	 * The list of non-point-group symmetry operations for this space group,
 	 * including nCenteringOps at the end of the list.
 	 * 
-	 * Note that if every we wanted to actually list all of the 
+	 * Note that if ever we wanted to actually list all of the 
 	 * operations, we would need to expand the list by multiplying
 	 * the N-nCenteringOps operations by each centering op.
+	 * 
+	 * Magnetic time reversal is indicated by tau.
 	 * 
 	 */
 	public List<SymopData>  symopData;

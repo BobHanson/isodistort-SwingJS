@@ -351,7 +351,8 @@ class IsoTokenizer extends TreeMap<String, int[]> {
 			from++;
 			break;
 		case '0':
-			// ignore first leading 0
+		case '+':
+			// ignore first leading 0 or +
 			from++;
 			break;
 		}

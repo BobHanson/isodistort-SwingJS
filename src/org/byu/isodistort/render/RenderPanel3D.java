@@ -608,7 +608,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 			else
 				spinrate = 0.006;
 			
-			System.out.println("R3d mouse " + dragging);
+//			System.out.println("R3d mouse " + dragging);
 			if (dragging) {
 				switch (rotAxis) {
 				case ROTATE_XYZ:
@@ -877,7 +877,7 @@ public class RenderPanel3D extends JPanel implements IsoRenderPanel {
 	@Override
 	public void keyPressed(KeyEvent e) {
 		// called from IsoDistortApp
-		System.out.println("\n" + e);
+		//System.out.println("\n" + e);
 		checkRotateKeyPressed(e.getKeyChar());
 	}
 

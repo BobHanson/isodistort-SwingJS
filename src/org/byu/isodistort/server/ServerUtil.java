@@ -4,6 +4,7 @@ import java.awt.Cursor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -91,6 +92,7 @@ public class ServerUtil {
 	}
 
 	static int ntest = 0;
+	private static boolean testing = true;
 
 	/**
 	 * Fetch a result from the server. This method handles all such requests.
@@ -133,9 +135,15 @@ public class ServerUtil {
 				if (fileData == null)
 					request.addHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
 				request.addHeader("Accept", "text/plain, */*; q=0.01");
-				
-//				if (testing)
-//					FileUtil.write(null, new File("c:/temp/test" + "_out_" + ++ntest + ".json"), toJSON(mapFormData), true);
+
+				if (testing) {
+					try {
+						String testFile = "c:/temp/test_isoviz" + "_out_" + ++ntest + ".json";
+						FileUtil.write(null, new File(testFile), toJSON(mapFormData), true);
+					} catch (Exception e) {
+						
+					}
+				}
 
 				for (Entry<String, Object> e : mapFormData.entrySet()) {
 					String key = e.getKey();
@@ -160,7 +168,7 @@ public class ServerUtil {
 				app.addStatus("ServerUtil connection failure: " + e);
 				e.printStackTrace();
 				consumer.accept(null);
-			} finally {				
+			} finally {
 				app.setCursor(0);
 			}
 		}, "serverUtil_fetch").start();
